@@ -20,7 +20,7 @@ There is no hosted instance yet. The public site at openpartygames.org arrives w
 
 ## Run it locally
 
-You need Node 22 or newer and pnpm.
+You need Node 24 or newer and pnpm.
 
 ```sh
 pnpm install
