@@ -51,32 +51,47 @@ OpenPartyGames runs on Cloudflare Workers, Durable Objects and D1.
    pnpm --filter @opg/worker exec wrangler d1 create openpartygames
    ```
 
-   Copy the `database_id` from the output into `apps/worker/wrangler.jsonc`, replacing the placeholder.
+   Copy the `database_id` from the output into `apps/worker/wrangler.jsonc`, replacing the one checked in for openpartygames.org.
 
-5. Apply the migrations to the remote database:
+5. Point `routes` in `apps/worker/wrangler.jsonc` at a domain on your Cloudflare account, or delete `routes` to use your `workers.dev` address.
+
+6. Apply the migrations to the remote database:
 
    ```sh
    pnpm --filter @opg/worker exec wrangler d1 migrations apply openpartygames --remote
    ```
 
-6. Seed the content packs. This validates and rebuilds the seed, then loads it into D1:
+7. Seed the content packs. This validates and rebuilds the seed, then loads it into D1:
 
    ```sh
    node scripts/build-pack-seed.mjs
    pnpm --filter @opg/worker exec wrangler d1 execute openpartygames --remote --file=.wrangler/pack-seed.sql
    ```
 
-7. Set the rate-limit namespace ids in `apps/worker/wrangler.jsonc`. Cloudflare assigns a `namespace_id` per account and binding name; pick two distinct positive integers (the checked-in `1001` and `1002` are placeholders).
+8. Set the rate-limit namespace ids in `apps/worker/wrangler.jsonc`. Cloudflare assigns a `namespace_id` per account and binding name; pick two distinct positive integers (the checked-in `1001` and `1002` are placeholders).
 
-8. Set the `DAILY_ROOM_CAP` var in `apps/worker/wrangler.jsonc`. It caps how many rooms the deployment creates per day.
+9. Set the `DAILY_ROOM_CAP` var in `apps/worker/wrangler.jsonc`. It caps how many rooms the deployment creates per day.
 
-9. Deploy:
+10. Deploy:
 
-   ```sh
-   pnpm --filter @opg/worker deploy
-   ```
+    ```sh
+    pnpm --filter @opg/worker run deploy
+    ```
 
 Deploys restart every Durable Object and drop open sockets. Clients reconnect with their token and get their view back, so players only see a short "Reconnecting…" message.
+
+### Deploy from GitHub Actions
+
+The `deploy` job in `.github/workflows/ci.yml` ships every push to `main` once `pnpm check` and the e2e suites (`pnpm e2e`) pass. It applies the D1 migrations, reseeds the packs, deploys the Worker and then checks `/api/health` on the live site. Run the CI workflow by hand from the Actions tab to redeploy.
+
+Migrations run before the new Worker goes live, so a migration must keep working with the version still running.
+
+To turn it on in your fork, do steps 1–9 above, then:
+
+1. Create a Cloudflare account API token with **Workers Scripts › Edit** and **D1 › Edit** on the account, plus **Zone › Read** and **Workers Routes › Edit** on your domain.
+2. In your GitHub repository settings, create an environment named `production` and add the token as its `CLOUDFLARE_API_TOKEN` secret.
+3. Add your Cloudflare account ID as a repository variable named `CLOUDFLARE_ACCOUNT_ID`. The deploy job is skipped while this variable is missing.
+4. Change the site address in the `deploy` job (the environment `url` and the health check) to your domain.
 
 ## Project layout
 

@@ -4,6 +4,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-11",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    { "pattern": "openpartygames.org", "custom_domain": true },
+    { "pattern": "www.openpartygames.org", "custom_domain": true }
+  ],
   "assets": {
     "directory": "../web/dist",
     "binding": "ASSETS",
@@ -18,7 +22,7 @@
     {
       "binding": "DB",
       "database_name": "openpartygames",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "f8d09c9b-6fe0-41c6-b48e-c0e2833fd9b9",
       "migrations_dir": "migrations"
     }
   ],
