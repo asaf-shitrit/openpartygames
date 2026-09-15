@@ -8,6 +8,8 @@ import type {
   RoomView,
   ServerMessage,
 } from "@opg/protocol";
+import { clockOffsetFrom, createServerClock, nextClockSamples } from "@opg/ui";
+import type { ServerClock } from "@opg/ui";
 
 export type RoomSocketStatus =
   | "connecting"
@@ -36,6 +38,8 @@ export interface RoomSocket {
   lastError: RoomSocketError | null;
   kicked: boolean;
   playerId: PlayerId | null;
+  /** Server-corrected clock; its offset is sampled as each state frame arrives. */
+  clock: ServerClock;
   send: (message: ClientMessage) => void;
   join: (name: string) => void;
   clearError: () => void;
@@ -72,7 +76,10 @@ const serverMessageSchema = z.union([
   }),
   // The view shape is produced by our own Worker; only the envelope is validated here.
   // SAFETY: state frames come from trusted server code, so the view payload needs no runtime decode.
-  z.object({ t: z.literal("state"), view: z.custom<RoomView>() }),
+  z.object({
+    t: z.literal("state"),
+    view: z.custom<RoomView>((value) => value !== null),
+  }),
   z.object({
     t: z.literal("error"),
     code: z.enum(ERROR_CODES),
@@ -306,6 +313,26 @@ export function connectRoom(params: {
   };
 }
 
+/**
+ * Collects clock samples outside of React state and exposes a clock over the running estimate.
+ * Each new socket starts a fresh estimate (a phone waking from sleep may have resynced its clock),
+ * but the old estimate keeps serving until the new socket's first sample lands.
+ */
+function createClockSampler() {
+  let samples: number[] = [];
+  let restarting = false;
+  return {
+    push: (sample: number) => {
+      samples = restarting ? [sample] : nextClockSamples(samples, sample);
+      restarting = false;
+    },
+    restart: () => {
+      restarting = true;
+    },
+    clock: createServerClock(() => clockOffsetFrom(samples)),
+  };
+}
+
 export function useRoomSocket({
   code,
   role,
@@ -321,6 +348,8 @@ export function useRoomSocket({
   const [kicked, setKicked] = useState(false);
   const [playerId, setPlayerId] = useState<PlayerId | null>(null);
   const connectionRef = useRef<RoomConnection | null>(null);
+  const [sampler] = useState(createClockSampler);
+  const clock = sampler.clock;
 
   const clearError = useCallback(() => setLastError(null), []);
   const send = useCallback((message: ClientMessage) => {
@@ -338,8 +367,14 @@ export function useRoomSocket({
       hostToken: hostToken ?? null,
       name: name ?? null,
       events: {
-        onStatus: setStatus,
-        onView: setView,
+        onStatus: (next) => {
+          if (next === "open") sampler.restart();
+          setStatus(next);
+        },
+        onView: (nextView) => {
+          sampler.push(nextView.serverNow - Date.now());
+          setView(nextView);
+        },
         onError: setLastError,
         onKicked: () => setKicked(true),
         onPlayer: setPlayerId,
@@ -350,7 +385,7 @@ export function useRoomSocket({
       connectionRef.current = null;
       connection.stop();
     };
-  }, [code, role, hostToken, name, enabled]);
+  }, [code, role, hostToken, name, enabled, sampler]);
 
   return {
     status: enabled ? status : "closed",
@@ -358,6 +393,7 @@ export function useRoomSocket({
     lastError,
     kicked,
     playerId,
+    clock,
     send,
     join,
     clearError,

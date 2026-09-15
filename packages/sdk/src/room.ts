@@ -4,9 +4,11 @@
 
 import {
   AVATARS,
+  MAX_AWARDS,
   MAX_PLAYERS,
   cleanPlayerName,
   type ActiveGameView,
+  type Award,
   type AvatarId,
   type ClientMessage,
   type ErrorCode,
@@ -58,12 +60,59 @@ interface GameRuntime {
   playerIds: PlayerId[];
   content: GameContent;
   deadline: number | null;
+  /** Epoch ms the current deadline was set; optional because pre-change snapshots lack it. */
+  timerStartedAt?: number | null;
   startedAt: number;
 }
 
 interface PendingStart {
   gameId: string;
   playerIds: PlayerId[];
+}
+
+/**
+ * The result as persisted. Older snapshots only ever wrote `gameId`, `scores` and
+ * `winnerIds`, so the fields added later are optional here; `resultSummary` fills
+ * in their defaults for the view.
+ */
+interface StoredResult {
+  gameId: string;
+  scores: Record<PlayerId, number>;
+  winnerIds: PlayerId[];
+  completed?: boolean;
+  finishedAt?: number;
+  awards?: Award[];
+}
+
+/** Normalizes a persisted result into the view shape, defaulting fields older snapshots lack. */
+export function resultSummary(stored: StoredResult): GameResultSummary {
+  return {
+    gameId: stored.gameId,
+    scores: stored.scores,
+    winnerIds: stored.winnerIds,
+    completed: stored.completed ?? stored.winnerIds.length > 0,
+    finishedAt: stored.finishedAt ?? 0,
+    awards: stored.awards ?? [],
+  };
+}
+
+/**
+ * Keeps only players still in the game, drops awards left with no players, and caps
+ * the list at MAX_AWARDS while keeping order. Pure so tests can call it directly.
+ */
+export function sanitizeAwards(
+  awards: readonly Award[],
+  playerIds: readonly PlayerId[],
+): Award[] {
+  const roster = new Set(playerIds);
+  const kept: Award[] = [];
+  for (const award of awards) {
+    if (kept.length >= MAX_AWARDS) break;
+    const ids = award.playerIds.filter((id) => roster.has(id));
+    if (ids.length === 0) continue;
+    kept.push({ ...award, playerIds: ids });
+  }
+  return kept;
 }
 
 interface InternalState {
@@ -79,7 +128,7 @@ interface InternalState {
   phase: RoomPhase;
   packCatalog: PackMeta[];
   packEnabled: Record<string, boolean>;
-  lastResult: GameResultSummary | null;
+  lastResult: StoredResult | null;
   game: GameRuntime | null;
   pending: PendingStart | null;
   hostConnected: boolean;
@@ -146,7 +195,7 @@ class RoomImpl implements RoomCore {
   private phase: RoomPhase;
   private packCatalog: PackMeta[];
   private packEnabled: Record<string, boolean>;
-  private lastResult: GameResultSummary | null;
+  private lastResult: StoredResult | null;
   private game: GameRuntime | null;
   private pending: PendingStart | null;
   private hostConnected: boolean;
@@ -172,6 +221,10 @@ class RoomImpl implements RoomCore {
           ...state.lastResult,
           scores: { ...state.lastResult.scores },
           winnerIds: [...state.lastResult.winnerIds],
+          awards: state.lastResult.awards?.map((a) => ({
+            ...a,
+            playerIds: [...a.playerIds],
+          })),
         }
       : null;
     this.game = state.game
@@ -264,10 +317,18 @@ class RoomImpl implements RoomCore {
     return { players, connectedIds, rng: this.rng, now, content: game.content };
   }
 
-  private refreshDeadline(): void {
+  /**
+   * Recomputes the deadline and re-anchors `timerStartedAt` whenever its value changes.
+   * A new phase always gets `ctx.now + duration`, which differs from the old deadline unless the
+   * phase began in the same millisecond the previous one did, so value equality means "no change".
+   */
+  private setDeadline(now: number): void {
     if (!this.game) return;
     const def = this.gameDef(this.game.gameId);
-    this.game.deadline = def ? def.nextDeadline(this.game.state) : null;
+    const next = def ? def.nextDeadline(this.game.state) : null;
+    if (next === this.game.deadline) return;
+    this.game.deadline = next;
+    this.game.timerStartedAt = next === null ? null : now;
   }
 
   // ---------- public API ----------
@@ -390,12 +451,14 @@ class RoomImpl implements RoomCore {
       (id) => this.getPlayer(id) !== undefined,
     );
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
+    const deadline = def.nextDeadline(state);
     this.game = {
       gameId: def.id,
       state,
       playerIds,
       content,
-      deadline: def.nextDeadline(state),
+      deadline,
+      timerStartedAt: deadline === null ? null : now,
       startedAt: now,
     };
     this.pending = null;
@@ -442,7 +505,7 @@ class RoomImpl implements RoomCore {
     if (deadline === null || deadline > now) return false;
     const before = game.state;
     game.state = def.onDeadline(game.state, this.makeCtx(game, now));
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
     return this.deadlineMoved(game, def, before, deadline);
@@ -792,7 +855,7 @@ class RoomImpl implements RoomCore {
       targetId,
       this.makeCtx(game, now),
     );
-    this.refreshDeadline();
+    this.setDeadline(now);
     if (game.playerIds.length < def.minPlayers) {
       this.finishGame(now, false, out);
     } else {
@@ -851,7 +914,7 @@ class RoomImpl implements RoomCore {
       this.game.state,
       this.makeCtx(this.game, now),
     );
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
   }
@@ -917,7 +980,7 @@ class RoomImpl implements RoomCore {
     );
     if (next === game.state) return;
     game.state = next;
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
   }
@@ -937,8 +1000,16 @@ class RoomImpl implements RoomCore {
     const def = this.gameDef(game.gameId);
     const scores = this.collectScores(game, def);
     const winnerIds = this.awardCrowns(game, scores, completed);
+    const awards = this.gameAwards(game, def, completed);
 
-    this.lastResult = { gameId: game.gameId, scores, winnerIds };
+    this.lastResult = {
+      gameId: game.gameId,
+      scores,
+      winnerIds,
+      completed,
+      finishedAt: now,
+      awards,
+    };
     this.phase = "lobby";
     this.lobbyScreen = "results";
     for (const p of this.players) p.waitingForNextGame = false;
@@ -973,6 +1044,16 @@ class RoomImpl implements RoomCore {
     const winnerIds = game.playerIds.filter((id) => (scores[id] ?? 0) === top);
     this.crown(winnerIds);
     return winnerIds;
+  }
+
+  /** Only a completed game gets awards; they are sanitized against the surviving roster. */
+  private gameAwards(
+    game: GameRuntime,
+    def: AnyGame | undefined,
+    completed: boolean,
+  ): Award[] {
+    if (!completed) return [];
+    return sanitizeAwards(def?.awards?.(game.state) ?? [], game.playerIds);
   }
 
   private topScore(
@@ -1011,7 +1092,7 @@ class RoomImpl implements RoomCore {
       })),
       selectedGameId: this.selectedGameId,
       packs: this.packSummaries(),
-      lastResult: this.lastResult,
+      lastResult: this.lastResult ? resultSummary(this.lastResult) : null,
       serverNow: now,
     };
   }
@@ -1042,6 +1123,15 @@ class RoomImpl implements RoomCore {
       }));
   }
 
+  /** The shared envelope every active-game view carries. */
+  private gameViewBase(game: GameRuntime) {
+    return {
+      id: game.gameId,
+      deadline: game.deadline,
+      timerStartedAt: game.timerStartedAt ?? null,
+    };
+  }
+
   private activeGame(
     now: number,
     role: "host" | "player",
@@ -1051,7 +1141,7 @@ class RoomImpl implements RoomCore {
     if (this.phase !== "in-game" || !game) return null;
     const def = this.gameDef(game.gameId);
     if (!def) return null;
-    const base = { id: game.gameId, deadline: game.deadline };
+    const base = this.gameViewBase(game);
     if (role === "host")
       return { ...base, view: def.hostView(game.state, { now }) };
     if (playerId === undefined || !game.playerIds.includes(playerId)) {

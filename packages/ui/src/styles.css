@@ -2,6 +2,7 @@
 @import "@fontsource/permanent-marker/index.css";
 @import "@fontsource/atkinson-hyperlegible/400.css";
 @import "@fontsource/atkinson-hyperlegible/700.css";
+@import "./fx.css";
 
 :root {
   --opg-ink: #2b2b2b;
@@ -178,11 +179,21 @@ a.opg-link:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .opg-root,
-  .opg-root * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Fades are the reduced-motion stand-in for movement, so they stay visible. */
+  .opg-motion-fade,
+  .opg-motion-fade::before,
+  .opg-motion-fade::after {
+    animation-duration: 200ms !important;
+    transition-duration: 200ms !important;
   }
 }

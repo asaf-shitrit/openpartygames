@@ -44,6 +44,7 @@ describe("runBotPlaythrough", () => {
       expect(score).toBe(TAP_ROUNDS * TAP_POINTS);
     }
     expect(result.winnerIds).toHaveLength(3);
+    expect(result.awards).toEqual([]);
     expect(result.rejoinedPlayerId).toBeNull();
     expect(result.log.length).toBeGreaterThan(0);
   });

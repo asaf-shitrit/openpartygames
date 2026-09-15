@@ -173,6 +173,84 @@ describe("useRoomSocket", () => {
     });
   });
 
+  it("samples the clock offset when a state frame arrives", () => {
+    vi.setSystemTime(1_000_000);
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    act(() =>
+      socket.receive(
+        JSON.stringify({
+          t: "state",
+          view: { ...testView(), serverNow: 1_005_000 },
+        }),
+      ),
+    );
+    expect(result.current.clock.now()).toBe(1_005_000);
+  });
+
+  it("does not lower the offset when a later sample is smaller", () => {
+    vi.setSystemTime(1_000_000);
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    act(() =>
+      socket.receive(
+        JSON.stringify({
+          t: "state",
+          view: { ...testView(), serverNow: 1_005_000 },
+        }),
+      ),
+    );
+    vi.setSystemTime(1_000_500);
+    act(() =>
+      socket.receive(
+        JSON.stringify({
+          t: "state",
+          view: { ...testView(), serverNow: 1_005_200 },
+        }),
+      ),
+    );
+    // The biased second sample (4700ms) must not beat the first (5000ms).
+    expect(result.current.clock.now()).toBe(1_005_500);
+  });
+
+  it("starts a fresh offset estimate after a reconnect", () => {
+    vi.setSystemTime(1_000_000);
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    act(() => lastSocket().open());
+    act(() =>
+      lastSocket().receive(
+        JSON.stringify({
+          t: "state",
+          view: { ...testView(), serverNow: 1_005_000 },
+        }),
+      ),
+    );
+    act(() => lastSocket().serverClose());
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    act(() => lastSocket().open());
+    // Until the new socket's first frame, the old estimate still applies.
+    expect(result.current.clock.now() - Date.now()).toBe(5_000);
+    act(() =>
+      lastSocket().receive(
+        JSON.stringify({
+          t: "state",
+          view: { ...testView(), serverNow: Date.now() + 1_000 },
+        }),
+      ),
+    );
+    expect(result.current.clock.now() - Date.now()).toBe(1_000);
+  });
+
   it("ignores malformed frames instead of throwing", () => {
     const { result } = renderHook(() =>
       useRoomSocket({ code: "BKTZ", role: "player" }),

@@ -4,10 +4,14 @@ import type { PlayerId } from "@opg/protocol";
 import {
   CLUE_TURN_MS,
   LAST_CHANCE_MS,
-  RESULT_MS,
+  RESULT_CANCELLED_MS,
+  RESULT_CAUGHT_MS,
+  RESULT_ESCAPED_MS,
   REVEAL_MS,
+  TYPING_MIN_INTERVAL_MS,
   VOTE_MS,
   WORD_CHECK_MS,
+  resultDurationMs,
   buildClueOrder,
   imposter,
   isOver,
@@ -532,7 +536,24 @@ describe("turn order and actions", () => {
 
     state = onDeadline(state, c);
     expect(state.phase).toBe("result");
-    expect(state.deadline).toBe(c.now + RESULT_MS);
+    expect(state.caught).toBe(true);
+    expect(state.deadline).toBe(c.now + RESULT_CAUGHT_MS);
+    expect(state.deadline).toBe(c.now + resultDurationMs(true));
+  });
+
+  it("uses the escaped result duration when the imposter got away", () => {
+    const c = makeCtx({ n: 4, seed: 61, content: ONE_PAIR });
+    let state = toVotePhase(setup(c), c);
+    for (const [voter, target] of Object.entries(votesNotCaught(state))) {
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    if (state.phase === "vote") state = onDeadline(state, c); // -> reveal
+    expect(state.phase).toBe("reveal");
+    state = onDeadline(state, c); // reveal -> result (not caught skips last-chance)
+    expect(state.phase).toBe("result");
+    expect(state.caught).toBe(false);
+    expect(state.deadline).toBe(c.now + RESULT_ESCAPED_MS);
+    expect(state.deadline).toBe(c.now + resultDurationMs(false));
   });
 
   it("only the imposter can guess, and only once", () => {
@@ -552,6 +573,197 @@ describe("turn order and actions", () => {
     const guessed = onAction(state, imp, { type: "guess", text: "apple" }, c);
     expect(guessed.phase).toBe("result");
     expect(guessed.guessCorrect).toBe(true);
+  });
+});
+
+describe("word history for awards", () => {
+  it("records one entry per scored word and skips a cancelled word", () => {
+    const c = makeCtx({ n: 4, seed: 71, content: ONE_PAIR });
+    const state = setup(c);
+    const imp = imposterOf(state);
+    const result = playWord(state, c, votesCaught(state), "apple");
+
+    expect(result.history).toHaveLength(1);
+    const [entry] = result.history ?? [];
+    expect(entry?.imposterId).toBe(imp);
+    expect(entry?.caught).toBe(true);
+    expect(entry?.guessCorrect).toBe(true);
+    expect(entry?.playerIds).toEqual(result.playerIds);
+    expect(entry?.votes).toEqual(votesCaught(state));
+  });
+
+  it("does not record history when the imposter is kicked mid-word", () => {
+    const c = makeCtx({ n: 4, seed: 72, content: ONE_PAIR });
+    const state = onDeadline(setup(c), c); // clues
+    const imp = imposterOf(state);
+    const after = onPlayerRemoved(state, imp, c);
+    expect(after.phase).toBe("result");
+    expect(after.history ?? []).toEqual([]);
+  });
+
+  it("accumulates history across every word, including the last", () => {
+    const c = makeCtx({
+      n: 4,
+      seed: 73,
+      content: { kind: "word-pairs", items: PAIRS.slice(0, 2) },
+    });
+    let state = setup(c);
+    state = playWord(state, c, votesNotCaught(state), null);
+    state = onDeadline(state, c); // -> next word-check
+    expect(state.history).toHaveLength(1);
+    state = playWord(state, c, votesNotCaught(state), null);
+    expect(state.history).toHaveLength(2);
+    expect(isOver(onDeadline(state, c))).toBe(true);
+  });
+});
+
+describe("resultDurationMs", () => {
+  it("maps caught, escaped and cancelled to their durations", () => {
+    expect(resultDurationMs(true)).toBe(RESULT_CAUGHT_MS);
+    expect(resultDurationMs(false)).toBe(RESULT_ESCAPED_MS);
+    expect(resultDurationMs(null)).toBe(RESULT_CANCELLED_MS);
+  });
+});
+
+/** Drives a fresh caught last-chance phase for the given ctx. */
+function toLastChance(c: GameContext<WordPairContent>): ImposterState {
+  let state = toVotePhase(setup(c), c);
+  for (const [voter, target] of Object.entries(votesCaught(state))) {
+    state = onAction(state, voter, { type: "vote", target }, c);
+  }
+  if (state.phase === "vote") state = onDeadline(state, c);
+  if (state.phase === "reveal") state = onDeadline(state, c);
+  return state;
+}
+
+describe("typing action", () => {
+  it("accepts a length change and records the length and timestamp", () => {
+    const c = makeCtx({ n: 4, seed: 61, content: ONE_PAIR });
+    const state = toLastChance(c);
+    expect(state.phase).toBe("last-chance");
+    const imp = imposterOf(state);
+
+    const next = onAction(state, imp, { type: "typing", length: 3 }, c);
+    expect(next).not.toBe(state);
+    expect(next.guessLength).toBe(3);
+    expect(next.guessLengthAt).toBe(c.now);
+  });
+
+  it("rejects typing outside the last-chance phase", () => {
+    const c = makeCtx({ n: 4, seed: 62, content: ONE_PAIR });
+    const state = toVotePhase(setup(c), c);
+    expect(state.phase).not.toBe("last-chance");
+    expect(onAction(state, "p1", { type: "typing", length: 2 }, c)).toBe(
+      state,
+    );
+  });
+
+  it("rejects typing from anyone but the imposter", () => {
+    const c = makeCtx({ n: 4, seed: 63, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const crew = otherPlayer(state.playerIds, imp);
+    expect(onAction(state, crew, { type: "typing", length: 2 }, c)).toBe(
+      state,
+    );
+  });
+
+  it("rejects typing once a guess is already in", () => {
+    const c = makeCtx({ n: 4, seed: 64, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const guessed = onAction(state, imp, { type: "guess", text: "apple" }, c);
+    expect(guessed.phase).toBe("result");
+    expect(onAction(guessed, imp, { type: "typing", length: 2 }, c)).toBe(
+      guessed,
+    );
+
+    // A guess submitted mid-phase (defensive: normal play always leaves
+    // last-chance the moment a guess lands) still blocks further typing.
+    const stillLastChance = { ...state, guess: "apple" };
+    expect(
+      onAction(stillLastChance, imp, { type: "typing", length: 2 }, c),
+    ).toBe(stillLastChance);
+  });
+
+  it("rejects a length unchanged from the current one", () => {
+    const c = makeCtx({ n: 4, seed: 65, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    expect(state.guessLength ?? 0).toBe(0);
+    expect(onAction(state, imp, { type: "typing", length: 0 }, c)).toBe(
+      state,
+    );
+  });
+
+  it("treats a missing guessLength (an old snapshot) as zero", () => {
+    const c = makeCtx({ n: 4, seed: 68, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const legacy: ImposterState = { ...state };
+    delete legacy.guessLength;
+    delete legacy.guessLengthAt;
+
+    expect(onAction(legacy, imp, { type: "typing", length: 0 }, c)).toBe(
+      legacy,
+    );
+    const typed = onAction(legacy, imp, { type: "typing", length: 3 }, c);
+    expect(typed.guessLength).toBe(3);
+  });
+
+  it("rejects an update sent before the throttle interval elapses", () => {
+    const c = makeCtx({ n: 4, seed: 66, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const first = onAction(state, imp, { type: "typing", length: 3 }, c);
+    expect(first.guessLength).toBe(3);
+
+    const soon = withCtx(c, {
+      now: c.now + TYPING_MIN_INTERVAL_MS - 1,
+    });
+    expect(onAction(first, imp, { type: "typing", length: 5 }, soon)).toBe(
+      first,
+    );
+
+    const later = withCtx(c, { now: c.now + TYPING_MIN_INTERVAL_MS });
+    const second = onAction(first, imp, { type: "typing", length: 5 }, later);
+    expect(second).not.toBe(first);
+    expect(second.guessLength).toBe(5);
+    expect(second.guessLengthAt).toBe(later.now);
+  });
+
+  it("rejects a length above the schema max", () => {
+    expect(
+      imposterActionSchema.safeParse({ type: "typing", length: 41 }).success,
+    ).toBe(false);
+    expect(
+      imposterActionSchema.safeParse({ type: "typing", length: -1 }).success,
+    ).toBe(false);
+    expect(
+      imposterActionSchema.safeParse({ type: "typing", length: 40 }).success,
+    ).toBe(true);
+    expect(
+      imposterActionSchema.safeParse({ type: "typing", length: 0 }).success,
+    ).toBe(true);
+  });
+
+  it("resets the guess length when the next word's last-chance starts", () => {
+    const c = makeCtx({
+      n: 4,
+      seed: 67,
+      content: { kind: "word-pairs", items: PAIRS.slice(0, 2) },
+    });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const typed = onAction(state, imp, { type: "typing", length: 4 }, c);
+    expect(typed.guessLength).toBe(4);
+
+    const result = onDeadline(typed, c); // last-chance timeout -> result
+    expect(result.phase).toBe("result");
+    const nextWord = onDeadline(result, c); // result -> next word-check
+    expect(nextWord.phase).toBe("word-check");
+    expect(nextWord.guessLength).toBe(0);
+    expect(nextWord.guessLengthAt).toBeNull();
   });
 });
 
@@ -666,6 +878,48 @@ describe("view secrecy", () => {
       imposter.playerView(s, lastChanceImposter, viewCtx(oneCtx)).decoyWord,
     ).toBeNull();
   });
+
+  it("gives the host the guess LENGTH only during last chance, and never the letters", () => {
+    const lcCtx = makeCtx({ n: 4, seed: 33, content: ONE_PAIR });
+    const lcState = toLastChance(lcCtx);
+    expect(lcState.phase).toBe("last-chance");
+    const lcImp = imposterOf(lcState);
+    const typed = onAction(
+      lcState,
+      lcImp,
+      { type: "typing", length: 5 },
+      lcCtx,
+    );
+
+    const hostDuring = imposter.hostView(typed, viewCtx(lcCtx));
+    expect(hostDuring.guessLength).toBe(5);
+    expect(hostDuring.guess).toBeNull();
+    const { crew } = wordAt(typed);
+    expect(JSON.stringify(hostDuring)).not.toContain(crew);
+
+    const hostWordCheck = imposter.hostView(setup(lcCtx), viewCtx(lcCtx));
+    expect(hostWordCheck.guessLength).toBeNull();
+
+    const guessed = onAction(
+      typed,
+      lcImp,
+      { type: "guess", text: "apple" },
+      lcCtx,
+    );
+    expect(guessed.phase).toBe("result");
+    expect(imposter.hostView(guessed, viewCtx(lcCtx)).guessLength).toBeNull();
+  });
+});
+
+describe("awards wiring", () => {
+  it("exposes imposterAwards as the game's awards hook", () => {
+    const c = makeCtx({ n: 4, seed: 74, content: ONE_PAIR });
+    const state = setup(c);
+    const result = playWord(state, c, votesCaught(state), "apple");
+    expect(imposter.awards?.(result)).toEqual([
+      { id: "word-thief", playerIds: [imposterOf(state)], value: 1 },
+    ]);
+  });
 });
 
 describe("parseAction", () => {
@@ -749,7 +1003,8 @@ describe("onPlayerRemoved", () => {
     expect(after.phase).toBe("result");
     expect(after.caught).toBeNull();
     expect(after.guess).toBeNull();
-    expect(after.deadline).toBe(c.now + RESULT_MS);
+    expect(after.deadline).toBe(c.now + RESULT_CANCELLED_MS);
+    expect(after.deadline).toBe(c.now + resultDurationMs(null));
     expect(after.playerIds).not.toContain(imp);
     for (const id of after.playerIds) expect(after.pointsThisWord[id]).toBe(0);
     expect(isOver(after)).toBe(false);
@@ -855,5 +1110,20 @@ describe("bot policy", () => {
     const state = setup(c);
     const view = imposter.playerView(state, "p1", viewCtx(c));
     expect(imposter.bot(view, makeRng(4))).toBeNull();
+  });
+
+  it("never emits a typing action, even during its own last chance", () => {
+    const c = makeCtx({ n: 4, seed: 55, content: ONE_PAIR });
+    const state = toLastChance(c);
+    const imp = imposterOf(state);
+    const actionTypes = state.playerIds.map((id) => {
+      const view = imposter.playerView(state, id, viewCtx(c));
+      return { id, action: imposter.bot(view, makeRng(5)) };
+    });
+    for (const { action } of actionTypes) {
+      expect(action?.type).not.toBe("typing");
+    }
+    const impAction = actionTypes.find((a) => a.id === imp)?.action;
+    expect(impAction?.type).toBe("guess");
   });
 });

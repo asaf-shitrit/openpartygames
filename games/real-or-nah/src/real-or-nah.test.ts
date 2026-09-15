@@ -6,7 +6,6 @@ import {
   LIE_MAX_LENGTH,
   POINTS_PER_FOOL,
   POINTS_TRUTH,
-  REVEAL_MS,
   VOTE_MS,
   WRITE_MS,
   bot,
@@ -17,6 +16,9 @@ import {
   onAction,
   onDeadline,
   onPlayerRemoved,
+  planLiesOf,
+  revealDurationMs,
+  revealPlan,
   ronActionSchema,
   realOrNah,
   setup,
@@ -310,7 +312,11 @@ describe("early phase ends", () => {
     expect(state.phase).toBe("vote");
     state = pick(state, "p2", truthId, ctx);
     expect(state.phase).toBe("reveal");
-    expect(state.deadline).toBe(BASE_NOW + REVEAL_MS);
+    expect(state.reveal).not.toBeNull();
+    expect(state.deadline).toBe(
+      BASE_NOW +
+        revealDurationMs({ lies: planLiesOf(state.reveal ?? { lies: [] }) }),
+    );
   });
 });
 
@@ -549,6 +555,72 @@ describe("onPlayerRemoved edges", () => {
     expect(after.reveal?.lies).toEqual([]);
     expect(after.scores.p1).toBeUndefined();
   });
+
+  it("leaves the reveal deadline unchanged when a player is kicked mid-reveal", () => {
+    const ctx = makeCtx({ n: 4 });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = onDeadline(state, ctx);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
+    state = pick(state, "p3", optionIdByText(state, "aaa"), ctx);
+    state = pick(state, "p4", truthId, ctx);
+    expect(state.phase).toBe("reveal");
+    const deadlineBeforeKick = state.deadline;
+
+    const after = onPlayerRemoved(state, "p3", ctx);
+    expect(after.phase).toBe("reveal");
+    expect(after.deadline).toBe(deadlineBeforeKick);
+  });
+
+  it("freezes planLies (and so every beat time) when a player is kicked mid-reveal", () => {
+    const ctx = makeCtx({ n: 4 });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = onDeadline(state, ctx);
+    const truthId = optionIdByText(state, "emus");
+    const p1Lie = optionIdByText(state, "aaa");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
+    state = pick(state, "p3", p1Lie, ctx); // p3 is fooled by p1's lie
+    state = pick(state, "p4", truthId, ctx);
+    expect(state.phase).toBe("reveal");
+    const planBefore = state.reveal?.planLies;
+    expect(
+      planBefore?.find((p) => p.optionId === p1Lie)?.fooledCount,
+    ).toBe(1);
+
+    // Kicking the only voter fooled by p1's lie drops it from `lies` (now zero-fooled),
+    // but the frozen plan, and so the reveal's timing, must not move.
+    const after = onPlayerRemoved(state, "p3", ctx);
+    expect(after.reveal?.planLies).toEqual(planBefore);
+    expect(
+      after.reveal?.lies.find((l) => l.optionId === p1Lie)?.fooledIds,
+    ).toEqual([]);
+    expect(revealPlan({ lies: planLiesOf(after.reveal ?? { lies: [] }) })).toEqual(
+      revealPlan({ lies: planLiesOf(state.reveal ?? { lies: [] }) }),
+    );
+  });
+
+  it("shows a lie's beat with no author once that author is kicked mid-reveal", () => {
+    const ctx = makeCtx({ n: 4 });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = onDeadline(state, ctx);
+    const truthId = optionIdByText(state, "emus");
+    const p1Lie = optionIdByText(state, "aaa");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", p1Lie, ctx); // p2 is fooled by p1's lie
+    state = pick(state, "p3", truthId, ctx);
+    state = pick(state, "p4", truthId, ctx);
+    expect(state.phase).toBe("reveal");
+    const planBefore = state.reveal?.planLies;
+
+    // Kicking the lie's own author drops the option from `lies` entirely (its authorId
+    // is anonymized to null, which filters it out), but the beat it was assigned stays.
+    const after = onPlayerRemoved(state, "p1", ctx);
+    expect(after.reveal?.lies.some((l) => l.optionId === p1Lie)).toBe(false);
+    expect(after.reveal?.planLies).toEqual(planBefore);
+    expect(after.deadline).toBe(state.deadline);
+  });
 });
 
 describe("finished game", () => {
@@ -602,6 +674,73 @@ describe("bot", () => {
     state = pick(state, "p3", truthId, ctx);
     expect(state.phase).toBe("reveal");
     expect(bot(buildPlayerView(state, "p1"), makeRng(3))).toBeNull();
+  });
+});
+
+describe("fact history for awards", () => {
+  it("records one entry per fact, built from the final reveal", () => {
+    const ctx = makeCtx({ n: 3, content: TWO_FACTS });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = lie(state, "p2", "bbb", ctx);
+    state = onDeadline(state, ctx);
+    const truth1 = optionIdByText(state, state.facts[0]?.answer ?? "");
+    const p1Lie = optionIdByText(state, "aaa");
+    const p2Lie = optionIdByText(state, "bbb");
+    state = pick(state, "p1", truth1, ctx);
+    state = pick(state, "p2", p1Lie, ctx);
+    state = pick(state, "p3", p2Lie, ctx);
+    expect(state.phase).toBe("reveal");
+
+    state = onDeadline(state, ctx); // leaves the reveal
+    expect(state.history).toHaveLength(1);
+    const [entry] = state.history ?? [];
+    expect(entry?.foundByIds).toEqual(["p1"]);
+    expect(entry?.picks).toEqual({ p1: truth1, p2: p1Lie, p3: p2Lie });
+    expect(new Set(entry?.lies.map((l) => l.authorId))).toEqual(
+      new Set(["p1", "p2"]),
+    );
+  });
+
+  it("records the last fact's reveal before the game finishes", () => {
+    const ctx = makeCtx({ n: 3, content: ONE_FACT });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = onDeadline(state, ctx);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
+    state = pick(state, "p3", truthId, ctx);
+    expect(state.phase).toBe("reveal");
+
+    state = onDeadline(state, ctx);
+    expect(state.finished).toBe(true);
+    expect(state.history).toHaveLength(1);
+  });
+
+  it("does not record a phase left before any reveal happened", () => {
+    const ctx = makeCtx({ content: TWO_FACTS });
+    const state = onDeadline(setup(ctx), ctx); // write -> vote, no reveal yet
+    expect(state.phase).toBe("vote");
+    expect(state.history ?? []).toEqual([]);
+  });
+});
+
+describe("awards wiring", () => {
+  it("exposes realOrNahAwards as the game's awards hook", () => {
+    const ctx = makeCtx({ n: 3, content: TWO_FACTS });
+    let state = setup(ctx);
+    state = lie(state, "p1", "aaa", ctx);
+    state = lie(state, "p2", "bbb", ctx);
+    state = onDeadline(state, ctx);
+    const truth1 = optionIdByText(state, state.facts[0]?.answer ?? "");
+    const p1Lie = optionIdByText(state, "aaa");
+    state = pick(state, "p1", truth1, ctx);
+    state = pick(state, "p2", p1Lie, ctx);
+    state = pick(state, "p3", p1Lie, ctx);
+    state = onDeadline(state, ctx); // leaves the reveal
+    expect(realOrNah.awards?.(state)).toEqual([
+      { id: "best-liar", playerIds: ["p1"], value: 2 },
+      { id: "greatest-hit", playerIds: ["p1"], value: 2 },
+    ]);
   });
 });
 

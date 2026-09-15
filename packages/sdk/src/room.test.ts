@@ -1,7 +1,7 @@
 // RoomCore rules tests. Every test drives the room through its public API only:
 // handle() with a fake clock and a counter token generator, exactly like the Worker adapter.
 import { describe, expect, it } from "vitest";
-import type { ClientMessage, PlayerId, ServerMessage } from "@opg/protocol";
+import type { Award, ClientMessage, PlayerId, ServerMessage } from "@opg/protocol";
 import { tapGame } from "./fixtures/tap-game";
 import type {
   Caller,
@@ -10,7 +10,20 @@ import type {
   PackMeta,
   RoomCore,
 } from "./types";
-import { createRoom, restoreRoom } from "./room";
+import { createRoom, restoreRoom, sanitizeAwards } from "./room";
+
+const tapWithAwards = {
+  ...tapGame,
+  id: "tap-awards",
+  awards: (state: { scores: Record<PlayerId, number> }): Award[] => {
+    const top = Math.max(0, ...Object.values(state.scores));
+    if (top <= 0) return [];
+    const winners = Object.keys(state.scores).filter(
+      (id) => state.scores[id] === top,
+    );
+    return [{ id: "high-scorer", playerIds: winners, value: top }];
+  },
+};
 
 const HOST_TOKEN = "host-secret";
 
@@ -63,6 +76,7 @@ interface RoomOptions {
   code?: string;
   packs?: PackMeta[];
   seed?: number;
+  game?: typeof tapGame;
 }
 
 interface Harness {
@@ -90,7 +104,7 @@ function makeRoom(options?: RoomOptions): Harness {
   const room = createRoom({
     code: options?.code ?? "BCDF",
     hostToken: HOST_TOKEN,
-    games: [tapGame],
+    games: [options?.game ?? tapGame],
     seed: options?.seed ?? 1,
     now: clock,
     newToken,
@@ -157,10 +171,10 @@ function idsOf(players: readonly PlayerWelcome[]): PlayerId[] {
 }
 
 /** Pick the tap game as the VIP and kick off content loading. Leaves the room in "starting". */
-function startTap(h: Harness, ids: PlayerId[]): void {
+function startTap(h: Harness, ids: PlayerId[], gameId = tapGame.id): void {
   h.room.handle(
     vip(h.room, at(ids, 0)),
-    { t: "pick-game", gameId: tapGame.id },
+    { t: "pick-game", gameId },
     h.now(),
   );
   h.room.handle(vip(h.room, at(ids, 0)), { t: "start-game" }, h.now());
@@ -747,6 +761,9 @@ describe("ending a game", () => {
         [at(players, 2).playerId]: 0,
       },
       winnerIds: [maya],
+      completed: true,
+      finishedAt: 30_000,
+      awards: [],
     });
     expect(view.players.find((p) => p.id === maya)?.crowns).toBe(1);
     expect(
@@ -881,6 +898,106 @@ describe("kicking", () => {
   });
 });
 
+describe("timerStartedAt", () => {
+  it("anchors to the moment the game begins", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    const game = h.room.hostView(0).game;
+    expect(game?.deadline).toBe(10_000);
+    expect(game?.timerStartedAt).toBe(0);
+  });
+
+  it("moves to the tick time when a deadline fires", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    h.room.tick(10_000);
+    const game = h.room.hostView(10_000).game;
+    expect(game?.deadline).toBe(20_000);
+    expect(game?.timerStartedAt).toBe(10_000);
+  });
+
+  it("keeps the old anchor when an action leaves the deadline alone", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "game-action", action: { type: "tap" } },
+      2_000,
+    );
+    const game = h.room.hostView(2_000).game;
+    expect(game?.deadline).toBe(10_000);
+    expect(game?.timerStartedAt).toBe(0);
+  });
+
+  it("re-anchors when an action ends the phase early", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    for (const player of players) {
+      h.room.handle(
+        vip(h.room, player.playerId),
+        { t: "game-action", action: { type: "tap" } },
+        2_000,
+      );
+    }
+    const game = h.room.hostView(2_000).game;
+    expect(game?.view).toMatchObject({ round: 2 });
+    expect(game?.deadline).toBe(12_000);
+    expect(game?.timerStartedAt).toBe(2_000);
+  });
+
+  it("re-anchors when the VIP skips the phase", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "skip-phase" },
+      3_000,
+    );
+    const game = h.room.hostView(3_000).game;
+    expect(game?.deadline).toBe(13_000);
+    expect(game?.timerStartedAt).toBe(3_000);
+  });
+
+  it("re-anchors when a kick changes the deadline", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia", "Omar"], 0);
+    startTap(h, idsOf(players));
+    const maya = at(players, 0).playerId;
+    const leo = at(players, 1).playerId;
+    h.room.handle(
+      vip(h.room, leo),
+      { t: "game-action", action: { type: "tap" } },
+      4_000,
+    );
+    h.room.handle(vip(h.room, maya), { t: "kick", playerId: leo }, 4_000);
+    const game = h.room.hostView(4_000).game;
+    expect(game?.deadline).toBe(14_000);
+    expect(game?.timerStartedAt).toBe(4_000);
+  });
+
+  it("restores a snapshot with no anchor and emits null", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    // Simulate an older snapshot that predates the anchor field.
+    const data = JSON.parse(h.room.snapshot().data);
+    if (data.game) delete data.game.timerStartedAt;
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+    const game = restored.hostView(0).game;
+    expect(game?.deadline).toBe(10_000);
+    expect(game?.timerStartedAt).toBeNull();
+  });
+});
+
 describe("snapshot and restore", () => {
   it("round-trips through JSON with identical views and keeps playing", () => {
     const h = makeRoom({ packs: [PACK_FAMILY], seed: 7 });
@@ -960,5 +1077,104 @@ describe("isIdleSince", () => {
     h.room.tick(20_000);
     h.room.tick(30_000);
     expect(h.room.isIdleSince(30_000, 1)).toBe(true);
+  });
+});
+
+describe("awards", () => {
+  it("sanitizeAwards filters unknown players, drops empty awards and caps at MAX_AWARDS", () => {
+    const awards: Award[] = [
+      { id: "a", playerIds: ["p1", "ghost"], value: 1 },
+      { id: "b", playerIds: ["ghost"], value: 2 },
+      { id: "c", playerIds: ["p2"], value: 3 },
+      { id: "d", playerIds: ["p1"], value: 4 },
+      { id: "e", playerIds: ["p2"], value: 5 },
+    ];
+    const kept = sanitizeAwards(awards, ["p1", "p2"]);
+    expect(kept).toEqual([
+      { id: "a", playerIds: ["p1"], value: 1 },
+      { id: "c", playerIds: ["p2"], value: 3 },
+      { id: "d", playerIds: ["p1"], value: 4 },
+    ]);
+  });
+
+  it("stores awards and finishedAt when a game completes", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], game: tapWithAwards });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players), tapWithAwards.id);
+    const maya = at(players, 0).playerId;
+    h.room.handle(
+      vip(h.room, maya),
+      { t: "game-action", action: { type: "tap" } },
+      0,
+    );
+    h.room.tick(10_000);
+    h.room.handle(
+      vip(h.room, maya),
+      { t: "game-action", action: { type: "tap" } },
+      10_000,
+    );
+    h.room.tick(20_000);
+    h.room.handle(
+      vip(h.room, maya),
+      { t: "game-action", action: { type: "tap" } },
+      20_000,
+    );
+    h.room.tick(30_000);
+    const view = h.room.hostView(30_000);
+    expect(view.lastResult?.completed).toBe(true);
+    expect(view.lastResult?.finishedAt).toBe(30_000);
+    expect(view.lastResult?.awards).toEqual([
+      { id: "high-scorer", playerIds: [maya], value: 300 },
+    ]);
+  });
+
+  it("end-game stores completed false and no awards", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], game: tapWithAwards });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players), tapWithAwards.id);
+    const maya = at(players, 0).playerId;
+    h.room.handle(
+      vip(h.room, maya),
+      { t: "game-action", action: { type: "tap" } },
+      0,
+    );
+    h.room.handle(vip(h.room, maya), { t: "end-game" }, 0);
+    const view = h.room.hostView(0);
+    expect(view.lastResult?.completed).toBe(false);
+    expect(view.lastResult?.awards).toEqual([]);
+  });
+
+  it("stores no awards for a game without an awards hook", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    h.room.tick(10_000);
+    h.room.tick(20_000);
+    h.room.tick(30_000);
+    expect(h.room.hostView(30_000).lastResult?.awards).toEqual([]);
+  });
+
+  it("defaults completed, finishedAt and awards when restoring an old snapshot's lastResult", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    h.room.tick(10_000);
+    h.room.tick(20_000);
+    h.room.tick(30_000);
+    const data = JSON.parse(h.room.snapshot().data);
+    data.lastResult = {
+      gameId: data.lastResult.gameId,
+      scores: data.lastResult.scores,
+      winnerIds: data.lastResult.winnerIds,
+    };
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+    const lastResult = restored.hostView(30_000).lastResult;
+    expect(lastResult?.completed).toBe(false);
+    expect(lastResult?.finishedAt).toBe(0);
+    expect(lastResult?.awards).toEqual([]);
   });
 });

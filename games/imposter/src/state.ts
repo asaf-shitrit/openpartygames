@@ -7,9 +7,23 @@ export const WORDS_PER_GAME = 6;
 export const WORD_CHECK_MS = 8000;
 export const CLUE_TURN_MS = 30000;
 export const VOTE_MS = 45000;
-export const REVEAL_MS = 7000;
+export const REVEAL_MS = 12000;
 export const LAST_CHANCE_MS = 15000;
-export const RESULT_MS = 8000;
+export const RESULT_CAUGHT_MS = 14000;
+export const RESULT_ESCAPED_MS = 9000;
+export const RESULT_CANCELLED_MS = 6000;
+
+/**
+ * Result phase length. `caught` picks the caught/escaped duration; `null`
+ * (a cancelled word, imposter kicked mid-word) picks the shortest one.
+ */
+export function resultDurationMs(caught: boolean | null): number {
+  if (caught === true) return RESULT_CAUGHT_MS;
+  if (caught === false) return RESULT_ESCAPED_MS;
+  return RESULT_CANCELLED_MS;
+}
+
+export const TYPING_MIN_INTERVAL_MS = 150;
 
 export const IMPOSTER_MIN_PLAYERS = 3;
 export const IMPOSTER_MAX_PLAYERS = 8;
@@ -63,12 +77,36 @@ export interface ImposterState {
   finished: boolean;
   /** Epoch ms of the current phase timeout; null once finished. */
   deadline: number | null;
+  /**
+   * Length of the imposter's in-progress guess during last-chance, so the TV
+   * can grow/shrink a row of blank tiles without ever seeing the letters.
+   * Optional: snapshots saved before this field existed lack it.
+   */
+  guessLength?: number;
+  /** `ctx.now` of the last accepted `typing` update, or null/undefined. */
+  guessLengthAt?: number | null;
+  /**
+   * One record per word whose points were scored (never a cancelled word), used to
+   * compute end-of-game awards. Optional: snapshots saved before this field existed
+   * lack it.
+   */
+  history?: ImposterWordRecord[];
+}
+
+/** What happened in one scored word, kept for end-of-game awards. */
+export interface ImposterWordRecord {
+  playerIds: PlayerId[];
+  imposterId: PlayerId;
+  votes: Record<PlayerId, PlayerId>;
+  caught: boolean;
+  guessCorrect: boolean;
 }
 
 export type ImposterAction =
   | { type: "done" }
   | { type: "vote"; target: PlayerId }
-  | { type: "guess"; text: string };
+  | { type: "guess"; text: string }
+  | { type: "typing"; length: number };
 
 /** Wire shape of the host view. Parsing at the web boundary strips unknown keys. */
 export const imposterHostViewSchema = z.object({
@@ -91,6 +129,8 @@ export const imposterHostViewSchema = z.object({
   guess: z.string().nullable(),
   guessCorrect: z.boolean().nullable(),
   pointsThisWord: z.record(z.string(), z.number()).nullable(),
+  // The guess LENGTH only, during last-chance; never the letters. Null otherwise.
+  guessLength: z.number().nullable(),
 });
 
 export type ImposterHostView = z.infer<typeof imposterHostViewSchema>;

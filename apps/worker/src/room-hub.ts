@@ -245,15 +245,30 @@ export class RoomHub {
       );
   }
 
-  /** Persist, reply to the caller, rebroadcast views, run effects, re-arm the alarm. */
+  /**
+   * Persist when the room changed, reply to the caller, then either rebroadcast
+   * every socket's view (a real change) or send just the caller's own view when
+   * a no-op reply carries a welcome (a reconnect promoting the socket). Then run
+   * effects and re-arm the alarm.
+   */
   private async apply(result: HandleResult, socket?: HubSocket): Promise<void> {
     const room = this.room;
     if (!room) return;
     if (result.changed) await this.options.storage.put(room.snapshot());
     if (socket) for (const reply of result.reply) socket.send(reply);
-    this.broadcast(this.options.now());
+    this.notify(result, socket);
     await this.runEffects(result.effects);
     await this.armAlarm();
+  }
+
+  /** Broadcasts on a real change; otherwise sends only a welcomed caller its own view. */
+  private notify(result: HandleResult, socket?: HubSocket): void {
+    const now = this.options.now();
+    if (result.changed) {
+      this.broadcast(now);
+      return;
+    }
+    if (socket && hasWelcome(result.reply)) this.sendView(socket, now);
   }
 
   private broadcast(now: number): void {
@@ -261,15 +276,27 @@ export class RoomHub {
     if (!room) return;
     const players = new Set(room.playerIds());
     for (const socket of this.options.sockets.all()) {
-      const caller = socket.caller();
-      if (caller.kind === "anonymous") continue;
-      if (caller.kind === "player" && !players.has(caller.playerId)) continue;
-      const view =
-        caller.kind === "host"
-          ? room.hostView(now)
-          : room.playerView(caller.playerId, now);
-      socket.send({ t: "state", view });
+      this.sendView(socket, now, players);
     }
+  }
+
+  /** Sends one socket its own current view, when its caller still belongs to the room. */
+  private sendView(
+    socket: HubSocket,
+    now: number,
+    players?: Set<string>,
+  ): void {
+    const room = this.room;
+    if (!room) return;
+    const caller = socket.caller();
+    if (caller.kind === "anonymous") return;
+    const ids = players ?? new Set(room.playerIds());
+    if (caller.kind === "player" && !ids.has(caller.playerId)) return;
+    const view =
+      caller.kind === "host"
+        ? room.hostView(now)
+        : room.playerView(caller.playerId, now);
+    socket.send({ t: "state", view });
   }
 
   /** Effects run in order: a disconnect must not race the game start it belongs to. */
@@ -342,6 +369,10 @@ export class RoomHub {
       deadline === null ? idleCheck : Math.min(deadline, idleCheck),
     );
   }
+}
+
+function hasWelcome(reply: ServerMessage[]): boolean {
+  return reply.some((message) => message.t === "welcome");
 }
 
 function callerForWelcome(

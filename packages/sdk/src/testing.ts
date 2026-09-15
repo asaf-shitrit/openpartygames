@@ -2,7 +2,7 @@
 // phones do: they read their own playerView and send actions, never poking at state.
 // The clock is fake — it only moves when every bot is waiting, to the next deadline.
 
-import type { PlayerId, ServerMessage } from "@opg/protocol";
+import type { GameResultSummary, PlayerId, ServerMessage } from "@opg/protocol";
 import { createRng } from "./rng";
 import { createRoom } from "./room";
 import type {
@@ -319,15 +319,30 @@ class BotPlaythrough {
 
   result(): PlaythroughResult {
     const lastResult = this.room.hostView(this.clock).lastResult;
+    const fields = resultFields(
+      lastResult,
+      liveScores(this.room, this.game) ?? {},
+    );
     return {
       finished: this.finished,
       steps: this.steps,
-      scores: lastResult?.scores ?? liveScores(this.room, this.game) ?? {},
-      winnerIds: lastResult?.winnerIds ?? [],
+      ...fields,
       rejoinedPlayerId: this.rejoinedPlayerId,
       log: this.log,
     };
   }
+}
+
+/** The score/winner/award fields for a playthrough result, falling back to live state. */
+function resultFields(
+  lastResult: GameResultSummary | null,
+  fallbackScores: Record<PlayerId, number>,
+) {
+  return {
+    scores: lastResult?.scores ?? fallbackScores,
+    winnerIds: lastResult?.winnerIds ?? [],
+    awards: lastResult?.awards ?? [],
+  };
 }
 
 /**

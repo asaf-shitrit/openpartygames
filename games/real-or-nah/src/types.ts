@@ -7,7 +7,6 @@ import type { PlayerId } from "@opg/protocol";
 export const FACTS_PER_GAME = 6;
 export const WRITE_MS = 60000;
 export const VOTE_MS = 30000;
-export const REVEAL_MS = 12000;
 
 export const LIE_MAX_LENGTH = 40;
 export const MIN_OPTIONS = 4;
@@ -46,15 +45,44 @@ const ronFooledLieSchema = z.object({
 
 export type RonFooledLie = z.infer<typeof ronFooledLieSchema>;
 
+/** How many people a lie fooled at the moment the reveal started, frozen for the plan. */
+const ronPlanLieSchema = z.object({
+  optionId: z.string(),
+  fooledCount: z.number(),
+});
+
+export type RonPlanLie = z.infer<typeof ronPlanLieSchema>;
+
 const ronRevealSchema = z.object({
   truthOptionId: z.string(),
   answer: z.string(),
   source: z.object({ title: z.string(), url: z.string() }),
   foundByIds: z.array(z.string()),
   lies: z.array(ronFooledLieSchema),
+  /**
+   * The reveal-plan input, frozen when the reveal started so a later kick can't reorder
+   * or resize the timeline. Optional because snapshots saved before this field existed
+   * lack it; `planLiesOf` derives it from `lies` when missing.
+   */
+  planLies: z.array(ronPlanLieSchema).optional(),
 });
 
 export type RonReveal = z.infer<typeof ronRevealSchema>;
+
+/**
+ * The frozen reveal-plan input for `reveal`: its own `planLies` when present, otherwise
+ * one derived from `lies` (an old snapshot, or a reveal not yet run through `startReveal`).
+ */
+export function planLiesOf(reveal: {
+  lies: readonly RonFooledLie[];
+  planLies?: readonly RonPlanLie[];
+}): RonPlanLie[] {
+  if (reveal.planLies !== undefined) return [...reveal.planLies];
+  return reveal.lies.map((lie) => ({
+    optionId: lie.optionId,
+    fooledCount: lie.fooledIds.length,
+  }));
+}
 
 export interface RonState {
   phase: RonPhase;
@@ -77,6 +105,23 @@ export interface RonState {
   finished: boolean;
   /** Epoch ms of the current phase timeout; null once finished. */
   deadline: number | null;
+  /**
+   * One record per fact whose reveal was left, used to compute end-of-game
+   * awards. Optional: snapshots saved before this field existed lack it.
+   */
+  history?: RonFactRecord[];
+}
+
+/** What happened in one fact's reveal, kept for end-of-game awards. */
+export interface RonFactRecord {
+  foundByIds: PlayerId[];
+  /** voterId -> optionId picked, for the fact this record covers. */
+  picks: Record<PlayerId, string>;
+  lies: Array<{
+    optionId: string;
+    authorId: PlayerId | null;
+    fooledIds: PlayerId[];
+  }>;
 }
 
 export type RonAction =

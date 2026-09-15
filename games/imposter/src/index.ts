@@ -15,19 +15,22 @@ import {
   IMPOSTER_MINUTES,
   LAST_CHANCE_MS,
   MAX_GUESS_LENGTH,
-  RESULT_MS,
   REVEAL_MS,
+  TYPING_MIN_INTERVAL_MS,
   VOTE_MS,
   WORD_CHECK_MS,
   WORDS_PER_GAME,
+  resultDurationMs,
   type ImposterAction,
   type ImposterHostView,
   type ImposterPhase,
   type ImposterPlayerView,
   type ImposterState,
   type ImposterWord,
+  type ImposterWordRecord,
 } from "./state";
 import { buildHostView, buildPlayerView } from "./views";
+import { imposterAwards } from "./awards";
 
 export type {
   ImposterAction,
@@ -36,7 +39,9 @@ export type {
   ImposterPlayerView,
   ImposterState,
   ImposterWord,
+  ImposterWordRecord,
 } from "./state";
+export { imposterAwards } from "./awards";
 export {
   CLUE_TURN_MS,
   IMPOSTER_MAX_PLAYERS,
@@ -46,11 +51,15 @@ export {
   MAX_GUESS_LENGTH,
   POINTS_PER_CORRECT_VOTE,
   POINTS_PER_WORD,
-  RESULT_MS,
+  RESULT_CANCELLED_MS,
+  RESULT_CAUGHT_MS,
+  RESULT_ESCAPED_MS,
   REVEAL_MS,
+  TYPING_MIN_INTERVAL_MS,
   VOTE_MS,
   WORD_CHECK_MS,
   WORDS_PER_GAME,
+  resultDurationMs,
   imposterHostViewSchema,
   imposterPlayerViewSchema,
 } from "./state";
@@ -129,6 +138,8 @@ export function setup(ctx: Ctx): ImposterState {
     scores: nextScores,
     finished: false,
     deadline: ctx.now + WORD_CHECK_MS,
+    guessLength: 0,
+    guessLengthAt: null,
   };
 }
 
@@ -140,6 +151,10 @@ export const imposterActionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("guess"),
     text: z.string().trim().min(1).max(MAX_GUESS_LENGTH),
+  }),
+  z.object({
+    type: z.literal("typing"),
+    length: z.number().int().min(0).max(MAX_GUESS_LENGTH),
   }),
 ]) satisfies ZodType<ImposterAction>;
 
@@ -183,7 +198,13 @@ function startReveal(state: ImposterState, ctx: Ctx): ImposterState {
 }
 
 function startLastChance(state: ImposterState, ctx: Ctx): ImposterState {
-  return { ...state, phase: "last-chance", deadline: ctx.now + LAST_CHANCE_MS };
+  return {
+    ...state,
+    phase: "last-chance",
+    deadline: ctx.now + LAST_CHANCE_MS,
+    guessLength: 0,
+    guessLengthAt: null,
+  };
 }
 
 function resultWithoutWord(state: ImposterState, ctx: Ctx): ImposterState {
@@ -191,8 +212,23 @@ function resultWithoutWord(state: ImposterState, ctx: Ctx): ImposterState {
     ...state,
     phase: "result",
     pointsThisWord: {},
-    deadline: ctx.now + RESULT_MS,
+    deadline: ctx.now + resultDurationMs(state.caught),
   };
+}
+
+/** Records what happened for this scored word, for end-of-game awards. */
+function recordWordHistory(
+  state: ImposterState,
+  word: ImposterWord,
+): ImposterWordRecord[] {
+  const record: ImposterWordRecord = {
+    playerIds: [...state.playerIds],
+    imposterId: word.imposterId,
+    votes: { ...state.votes },
+    caught: state.caught === true,
+    guessCorrect: state.guessCorrect === true,
+  };
+  return [...(state.history ?? []), record];
 }
 
 function addWordPoints(
@@ -215,7 +251,8 @@ function addWordPoints(
     phase: "result",
     pointsThisWord: points,
     scores: nextScores,
-    deadline: ctx.now + RESULT_MS,
+    deadline: ctx.now + resultDurationMs(state.caught),
+    history: recordWordHistory(state, word),
   };
 }
 
@@ -243,6 +280,8 @@ function startNextWord(state: ImposterState, ctx: Ctx): ImposterState {
     guessCorrect: null,
     pointsThisWord: {},
     deadline: ctx.now + WORD_CHECK_MS,
+    guessLength: 0,
+    guessLengthAt: null,
   };
 }
 
@@ -335,6 +374,32 @@ function applyGuess(
   return startResult({ ...state, guess: text, guessCorrect }, ctx);
 }
 
+/** True once enough time has passed since the last accepted typing update. */
+function typingIntervalElapsed(state: ImposterState, ctx: Ctx): boolean {
+  const at = state.guessLengthAt;
+  if (at === null || at === undefined) return true;
+  return ctx.now - at >= TYPING_MIN_INTERVAL_MS;
+}
+
+/**
+ * Records the imposter's in-progress guess LENGTH only, throttled to at most
+ * one accepted update per `TYPING_MIN_INTERVAL_MS`. Never touches letters.
+ */
+function applyTyping(
+  state: ImposterState,
+  playerId: PlayerId,
+  length: number,
+  ctx: Ctx,
+): ImposterState {
+  if (state.phase !== "last-chance") return state;
+  const word = state.words[state.wordIndex];
+  if (word === undefined || word.imposterId !== playerId) return state;
+  if (state.guess !== null) return state;
+  if (length === (state.guessLength ?? 0)) return state;
+  if (!typingIntervalElapsed(state, ctx)) return state;
+  return { ...state, guessLength: length, guessLengthAt: ctx.now };
+}
+
 export function onAction(
   state: ImposterState,
   playerId: PlayerId,
@@ -345,6 +410,8 @@ export function onAction(
   if (action.type === "done") return applyDone(state, playerId, ctx);
   if (action.type === "vote")
     return applyVote(state, playerId, action.target, ctx);
+  if (action.type === "typing")
+    return applyTyping(state, playerId, action.length, ctx);
   return applyGuess(state, playerId, action.text, ctx);
 }
 
@@ -424,7 +491,7 @@ function cancelWord(base: ImposterState, ctx: Ctx): ImposterState {
     guess: null,
     guessCorrect: null,
     pointsThisWord: zero,
-    deadline: ctx.now + RESULT_MS,
+    deadline: ctx.now + resultDurationMs(null),
   };
 }
 
@@ -551,4 +618,5 @@ export const imposter: GameDefinition<
   isOver,
   scores,
   bot,
+  awards: imposterAwards,
 };

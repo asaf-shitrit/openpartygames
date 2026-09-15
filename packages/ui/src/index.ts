@@ -35,6 +35,90 @@ export type {
 export { PhaseEnter } from "./motion";
 export type { PhaseEnterProps } from "./motion";
 
+export { prefersReducedMotion, useReducedMotion } from "./reduced-motion";
+
+export {
+  CUE_GRACE_MS,
+  anchorAt,
+  beatIndexAt,
+  beatIndexOf,
+  isFreshEntry,
+  msUntilNextBeat,
+  spacedBeats,
+} from "./moment/timeline";
+export type { Beat, SpacedBeatsOptions } from "./moment/timeline";
+export { reached, useMoment } from "./moment/useMoment";
+export type { Moment } from "./moment/useMoment";
+export { useBeatEntries } from "./moment/useBeatEntries";
+export { EyesOnTv } from "./moment/EyesOnTv";
+export type { EyesOnTvProps } from "./moment/EyesOnTv";
+
+export {
+  HAPTIC_PATTERNS,
+  HEARTBEAT_MS,
+  buzz,
+  canVibrate,
+  pulse,
+  useBuzz,
+  useHeartbeat,
+} from "./haptics";
+export type { HapticName, HeartbeatTempo } from "./haptics";
+
+export { fxSpec, playFx } from "./fx/animate";
+export type { FxPreset, FxSpec } from "./fx/animate";
+export { SlamStamp } from "./fx/SlamStamp";
+export type { SlamStampProps } from "./fx/SlamStamp";
+export { TallyScratch } from "./fx/TallyScratch";
+export type { TallyScratchProps } from "./fx/TallyScratch";
+export { Spotlight, spotlightMaskCircles } from "./fx/Spotlight";
+export type { SpotlightProps, SpotlightTarget } from "./fx/Spotlight";
+export { FxIn } from "./fx/FxIn";
+export type { FxInProps } from "./fx/FxIn";
+export { StickerBurst } from "./fx/StickerBurst";
+export type { StickerBurstProps } from "./fx/StickerBurst";
+export { LetterTiles, tileSizeFor } from "./fx/LetterTiles";
+export type { LetterTilesProps } from "./fx/LetterTiles";
+export { countAt, easeOutCubic, formatPoints } from "./fx/count-up";
+export { CountUp } from "./fx/CountUp";
+export type { CountUpProps } from "./fx/CountUp";
+export { flipOffsets, rankChanges } from "./fx/flip";
+export type { RankChanges, RowBox } from "./fx/flip";
+export { useFlipList } from "./fx/useFlipList";
+export type { UseFlipList, UseFlipListOptions } from "./fx/useFlipList";
+export { arrivalsBetween, useArrivals } from "./fx/useArrivals";
+export { FlipCard } from "./fx/FlipCard";
+export type { FlipCardProps } from "./fx/FlipCard";
+export { Confetti } from "./fx/Confetti";
+export type { ConfettiOrigin, ConfettiProps } from "./fx/Confetti";
+export { CONFETTI_CAP } from "./fx/confetti-physics";
+
+export { CUE_IDS, MUSIC_IDS, SILENT_ENGINE, SILENT_HANDLE } from "./audio/types";
+export type {
+  CueHandle,
+  CueId,
+  CueOptions,
+  MusicId,
+  SoundEngine,
+  SoundStatus,
+} from "./audio/types";
+export {
+  SoundProvider,
+  useCue,
+  useMusic,
+  useSound,
+} from "./audio/SoundProvider";
+export type {
+  SoundContextValue,
+  SoundProviderProps,
+} from "./audio/SoundProvider";
+export {
+  DUCKING_CUES,
+  createBrowserSoundEngine,
+  createSoundEngine,
+} from "./audio/engine";
+export { AUDIO_CREDITS, MUSIC_CREDITS } from "./audio/credits";
+export type { AudioCredit, AudioLicense, MusicCredit } from "./audio/credits";
+
 export { Crown, Tally } from "./marks";
 export type { CrownProps, TallyProps } from "./marks";
 
@@ -45,6 +129,13 @@ export { Avatar, AVATAR_FILLS } from "./Avatar";
 export type { AvatarProps } from "./Avatar";
 
 export { Timer, TIMER_URGENT_MS } from "./Timer";
+export {
+  msUntilNextSecond,
+  ringFraction,
+  secondsLeft,
+  timerStage,
+} from "./timer-stage";
+export type { TimerStage } from "./timer-stage";
 export type { TimerProps } from "./Timer";
 
 export { TvHeader, PhoneStrip, PlayerChip, HeaderChip } from "./chrome";
@@ -55,8 +146,12 @@ export type {
   HeaderChipProps,
 } from "./chrome";
 
-export { useServerClock, useSoundSetting } from "./clock";
-export type { SoundSetting } from "./clock";
+export {
+  CLOCK_SAMPLE_WINDOW,
+  clockOffsetFrom,
+  createServerClock,
+  nextClockSamples,
+} from "./clock";
 
 export { useFullscreen, useScreenWakeLock } from "./screen";
 export type { FullscreenControl } from "./screen";

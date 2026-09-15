@@ -26,6 +26,12 @@ function currentSpeakerId(state: ImposterState): PlayerId | null {
   return state.clueOrder[state.clueIndex] ?? null;
 }
 
+/** The in-progress guess LENGTH only, during last-chance; never the letters. */
+function hostGuessLength(state: ImposterState): number | null {
+  if (state.phase !== "last-chance") return null;
+  return state.guessLength ?? 0;
+}
+
 function wordNumber(state: ImposterState): number {
   return Math.min(state.wordIndex + 1, state.words.length);
 }
@@ -76,6 +82,7 @@ export function buildHostView(state: ImposterState): ImposterHostView {
     doneSpeakerIds: [...state.doneSpeakerIds],
     votedIds: Object.keys(state.votes),
     totals: { ...state.scores },
+    guessLength: hostGuessLength(state),
     ...hostRevealedFields(state, word),
     ...hostResultFields(state, word),
   };

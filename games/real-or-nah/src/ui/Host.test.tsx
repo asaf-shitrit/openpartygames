@@ -33,6 +33,7 @@ function renderHost(label: string) {
       view={view}
       room={room}
       deadline={room.game?.deadline ?? null}
+      timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
     />,
   );
@@ -65,18 +66,18 @@ describe("Host vote phase", () => {
 });
 
 describe("Host reveal phase", () => {
-  it("stamps the truth REAL and every lie NAH", () => {
-    const { view } = hostSample("Host: reveal");
-    renderHost("Host: reveal");
+  it("stamps the truth REAL and every lie NAH, settled by default", () => {
+    const { view } = hostSample("Host: reveal, 3 foolers");
+    renderHost("Host: reveal, 3 foolers");
+    expect(screen.getByText("Let's see who fooled who")).toBeTruthy();
+    expect(screen.getByText("These fooled nobody")).toBeTruthy();
     expect(screen.getByText("The truth")).toBeTruthy();
     expect(screen.getByText("REAL")).toBeTruthy();
     expect(screen.getAllByText("NAH")).toHaveLength(
       view.reveal?.lies.length ?? 0,
     );
-    expect(screen.getByText("The lies")).toBeTruthy();
-    expect(screen.getAllByText("Fooled nobody")).toHaveLength(3);
-    expect(screen.getByText("Found by")).toBeTruthy();
     expect(screen.getByText("+1,000 each")).toBeTruthy();
+    expect(screen.getByText("Standings")).toBeTruthy();
   });
 
   it("labels a house lie instead of a player name", () => {
@@ -88,13 +89,14 @@ describe("Host reveal phase", () => {
 
   it("wraps the phase in the enter animation and swaps content on a phase change", () => {
     const first = hostSample("Host: vote");
-    const second = hostSample("Host: reveal");
+    const second = hostSample("Host: reveal, 3 foolers");
     const clock: ServerClock = { now: () => first.room.serverNow };
     const { container, rerender } = render(
       <Host
         view={first.view}
         room={first.room}
         deadline={null}
+        timerStartedAt={null}
         clock={clock}
       />,
     );
@@ -107,6 +109,7 @@ describe("Host reveal phase", () => {
         view={second.view}
         room={second.room}
         deadline={null}
+        timerStartedAt={second.room.game?.timerStartedAt ?? null}
         clock={clock}
       />,
     );

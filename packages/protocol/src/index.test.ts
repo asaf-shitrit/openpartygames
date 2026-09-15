@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { cleanPlayerName, normalizeRoomCode, parseClientMessage, ROOM_CODE_RE } from "./index";
+import { MAX_AWARDS, cleanPlayerName, normalizeRoomCode, parseClientMessage, ROOM_CODE_RE } from "./index";
+import type { Award, GameResultSummary } from "./index";
 
 describe("parseClientMessage", () => {
   it("accepts every well-formed message", () => {
@@ -59,5 +60,21 @@ describe("room codes", () => {
     expect(normalizeRoomCode(" bktz ")).toBe("BKTZ");
     expect(ROOM_CODE_RE.test("BKTZ")).toBe(true);
     expect(ROOM_CODE_RE.test("BATZ")).toBe(false);
+  });
+});
+
+describe("GameResultSummary", () => {
+  it("caps awards at MAX_AWARDS", () => {
+    expect(MAX_AWARDS).toBe(3);
+    const award: Award = { id: "best-liar", playerIds: ["p1"], value: 2 };
+    const result: GameResultSummary = {
+      gameId: "imposter",
+      scores: { p1: 100 },
+      winnerIds: ["p1"],
+      completed: true,
+      finishedAt: 1000,
+      awards: [award],
+    };
+    expect(result.awards).toHaveLength(1);
   });
 });

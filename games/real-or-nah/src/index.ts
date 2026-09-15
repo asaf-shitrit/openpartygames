@@ -14,13 +14,13 @@ import {
   MIN_OPTIONS,
   POINTS_PER_FOOL,
   POINTS_TRUTH,
-  REVEAL_MS,
   RON_MAX_PLAYERS,
   RON_MIN_PLAYERS,
   RON_MINUTES,
   VOTE_MS,
   WRITE_MS,
   type RonAction,
+  type RonFactRecord,
   type RonFooledLie,
   type RonHostOption,
   type RonHostView,
@@ -30,36 +30,49 @@ import {
   type RonPlayerView,
   type RonReveal,
   type RonState,
+  planLiesOf,
 } from "./types";
+import { revealDurationMs } from "./reveal-plan";
+import { realOrNahAwards } from "./awards";
 
 export type {
   RonAction,
+  RonFactRecord,
   RonFooledLie,
   RonHostOption,
   RonHostView,
   RonLieError,
   RonOption,
   RonPhase,
+  RonPlanLie,
   RonPlayerOption,
   RonPlayerView,
   RonReveal,
   RonState,
 } from "./types";
+export { realOrNahAwards } from "./awards";
 export {
   FACTS_PER_GAME,
   LIE_MAX_LENGTH,
   MIN_OPTIONS,
   POINTS_PER_FOOL,
   POINTS_TRUTH,
-  REVEAL_MS,
   RON_MAX_PLAYERS,
   RON_MIN_PLAYERS,
   RON_MINUTES,
   VOTE_MS,
   WRITE_MS,
+  planLiesOf,
   ronHostViewSchema,
   ronPlayerViewSchema,
 } from "./types";
+export {
+  revealDurationMs,
+  revealPlan,
+  RON_REVEAL,
+  type RevealSegment,
+  type RevealSegmentKind,
+} from "./reveal-plan";
 
 type Ctx = GameContext<FactContent>;
 
@@ -272,12 +285,16 @@ function addPoints(
 }
 
 function startReveal(state: RonState, ctx: Ctx): RonState {
-  const reveal = computeReveal(
+  const computed = computeReveal(
     state.options ?? [],
     state.votes,
     state.playerIds,
     state.facts[state.factIndex],
   );
+  // Freeze the plan input now: a later kick recomputes `lies`/`foundByIds`, but the
+  // timeline (segment order, duration, and deadline) must not move underneath it.
+  const planLies = planLiesOf(computed);
+  const reveal: RonReveal = { ...computed, planLies };
   const pointsThisFact = factPoints(reveal, state.playerIds);
   return {
     ...state,
@@ -285,14 +302,36 @@ function startReveal(state: RonState, ctx: Ctx): RonState {
     reveal,
     pointsThisFact,
     scores: addPoints(state.scores, pointsThisFact),
-    deadline: ctx.now + REVEAL_MS,
+    deadline: ctx.now + revealDurationMs({ lies: planLies }),
   };
 }
 
+/** The reveal being left, kept for end-of-game awards. Null when there is nothing to record. */
+function factRecord(state: RonState): RonFactRecord | null {
+  const reveal = state.reveal;
+  if (reveal === null) return null;
+  return {
+    foundByIds: [...reveal.foundByIds],
+    picks: { ...state.votes },
+    lies: reveal.lies.map((lie) => ({
+      optionId: lie.optionId,
+      authorId: lie.authorId,
+      fooledIds: [...lie.fooledIds],
+    })),
+  };
+}
+
+function appendFactHistory(state: RonState): RonFactRecord[] {
+  const record = factRecord(state);
+  const history = state.history ?? [];
+  return record === null ? history : [...history, record];
+}
+
 function startNextFact(state: RonState, ctx: Ctx): RonState {
+  const history = appendFactHistory(state);
   const next = state.factIndex + 1;
   if (next >= state.facts.length)
-    return { ...state, finished: true, deadline: null };
+    return { ...state, finished: true, deadline: null, history };
   return {
     ...state,
     phase: "write",
@@ -304,6 +343,7 @@ function startNextFact(state: RonState, ctx: Ctx): RonState {
     reveal: null,
     pointsThisFact: {},
     deadline: ctx.now + WRITE_MS,
+    history,
   };
 }
 
@@ -517,15 +557,20 @@ export function onPlayerRemoved(
     options,
     pointsThisFact: withoutPlayer(state.pointsThisFact, playerId),
     scores: withoutPlayer(state.scores, playerId),
+    // `planLies` stays frozen: a kick can shrink or reorder `lies`, but must never
+    // move the reveal's beat timing (see startReveal).
     reveal:
       state.reveal === null
         ? null
-        : computeReveal(
-            options ?? [],
-            votes,
-            playerIds,
-            state.facts[state.factIndex],
-          ),
+        : {
+            ...computeReveal(
+              options ?? [],
+              votes,
+              playerIds,
+              state.facts[state.factIndex],
+            ),
+            planLies: planLiesOf(state.reveal),
+          },
   };
   return advanceIfReady(next, ctx);
 }
@@ -592,8 +637,10 @@ function submittedIds(state: RonState): PlayerId[] {
   return state.playerIds.filter((id) => state.lies[id] !== undefined);
 }
 
+/** Always carries `planLies`, defaulted from `lies` for a reveal saved before it existed. */
 function revealInPlay(state: RonState): RonReveal | null {
-  return state.phase === "reveal" ? state.reveal : null;
+  if (state.phase !== "reveal" || state.reveal === null) return null;
+  return { ...state.reveal, planLies: planLiesOf(state.reveal) };
 }
 
 function revealPoints(state: RonState, playerId: PlayerId): number | null {
@@ -660,4 +707,5 @@ export const realOrNah: GameDefinition<
   isOver,
   scores,
   bot,
+  awards: realOrNahAwards,
 };

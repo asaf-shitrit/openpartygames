@@ -29,12 +29,11 @@ export function tallyVotes(votes: Record<PlayerId, PlayerId>) {
   return tally;
 }
 
-/** Caught = exactly one unique top vote-getter, and that player is the imposter. */
-export function isCaught(
+/** Player ids with the highest non-zero vote count, in playerIds order. Empty when nobody got a vote. */
+export function topVoted(
   tally: Record<PlayerId, PlayerId[]>,
-  imposterId: PlayerId,
   playerIds: readonly PlayerId[],
-): boolean {
+): PlayerId[] {
   let top = 0;
   let leaders: PlayerId[] = [];
   for (const id of playerIds) {
@@ -47,7 +46,38 @@ export function isCaught(
       leaders.push(id);
     }
   }
+  return leaders;
+}
+
+/** Caught = exactly one unique top vote-getter, and that player is the imposter. */
+export function isCaught(
+  tally: Record<PlayerId, PlayerId[]>,
+  imposterId: PlayerId,
+  playerIds: readonly PlayerId[],
+): boolean {
+  const leaders = topVoted(tally, playerIds);
   return leaders.length === 1 && leaders[0] === imposterId;
+}
+
+/** What the votes decided, once the reveal starts. A tie is never "caught". */
+export type RevealOutcome =
+  | { kind: "caught" }
+  | { kind: "wrong"; accusedId: PlayerId }
+  | { kind: "tie"; tiedIds: PlayerId[] }
+  | { kind: "no-votes" };
+
+/** Reads the tally into one of the four reveal outcomes. */
+export function revealOutcome(
+  tally: Record<PlayerId, PlayerId[]>,
+  imposterId: PlayerId | null,
+  playerIds: readonly PlayerId[],
+): RevealOutcome {
+  const leaders = topVoted(tally, playerIds);
+  const only = leaders[0];
+  if (only === undefined) return { kind: "no-votes" };
+  if (leaders.length > 1) return { kind: "tie", tiedIds: leaders };
+  if (only === imposterId) return { kind: "caught" };
+  return { kind: "wrong", accusedId: only };
 }
 
 /** How the current word ended, as far as scoring cares. */

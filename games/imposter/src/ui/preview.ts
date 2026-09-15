@@ -20,9 +20,20 @@ const LEO = "leo";
 const WORD_CHECK_DEADLINE = SERVER_NOW + 6000;
 const CLUES_DEADLINE = SERVER_NOW + 22000;
 const VOTE_DEADLINE = SERVER_NOW + 31000;
-const REVEAL_DEADLINE = SERVER_NOW + 5000;
+const REVEAL_DEADLINE = SERVER_NOW + 1000;
 const LAST_CHANCE_DEADLINE = SERVER_NOW + 12000;
 const RESULT_DEADLINE = SERVER_NOW + 7000;
+
+/** A reveal already at its 11s mark, so previews and tests render the settled end state. */
+export const REVEAL_PREVIEW_START = SERVER_NOW - 11000;
+
+/** A last-chance already 10s into its 15s countdown, mid-typing. */
+const LAST_CHANCE_MID_START = SERVER_NOW - 10000;
+const LAST_CHANCE_MID_DEADLINE = LAST_CHANCE_MID_START + 15000;
+
+/** A result already past its settle beat, so previews and tests render the settled end state. */
+export const RESULT_PREVIEW_START = SERVER_NOW - 12000;
+const RESULT_PREVIEW_DEADLINE = SERVER_NOW + 2000;
 
 function player(
   id: PlayerId,
@@ -72,6 +83,21 @@ const TALLY = {
   [LEO]: [PRIYA],
 } satisfies Record<PlayerId, PlayerId[]>;
 
+/** Dov takes the most votes, but the imposter is Priya. */
+const WRONG_TALLY = {
+  [DOV]: [MAYA, SAM, NOA],
+  [LEO]: [DOV, PRIYA],
+  [PRIYA]: [LEO],
+} satisfies Record<PlayerId, PlayerId[]>;
+
+/** Dov and Priya tie 2-2. */
+const TIE_TALLY = {
+  [DOV]: [MAYA, SAM],
+  [PRIYA]: [DOV, NOA],
+  [LEO]: [PRIYA],
+  [MAYA]: [LEO],
+} satisfies Record<PlayerId, PlayerId[]>;
+
 const POINTS_THIS_WORD = {
   [MAYA]: 500,
   [DOV]: 500,
@@ -103,6 +129,7 @@ const hostWordCheck: ImposterHostView = {
   guess: null,
   guessCorrect: null,
   pointsThisWord: null,
+  guessLength: null,
 };
 
 const hostClues: ImposterHostView = {
@@ -119,6 +146,7 @@ const hostClues: ImposterHostView = {
   guess: null,
   guessCorrect: null,
   pointsThisWord: null,
+  guessLength: null,
 };
 
 const hostVote: ImposterHostView = {
@@ -135,6 +163,7 @@ const hostVote: ImposterHostView = {
   guess: null,
   guessCorrect: null,
   pointsThisWord: null,
+  guessLength: null,
 };
 
 const hostReveal: ImposterHostView = {
@@ -151,11 +180,34 @@ const hostReveal: ImposterHostView = {
   guess: null,
   guessCorrect: null,
   pointsThisWord: null,
+  guessLength: null,
 };
 
 const hostLastChance: ImposterHostView = {
   ...hostReveal,
   phase: "last-chance",
+  guessLength: 5,
+};
+
+/** Dov takes the most votes; Priya, the real imposter, gets away. */
+const hostRevealWrong: ImposterHostView = {
+  ...hostReveal,
+  tally: WRONG_TALLY,
+  caught: false,
+};
+
+/** Dov and Priya tie; nobody can be caught on a tie. */
+const hostRevealTie: ImposterHostView = {
+  ...hostReveal,
+  tally: TIE_TALLY,
+  caught: false,
+};
+
+/** Nobody voted at all. */
+const hostRevealNoVotes: ImposterHostView = {
+  ...hostReveal,
+  tally: {},
+  caught: false,
 };
 
 const hostResult: ImposterHostView = {
@@ -165,6 +217,54 @@ const hostResult: ImposterHostView = {
   guess: "horse",
   guessCorrect: false,
   pointsThisWord: POINTS_THIS_WORD,
+};
+
+/** Priya was caught and missed the guess, a settled render for the result moment. */
+const hostResultCaughtNope: ImposterHostView = {
+  ...hostReveal,
+  phase: "result",
+  crewWord: CREW_WORD,
+  guess: "HORSE",
+  guessCorrect: false,
+  pointsThisWord: POINTS_THIS_WORD,
+};
+
+const POINTS_THIS_WORD_STOLEN = {
+  [MAYA]: 0,
+  [DOV]: 0,
+  [SAM]: 0,
+  [NOA]: 0,
+  [PRIYA]: 1000,
+  [LEO]: 0,
+} satisfies Record<PlayerId, number>;
+
+/** Priya was caught but stole the word back with a correct guess. */
+const hostResultCaughtGotIt: ImposterHostView = {
+  ...hostReveal,
+  phase: "result",
+  crewWord: CREW_WORD,
+  guess: "GIRAFFE",
+  guessCorrect: true,
+  pointsThisWord: POINTS_THIS_WORD_STOLEN,
+};
+
+const POINTS_THIS_WORD_ESCAPED = {
+  [MAYA]: 0,
+  [DOV]: 0,
+  [SAM]: 0,
+  [NOA]: 0,
+  [PRIYA]: 1000,
+  [LEO]: 0,
+} satisfies Record<PlayerId, number>;
+
+/** Priya got away with it: no guess line, straight to points and standings. */
+const hostResultEscaped: ImposterHostView = {
+  ...hostRevealWrong,
+  phase: "result",
+  crewWord: CREW_WORD,
+  guess: null,
+  guessCorrect: null,
+  pointsThisWord: POINTS_THIS_WORD_ESCAPED,
 };
 
 const PLAYER_BASE = {
@@ -239,8 +339,19 @@ const phoneReveal: ImposterPlayerView = {
   caught: true,
 };
 
+/** Leo voted for Dov; the crew still caught Priya. */
+const phoneLeoReveal: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "reveal",
+  word: null,
+  myVote: DOV,
+  imposterId: PRIYA,
+  caught: true,
+};
+
 /** Priya's last chance to guess the crew word. */
 const phoneLastChance: ImposterPlayerView = {
+  /** Priya's last chance to guess the crew word. */
   ...phoneCrewCard,
   phase: "last-chance",
   role: "imposter",
@@ -328,7 +439,91 @@ const phoneResult: ImposterPlayerView = {
   myPoints: 500,
 };
 
-function commonRoom(view: ImposterHostView | ImposterPlayerView) {
+/** Priya stole the word back with a correct last-chance guess. */
+const phoneResultStole: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "result",
+  role: "imposter",
+  word: null,
+  myVote: LEO,
+  imposterId: PRIYA,
+  caught: true,
+  crewWord: CREW_WORD,
+  guess: "GIRAFFE",
+  guessCorrect: true,
+  myPoints: 1000,
+};
+
+/** Priya was caught and missed the guess. */
+const phoneResultNope: ImposterPlayerView = {
+  ...phoneResultStole,
+  guess: "HORSE",
+  guessCorrect: false,
+  myPoints: 0,
+};
+
+/** Dov voted for Priya and gets the spotter bonus. */
+const phoneResultSpotted: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "result",
+  word: null,
+  myVote: PRIYA,
+  imposterId: PRIYA,
+  caught: true,
+  crewWord: CREW_WORD,
+  guess: "HORSE",
+  guessCorrect: false,
+  myPoints: 500,
+};
+
+/** Leo did not vote for Priya, so he gets nothing for the catch. */
+const phoneResultMissed: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "result",
+  word: null,
+  myVote: DOV,
+  imposterId: PRIYA,
+  caught: true,
+  crewWord: CREW_WORD,
+  guess: "HORSE",
+  guessCorrect: false,
+  myPoints: 0,
+};
+
+/** Priya got away with it. */
+const phoneResultEscapedImposter: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "result",
+  role: "imposter",
+  word: null,
+  myVote: LEO,
+  imposterId: PRIYA,
+  caught: false,
+  crewWord: CREW_WORD,
+  guess: null,
+  guessCorrect: null,
+  myPoints: 1000,
+};
+
+/** Dov watches the imposter get away. */
+const phoneResultEscapedCrew: ImposterPlayerView = {
+  ...phoneCrewCard,
+  phase: "result",
+  word: null,
+  myVote: PRIYA,
+  imposterId: PRIYA,
+  caught: false,
+  crewWord: CREW_WORD,
+  guess: null,
+  guessCorrect: null,
+  myPoints: 0,
+};
+
+function commonRoom(
+  view: ImposterHostView | ImposterPlayerView,
+  deadline: number | null,
+  timerStartedAt: number | null = null,
+) {
   return {
     code: "BKTZ",
     phase: "in-game" as const,
@@ -340,7 +535,7 @@ function commonRoom(view: ImposterHostView | ImposterPlayerView) {
     selectedGameId: "imposter",
     packs: [],
     lastResult: null,
-    game: { id: "imposter", view, deadline: null },
+    game: { id: "imposter", view, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
   };
 }
@@ -348,11 +543,11 @@ function commonRoom(view: ImposterHostView | ImposterPlayerView) {
 function hostRoom(
   view: ImposterHostView,
   deadline: number | null,
+  timerStartedAt: number | null = null,
 ): HostRoomView {
   return {
     role: "host",
-    ...commonRoom(view),
-    game: { id: "imposter", view, deadline },
+    ...commonRoom(view, deadline, timerStartedAt),
   };
 }
 
@@ -360,12 +555,12 @@ function playerRoom(
   view: ImposterPlayerView,
   you: PlayerId,
   deadline: number | null,
+  timerStartedAt: number | null = null,
 ): PlayerRoomView {
   return {
     role: "player",
     you,
-    ...commonRoom(view),
-    game: { id: "imposter", view, deadline },
+    ...commonRoom(view, deadline, timerStartedAt),
   };
 }
 
@@ -397,7 +592,25 @@ export const imposterPreviews: Array<{
     label: "Host: reveal",
     surface: "host",
     view: hostReveal,
-    room: hostRoom(hostReveal, REVEAL_DEADLINE),
+    room: hostRoom(hostReveal, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+  },
+  {
+    label: "Host: reveal wrong",
+    surface: "host",
+    view: hostRevealWrong,
+    room: hostRoom(hostRevealWrong, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+  },
+  {
+    label: "Host: reveal tie",
+    surface: "host",
+    view: hostRevealTie,
+    room: hostRoom(hostRevealTie, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+  },
+  {
+    label: "Host: reveal no votes",
+    surface: "host",
+    view: hostRevealNoVotes,
+    room: hostRoom(hostRevealNoVotes, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
   },
   {
     label: "Host: last chance",
@@ -406,10 +619,50 @@ export const imposterPreviews: Array<{
     room: hostRoom(hostLastChance, LAST_CHANCE_DEADLINE),
   },
   {
+    label: "Host: last chance typing",
+    surface: "host",
+    view: hostLastChance,
+    room: hostRoom(
+      hostLastChance,
+      LAST_CHANCE_MID_DEADLINE,
+      LAST_CHANCE_MID_START,
+    ),
+  },
+  {
     label: "Host: result",
     surface: "host",
     view: hostResult,
-    room: hostRoom(hostResult, RESULT_DEADLINE),
+    room: hostRoom(hostResult, RESULT_DEADLINE, RESULT_PREVIEW_START),
+  },
+  {
+    label: "Host: result caught nope",
+    surface: "host",
+    view: hostResultCaughtNope,
+    room: hostRoom(
+      hostResultCaughtNope,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Host: result caught got it",
+    surface: "host",
+    view: hostResultCaughtGotIt,
+    room: hostRoom(
+      hostResultCaughtGotIt,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Host: result escaped",
+    surface: "host",
+    view: hostResultEscaped,
+    room: hostRoom(
+      hostResultEscaped,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
   },
   {
     label: "Phone: Maya crew card",
@@ -445,7 +698,18 @@ export const imposterPreviews: Array<{
     label: "Phone: Dov reveal",
     surface: "phone",
     view: phoneReveal,
-    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE),
+    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+  },
+  {
+    label: "Phone: Leo reveal",
+    surface: "phone",
+    view: phoneLeoReveal,
+    room: playerRoom(
+      phoneLeoReveal,
+      LEO,
+      REVEAL_DEADLINE,
+      REVEAL_PREVIEW_START,
+    ),
   },
   {
     label: "Phone: Priya last chance",
@@ -475,13 +739,23 @@ export const imposterPreviews: Array<{
     label: "Phone: Priya reveal caught",
     surface: "phone",
     view: phoneImposterReveal,
-    room: playerRoom(phoneImposterReveal, PRIYA, REVEAL_DEADLINE),
+    room: playerRoom(
+      phoneImposterReveal,
+      PRIYA,
+      REVEAL_DEADLINE,
+      REVEAL_PREVIEW_START,
+    ),
   },
   {
     label: "Phone: Priya reveal free",
     surface: "phone",
     view: phoneImposterRevealFree,
-    room: playerRoom(phoneImposterRevealFree, PRIYA, REVEAL_DEADLINE),
+    room: playerRoom(
+      phoneImposterRevealFree,
+      PRIYA,
+      REVEAL_DEADLINE,
+      REVEAL_PREVIEW_START,
+    ),
   },
   {
     label: "Phone: Priya result",
@@ -494,5 +768,71 @@ export const imposterPreviews: Array<{
     surface: "phone",
     view: phoneResult,
     room: playerRoom(phoneResult, DOV, RESULT_DEADLINE),
+  },
+  {
+    label: "Phone: Priya result stole",
+    surface: "phone",
+    view: phoneResultStole,
+    room: playerRoom(
+      phoneResultStole,
+      PRIYA,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Phone: Priya result nope",
+    surface: "phone",
+    view: phoneResultNope,
+    room: playerRoom(
+      phoneResultNope,
+      PRIYA,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Phone: Dov result spotted",
+    surface: "phone",
+    view: phoneResultSpotted,
+    room: playerRoom(
+      phoneResultSpotted,
+      DOV,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Phone: Leo result missed",
+    surface: "phone",
+    view: phoneResultMissed,
+    room: playerRoom(
+      phoneResultMissed,
+      LEO,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Phone: Priya result escaped",
+    surface: "phone",
+    view: phoneResultEscapedImposter,
+    room: playerRoom(
+      phoneResultEscapedImposter,
+      PRIYA,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
+  },
+  {
+    label: "Phone: Dov result escaped",
+    surface: "phone",
+    view: phoneResultEscapedCrew,
+    room: playerRoom(
+      phoneResultEscapedCrew,
+      DOV,
+      RESULT_PREVIEW_DEADLINE,
+      RESULT_PREVIEW_START,
+    ),
   },
 ];

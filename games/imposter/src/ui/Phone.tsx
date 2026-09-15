@@ -1,32 +1,32 @@
 // Phone screens for Imposter. Renders only the player's own view — never anyone's secret.
-import { useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import type { PlayerId, PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import {
   Avatar,
   Button,
   Card,
+  FlipCard,
   Highlight,
   Icon,
-  LinedCard,
   Marker,
   PhaseEnter,
   PhoneScreen,
   PhoneStrip,
   PRESSABLE_CLASS,
-  Stamp,
   StickyNote,
-  TextInput,
   Timer,
+  useBuzz,
 } from "@opg/ui";
-import {
-  MAX_GUESS_LENGTH,
-  POINTS_PER_WORD,
-  type ImposterAction,
-  type ImposterPhase,
-  type ImposterPlayerView,
+import type {
+  ImposterAction,
+  ImposterPhase,
+  ImposterPlayerView,
 } from "../state";
+import { GuessView, GuessWaiting } from "./PhoneLastChance";
+import { PhoneReveal } from "./PhoneReveal";
+import { PhoneResult } from "./PhoneResult";
 
 function findPlayer(
   players: PlayerSummary[],
@@ -46,20 +46,18 @@ function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
   return findPlayer(players, id)?.avatar ?? null;
 }
 
-function money(value: number): string {
-  return value.toLocaleString("en-US");
-}
-
 function displayName(me: PlayerSummary | null): string {
   return me?.name ?? "?";
 }
 
-function meName(me: PlayerSummary | null): string {
-  return me?.name ?? "You";
-}
-
 function avatarAlt(me: PlayerSummary | null): string | undefined {
   return me === null ? undefined : `${me.name}'s avatar`;
+}
+
+/** The result phase's own progress label: "Word N of M", or a heads-up on the last word. */
+function resultProgress(view: ImposterPlayerView): string {
+  if (view.wordNumber >= view.wordCount) return "Final scores next";
+  return `Word ${view.wordNumber} of ${view.wordCount}`;
 }
 
 function progressFor(view: ImposterPlayerView): string {
@@ -69,7 +67,7 @@ function progressFor(view: ImposterPlayerView): string {
     vote: "Vote",
     reveal: "The votes are in",
     "last-chance": "Last chance",
-    result: "Final scores",
+    result: resultProgress(view),
   } satisfies Record<ImposterPhase, string>;
   return byPhase[view.phase];
 }
@@ -79,9 +77,12 @@ interface SectionProps {
   players: PlayerSummary[];
   me: PlayerSummary | null;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: ImposterAction) => void;
 }
+
+export type { SectionProps };
 
 function Strip({ progress, right }: { progress: string; right?: ReactNode }) {
   return <PhoneStrip gameName="Imposter" progress={progress} right={right} />;
@@ -147,11 +148,19 @@ function MeTag({ me }: { me: PlayerSummary | null }) {
   );
 }
 
+function meName(me: PlayerSummary | null): string {
+  return me?.name ?? "You";
+}
+
+function meAvatarId(me: PlayerSummary | null) {
+  return me?.avatar ?? null;
+}
+
 /** Avatar + name footer shared by the word and guess screens. */
 function MeRow({ me }: { me: PlayerSummary | null }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <Avatar id={me?.avatar ?? null} size={50} alt={avatarAlt(me)} />
+      <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(me)} />
       <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(me)}</div>
     </div>
   );
@@ -263,22 +272,17 @@ function wordPanelCopy(isImposter: boolean): WordPanelCopy {
   };
 }
 
-function WordPanel({
-  view,
-  hidden,
-}: {
-  view: ImposterPlayerView;
-  hidden: boolean;
-}) {
+/** The word-check card's face-up content. Only mounted once the card is flipped, so the
+ * word never touches the DOM before that. */
+function WordPanel({ view }: { view: ImposterPlayerView }) {
   const isImposter = view.role === "imposter";
   const { title, label, desc } = wordPanelCopy(isImposter);
   return (
-    <LinedCard
-      tilt={1}
+    <div
       style={{
         flexGrow: 1,
-        marginTop: 8,
-        padding: "24px 20px 24px 56px",
+        width: "100%",
+        padding: "24px 20px",
         display: "flex",
         flexDirection: "column",
         gap: 12,
@@ -295,21 +299,52 @@ function WordPanel({
         {label}
       </div>
       <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-        <Marker size={isImposter ? 72 : 56}>
-          {hidden ? "Tap to show" : (view.word ?? "—")}
-        </Marker>
+        <Marker size={isImposter ? 72 : 56}>{view.word ?? "—"}</Marker>
       </Highlight>
       <div style={{ marginBottom: "auto", fontSize: 19, lineHeight: 1.4 }}>
         {desc}
       </div>
-    </LinedCard>
+    </div>
+  );
+}
+
+/** The card's back: identical for crew and the imposter, so a peek never leaks a role. */
+function WordCardBack() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 14,
+      }}
+    >
+      <Icon name="cards" size={56} color="var(--opg-ink-secondary)" />
+      <Marker size={26}>Hold to peek</Marker>
+    </div>
   );
 }
 
 function WordCard(props: SectionProps) {
   const { view, players, me, deadline, clock } = props;
-  const [hidden, setHidden] = useState(false);
-  const toggle = () => setHidden((value) => !value);
+  const [revealed, setRevealed] = useState(false);
+  const [everRevealed, setEverRevealed] = useState(false);
+  const buzz = useBuzz();
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const reveal = () => {
+    setRevealed(true);
+    setEverRevealed(true);
+    buzz("flip", wrapRef.current);
+  };
+  const toggle = () => {
+    if (revealed) {
+      setRevealed(false);
+      return;
+    }
+    reveal();
+  };
+
   return (
     <>
       <Strip
@@ -317,12 +352,26 @@ function WordCard(props: SectionProps) {
         right={<Timer deadline={deadline} clock={clock} />}
       />
       <ClueBanner view={view} players={players} me={me} />
-      <WordPanel view={view} hidden={hidden} />
+      <div
+        ref={wrapRef}
+        style={{ flexGrow: 1, display: "flex", marginTop: 8 }}
+      >
+        <FlipCard
+          label="Your secret card"
+          flipped={revealed}
+          onFlip={reveal}
+          back={<WordCardBack />}
+          front={<WordPanel view={view} />}
+          style={{ flexGrow: 1 }}
+        />
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flexGrow: 1 }}>
           <MeRow me={me} />
         </div>
-        <HideButton hidden={hidden} onToggle={toggle} />
+        {everRevealed ? (
+          <HideButton hidden={!revealed} onToggle={toggle} />
+        ) : null}
       </div>
     </>
   );
@@ -367,50 +416,76 @@ function WordRow({
   );
 }
 
+/** Runs `effect` exactly once, right after mount, always reading its latest closure. */
+function useOnceOnMount(effect: () => void): void {
+  const effectRef = useRef(effect);
+  useEffect(() => {
+    effectRef.current = effect;
+  });
+  useEffect(() => {
+    effectRef.current();
+    // Deliberately empty: this is a mount-only effect; the latest effect body
+    // is read through the ref above so it never goes stale.
+  }, []);
+}
+
 function YourTurn(props: SectionProps) {
-  const { view, me, deadline, clock, send, players } = props;
+  const { view, me, deadline, timerStartedAt, clock, send, players } = props;
   const [hidden, setHidden] = useState(false);
   const toggle = () => setHidden((value) => !value);
   const next = nameOf(players, view.nextSpeakerId);
   const passNote = view.nextSpeakerId
     ? `Passes to ${next}`
     : "Last clue for this word";
+  const buzz = useBuzz();
+  const noteRef = useRef<HTMLDivElement>(null);
+
+  useOnceOnMount(() => {
+    if (timerStartedAt !== null && clock.now() - timerStartedAt < 1500) {
+      buzz("turn", noteRef.current);
+    }
+  });
+
   return (
     <>
       <Strip progress={progressFor(view)} right={<MeTag me={me} />} />
-      <StickyNote
-        tilt={-1.5}
-        style={{
-          flexGrow: 1,
-          margin: "6px 4px 0",
-          padding: "28px 22px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-        }}
-      >
-        <Marker size={48} style={{ textAlign: "center" }}>
-          Your turn!
-        </Marker>
-        <div
+      <div ref={noteRef}>
+        <StickyNote
+          tilt={-1.5}
           style={{
-            fontSize: 22,
-            fontWeight: 700,
-            lineHeight: 1.3,
-            textAlign: "center",
+            flexGrow: 1,
+            margin: "6px 4px 0",
+            padding: "28px 22px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
           }}
         >
-          Say one clue out loud.
-        </div>
-        <Timer
-          deadline={deadline}
-          clock={clock}
-          size={150}
-          style={{ marginTop: 8 }}
-        />
-      </StickyNote>
+          <Marker size={48} style={{ textAlign: "center" }}>
+            Your turn!
+          </Marker>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              lineHeight: 1.3,
+              textAlign: "center",
+            }}
+          >
+            Say one clue out loud.
+          </div>
+          <Timer
+            deadline={deadline}
+            clock={clock}
+            size={150}
+            style={{ marginTop: 8 }}
+            startedAt={timerStartedAt}
+            haptics
+          />
+        </StickyNote>
+      </div>
       <WordRow view={view} hidden={hidden} onToggle={toggle} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Button size="xl" fullWidth onClick={() => send({ type: "done" })}>
@@ -495,8 +570,35 @@ function VoteRow({
   );
 }
 
-function VoteLocked(props: SectionProps) {
-  const { view, players, deadline, clock } = props;
+/** Buzzes "locked" the moment `myVote` flips from null to set while mounted; a remount
+ * that arrives already locked (a reconnect) never buzzes. */
+function useVoteLockBuzz(
+  myVote: PlayerId | null,
+  ref: RefObject<HTMLDivElement | null>,
+): void {
+  const buzz = useBuzz();
+  const buzzRef = useRef(buzz);
+  useEffect(() => {
+    buzzRef.current = buzz;
+  });
+  const mountedRef = useRef(false);
+  const prevRef = useRef(myVote);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevRef.current = myVote;
+      return;
+    }
+    const justLocked = prevRef.current === null && myVote !== null;
+    prevRef.current = myVote;
+    if (justLocked) buzzRef.current("locked", ref.current);
+  }, [myVote, ref]);
+}
+
+function VoteLocked(
+  props: SectionProps & { pulseRef?: RefObject<HTMLDivElement | null> },
+) {
+  const { view, players, deadline, clock, pulseRef } = props;
   const votedFor = findPlayer(players, view.myVote);
   return (
     <>
@@ -504,30 +606,32 @@ function VoteLocked(props: SectionProps) {
         progress={progressFor(view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
-      <Card
-        variant="M"
-        tilt={1}
-        style={{
-          padding: "24px 20px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 8,
-          textAlign: "center",
-        }}
-      >
-        <Icon name="check" size={40} color="var(--opg-marker)" />
-        <Marker size={32}>Vote locked in</Marker>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>
-          {votedFor ? `You voted for ${votedFor.name}.` : "You voted."}
-        </div>
-        <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-          Waiting for the others to vote.
-        </div>
-        <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-          {view.votedCount} voted so far
-        </div>
-      </Card>
+      <div ref={pulseRef}>
+        <Card
+          variant="M"
+          tilt={1}
+          style={{
+            padding: "24px 20px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+            textAlign: "center",
+          }}
+        >
+          <Icon name="check" size={40} color="var(--opg-marker)" />
+          <Marker size={32}>Vote locked in</Marker>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>
+            {votedFor ? `You voted for ${votedFor.name}.` : "You voted."}
+          </div>
+          <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
+            Waiting for the others to vote.
+          </div>
+          <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
+            {view.votedCount} voted so far
+          </div>
+        </Card>
+      </div>
     </>
   );
 }
@@ -536,7 +640,9 @@ function VoteView(props: SectionProps) {
   const { view, players, deadline, clock, send } = props;
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
-  if (view.myVote !== null) return <VoteLocked {...props} />;
+  const lockRef = useRef<HTMLDivElement>(null);
+  useVoteLockBuzz(view.myVote, lockRef);
+  if (view.myVote !== null) return <VoteLocked {...props} pulseRef={lockRef} />;
   return (
     <>
       <Strip
@@ -588,268 +694,6 @@ function VoteView(props: SectionProps) {
   );
 }
 
-interface RevealCopy {
-  headline: string;
-  sub: string;
-}
-
-function revealCopy(
-  view: ImposterPlayerView,
-  players: PlayerSummary[],
-  me: PlayerSummary | null,
-): RevealCopy {
-  const imposter = nameOf(players, view.imposterId);
-  const caught = view.caught === true;
-  const iAmImposter = view.imposterId !== null && view.imposterId === me?.id;
-  if (iAmImposter && caught) {
-    return {
-      headline: "You got caught!",
-      sub: "Get ready to guess the crew's word.",
-    };
-  }
-  if (iAmImposter) {
-    return { headline: "You slipped away!", sub: "Nobody caught you. Nice." };
-  }
-  if (caught) {
-    return {
-      headline: `The imposter was ${imposter}`,
-      sub: `Get ready for ${imposter}'s last chance.`,
-    };
-  }
-  return {
-    headline: `The imposter was ${imposter}`,
-    sub: "The imposter keeps the points.",
-  };
-}
-
-function RevealView(props: SectionProps) {
-  const { view, players, me, deadline, clock } = props;
-  const imposter = nameOf(players, view.imposterId);
-  const { headline, sub } = revealCopy(view, players, me);
-  return (
-    <>
-      <Strip
-        progress={progressFor(view)}
-        right={<Timer deadline={deadline} clock={clock} />}
-      />
-      <Card
-        variant="L"
-        tilt={-1}
-        style={{
-          flexGrow: 1,
-          padding: "28px 22px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-          textAlign: "center",
-        }}
-      >
-        <Marker size={34}>The votes are in</Marker>
-        <Avatar
-          id={avatarOf(players, view.imposterId)}
-          size={120}
-          alt={`${imposter}'s avatar`}
-        />
-        <Marker size={30}>{headline}</Marker>
-        <div style={{ fontSize: 19, fontWeight: 700 }}>{sub}</div>
-      </Card>
-    </>
-  );
-}
-
-function GuessForm({
-  view,
-  send,
-}: {
-  view: ImposterPlayerView;
-  send: (action: ImposterAction) => void;
-}) {
-  const [text, setText] = useState(view.myGuess ?? "");
-  const [sent, setSent] = useState(view.myGuess !== null);
-  const canSubmit = !sent && text.trim().length > 0;
-  let label = "Submit guess";
-  if (sent) label = "Guess sent";
-  return (
-    <>
-      <TextInput
-        label="Your guess"
-        value={text}
-        onChange={setText}
-        maxLength={MAX_GUESS_LENGTH}
-        placeholder="Type the crew's word"
-        disabled={sent}
-      />
-      <Button
-        size="lg"
-        fullWidth
-        disabled={!canSubmit}
-        disabledReason={sent ? "Guess sent" : undefined}
-        onClick={() => {
-          send({ type: "guess", text: text.trim() });
-          setSent(true);
-        }}
-      >
-        <span>{label}</span>
-        <Icon name="arrow-right" size={22} color="var(--opg-paper)" />
-      </Button>
-    </>
-  );
-}
-
-function GuessView(props: SectionProps) {
-  const { view, me, deadline, clock, send } = props;
-  return (
-    <>
-      <Strip
-        progress={progressFor(view)}
-        right={<Timer deadline={deadline} clock={clock} />}
-      />
-      <LinedCard
-        tilt={1}
-        style={{
-          flexGrow: 1,
-          marginTop: 8,
-          padding: "24px 20px 24px 56px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          gap: 18,
-        }}
-      >
-        <Marker
-          size={40}
-          color="var(--opg-marker)"
-          style={{ transform: "rotate(-3deg)" }}
-        >
-          You got caught!
-        </Marker>
-        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.4 }}>
-          Guess the crew&apos;s word. Get it right and you steal{" "}
-          {money(POINTS_PER_WORD)} points.
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            fontSize: 19,
-          }}
-        >
-          <div style={{ fontWeight: 400 }}>Your decoy was</div>
-          <Highlight style={{ padding: "0 6px" }}>
-            <strong style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
-              {view.decoyWord ?? "—"}
-            </strong>
-          </Highlight>
-        </div>
-      </LinedCard>
-      <GuessForm view={view} send={send} />
-      <MeRow me={me} />
-    </>
-  );
-}
-
-function GuessWaiting(props: SectionProps) {
-  const { view, players, deadline, clock } = props;
-  const imposter = nameOf(players, view.imposterId);
-  return (
-    <>
-      <Strip
-        progress={progressFor(view)}
-        right={<Timer deadline={deadline} clock={clock} />}
-      />
-      <Card
-        variant="L"
-        tilt={-1}
-        style={{
-          flexGrow: 1,
-          padding: "28px 22px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 16,
-          textAlign: "center",
-        }}
-      >
-        <Avatar
-          id={avatarOf(players, view.imposterId)}
-          size={120}
-          alt={`${imposter}'s avatar`}
-        />
-        <Marker size={32}>{imposter} is guessing…</Marker>
-        <div style={{ fontSize: 19 }}>Watch the TV.</div>
-      </Card>
-    </>
-  );
-}
-
-function guesserLabel(
-  view: ImposterPlayerView,
-  players: PlayerSummary[],
-  me: PlayerSummary | null,
-): string {
-  if (view.imposterId !== null && view.imposterId === me?.id) {
-    return "You guessed";
-  }
-  return `${nameOf(players, view.imposterId)} guessed`;
-}
-
-function earnedLabel(points: number): string {
-  return points > 0
-    ? `You earned +${money(points)} points`
-    : "No points this word";
-}
-
-function GuessStamp({ correct }: { correct: boolean | null }) {
-  return (
-    <Stamp size={26} tilt={-6}>
-      {correct ? "Got it" : "Nope"}
-    </Stamp>
-  );
-}
-
-function ResultView(props: SectionProps) {
-  const { view, players, me, deadline, clock } = props;
-  const guesser = guesserLabel(view, players, me);
-  const earned = earnedLabel(view.myPoints ?? 0);
-  return (
-    <>
-      <Strip
-        progress={progressFor(view)}
-        right={<Timer deadline={deadline} clock={clock} />}
-      />
-      <Card
-        variant="L"
-        tilt={-1}
-        style={{
-          flexGrow: 1,
-          padding: "28px 22px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          gap: 16,
-        }}
-      >
-        <div style={{ fontSize: 19, fontWeight: 700 }}>The word was</div>
-        <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-          <Marker size={56}>{view.crewWord ?? "—"}</Marker>
-        </Highlight>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 19 }}>{guesser}</div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>
-            {view.guess ?? "nothing"}
-          </div>
-          <GuessStamp correct={view.guessCorrect} />
-        </div>
-        <div style={{ fontSize: 21, fontWeight: 700 }}>{earned}</div>
-      </Card>
-    </>
-  );
-}
-
 function cluesPhase(props: SectionProps): ReactNode {
   return props.view.isMyTurn ? (
     <YourTurn {...props} />
@@ -866,15 +710,19 @@ function lastChancePhase(props: SectionProps): ReactNode {
   );
 }
 
+function resultPhase(props: SectionProps): ReactNode {
+  return <PhoneResult {...props} progress={progressFor(props.view)} />;
+}
+
 type PhaseComponent = (props: SectionProps) => ReactNode;
 
 const PHONE_PHASES = {
   "word-check": WordCard,
   clues: cluesPhase,
   vote: VoteView,
-  reveal: RevealView,
+  reveal: PhoneReveal,
   "last-chance": lastChancePhase,
-  result: ResultView,
+  result: resultPhase,
 } satisfies Record<ImposterPhase, PhaseComponent>;
 
 function renderPhase(props: SectionProps): ReactNode {
@@ -886,11 +734,19 @@ export interface PhoneProps {
   view: ImposterPlayerView;
   room: PlayerRoomView;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: ImposterAction) => void;
 }
 
-export function Phone({ view, room, deadline, clock, send }: PhoneProps) {
+export function Phone({
+  view,
+  room,
+  deadline,
+  timerStartedAt,
+  clock,
+  send,
+}: PhoneProps) {
   return (
     <PhoneScreen>
       <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>
@@ -899,6 +755,7 @@ export function Phone({ view, room, deadline, clock, send }: PhoneProps) {
           players: room.players,
           me: findPlayer(room.players, room.you),
           deadline,
+          timerStartedAt,
           clock,
           send,
         })}

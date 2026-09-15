@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ServerClock } from "@opg/ui";
 import type {
@@ -11,7 +11,19 @@ import type {
 import { Phone } from "./Phone";
 import { imposterPreviews } from "./preview";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  Reflect.deleteProperty(navigator, "vibrate");
+});
+
+function stubVibrate() {
+  const vibrate = vi.fn<(pattern: number | number[]) => boolean>(() => true);
+  Object.defineProperty(navigator, "vibrate", {
+    configurable: true,
+    value: vibrate,
+  });
+  return vibrate;
+}
 
 function findPreview(label: string) {
   const preview = imposterPreviews.find(
@@ -44,6 +56,7 @@ function renderPhone(label: string, send: (action: ImposterAction) => void) {
       view={view}
       room={room}
       deadline={room.game?.deadline ?? null}
+      timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
       send={send}
     />,
@@ -68,29 +81,61 @@ function submitButton(name: string): HTMLElement {
   return screen.getByRole("button", { name });
 }
 
+function flipCard(): void {
+  const button = screen.getByRole("button", { name: "Your secret card" });
+  fireEvent.pointerDown(button);
+  fireEvent.pointerUp(button);
+}
+
 describe("word screens", () => {
-  it("shows a crew member their own word and never the decoy", () => {
+  it("starts face down, with no word text in the DOM", () => {
     renderPhone("Phone: Maya crew card", mockSend());
+    expect(screen.getByText("Hold to peek")).toBeTruthy();
+    expect(screen.queryByText("GIRAFFE")).toBeNull();
+    expect(screen.queryByText("Shh… here's your word")).toBeNull();
+  });
+
+  it("shows a crew member their own word and never the decoy, once flipped", () => {
+    renderPhone("Phone: Maya crew card", mockSend());
+    flipCard();
     expect(screen.getByText("Shh… here's your word")).toBeTruthy();
     expect(screen.getByText("Your secret word")).toBeTruthy();
     expect(screen.getByText("GIRAFFE")).toBeTruthy();
     expect(screen.queryByText("ZEBRA")).toBeNull();
   });
 
-  it("shows the imposter the decoy word and never the crew word", () => {
+  it("shows the imposter the decoy word and never the crew word, once flipped", () => {
     renderPhone("Phone: Priya imposter card", mockSend());
+    flipCard();
     expect(screen.getByText("Psst… you're the imposter")).toBeTruthy();
     expect(screen.getByText("Your decoy word")).toBeTruthy();
     expect(screen.getByText("ZEBRA")).toBeTruthy();
     expect(screen.queryByText("GIRAFFE")).toBeNull();
   });
 
-  it("hides the word on Hide word and brings it back on Show word", async () => {
+  it("buzzes the same flip pattern for crew and the imposter", () => {
+    const crewVibrate = stubVibrate();
     renderPhone("Phone: Maya crew card", mockSend());
+    flipCard();
+    expect(crewVibrate).toHaveBeenCalledWith([30]);
+    cleanup();
+
+    const imposterVibrate = stubVibrate();
+    renderPhone("Phone: Priya imposter card", mockSend());
+    flipCard();
+    expect(imposterVibrate).toHaveBeenCalledWith([30]);
+  });
+
+  it("hides the word again on Hide word, and peeking again reveals it", async () => {
+    renderPhone("Phone: Maya crew card", mockSend());
+    flipCard();
+    expect(screen.getByText("GIRAFFE")).toBeTruthy();
+
     await userEvent.click(submitButton("Hide word"));
     expect(screen.queryByText("GIRAFFE")).toBeNull();
-    expect(screen.getByText("Tap to show")).toBeTruthy();
-    await userEvent.click(submitButton("Show word"));
+    expect(screen.getByText("Hold to peek")).toBeTruthy();
+
+    flipCard();
     expect(screen.getByText("GIRAFFE")).toBeTruthy();
   });
 
@@ -111,6 +156,7 @@ describe("word screens", () => {
     expect(crewPreviews.length).toBeGreaterThan(0);
     for (const preview of crewPreviews) {
       renderPhone(preview.label, mockSend());
+      if (preview.view.phase === "word-check") flipCard();
       expect(screen.queryByText("ZEBRA")).toBeNull();
       cleanup();
     }
@@ -134,6 +180,37 @@ describe("clue turn", () => {
     await userEvent.click(submitButton("I'm done"));
     expect(send).toHaveBeenCalledWith({ type: "done" });
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("buzzes 'turn' when a fresh turn starts, but not on a stale reconnect", () => {
+    const { view, room } = playerSample("Phone: Dov your turn");
+    const freshVibrate = stubVibrate();
+    const freshClock: ServerClock = { now: () => room.serverNow };
+    render(
+      <Phone
+        view={view}
+        room={room}
+        deadline={room.serverNow + 30000}
+        timerStartedAt={room.serverNow}
+        clock={freshClock}
+        send={mockSend()}
+      />,
+    );
+    expect(freshVibrate).toHaveBeenCalledWith([90, 60, 90]);
+    cleanup();
+
+    const staleVibrate = stubVibrate();
+    render(
+      <Phone
+        view={view}
+        room={room}
+        deadline={room.serverNow + 30000}
+        timerStartedAt={room.serverNow - 5000}
+        clock={freshClock}
+        send={mockSend()}
+      />,
+    );
+    expect(staleVibrate).not.toHaveBeenCalled();
   });
 });
 
@@ -171,6 +248,41 @@ describe("voting", () => {
     expect(send).toHaveBeenCalledWith({ type: "vote", target: "priya" });
   });
 
+  it("buzzes 'locked' the moment the server view reports the vote is in", () => {
+    const selecting = playerSample("Phone: Dov vote selecting");
+    const locked = playerSample("Phone: Dov vote locked in");
+    const clock: ServerClock = { now: () => selecting.room.serverNow };
+    const lockVibrate = stubVibrate();
+    const { rerender } = render(
+      <Phone
+        view={selecting.view}
+        room={selecting.room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
+        send={mockSend()}
+      />,
+    );
+    expect(lockVibrate).not.toHaveBeenCalled();
+
+    rerender(
+      <Phone
+        view={locked.view}
+        room={locked.room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
+        send={mockSend()}
+      />,
+    );
+    expect(lockVibrate).toHaveBeenCalledWith([25, 40, 25]);
+    cleanup();
+
+    const reconnectVibrate = stubVibrate();
+    renderPhone("Phone: Dov vote locked in", mockSend());
+    expect(reconnectVibrate).not.toHaveBeenCalled();
+  });
+
   it("wraps the phase in the enter animation and swaps content on a phase change", () => {
     const first = playerSample("Phone: Dov vote selecting");
     const second = playerSample("Phone: Dov reveal");
@@ -180,6 +292,7 @@ describe("voting", () => {
         view={first.view}
         room={first.room}
         deadline={null}
+        timerStartedAt={null}
         clock={clock}
         send={mockSend()}
       />,
@@ -192,45 +305,46 @@ describe("voting", () => {
       <Phone
         view={second.view}
         room={second.room}
-        deadline={null}
+        deadline={second.room.game?.deadline ?? null}
+        timerStartedAt={second.room.game?.timerStartedAt ?? null}
         clock={clock}
         send={mockSend()}
       />,
     );
     const next = container.querySelector(".opg-phase-enter");
     expect(next).toBeTruthy();
-    expect(next?.textContent).toContain("The imposter was Priya");
+    expect(next?.textContent).toContain("You spotted Priya!");
   });
 });
 
 describe("reveal, last chance and result", () => {
   it("reveal names the imposter and stays quiet about both words", () => {
     renderPhone("Phone: Dov reveal", mockSend());
-    expect(screen.getByText("The imposter was Priya")).toBeTruthy();
-    expect(screen.getByText("Get ready for Priya's last chance.")).toBeTruthy();
+    expect(screen.getByText("You spotted Priya!")).toBeTruthy();
+    expect(screen.getByText("+500 if they miss the word.")).toBeTruthy();
     expect(screen.queryByText("GIRAFFE")).toBeNull();
     expect(screen.queryByText("ZEBRA")).toBeNull();
   });
 
-  it("the imposter's last chance sends a trimmed guess and then locks", async () => {
+  it("the imposter's last chance sends a guess and then locks", async () => {
     const send = mockSend();
     renderPhone("Phone: Priya last chance", send);
     expect(screen.getByText("You got caught!")).toBeTruthy();
     expect(screen.getByText("ZEBRA")).toBeTruthy();
     expect(submitButton("Submit guess").hasAttribute("disabled")).toBe(true);
 
-    await userEvent.type(screen.getByLabelText("Your guess"), "  horse  ");
+    fireEvent.change(screen.getByLabelText("Your guess"), {
+      target: { value: "horse" },
+    });
     await userEvent.click(submitButton("Submit guess"));
     expect(send).toHaveBeenCalledWith({ type: "guess", text: "horse" });
     expect(submitButton("Guess sent").hasAttribute("disabled")).toBe(true);
   });
 
-  it("result shows the crew word and the points earned", () => {
-    renderPhone("Phone: Dov result", mockSend());
-    expect(screen.getByText("The word was")).toBeTruthy();
-    expect(screen.getByText("GIRAFFE")).toBeTruthy();
-    expect(screen.getByText("You earned +500 points")).toBeTruthy();
-    expect(screen.getByText("Nope")).toBeTruthy();
+  it("crew waits for the guess with eyes on the TV", () => {
+    renderPhone("Phone: Dov waiting for guess", mockSend());
+    expect(screen.getByText("Priya is guessing…")).toBeTruthy();
+    expect(screen.getByText("Eyes on the TV")).toBeTruthy();
   });
 
   it("an imposter sees they were caught, or that they slipped away", () => {
@@ -241,11 +355,9 @@ describe("reveal, last chance and result", () => {
     expect(screen.getByText("You slipped away!")).toBeTruthy();
   });
 
-  it("an imposter result credits their own guess", () => {
-    renderPhone("Phone: Priya result", mockSend());
-    expect(screen.getByText("You guessed")).toBeTruthy();
-    expect(screen.getByText("Got it")).toBeTruthy();
-    expect(screen.getByText("You earned +1,000 points")).toBeTruthy();
+  it("routes the result phase to the personal result screen", () => {
+    renderPhone("Phone: Dov result", mockSend());
+    expect(screen.getByText("Nice spotting!")).toBeTruthy();
   });
 
   it("reveal, waiting and result screens have no action buttons", () => {

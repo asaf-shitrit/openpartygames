@@ -121,6 +121,57 @@ describe("PlayerApp", () => {
     expect(screen.getByText("You're the VIP")).toBeTruthy();
   });
 
+  it("shows the results screen to a non-VIP phone after a game", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(<PlayerApp code="BKTZ" />);
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          ...lobbyWithVipElsewhere(),
+          lobbyScreen: "results",
+          lastResult: {
+            gameId: "imposter",
+            scores: { p1: 10, p2: 4 },
+            winnerIds: ["p1"],
+            completed: true,
+            finishedAt: 0,
+            awards: [],
+          },
+        }),
+      }),
+    );
+    expect(screen.getByText(/finished/)).toBeTruthy();
+    expect(screen.queryByText("You're the VIP")).toBeNull();
+  });
+
+  it("shows results above the VIP controls for the VIP, who can still pick", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(<PlayerApp code="BKTZ" />);
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          vipId: "p1",
+          you: "p1",
+          lobbyScreen: "results",
+          lastResult: {
+            gameId: "imposter",
+            scores: { p1: 10 },
+            winnerIds: ["p1"],
+            completed: true,
+            finishedAt: 0,
+            awards: [],
+          },
+        }),
+      }),
+    );
+    expect(screen.getByText(/finished/)).toBeTruthy();
+    expect(screen.getByText("You're the VIP")).toBeTruthy();
+  });
+
   it("shows the waiting screen for a player joining mid-game", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(<PlayerApp code="BKTZ" />);
@@ -131,7 +182,12 @@ describe("PlayerApp", () => {
         view: makePlayerView({
           phase: "in-game",
           players: [makePlayer({ id: "p1", waitingForNextGame: true })],
-          game: { id: "imposter", view: {}, deadline: null },
+          game: {
+            id: "imposter",
+            view: {},
+            deadline: null,
+            timerStartedAt: null,
+          },
         }),
       }),
     );
@@ -269,7 +325,12 @@ describe("PlayerApp", () => {
         t: "state",
         view: makePlayerView({
           phase: "in-game",
-          game: { id: "no-such-game", view: {}, deadline: null },
+          game: {
+            id: "no-such-game",
+            view: {},
+            deadline: null,
+            timerStartedAt: null,
+          },
         }),
       }),
     );
@@ -285,7 +346,12 @@ describe("PlayerApp", () => {
         t: "state",
         view: makePlayerView({
           phase: "in-game",
-          game: { id: "imposter", view: null, deadline: null },
+          game: {
+            id: "imposter",
+            view: null,
+            deadline: null,
+            timerStartedAt: null,
+          },
         }),
       }),
     );

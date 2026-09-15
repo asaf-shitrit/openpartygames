@@ -13,6 +13,7 @@ import {
   StickyNote,
   Tape,
   TvHeader,
+  useSound,
 } from "@opg/ui";
 import { TvPage } from "./shared";
 import { ShowOnTvChip } from "./ShowOnTv";
@@ -198,6 +199,7 @@ function LandingFooter() {
 }
 
 export function TvLanding() {
+  const { unlock } = useSound();
   const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +230,8 @@ export function TvLanding() {
   };
 
   const handleStart = () => {
+    // Inside the gesture: resumes the audio context before the async room call.
+    unlock();
     void startRoom();
   };
 

@@ -1,9 +1,12 @@
 // Game registry: maps a game id to its TV and phone screens.
-import { imposterHostViewSchema, imposterPlayerViewSchema } from "@opg/game-imposter";
+import {
+  imposterHostViewSchema,
+  imposterPlayerViewSchema,
+} from "@opg/game-imposter";
 import { imposterUi } from "@opg/game-imposter/ui";
 import { ronHostViewSchema, ronPlayerViewSchema } from "@opg/game-real-or-nah";
 import { realOrNahUi } from "@opg/game-real-or-nah/ui";
-import type { AvatarId } from "@opg/protocol";
+import type { Award, AvatarId } from "@opg/protocol";
 import type { GameUi, IconName } from "@opg/ui";
 import type { ComponentProps } from "react";
 import type { z, ZodType } from "zod";
@@ -66,14 +69,24 @@ function ViewMismatch() {
  * Adapts a typed game UI to the registry's untyped shape. Views arrive over the socket, so
  * each adapter parses them with the game's own schema before rendering.
  */
-function registerGame<HostView, PlayerView, Action extends z.core.util.JSONType>(
-  entry: GameEntry<HostView, PlayerView, Action>,
-): AnyGameUi {
+function registerGame<
+  HostView,
+  PlayerView,
+  Action extends z.core.util.JSONType,
+>(entry: GameEntry<HostView, PlayerView, Action>): AnyGameUi {
   const { ui, hostViewSchema, playerViewSchema } = entry;
   function RegisteredHost(props: HostProps) {
     const parsed = hostViewSchema.safeParse(props.view);
     if (!parsed.success) return <ViewMismatch />;
-    return <ui.Host view={parsed.data} room={props.room} deadline={props.deadline} clock={props.clock} />;
+    return (
+      <ui.Host
+        view={parsed.data}
+        room={props.room}
+        deadline={props.deadline}
+        timerStartedAt={props.timerStartedAt}
+        clock={props.clock}
+      />
+    );
   }
   function RegisteredPhone(props: PhoneProps) {
     const parsed = playerViewSchema.safeParse(props.view);
@@ -83,12 +96,17 @@ function registerGame<HostView, PlayerView, Action extends z.core.util.JSONType>
         view={parsed.data}
         room={props.room}
         deadline={props.deadline}
+        timerStartedAt={props.timerStartedAt}
         clock={props.clock}
         send={(action: Action) => props.send(action)}
       />
     );
   }
-  return { Host: RegisteredHost, Phone: RegisteredPhone };
+  return {
+    Host: RegisteredHost,
+    Phone: RegisteredPhone,
+    awardCopy: ui.awardCopy,
+  };
 }
 
 const GAME_UIS = new Map<string, AnyGameUi>([
@@ -112,4 +130,14 @@ const GAME_UIS = new Map<string, AnyGameUi>([
 
 export function gameUiFor(id: string): AnyGameUi | null {
   return GAME_UIS.get(id) ?? null;
+}
+
+/** A game's award id turned into words, or null when the game has no copy for it. */
+export function awardCopyFor(
+  gameId: string,
+  award: Award,
+): { title: string; detail: string } | null {
+  const ui = gameUiFor(gameId);
+  if (!ui?.awardCopy) return null;
+  return ui.awardCopy(award);
 }

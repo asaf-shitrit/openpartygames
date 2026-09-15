@@ -3,6 +3,7 @@
 // every change and resume after a deploy or hibernation.
 
 import type {
+  Award,
   AvatarId,
   ClientMessage,
   HostRoomView,
@@ -129,6 +130,8 @@ export interface GameDefinition<State, Action, HostView, PlayerView, C extends G
   scores(state: State): Record<PlayerId, number>;
   /** Bot policy for tests: the action a reasonable player would send now, or null to wait. */
   bot(view: PlayerView, rng: Rng): Action | null;
+  /** End-of-game awards, best first. Called only when the game completes normally. */
+  awards?(state: State): Award[];
 }
 
 /**
@@ -216,6 +219,7 @@ export interface PlaythroughResult {
   steps: number;
   scores: Record<PlayerId, number>;
   winnerIds: PlayerId[];
+  awards: Award[];
   rejoinedPlayerId: PlayerId | null;
   log: string[];
 }

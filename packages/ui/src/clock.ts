@@ -1,46 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ServerClock } from "./game-ui";
 
-/**
- * Returns a clock corrected for skew against the server clock stamp that
- * arrives with every view. Safe to call with a changing `serverNow`.
- */
-export function useServerClock(serverNow: number): ServerClock {
-  const offsetRef = useRef(0);
-  useEffect(() => {
-    offsetRef.current = serverNow - Date.now();
-  }, [serverNow]);
-  return useMemo<ServerClock>(
-    () => ({ now: () => Date.now() + offsetRef.current }),
-    [],
-  );
+/** How many recent clock samples the offset estimate keeps. */
+export const CLOCK_SAMPLE_WINDOW = 8;
+
+/** Appends a sample, keeping only the most recent CLOCK_SAMPLE_WINDOW of them. */
+export function nextClockSamples(
+  samples: readonly number[],
+  sample: number,
+): number[] {
+  const next = [...samples, sample];
+  return next.length > CLOCK_SAMPLE_WINDOW
+    ? next.slice(next.length - CLOCK_SAMPLE_WINDOW)
+    : next;
 }
 
-const SOUND_KEY = "opg:muted";
-
-export interface SoundSetting {
-  muted: boolean;
-  setMuted: (muted: boolean) => void;
-  toggle: () => void;
+/** Server-minus-client offset estimate. Latency only makes a sample smaller, so the max wins. */
+export function clockOffsetFrom(samples: readonly number[]): number {
+  return samples.length === 0 ? 0 : Math.max(...samples);
 }
 
-/** Mute flag persisted in localStorage. No audio files yet, so this only tracks intent. */
-export function useSoundSetting(): SoundSetting {
-  const [muted, setMutedState] = useState(() => {
-    try {
-      return localStorage.getItem(SOUND_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-  const setMuted = useCallback((value: boolean) => {
-    setMutedState(value);
-    try {
-      localStorage.setItem(SOUND_KEY, value ? "1" : "0");
-    } catch {
-      /* storage unavailable; keep the in-memory setting */
-    }
-  }, []);
-  const toggle = useCallback(() => setMuted(!muted), [muted, setMuted]);
-  return { muted, setMuted, toggle };
+/** A clock that reads the offset on every call, so a sample taken after render still applies. */
+export function createServerClock(offsetMs: () => number): ServerClock {
+  return { now: () => Date.now() + offsetMs() };
 }
