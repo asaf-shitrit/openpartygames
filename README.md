@@ -16,7 +16,13 @@ Game content lives in versioned, licensed, rated packs in this repo. Code is AGP
 
 ## Play
 
-There is no hosted instance yet. The public site at openpartygames.org arrives with the launch. Until then, run it locally or self-host it.
+Play now at **[openpartygames.org](https://openpartygames.org)**.
+
+1. Open it on a TV or laptop and start a room.
+2. Everyone else scans the QR code with their phone, or goes to [openpartygames.org/join](https://openpartygames.org/join) and types the room code.
+3. The first player to join picks the game.
+
+Want your own copy? [Run it locally](#run-it-locally) or [self-host it on Cloudflare](#self-host-on-cloudflare).
 
 ## Run it locally
 
