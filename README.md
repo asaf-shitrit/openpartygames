@@ -53,7 +53,7 @@ OpenPartyGames runs on Cloudflare Workers, Durable Objects and D1.
 
    Copy the `database_id` from the output into `apps/worker/wrangler.jsonc`, replacing the one checked in for openpartygames.org.
 
-5. Point `routes` in `apps/worker/wrangler.jsonc` at a domain on your Cloudflare account, or delete `routes` to use your `workers.dev` address.
+5. Point `routes` in `apps/worker/wrangler.jsonc` at a domain on your Cloudflare account, or delete `routes` to use your `workers.dev` address. Put the same address in the share tags in `apps/web/index.html` and on the share card in `scripts/build-share-images.mjs`, then run `node scripts/build-share-images.mjs` to redraw the card.
 
 6. Apply the migrations to the remote database:
 
@@ -105,7 +105,7 @@ games/imposter/      Imposter rules and Host/Phone UI
 games/real-or-nah/   Real or Nah rules and Host/Phone UI
 packs/imposter/      word-pair packs (JSON)
 packs/real-or-nah/   fact packs (JSON)
-scripts/             pack validation, pack seed, pack submission
+scripts/             pack validation, pack seed, pack submission, icons and share card
 ```
 
 ## Quality gates
