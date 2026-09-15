@@ -1,0 +1,10 @@
+import react from "@vitejs/plugin-react";
+import { defineProject } from "vitest/config";
+
+export default defineProject({
+  plugins: [react()],
+  test: { include: ["src/**/*.test.{ts,tsx}"], environment: "happy-dom", passWithNoTests: true,
+    // Report every source file so untested code counts as 0% instead of being skipped.
+    coverage: { include: ["src/**/*.{ts,tsx}"], exclude: ["src/**/*.test.{ts,tsx}", "src/**/fixtures/**", "src/**/preview.ts", "src/**/*.d.ts"] },
+  },
+});

@@ -1,0 +1,142 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "react",
+    "jsx-a11y",
+    "vitest",
+    "promise"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": [
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+    ".vitest/**",
+    "tools/oxlint/anti-slop/**",
+    "design/**",
+    "coverage/**",
+    "**/dist/**",
+    "**/.wrangler/**",
+    "**/worker-configuration.d.ts"
+  ],
+  "jsPlugins": [
+    {
+      "name": "anti-slop",
+      "specifier": "./tools/oxlint/anti-slop/index.ts"
+    }
+  ],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "complexity": [
+      "error",
+      {
+        "max": 10
+      }
+    ],
+    "max-depth": [
+      "error",
+      {
+        "max": 4
+      }
+    ],
+    "max-params": [
+      "error",
+      {
+        "max": 4
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 80,
+        "skipBlankLines": true,
+        "skipComments": true
+      }
+    ],
+    "no-nested-ternary": "error",
+    "eqeqeq": "error",
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "import/no-cycle": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "react/jsx-key": "error",
+    "react/no-array-index-key": "error",
+    "react/button-has-type": "error",
+    "jsx-a11y/alt-text": "error",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-runtime-typeof": "error",
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error"
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/fixtures/**"
+      ],
+      "rules": {
+        "max-lines-per-function": "off"
+      }
+    },
+    {
+      "files": [
+        "scripts/**/*.mjs"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ],
+  "settings": {
+    "react": {
+      "version": "19.3"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+/* App stylesheet entry. Vite resolves the package import and its fontsource chain. */
+@import "@opg/ui/styles.css";
+
+.opg-qr {
+  shape-rendering: crispEdges;
+}
+/* Pages outside Stage/PhoneScreen (landing, credits, privacy) inherit the notebook look. */
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--opg-font-body);
+  color: var(--opg-ink);
+  background-color: var(--opg-paper);
+  background-image:
+    linear-gradient(var(--opg-grid) 2px, transparent 2px),
+    linear-gradient(90deg, var(--opg-grid) 2px, transparent 2px);
+  background-size: 48px 48px;
+}

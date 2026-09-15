@@ -1,0 +1,107 @@
+{
+  "id": "movies-and-tv",
+  "name": "Movies and TV",
+  "kind": "word-pairs",
+  "rating": "teen",
+  "language": "en",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Original word pairs written for OpenPartyGames, released into the public domain under CC0-1.0.",
+  "items": [
+    {
+      "crew": "horror",
+      "decoy": "thriller"
+    },
+    {
+      "crew": "comedy",
+      "decoy": "romance"
+    },
+    {
+      "crew": "documentary",
+      "decoy": "biography"
+    },
+    {
+      "crew": "sequel",
+      "decoy": "remake"
+    },
+    {
+      "crew": "actor",
+      "decoy": "extra"
+    },
+    {
+      "crew": "director",
+      "decoy": "producer"
+    },
+    {
+      "crew": "script",
+      "decoy": "storyboard"
+    },
+    {
+      "crew": "soundtrack",
+      "decoy": "sound effects"
+    },
+    {
+      "crew": "subtitles",
+      "decoy": "dubbing"
+    },
+    {
+      "crew": "trailer",
+      "decoy": "poster"
+    },
+    {
+      "crew": "sitcom",
+      "decoy": "sketch show"
+    },
+    {
+      "crew": "cartoon",
+      "decoy": "anime"
+    },
+    {
+      "crew": "villain",
+      "decoy": "sidekick"
+    },
+    {
+      "crew": "hero",
+      "decoy": "mentor"
+    },
+    {
+      "crew": "cliffhanger",
+      "decoy": "plot twist"
+    },
+    {
+      "crew": "cameo",
+      "decoy": "guest star"
+    },
+    {
+      "crew": "blockbuster",
+      "decoy": "indie film"
+    },
+    {
+      "crew": "award show",
+      "decoy": "red carpet"
+    },
+    {
+      "crew": "reality show",
+      "decoy": "game show"
+    },
+    {
+      "crew": "soap opera",
+      "decoy": "telenovela"
+    },
+    {
+      "crew": "voice actor",
+      "decoy": "narrator"
+    },
+    {
+      "crew": "stunt double",
+      "decoy": "body double"
+    },
+    {
+      "crew": "spinoff",
+      "decoy": "crossover"
+    },
+    {
+      "crew": "miniseries",
+      "decoy": "podcast"
+    }
+  ]
+}

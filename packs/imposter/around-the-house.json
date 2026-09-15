@@ -1,0 +1,99 @@
+{
+  "id": "around-the-house",
+  "name": "Around the house",
+  "kind": "word-pairs",
+  "rating": "family",
+  "language": "en",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Original word pairs written for OpenPartyGames, released into the public domain under CC0-1.0.",
+  "items": [
+    {
+      "crew": "couch",
+      "decoy": "armchair"
+    },
+    {
+      "crew": "lamp",
+      "decoy": "ceiling fan"
+    },
+    {
+      "crew": "pillow",
+      "decoy": "mattress"
+    },
+    {
+      "crew": "curtain",
+      "decoy": "blinds"
+    },
+    {
+      "crew": "refrigerator",
+      "decoy": "freezer"
+    },
+    {
+      "crew": "oven",
+      "decoy": "microwave"
+    },
+    {
+      "crew": "dishwasher",
+      "decoy": "washing machine"
+    },
+    {
+      "crew": "broom",
+      "decoy": "mop"
+    },
+    {
+      "crew": "vacuum",
+      "decoy": "dustpan"
+    },
+    {
+      "crew": "bathtub",
+      "decoy": "shower"
+    },
+    {
+      "crew": "sink",
+      "decoy": "faucet"
+    },
+    {
+      "crew": "mirror",
+      "decoy": "window"
+    },
+    {
+      "crew": "doormat",
+      "decoy": "rug"
+    },
+    {
+      "crew": "bookshelf",
+      "decoy": "cabinet"
+    },
+    {
+      "crew": "dresser",
+      "decoy": "wardrobe"
+    },
+    {
+      "crew": "blanket",
+      "decoy": "towel"
+    },
+    {
+      "crew": "toaster",
+      "decoy": "blender"
+    },
+    {
+      "crew": "candle",
+      "decoy": "flashlight"
+    },
+    {
+      "crew": "toothbrush",
+      "decoy": "comb"
+    },
+    {
+      "crew": "teapot",
+      "decoy": "kettle"
+    },
+    {
+      "crew": "trash can",
+      "decoy": "recycling bin"
+    },
+    {
+      "crew": "light switch",
+      "decoy": "power outlet"
+    }
+  ]
+}

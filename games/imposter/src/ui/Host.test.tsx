@@ -1,0 +1,128 @@
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import type { ServerClock } from "@opg/ui";
+import type { ImposterHostView, ImposterPlayerView } from "../state";
+import { Host } from "./Host";
+import { imposterPreviews } from "./preview";
+
+afterEach(cleanup);
+
+function findPreview(label: string) {
+  const preview = imposterPreviews.find(
+    (candidate) => candidate.label === label,
+  );
+  if (preview === undefined) throw new Error(`no preview labelled ${label}`);
+  return preview;
+}
+
+function isHostView(
+  view: ImposterHostView | ImposterPlayerView,
+): view is ImposterHostView {
+  return "votedIds" in view;
+}
+
+function hostSample(label: string) {
+  const preview = findPreview(label);
+  const room = preview.room;
+  const view = preview.view;
+  if (!isHostView(view)) throw new Error(`${label} is not a host view`);
+  if (room.role !== "host") throw new Error(`${label} is not a host room`);
+  return { view, room };
+}
+
+function renderHost(label: string) {
+  const { view, room } = hostSample(label);
+  const clock: ServerClock = { now: () => room.serverNow };
+  return render(
+    <Host
+      view={view}
+      room={room}
+      deadline={room.game?.deadline ?? null}
+      clock={clock}
+    />,
+  );
+}
+
+describe("Host phases", () => {
+  it("word-check shows the phones prompt and the clue order", () => {
+    renderHost("Host: check your phones");
+    expect(screen.getByText("Check your phones!")).toBeTruthy();
+    expect(screen.getByText("Clue order")).toBeTruthy();
+    expect(screen.getByText("Maya")).toBeTruthy();
+  });
+
+  it("clues names the current speaker", () => {
+    renderHost("Host: clues");
+    expect(screen.getByText("Dov's turn")).toBeTruthy();
+    expect(screen.getByText("Speaking")).toBeTruthy();
+    expect(screen.getByText("Up next")).toBeTruthy();
+  });
+
+  it("vote counts how many players voted", () => {
+    renderHost("Host: vote");
+    expect(screen.getByText("5 of 6 voted")).toBeTruthy();
+    expect(screen.getAllByText("Voted")).toHaveLength(5);
+    expect(screen.getByText("Thinking…")).toBeTruthy();
+  });
+
+  it("reveal shows the caught imposter stamp and the decoy word", () => {
+    renderHost("Host: reveal");
+    expect(screen.getByText("The votes are in")).toBeTruthy();
+    expect(screen.getByText("Imposter!")).toBeTruthy();
+    expect(screen.getByText("Priya's decoy word was")).toBeTruthy();
+    expect(screen.getByText("ZEBRA")).toBeTruthy();
+    expect(screen.getByText("4 votes")).toBeTruthy();
+  });
+
+  it("last chance names the imposter and the seconds left", () => {
+    renderHost("Host: last chance");
+    expect(screen.getByText("Last chance, Priya!")).toBeTruthy();
+    expect(screen.getByText("Priya is typing…")).toBeTruthy();
+  });
+
+  it("result shows the crew word, the guess and the points", () => {
+    renderHost("Host: result");
+    expect(screen.getByText("The word was")).toBeTruthy();
+    expect(screen.getByText("GIRAFFE")).toBeTruthy();
+    expect(screen.getByText("Priya guessed")).toBeTruthy();
+    expect(screen.getByText("horse")).toBeTruthy();
+    expect(screen.getByText("Nope")).toBeTruthy();
+    expect(screen.getByText("Points this word")).toBeTruthy();
+    expect(screen.getAllByText("1,500")).toHaveLength(2);
+  });
+});
+
+describe("Host secrecy", () => {
+  it("only shows the imposter stamp when the imposter was caught", () => {
+    for (const label of [
+      "Host: check your phones",
+      "Host: clues",
+      "Host: vote",
+      "Host: last chance",
+      "Host: result",
+    ]) {
+      renderHost(label);
+      expect(screen.queryByText("Imposter!")).toBeNull();
+      cleanup();
+    }
+    renderHost("Host: reveal");
+    expect(screen.getByText("Imposter!")).toBeTruthy();
+  });
+
+  it("only shows the crew word in the result", () => {
+    for (const label of [
+      "Host: check your phones",
+      "Host: clues",
+      "Host: vote",
+      "Host: reveal",
+      "Host: last chance",
+    ]) {
+      renderHost(label);
+      expect(screen.queryByText("GIRAFFE")).toBeNull();
+      cleanup();
+    }
+    renderHost("Host: result");
+    expect(screen.getByText("GIRAFFE")).toBeTruthy();
+  });
+});

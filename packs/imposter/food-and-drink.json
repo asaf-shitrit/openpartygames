@@ -1,0 +1,103 @@
+{
+  "id": "food-and-drink",
+  "name": "Food and drink",
+  "kind": "word-pairs",
+  "rating": "family",
+  "language": "en",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Original word pairs written for OpenPartyGames, released into the public domain under CC0-1.0.",
+  "items": [
+    {
+      "crew": "pancake",
+      "decoy": "waffle"
+    },
+    {
+      "crew": "cupcake",
+      "decoy": "muffin"
+    },
+    {
+      "crew": "latte",
+      "decoy": "cappuccino"
+    },
+    {
+      "crew": "lemonade",
+      "decoy": "limeade"
+    },
+    {
+      "crew": "popcorn",
+      "decoy": "chips"
+    },
+    {
+      "crew": "sushi",
+      "decoy": "sashimi"
+    },
+    {
+      "crew": "ice cream",
+      "decoy": "gelato"
+    },
+    {
+      "crew": "spaghetti",
+      "decoy": "linguine"
+    },
+    {
+      "crew": "burger",
+      "decoy": "sandwich"
+    },
+    {
+      "crew": "donut",
+      "decoy": "bagel"
+    },
+    {
+      "crew": "taco",
+      "decoy": "burrito"
+    },
+    {
+      "crew": "cookie",
+      "decoy": "cracker"
+    },
+    {
+      "crew": "smoothie",
+      "decoy": "milkshake"
+    },
+    {
+      "crew": "omelette",
+      "decoy": "frittata"
+    },
+    {
+      "crew": "brownie",
+      "decoy": "fudge"
+    },
+    {
+      "crew": "coffee",
+      "decoy": "tea"
+    },
+    {
+      "crew": "steak",
+      "decoy": "roast"
+    },
+    {
+      "crew": "cheese",
+      "decoy": "butter"
+    },
+    {
+      "crew": "hot chocolate",
+      "decoy": "apple cider"
+    },
+    {
+      "crew": "pretzel",
+      "decoy": "croissant"
+    },
+    {
+      "crew": "pizza",
+      "decoy": "calzone"
+    },
+    {
+      "crew": "ramen",
+      "decoy": "pho"
+    },
+    {
+      "crew": "apple",
+      "decoy": "pear"
+    }
+  ]
+}

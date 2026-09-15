@@ -1,0 +1,155 @@
+{
+  "id": "starter-facts",
+  "name": "Starter facts",
+  "kind": "facts",
+  "rating": "family",
+  "language": "en",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Facts paraphrased from Wikipedia articles (CC BY-SA 4.0); each item links its source.",
+  "items": [
+    {
+      "id": "emu-war",
+      "prompt": "In 1932, the Australian army went to war against ____ and lost.",
+      "answer": "emus",
+      "alternates": ["emu"],
+      "decoys": ["kangaroos", "rabbits", "cane toads"],
+      "source": { "title": "Emu War", "url": "https://en.wikipedia.org/wiki/Emu_War" }
+    },
+    {
+      "id": "scotland-unicorn",
+      "prompt": "Scotland's national animal is the ____.",
+      "answer": "unicorn",
+      "alternates": ["unicorns"],
+      "decoys": ["red deer", "golden eagle", "highland cow"],
+      "source": { "title": "National symbols of Scotland", "url": "https://en.wikipedia.org/wiki/National_symbols_of_Scotland" }
+    },
+    {
+      "id": "wombat-cubes",
+      "prompt": "Wombats are famous for pooping little ____.",
+      "answer": "cubes",
+      "alternates": ["cube", "cube shapes", "cube-shaped poops"],
+      "decoys": ["stars", "spirals", "pyramids"],
+      "source": { "title": "Wombat", "url": "https://en.wikipedia.org/wiki/Wombat" }
+    },
+    {
+      "id": "anglo-zanzibar-war",
+      "prompt": "The shortest war on record, fought between Britain and Zanzibar in 1896, lasted about ____.",
+      "answer": "40 minutes",
+      "alternates": ["38 minutes", "45 minutes", "38 to 45 minutes", "under an hour", "less than an hour"],
+      "decoys": ["six hours", "two days", "90 minutes"],
+      "source": { "title": "Anglo-Zanzibar War", "url": "https://en.wikipedia.org/wiki/Anglo-Zanzibar_War" }
+    },
+    {
+      "id": "flamingo-flamboyance",
+      "prompt": "A group of flamingos is called a ____.",
+      "answer": "flamboyance",
+      "alternates": [],
+      "decoys": ["parade", "blush", "fluster"],
+      "source": { "title": "List of English terms of venery, by animal", "url": "https://en.wikipedia.org/wiki/List_of_English_terms_of_venery,_by_animal" }
+    },
+    {
+      "id": "octopus-hearts",
+      "prompt": "An octopus has ____ hearts.",
+      "answer": "three",
+      "alternates": ["3"],
+      "decoys": ["two", "five", "nine"],
+      "source": { "title": "Octopus", "url": "https://en.wikipedia.org/wiki/Octopus" }
+    },
+    {
+      "id": "google-backrub",
+      "prompt": "Before it was called Google, Larry Page and Sergey Brin's search engine was nicknamed ____.",
+      "answer": "BackRub",
+      "alternates": ["back rub"],
+      "decoys": ["Googol", "PageFinder", "LinkLoop"],
+      "source": { "title": "History of Google", "url": "https://en.wikipedia.org/wiki/History_of_Google" }
+    },
+    {
+      "id": "banana-radioactive",
+      "prompt": "Bananas are very slightly ____ because of the potassium in them.",
+      "answer": "radioactive",
+      "alternates": [],
+      "decoys": ["magnetic", "glow-in-the-dark", "electric"],
+      "source": { "title": "Banana equivalent dose", "url": "https://en.wikipedia.org/wiki/Banana_equivalent_dose" }
+    },
+    {
+      "id": "switzerland-guinea-pig",
+      "prompt": "In Switzerland, it's illegal to keep just one ____, because it would get lonely.",
+      "answer": "guinea pig",
+      "alternates": ["guinea pigs"],
+      "decoys": ["hamster", "tortoise", "hedgehog"],
+      "source": { "title": "Guinea pig", "url": "https://en.wikipedia.org/wiki/Guinea_pig" }
+    },
+    {
+      "id": "ebay-laser-pointer",
+      "prompt": "The first item ever sold on eBay was a broken ____.",
+      "answer": "laser pointer",
+      "alternates": ["laser pen"],
+      "decoys": ["toaster", "calculator", "Pez dispenser"],
+      "source": { "title": "eBay", "url": "https://en.wikipedia.org/wiki/EBay" }
+    },
+    {
+      "id": "cleopatra-pyramid",
+      "prompt": "Cleopatra lived closer in time to the Moon landing than to the building of the ____.",
+      "answer": "Great Pyramid",
+      "alternates": ["great pyramid of giza", "pyramids", "pyramid", "pyramids of giza"],
+      "decoys": ["Parthenon", "Great Wall of China", "Colosseum"],
+      "source": { "title": "Great Pyramid of Giza", "url": "https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza" }
+    },
+    {
+      "id": "venus-day",
+      "prompt": "On Venus, a single day lasts longer than a ____.",
+      "answer": "year",
+      "alternates": ["year on venus", "venus year"],
+      "decoys": ["decade", "century", "year on Mars"],
+      "source": { "title": "Venus", "url": "https://en.wikipedia.org/wiki/Venus" }
+    },
+    {
+      "id": "pringles-can",
+      "prompt": "The chemist who designed the Pringles can had some of his ashes buried in a ____.",
+      "answer": "Pringles can",
+      "alternates": ["pringles tube", "pringle can", "can of pringles"],
+      "decoys": ["cereal box", "coffee tin", "soda bottle"],
+      "source": { "title": "Fredric Baur", "url": "https://en.wikipedia.org/wiki/Fredric_Baur" }
+    },
+    {
+      "id": "tittle",
+      "prompt": "The dot on top of a lowercase i is called a ____.",
+      "answer": "tittle",
+      "alternates": [],
+      "decoys": ["jot", "speck", "pip"],
+      "source": { "title": "Tittle", "url": "https://en.wikipedia.org/wiki/Tittle" }
+    },
+    {
+      "id": "nintendo-cards",
+      "prompt": "Long before video games, Nintendo started out in 1889 making ____.",
+      "answer": "playing cards",
+      "alternates": ["cards", "hanafuda cards", "hanafuda"],
+      "decoys": ["umbrellas", "matches", "tea sets"],
+      "source": { "title": "Nintendo", "url": "https://en.wikipedia.org/wiki/Nintendo" }
+    },
+    {
+      "id": "hundred-years-war",
+      "prompt": "The Hundred Years' War actually lasted ____ years.",
+      "answer": "116",
+      "alternates": ["one hundred sixteen", "one hundred and sixteen"],
+      "decoys": ["99", "81", "134"],
+      "source": { "title": "Hundred Years' War", "url": "https://en.wikipedia.org/wiki/Hundred_Years%27_War" }
+    },
+    {
+      "id": "oxford-aztec",
+      "prompt": "The University of Oxford is older than the ____ Empire.",
+      "answer": "Aztec",
+      "alternates": ["aztecs"],
+      "decoys": ["Roman", "Byzantine", "Holy Roman"],
+      "source": { "title": "University of Oxford", "url": "https://en.wikipedia.org/wiki/University_of_Oxford" }
+    },
+    {
+      "id": "sharks-trees",
+      "prompt": "Sharks have existed for longer than ____ have.",
+      "answer": "trees",
+      "alternates": ["tree"],
+      "decoys": ["jellyfish", "sponges", "the Moon"],
+      "source": { "title": "Shark", "url": "https://en.wikipedia.org/wiki/Shark" }
+    }
+  ]
+}

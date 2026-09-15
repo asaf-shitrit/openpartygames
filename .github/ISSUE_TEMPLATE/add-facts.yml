@@ -1,0 +1,64 @@
+name: Add facts
+description: Submit facts for a Real or Nah pack
+title: "[Facts] "
+labels: ["pack-submission", "facts"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Facts for Real or Nah. Write a prompt with one `____` blank, the true answer, and at least two decoys. Paraphrase the fact from the source you cite — do not copy the source text.
+  - type: input
+    id: prompt
+    attributes:
+      label: Prompt
+      description: One sentence with exactly one `____` where the answer goes.
+      placeholder: Scotland's national animal is the ____.
+    validations:
+      required: true
+  - type: input
+    id: answer
+    attributes:
+      label: Answer
+      description: The true answer, 40 characters or fewer.
+      placeholder: unicorn
+    validations:
+      required: true
+  - type: input
+    id: alternates
+    attributes:
+      label: Alternates
+      description: Other accepted spellings, separated by commas. Leave empty if there are none.
+      placeholder: unicorns
+    validations:
+      required: false
+  - type: input
+    id: decoys
+    attributes:
+      label: Decoys
+      description: At least two plausible wrong answers, separated by commas. They must not mean the answer.
+      placeholder: red deer, golden eagle, highland cow
+    validations:
+      required: true
+  - type: input
+    id: source-title
+    attributes:
+      label: Source title
+      description: Title of the page you paraphrased.
+      placeholder: National symbols of Scotland
+    validations:
+      required: true
+  - type: input
+    id: source-url
+    attributes:
+      label: Source URL
+      description: An https:// link to the source.
+      placeholder: https://en.wikipedia.org/wiki/National_symbols_of_Scotland
+    validations:
+      required: true
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: This fact is paraphrased from the source above, and I release it under CC BY-SA 4.0.
+          required: true

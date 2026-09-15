@@ -1,0 +1,82 @@
+name: Pack submission
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  pack-submission:
+    if: contains(github.event.issue.labels.*.name, 'pack-submission')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Read the submission kind from the labels
+        id: meta
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const labels = context.payload.issue.labels.map((label) => label.name);
+            const kind = labels.includes("word-pairs")
+              ? "word-pairs"
+              : labels.includes("facts")
+                ? "facts"
+                : "";
+            core.setOutput("kind", kind);
+
+      - name: Require a word-pairs or facts label
+        if: steps.meta.outputs.kind == ''
+        run: |
+          echo "::error::Add the 'word-pairs' or 'facts' label to this issue."
+          exit 1
+
+      - name: Write the issue body to a file
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: printf '%s' "$ISSUE_BODY" > issue-body.md
+
+      - name: Apply the submission
+        id: submit
+        continue-on-error: true
+        env:
+          KIND: ${{ steps.meta.outputs.kind }}
+        run: |
+          set -o pipefail
+          node scripts/pack-submission.mjs issue-body.md "$KIND" 2>&1 | tee submission-errors.txt
+
+      - name: Comment the errors on the issue
+        if: steps.submit.outcome == 'failure'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const errors = require("fs").readFileSync("submission-errors.txt", "utf8").trim();
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `This submission could not be turned into a pull request:\n\n\`\`\`\n${errors}\n\`\`\``,
+            });
+
+      - name: Stop on failure
+        if: steps.submit.outcome == 'failure'
+        run: exit 1
+
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: "Pack submission: #${{ github.event.issue.number }}"
+          body: |
+            Content submitted in [#${{ github.event.issue.number }}](https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }}).
+
+            Closes #${{ github.event.issue.number }}
+          branch: pack-submission/${{ github.event.issue.number }}
+          commit-message: "Add pack content from #${{ github.event.issue.number }}"
+          add-paths: packs/**

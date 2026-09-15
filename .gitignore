@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+worker-configuration.d.ts
+design/openpartygames-mvp-screens.html
+coverage/
+.vitest/
+test-results/
+playwright-report/

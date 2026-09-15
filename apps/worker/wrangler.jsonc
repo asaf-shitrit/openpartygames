@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "openpartygames",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/ws/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "openpartygames",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "DAILY_ROOM_CAP": "150"
+  },
+  // Cloudflare rate-limit bindings. The code treats them as optional so the
+  // Worker still runs (locally) when they are missing.
+  "ratelimits": [
+    { "name": "CREATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } },
+    { "name": "JOIN_LIMITER", "namespace_id": "1002", "simple": { "limit": 60, "period": 60 } }
+  ]
+}
