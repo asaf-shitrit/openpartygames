@@ -86,6 +86,31 @@ OpenPartyGames runs on Cloudflare Workers, Durable Objects and D1.
 
 Deploys restart every Durable Object and drop open sockets. Clients reconnect with their token and get their view back, so players only see a short "Reconnecting…" message.
 
+### Cloudflare zone settings
+
+openpartygames.org uses these settings on its Cloudflare zone. They live in the Cloudflare dashboard, not in this repo, so set them by hand on your own domain. All of them fit the free plan.
+
+- **SSL/TLS › Edge Certificates**
+  - **Always Use HTTPS:** on. The Worker never redirects to HTTPS itself, so this can't cause a redirect loop.
+  - **Minimum TLS Version:** TLS 1.2.
+  - **HSTS:** off. Browsers remember it for months, so turn it on only once the domain will stay HTTPS-only.
+- **Security › Security rules › Custom rules:** "Block vulnerability scanner probes", with the action **Block** and this expression:
+
+  ```text
+  (lower(http.request.uri.path) contains ".php") or (lower(http.request.uri.path) contains "/wp-") or (http.request.uri.path contains "/.env") or (http.request.uri.path contains "/.git") or (lower(http.request.uri.path) contains "/cgi-bin")
+  ```
+
+- **Security › Security rules › Rate limiting rules:** "Rate limit API and WebSocket requests per IP". It counts requests per IP that match this expression, and above 100 requests in 10 seconds it blocks that IP for 10 seconds:
+
+  ```text
+  (starts_with(http.request.uri.path, "/api/")) or (starts_with(http.request.uri.path, "/ws/"))
+  ```
+
+  The limit is high on purpose, because a whole party on one Wi-Fi network shares an IP. It stops floods before they reach the Worker. Behind it, the Worker's `CREATE_LIMITER` and `JOIN_LIMITER` bindings still limit room creation and joins per IP.
+- **Security › Settings › Bot fight mode:** off. The free plan can't exempt paths from it, and its challenges can block phones, TV browsers and the WebSocket connection.
+
+The Cloudflare managed ruleset and HTTP DDoS attack protection are always on, including on the free plan.
+
 ### Deploy from GitHub Actions
 
 The `deploy` job in `.github/workflows/ci.yml` ships every push to `main` once `pnpm check` and the e2e suites (`pnpm e2e`) pass. It applies the D1 migrations, reseeds the packs, deploys the Worker and then checks `/api/health` on the live site. Run the CI workflow by hand from the Actions tab to redeploy.
