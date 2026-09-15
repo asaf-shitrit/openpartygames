@@ -11,8 +11,10 @@ import {
   Icon,
   LinedCard,
   Marker,
+  PhaseEnter,
   PhoneScreen,
   PhoneStrip,
+  PRESSABLE_CLASS,
   Stamp,
   StickyNote,
   TextInput,
@@ -115,7 +117,7 @@ function HideButton({
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onToggle}
       style={{
         height: dims.height,
@@ -476,7 +478,7 @@ function VoteRow({
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onPick}
       style={voteRowStyle(index, selected)}
     >
@@ -493,9 +495,48 @@ function VoteRow({
   );
 }
 
+function VoteLocked(props: SectionProps) {
+  const { view, players, deadline, clock } = props;
+  const votedFor = findPlayer(players, view.myVote);
+  return (
+    <>
+      <Strip
+        progress={progressFor(view)}
+        right={<Timer deadline={deadline} clock={clock} />}
+      />
+      <Card
+        variant="M"
+        tilt={1}
+        style={{
+          padding: "24px 20px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          textAlign: "center",
+        }}
+      >
+        <Icon name="check" size={40} color="var(--opg-marker)" />
+        <Marker size={32}>Vote locked in</Marker>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>
+          {votedFor ? `You voted for ${votedFor.name}.` : "You voted."}
+        </div>
+        <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
+          Waiting for the others to vote.
+        </div>
+        <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
+          {view.votedCount} voted so far
+        </div>
+      </Card>
+    </>
+  );
+}
+
 function VoteView(props: SectionProps) {
   const { view, players, deadline, clock, send } = props;
-  const [pick, setPick] = useState<PlayerId | null>(view.myVote);
+  const [pick, setPick] = useState<PlayerId | null>(null);
+  const [sent, setSent] = useState(false);
+  if (view.myVote !== null) return <VoteLocked {...props} />;
   return (
     <>
       <Strip
@@ -532,10 +573,12 @@ function VoteView(props: SectionProps) {
       <Button
         size="lg"
         fullWidth
-        disabled={pick === null}
-        disabledReason="Pick someone first"
+        disabled={pick === null || sent}
+        disabledReason={pick === null ? "Pick someone first" : undefined}
         onClick={() => {
-          if (pick) send({ type: "vote", target: pick });
+          if (pick === null || sent) return;
+          setSent(true);
+          send({ type: "vote", target: pick });
         }}
       >
         <Icon name="lock" size={22} color="var(--opg-paper)" />
@@ -850,14 +893,16 @@ export interface PhoneProps {
 export function Phone({ view, room, deadline, clock, send }: PhoneProps) {
   return (
     <PhoneScreen>
-      {renderPhase({
-        view,
-        players: room.players,
-        me: findPlayer(room.players, room.you),
-        deadline,
-        clock,
-        send,
-      })}
+      <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>
+        {renderPhase({
+          view,
+          players: room.players,
+          me: findPlayer(room.players, room.you),
+          deadline,
+          clock,
+          send,
+        })}
+      </PhaseEnter>
     </PhoneScreen>
   );
 }

@@ -18,6 +18,7 @@ const ICON_NAMES = [
   "mask",
   "cards",
   "monitor",
+  "expand",
   "kick",
 ] satisfies IconName[];
 

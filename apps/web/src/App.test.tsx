@@ -25,6 +25,18 @@ describe("App routing", () => {
     expect(screen.getByText("Party games for")).toBeTruthy();
   });
 
+  it("scales the landing inside the TV stage", () => {
+    const { container } = renderAt("/");
+    const stage = container.querySelector(".opg-grid-tv");
+    expect(stage).not.toBeNull();
+    expect(stage?.textContent).toContain("Party games for");
+  });
+
+  it("scales the credits page inside the TV stage", () => {
+    const { container } = renderAt("/credits");
+    expect(container.querySelector(".opg-grid-tv")).not.toBeNull();
+  });
+
   it("renders the phone join form at /join", () => {
     renderAt("/join");
     expect(screen.getByText("Join a game")).toBeTruthy();

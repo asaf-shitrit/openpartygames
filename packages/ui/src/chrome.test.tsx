@@ -1,10 +1,74 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { PhoneStrip, PlayerChip, TvHeader } from "./chrome";
+import { HeaderChip, PhoneStrip, PlayerChip, TvHeader } from "./chrome";
 
-beforeEach(() => localStorage.clear());
-afterEach(cleanup);
+type PropertyOwner = Document | HTMLElement;
+
+const fullscreenEnabledDescriptor = Object.getOwnPropertyDescriptor(
+  document,
+  "fullscreenEnabled",
+);
+const fullscreenElementDescriptor = Object.getOwnPropertyDescriptor(
+  document,
+  "fullscreenElement",
+);
+const requestFullscreenDescriptor = Object.getOwnPropertyDescriptor(
+  document.documentElement,
+  "requestFullscreen",
+);
+
+function defineValue(
+  target: PropertyOwner,
+  key: string,
+  value: PropertyDescriptor["value"],
+): void {
+  Object.defineProperty(target, key, { configurable: true, value });
+}
+
+function restoreValue(
+  target: PropertyOwner,
+  key: string,
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor === undefined) {
+    Reflect.deleteProperty(target, key);
+    return;
+  }
+  Object.defineProperty(target, key, descriptor);
+}
+
+function stubFullscreen(enabled: boolean, request?: () => Promise<void>): void {
+  defineValue(document, "fullscreenEnabled", enabled);
+  if (request)
+    defineValue(document.documentElement, "requestFullscreen", request);
+}
+
+function precedes(first: Element, second: Element): boolean {
+  return (
+    (first.compareDocumentPosition(second) &
+      Node.DOCUMENT_POSITION_FOLLOWING) !==
+    0
+  );
+}
+
+function noop(): void {}
+
+beforeEach(() => {
+  localStorage.clear();
+  defineValue(document, "fullscreenElement", null);
+});
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  restoreValue(document, "fullscreenEnabled", fullscreenEnabledDescriptor);
+  restoreValue(document, "fullscreenElement", fullscreenElementDescriptor);
+  restoreValue(
+    document.documentElement,
+    "requestFullscreen",
+    requestFullscreenDescriptor,
+  );
+});
 
 describe("TvHeader", () => {
   it("renders the brand variant with the sound chip", () => {
@@ -40,6 +104,11 @@ describe("TvHeader", () => {
     expect(screen.queryByText("Room")).toBeNull();
   });
 
+  it("renders an empty game title when no name is given", () => {
+    const { container } = render(<TvHeader variant="game" />);
+    expect(container.querySelector(".opg-marker")?.textContent).toBe("");
+  });
+
   it("toggles the sound setting from the chip", async () => {
     render(<TvHeader variant="brand" />);
     await userEvent.click(screen.getByRole("button", { name: "Sound on" }));
@@ -55,6 +124,94 @@ describe("TvHeader", () => {
     localStorage.setItem("opg:muted", "1");
     render(<TvHeader variant="brand" />);
     expect(screen.getByText("Sound off")).toBeTruthy();
+  });
+
+  it("renders actions before the chips in the brand variant", () => {
+    render(
+      <TvHeader variant="brand" roomCode="ABCD" actions={<span>Help</span>} />,
+    );
+    expect(precedes(screen.getByText("Help"), screen.getByText("Room"))).toBe(
+      true,
+    );
+  });
+
+  it("renders actions before the chips in the game variant", () => {
+    render(
+      <TvHeader
+        variant="game"
+        gameName="Quip Clash"
+        roomCode="ABCD"
+        actions={<span>Help</span>}
+      />,
+    );
+    expect(precedes(screen.getByText("Help"), screen.getByText("Room"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("full screen chip", () => {
+  it("is hidden when fullscreen is unsupported", () => {
+    stubFullscreen(false);
+    render(<TvHeader variant="brand" />);
+    expect(screen.queryByRole("button", { name: "Full screen" })).toBeNull();
+  });
+
+  it("is shown when fullscreen is supported", () => {
+    stubFullscreen(true);
+    render(<TvHeader variant="brand" />);
+    expect(screen.getByRole("button", { name: "Full screen" })).toBeTruthy();
+  });
+
+  it("requests fullscreen when clicked", async () => {
+    const request = vi.fn<() => Promise<void>>(() => Promise.resolve());
+    stubFullscreen(true, request);
+    render(<TvHeader variant="brand" />);
+    await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides once the page is full screen", () => {
+    stubFullscreen(true);
+    render(<TvHeader variant="brand" />);
+    act(() => {
+      defineValue(document, "fullscreenElement", document.createElement("div"));
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    expect(screen.queryByRole("button", { name: "Full screen" })).toBeNull();
+  });
+});
+
+describe("HeaderChip", () => {
+  it("carries the shared pressable class", () => {
+    render(<HeaderChip icon="check" label="Do it" onClick={noop} />);
+    expect(screen.getByRole("button", { name: "Do it" }).className).toBe(
+      "opg-reset opg-pressable",
+    );
+  });
+
+  it("renders the label and calls onClick", async () => {
+    const onClick = vi.fn<() => void>();
+    render(<HeaderChip icon="check" label="Do it" onClick={onClick} />);
+    await userEvent.click(screen.getByRole("button", { name: "Do it" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("only sets aria-pressed when pressed is given", () => {
+    const { rerender } = render(
+      <HeaderChip icon="check" label="Plain" onClick={noop} />,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Plain" })
+        .getAttribute("aria-pressed"),
+    ).toBeNull();
+    rerender(<HeaderChip icon="check" label="Plain" onClick={noop} pressed />);
+    expect(
+      screen
+        .getByRole("button", { name: "Plain" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 });
 

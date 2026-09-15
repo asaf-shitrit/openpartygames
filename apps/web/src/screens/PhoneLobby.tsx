@@ -7,6 +7,7 @@ import {
   Icon,
   Marker,
   PhoneScreen,
+  PRESSABLE_CLASS,
   StickyNote,
   Tally,
   Tape,
@@ -81,7 +82,7 @@ function ChangeDoodleButton({
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onChangeAvatar}
       style={{
         height: 48,
@@ -193,7 +194,7 @@ function LeaveButton({ onLeave }: { onLeave: () => void }) {
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onLeave}
       style={{
         marginTop: "auto",

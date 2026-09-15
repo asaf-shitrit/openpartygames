@@ -58,7 +58,9 @@ afterEach(cleanup);
 describe("PhoneVipControls", () => {
   it("sends pick-game when a game is chosen", async () => {
     const { handlers, user } = setup();
-    await user.click(screen.getByRole("button", { name: /real or nah/i }));
+    const gameButton = screen.getByRole("button", { name: /real or nah/i });
+    expect(gameButton.classList.contains("opg-pressable")).toBe(true);
+    await user.click(gameButton);
     expect(handlers.onPickGame).toHaveBeenCalledWith("real-or-nah");
   });
 

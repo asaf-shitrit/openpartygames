@@ -82,7 +82,11 @@ describe("PhoneLobby", () => {
   it("sends change-avatar", async () => {
     const onChangeAvatar = vi.fn<() => void>();
     const { user } = setup({}, { onChangeAvatar });
-    await user.click(screen.getByRole("button", { name: /change doodle/i }));
+    const changeButton = screen.getByRole("button", {
+      name: /change doodle/i,
+    });
+    expect(changeButton.classList.contains("opg-pressable")).toBe(true);
+    await user.click(changeButton);
     expect(onChangeAvatar).toHaveBeenCalledTimes(1);
   });
 

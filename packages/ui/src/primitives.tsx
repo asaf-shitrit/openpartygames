@@ -4,6 +4,9 @@ import { useEffect, useId, useRef } from "react";
 
 export type CardVariant = "L" | "M" | "Malt";
 
+/** Shared hover/press feedback class for tappable elements, including raw buttons outside the kit. */
+export const PRESSABLE_CLASS = "opg-pressable";
+
 const CARD_RADII = {
   L: "var(--opg-radius-l)",
   M: "var(--opg-radius-m)",
@@ -331,7 +334,7 @@ export function Button({
     >
       <button
         type="button"
-        className={className}
+        className={[PRESSABLE_CLASS, className].filter(Boolean).join(" ")}
         aria-label={ariaLabel}
         aria-disabled={disabled || undefined}
         disabled={disabled}
@@ -452,6 +455,7 @@ export function Switch({
       <button
         type="button"
         role="switch"
+        className={PRESSABLE_CLASS}
         aria-checked={checked}
         aria-label={label}
         disabled={disabled}

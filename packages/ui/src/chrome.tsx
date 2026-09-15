@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import type { AvatarId } from "@opg/protocol";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
-import { Marker } from "./primitives";
+import type { IconName } from "./Icon";
+import { Marker, PRESSABLE_CLASS } from "./primitives";
 import { useSoundSetting } from "./clock";
+import { useFullscreen } from "./screen";
 
 function RoomChip({
   code,
@@ -38,14 +40,33 @@ function RoomChip({
   );
 }
 
-function SoundChip({ height, fontSize }: { height: number; fontSize: number }) {
-  const { muted, toggle } = useSoundSetting();
+export interface HeaderChipProps {
+  icon: IconName;
+  label: string;
+  onClick: () => void;
+  /** Sets aria-pressed for toggle chips; omit for plain action chips. */
+  pressed?: boolean;
+  /** Default 68. */
+  height?: number;
+  /** Default 28. */
+  fontSize?: number;
+}
+
+/** Rounded, bordered chip button used in the TV header's right-hand cluster. */
+export function HeaderChip({
+  icon,
+  label,
+  onClick,
+  pressed,
+  height = 68,
+  fontSize = 28,
+}: HeaderChipProps) {
   return (
     <button
       type="button"
-      className="opg-reset"
-      onClick={toggle}
-      aria-pressed={!muted}
+      className={`opg-reset ${PRESSABLE_CLASS}`}
+      onClick={onClick}
+      aria-pressed={pressed}
       style={{
         display: "flex",
         alignItems: "center",
@@ -60,12 +81,60 @@ function SoundChip({ height, fontSize }: { height: number; fontSize: number }) {
         color: "var(--opg-ink)",
       }}
     >
-      <Icon
-        name={muted ? "sound-off" : "sound"}
-        size={Math.round(height * 0.5)}
-      />
-      <span>{muted ? "Sound off" : "Sound on"}</span>
+      <Icon name={icon} size={Math.round(height * 0.5)} />
+      <span>{label}</span>
     </button>
+  );
+}
+
+function SoundChip({ height, fontSize }: { height: number; fontSize: number }) {
+  const { muted, toggle } = useSoundSetting();
+  return (
+    <HeaderChip
+      icon={muted ? "sound-off" : "sound"}
+      label={muted ? "Sound off" : "Sound on"}
+      onClick={toggle}
+      pressed={!muted}
+      height={height}
+      fontSize={fontSize}
+    />
+  );
+}
+
+function FullscreenChip({
+  height,
+  fontSize,
+}: {
+  height: number;
+  fontSize: number;
+}) {
+  const { supported, active, enter } = useFullscreen();
+  if (!supported || active) return null;
+  return (
+    <HeaderChip
+      icon="expand"
+      label="Full screen"
+      onClick={enter}
+      height={height}
+      fontSize={fontSize}
+    />
+  );
+}
+
+function HeaderChips({
+  roomCode,
+  actions,
+}: {
+  roomCode?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      {actions}
+      {roomCode ? <RoomChip code={roomCode} height={68} fontSize={28} /> : null}
+      <FullscreenChip height={68} fontSize={28} />
+      <SoundChip height={68} fontSize={28} />
+    </div>
   );
 }
 
@@ -77,6 +146,8 @@ export interface TvHeaderProps {
   gameName?: string;
   /** e.g. "Word 3 of 6" or "Final scores". */
   progress?: string;
+  /** Extra controls shown before the header chips, e.g. an app-level help chip. */
+  actions?: ReactNode;
 }
 
 export function TvHeader({
@@ -84,6 +155,7 @@ export function TvHeader({
   roomCode,
   gameName,
   progress,
+  actions,
 }: TvHeaderProps) {
   if (variant === "brand") {
     return (
@@ -115,12 +187,7 @@ export function TvHeader({
             OpenPartyGames
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {roomCode ? (
-            <RoomChip code={roomCode} height={68} fontSize={28} />
-          ) : null}
-          <SoundChip height={68} fontSize={28} />
-        </div>
+        <HeaderChips roomCode={roomCode} actions={actions} />
       </div>
     );
   }
@@ -147,12 +214,7 @@ export function TvHeader({
           </div>
         ) : null}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        {roomCode ? (
-          <RoomChip code={roomCode} height={68} fontSize={28} />
-        ) : null}
-        <SoundChip height={68} fontSize={28} />
-      </div>
+      <HeaderChips roomCode={roomCode} actions={actions} />
     </div>
   );
 }

@@ -14,6 +14,7 @@ export type IconName =
   | "mask"
   | "cards"
   | "monitor"
+  | "expand"
   | "kick";
 
 interface IconSpec {
@@ -146,6 +147,11 @@ const ICONS = {
         <path d="M8 21h8M12 17v4" />
       </>
     ),
+  },
+  expand: {
+    viewBox: "0 0 24 24",
+    strokeWidth: 2.4,
+    nodes: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
   },
   kick: {
     viewBox: "0 0 24 24",

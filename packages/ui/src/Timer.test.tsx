@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { Timer } from "./Timer";
+import { TIMER_URGENT_MS, Timer } from "./Timer";
 import type { ServerClock } from "./game-ui";
 
 afterEach(cleanup);
@@ -63,6 +63,62 @@ describe("Timer", () => {
       <Timer deadline={null} clock={clockAt(0)} style={{ marginTop: 8 }} />,
     );
     expect(firstChild(container).style.marginTop).toBe("8px");
+  });
+});
+
+describe("Timer urgency", () => {
+  it("pulses and reddens the ring in the last five seconds", () => {
+    const { container } = render(
+      <Timer deadline={4_000} clock={clockAt(0)} />,
+    );
+    const timer = screen.getByRole("timer");
+    expect(timer.getAttribute("data-urgent")).toBe("true");
+    expect(timer.className).toBe("opg-timer-urgent");
+    expect(timer.getAttribute("aria-label")).toBe("Time left 0:04, almost out");
+    expect(screen.getByText("0:04").getAttribute("style")).toContain(
+      "var(--opg-marker)",
+    );
+    const path = container.querySelector("path");
+    expect(path?.getAttribute("stroke")).toBe("var(--opg-marker)");
+    expect(path?.getAttribute("stroke-dasharray")).toBe("7 5");
+    // Phone ring is 4px normally, 6px while urgent.
+    expect(path?.getAttribute("stroke-width")).toBe("6");
+  });
+
+  it("treats exactly five seconds left as urgent", () => {
+    render(<Timer deadline={TIMER_URGENT_MS} clock={clockAt(0)} />);
+    expect(screen.getByRole("timer").getAttribute("data-urgent")).toBe(
+      "true",
+    );
+  });
+
+  it("stays calm above the urgent threshold", () => {
+    const { container } = render(
+      <Timer deadline={TIMER_URGENT_MS + 1_000} clock={clockAt(0)} />,
+    );
+    const timer = screen.getByRole("timer");
+    expect(timer.getAttribute("data-urgent")).toBeNull();
+    expect(timer.className).toBe("");
+    expect(timer.getAttribute("aria-label")).toBe("Time left 0:06");
+    const path = container.querySelector("path");
+    expect(path?.getAttribute("stroke")).toBe("#2B2B2B");
+    expect(path?.getAttribute("stroke-dasharray")).toBeNull();
+  });
+
+  it("does not pulse an already expired timer", () => {
+    render(<Timer deadline={1_000} clock={clockAt(60_000)} />);
+    const timer = screen.getByRole("timer");
+    expect(timer.getAttribute("data-urgent")).toBeNull();
+    expect(timer.getAttribute("aria-label")).toBe("Time left 0:00");
+  });
+
+  it("thickens the big TV ring by two while urgent", () => {
+    const { container } = render(
+      <Timer deadline={2_000} clock={clockAt(0)} size={150} />,
+    );
+    const path = container.querySelector("path");
+    expect(path?.getAttribute("stroke-width")).toBe("5");
+    expect(path?.getAttribute("stroke-dasharray")).toBe("7 5");
   });
 });
 

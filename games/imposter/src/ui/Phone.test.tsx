@@ -148,13 +148,58 @@ describe("voting", () => {
     expect(send).toHaveBeenCalledWith({ type: "vote", target: "priya" });
   });
 
-  it("keeps an existing vote and can switch it before locking in", async () => {
+  it("marks a vote row as pressable", () => {
+    renderPhone("Phone: Dov vote selecting", mockSend());
+    const row = submitButton("Priya's avatar Priya");
+    expect(row.classList.contains("opg-pressable")).toBe(true);
+  });
+
+  it("shows the locked confirmation and the chosen name once myVote is set", () => {
+    renderPhone("Phone: Dov vote locked in", mockSend());
+    expect(screen.getByText("Vote locked in")).toBeTruthy();
+    expect(screen.getByText("You voted for Priya.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Lock in vote" })).toBeNull();
+  });
+
+  it("sends the vote only once when Lock in vote is tapped twice", async () => {
     const send = mockSend();
-    renderPhone("Phone: Dov vote locked in", send);
-    expect(screen.getByText("Your pick")).toBeTruthy();
-    await userEvent.click(submitButton("Maya's avatar Maya"));
+    renderPhone("Phone: Dov vote selecting", send);
+    await userEvent.click(submitButton("Priya's avatar Priya"));
     await userEvent.click(submitButton("Lock in vote"));
-    expect(send).toHaveBeenCalledWith({ type: "vote", target: "maya" });
+    await userEvent.click(submitButton("Lock in vote"));
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith({ type: "vote", target: "priya" });
+  });
+
+  it("wraps the phase in the enter animation and swaps content on a phase change", () => {
+    const first = playerSample("Phone: Dov vote selecting");
+    const second = playerSample("Phone: Dov reveal");
+    const clock: ServerClock = { now: () => first.room.serverNow };
+    const { container, rerender } = render(
+      <Phone
+        view={first.view}
+        room={first.room}
+        deadline={null}
+        clock={clock}
+        send={mockSend()}
+      />,
+    );
+    const wrapper = container.querySelector(".opg-phase-enter");
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.textContent).toContain("Who's the imposter?");
+
+    rerender(
+      <Phone
+        view={second.view}
+        room={second.room}
+        deadline={null}
+        clock={clock}
+        send={mockSend()}
+      />,
+    );
+    const next = container.querySelector(".opg-phase-enter");
+    expect(next).toBeTruthy();
+    expect(next?.textContent).toContain("The imposter was Priya");
   });
 });
 

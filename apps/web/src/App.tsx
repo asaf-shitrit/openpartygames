@@ -1,4 +1,5 @@
 // Pathname routing for the two surfaces.
+import { Stage } from "@opg/ui";
 import { matchRoute, type Route } from "./routes";
 import { usePathname } from "./router";
 import { HostApp } from "./screens/HostApp";
@@ -18,12 +19,22 @@ function isNarrowTouch(): boolean {
 }
 
 function RouteView({ route }: { route: Route }) {
-  if (route.kind === "credits") return <TvCredits />;
+  if (route.kind === "credits")
+    return (
+      <Stage>
+        <TvCredits />
+      </Stage>
+    );
   if (route.kind === "privacy") return <Privacy />;
   if (route.kind === "host") return <HostApp code={route.code} />;
   if (route.kind === "join") return <PhoneJoinRoute />;
   if (route.kind === "player") return <PlayerApp code={route.code} />;
-  return isNarrowTouch() ? <PhoneJoinRoute /> : <TvLanding />;
+  if (isNarrowTouch()) return <PhoneJoinRoute />;
+  return (
+    <Stage>
+      <TvLanding />
+    </Stage>
+  );
 }
 
 export function App() {

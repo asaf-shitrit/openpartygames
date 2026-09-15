@@ -48,6 +48,7 @@ describe("PhoneAvatarPicker", () => {
       name: /choose the blob avatar/i,
     });
     expect(mine.getAttribute("aria-pressed")).toBe("true");
+    expect(mine.classList.contains("opg-pressable")).toBe(true);
     expect(screen.getByText("Picked")).toBeTruthy();
   });
 

@@ -15,6 +15,7 @@ import {
   TvHeader,
 } from "@opg/ui";
 import { TvPage } from "./shared";
+import { ShowOnTvChip } from "./ShowOnTv";
 import { TvFullTonight } from "./TvFullTonight";
 
 const STEPS = [
@@ -234,7 +235,7 @@ export function TvLanding() {
 
   return (
     <TvPage>
-      <TvHeader variant="brand" />
+      <TvHeader variant="brand" actions={<ShowOnTvChip />} />
 
       <div
         style={{

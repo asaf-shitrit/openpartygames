@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lastSocket, resetFakeSockets } from "./fixtures/socket";
 import type { FakeWebSocket } from "./fixtures/socket";
+import {
+  FakeWakeLockSentinel,
+  restoreWakeLock,
+  stubWakeLock,
+} from "./fixtures/wakeLock";
 import { makePlayer, makePlayerView } from "./fixtures/room";
 import { realOrNahPreviews } from "@opg/game-real-or-nah/ui";
 import { PlayerApp } from "./PlayerApp";
@@ -44,6 +49,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  restoreWakeLock();
 });
 
 /** A lobby view where the phone player is a plain player, not the VIP. */
@@ -297,5 +303,28 @@ describe("PlayerApp", () => {
       }),
     );
     expect(screen.getByText("You're in, Priya!")).toBeTruthy();
+  });
+
+  it("keeps the screen awake once this phone has joined", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    const request = vi.fn<() => Promise<FakeWakeLockSentinel>>(() =>
+      Promise.resolve(new FakeWakeLockSentinel()),
+    );
+    stubWakeLock(request);
+    render(<PlayerApp code="BKTZ" />);
+    const socket = joinPlayer();
+    act(() => socket.receive({ t: "state", view: makePlayerView() }));
+    expect(request).toHaveBeenCalledWith("screen");
+  });
+
+  it("does not keep the screen awake before this phone joins", () => {
+    const request = vi.fn<() => Promise<FakeWakeLockSentinel>>(() =>
+      Promise.resolve(new FakeWakeLockSentinel()),
+    );
+    stubWakeLock(request);
+    render(<PlayerApp code="BKTZ" />);
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(request).not.toHaveBeenCalled();
   });
 });

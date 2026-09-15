@@ -9,6 +9,7 @@ import {
   Icon,
   LinedCard,
   Marker,
+  PhaseEnter,
   Stamp,
   Tape,
   Timer,
@@ -49,7 +50,9 @@ export function Host({ view, room, deadline, clock }: HostProps) {
         progress={`Fact ${view.factNumber} of ${view.factCount}`}
         roomCode={room.code}
       />
-      <HostBody view={view} room={room} deadline={deadline} clock={clock} />
+      <PhaseEnter phaseKey={`${view.factNumber}:${view.phase}`}>
+        <HostBody view={view} room={room} deadline={deadline} clock={clock} />
+      </PhaseEnter>
     </div>
   );
 }

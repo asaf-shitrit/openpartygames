@@ -193,6 +193,13 @@ describe("Stamp", () => {
 });
 
 describe("Button", () => {
+  it("carries the shared pressable class", () => {
+    render(<Button>Go</Button>);
+    expect(screen.getByRole("button", { name: "Go" }).className).toBe(
+      "opg-pressable",
+    );
+  });
+
   it("renders a native button with the default primary look", () => {
     render(<Button>Go</Button>);
     const btn = screen.getByRole("button", { name: "Go" });
@@ -258,7 +265,7 @@ describe("Button", () => {
       </Button>,
     );
     const btn = screen.getByRole("button", { name: "custom" });
-    expect(btn.className).toBe("b");
+    expect(btn.className).toBe("opg-pressable b");
     expect(btn.style.marginTop).toBe("2px");
   });
 
@@ -293,6 +300,13 @@ describe("Chip", () => {
 });
 
 describe("Switch", () => {
+  it("carries the shared pressable class", () => {
+    render(<Switch checked={false} label="Sound" />);
+    expect(screen.getByRole("switch", { name: "Sound" }).className).toBe(
+      "opg-pressable",
+    );
+  });
+
   it("reports its off state as text and aria-checked", () => {
     render(<Switch checked={false} label="Sound" />);
     const sw = screen.getByRole("switch", { name: "Sound" });

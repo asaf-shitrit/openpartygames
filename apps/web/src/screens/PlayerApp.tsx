@@ -8,7 +8,7 @@ import type {
   PlayerSummary,
 } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import { useServerClock } from "@opg/ui";
+import { useScreenWakeLock, useServerClock } from "@opg/ui";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
@@ -304,6 +304,8 @@ export function PlayerApp({ code }: { code: string }) {
   const [hadToken] = useState(() => Boolean(playerToken(code)));
 
   const me = meFor(view);
+
+  useScreenWakeLock(me !== null);
   const myAvatar = avatarFor(me);
   const myName = nameFor(me, joinedName);
   const error = errorFor(socket.lastError);

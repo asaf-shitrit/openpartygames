@@ -1,7 +1,15 @@
 // design/PhoneAvatarPicker.dc.html — shown once right after joining.
 import type { AvatarId, PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import { AVATARS } from "@opg/protocol";
-import { Avatar, Button, Icon, Marker, PhoneScreen, Stamp } from "@opg/ui";
+import {
+  Avatar,
+  Button,
+  Icon,
+  Marker,
+  PhoneScreen,
+  PRESSABLE_CLASS,
+  Stamp,
+} from "@opg/ui";
 
 export interface PhoneAvatarPickerProps {
   view: PlayerRoomView;
@@ -96,7 +104,7 @@ function PickTile({
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={() => onPick(id)}
       aria-pressed={picked}
       style={{

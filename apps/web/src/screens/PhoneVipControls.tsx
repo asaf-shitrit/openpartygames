@@ -15,6 +15,7 @@ import {
   Icon,
   Marker,
   PhoneScreen,
+  PRESSABLE_CLASS,
   Switch,
 } from "@opg/ui";
 import type { IconName } from "@opg/ui";
@@ -107,7 +108,7 @@ function GameButton({
   return (
     <button
       type="button"
-      className="opg-reset"
+      className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={() => onPick(game.id)}
       aria-pressed={selected}
       style={{

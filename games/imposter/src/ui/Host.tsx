@@ -9,6 +9,7 @@ import {
   Highlight,
   Icon,
   Marker,
+  PhaseEnter,
   Stamp,
   StickyNote,
   Tape,
@@ -1262,12 +1263,14 @@ export function Host({ view, room, deadline, clock }: HostProps) {
         progress={`Word ${view.wordNumber} of ${view.wordCount}`}
         roomCode={room.code}
       />
-      <PhaseBody
-        view={view}
-        players={room.players}
-        deadline={deadline}
-        clock={clock}
-      />
+      <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>
+        <PhaseBody
+          view={view}
+          players={room.players}
+          deadline={deadline}
+          clock={clock}
+        />
+      </PhaseEnter>
     </div>
   );
 }

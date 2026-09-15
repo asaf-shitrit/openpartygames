@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { makeHostView, makePlayer } from "./fixtures/room";
 import { TvLobby } from "./TvLobby";
@@ -38,12 +39,23 @@ describe("TvLobby", () => {
 
   it("waits for the first player when nobody has joined", () => {
     render(<TvLobby view={makeHostView({ players: [], vipId: null })} />);
-    expect(screen.getByText("Waiting for the first player to join")).toBeTruthy();
+    expect(
+      screen.getByText("Waiting for the first player to join"),
+    ).toBeTruthy();
   });
 
   it("tells players to open the address this screen is served from", () => {
     render(<TvLobby view={makeHostView({ players: [], vipId: null })} />);
     expect(screen.getByText(window.location.host)).toBeTruthy();
     expect(screen.queryByText("openpartygames.org")).toBeNull();
+  });
+
+  it("shows the Show on TV chip in the header and opens the guide", async () => {
+    const user = userEvent.setup();
+    render(<TvLobby view={makeHostView()} />);
+    await user.click(screen.getByRole("button", { name: "Show on TV" }));
+    expect(
+      screen.getByRole("dialog", { name: "Show this on your TV" }),
+    ).toBeTruthy();
   });
 });

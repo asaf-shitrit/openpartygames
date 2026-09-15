@@ -85,4 +85,33 @@ describe("Host reveal phase", () => {
     expect(screen.getByText("a surprisingly large lizard")).toBeTruthy();
     expect(screen.getAllByText("NAH")).toHaveLength(7);
   });
+
+  it("wraps the phase in the enter animation and swaps content on a phase change", () => {
+    const first = hostSample("Host: vote");
+    const second = hostSample("Host: reveal");
+    const clock: ServerClock = { now: () => first.room.serverNow };
+    const { container, rerender } = render(
+      <Host
+        view={first.view}
+        room={first.room}
+        deadline={null}
+        clock={clock}
+      />,
+    );
+    const wrapper = container.querySelector(".opg-phase-enter");
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.textContent).toContain("Which one is real?");
+
+    rerender(
+      <Host
+        view={second.view}
+        room={second.room}
+        deadline={null}
+        clock={clock}
+      />,
+    );
+    const next = container.querySelector(".opg-phase-enter");
+    expect(next).toBeTruthy();
+    expect(next?.textContent).toContain("The truth");
+  });
 });

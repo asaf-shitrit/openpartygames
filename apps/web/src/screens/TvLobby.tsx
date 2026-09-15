@@ -12,6 +12,7 @@ import {
   TvHeader,
 } from "@opg/ui";
 import { PointArrow, QrCode, ScanArrow, TvPage } from "./shared";
+import { ShowOnTvChip } from "./ShowOnTv";
 
 function SeatBadge({ player }: { player: PlayerSummary }) {
   if (player.isVip) {
@@ -238,7 +239,7 @@ export function TvLobby({ view }: { view: HostRoomView }) {
 
   return (
     <TvPage>
-      <TvHeader variant="brand" />
+      <TvHeader variant="brand" actions={<ShowOnTvChip />} />
 
       <div
         style={{

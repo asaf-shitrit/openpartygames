@@ -1,6 +1,6 @@
 // Real or Nah — phone controller. One phase component per screen.
 import { useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import {
@@ -9,8 +9,10 @@ import {
   Icon,
   LinedCard,
   Marker,
+  PhaseEnter,
   PhoneScreen,
   PhoneStrip,
+  PRESSABLE_CLASS,
   Stamp,
   TextInput,
   Timer,
@@ -52,14 +54,19 @@ function PhoneBody({
   room,
   send,
 }: Pick<PhoneProps, "view" | "room" | "send">) {
-  const phaseKey = `${view.factNumber}:${view.phase}`;
+  let phase: ReactNode;
   if (view.phase === "write") {
-    return <WritePhase key={phaseKey} view={view} send={send} />;
+    phase = <WritePhase view={view} send={send} />;
+  } else if (view.phase === "vote") {
+    phase = <VotePhase view={view} send={send} />;
+  } else {
+    phase = <RevealPhase view={view} room={room} />;
   }
-  if (view.phase === "vote") {
-    return <VotePhase key={phaseKey} view={view} send={send} />;
-  }
-  return <RevealPhase view={view} room={room} />;
+  return (
+    <PhaseEnter phaseKey={`${view.factNumber}:${view.phase}`}>
+      {phase}
+    </PhaseEnter>
+  );
 }
 
 const LIE_ERRORS = {
@@ -279,6 +286,7 @@ function VoteRow({
       type="button"
       disabled={mine}
       aria-pressed={mine ? undefined : selected}
+      className={PRESSABLE_CLASS}
       onClick={mine ? undefined : onSelect}
       style={voteRowStyle(mine, selected)}
     >

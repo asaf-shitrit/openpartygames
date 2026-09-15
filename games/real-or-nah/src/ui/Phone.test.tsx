@@ -106,6 +106,43 @@ describe("Phone vote phase", () => {
     expect(screen.getByText("Vote locked in")).toBeTruthy();
     expect(screen.getByText("Hold tight for the reveal")).toBeTruthy();
   });
+
+  it("marks an option button as pressable", () => {
+    renderPhone("Phone: Dov voting");
+    const row = screen.getByRole("button", { name: /rabbits/ });
+    expect(row.classList.contains("opg-pressable")).toBe(true);
+  });
+
+  it("wraps the phase in the enter animation and swaps content on a phase change", () => {
+    const first = phoneSample("Phone: Dov voting");
+    const second = phoneSample("Phone: reveal");
+    const clock: ServerClock = { now: () => first.room.serverNow };
+    const { container, rerender } = render(
+      <Phone
+        view={first.view}
+        room={first.room}
+        deadline={null}
+        clock={clock}
+        send={vi.fn<(action: RonAction) => void>()}
+      />,
+    );
+    const wrapper = container.querySelector(".opg-phase-enter");
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.textContent).toContain("Which one is real?");
+
+    rerender(
+      <Phone
+        view={second.view}
+        room={second.room}
+        deadline={null}
+        clock={clock}
+        send={vi.fn<(action: RonAction) => void>()}
+      />,
+    );
+    const next = container.querySelector(".opg-phase-enter");
+    expect(next).toBeTruthy();
+    expect(next?.textContent).toContain("The real answer");
+  });
 });
 
 describe("Phone reveal phase", () => {

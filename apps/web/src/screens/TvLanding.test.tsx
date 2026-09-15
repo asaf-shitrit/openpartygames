@@ -76,4 +76,13 @@ describe("TvLanding", () => {
     ).toBeTruthy();
     expect(window.location.pathname).toBe("/");
   });
+
+  it("shows the Show on TV chip in the header and opens the guide", async () => {
+    const user = userEvent.setup();
+    render(<TvLanding />);
+    await user.click(screen.getByRole("button", { name: "Show on TV" }));
+    expect(
+      screen.getByRole("dialog", { name: "Show this on your TV" }),
+    ).toBeTruthy();
+  });
 });

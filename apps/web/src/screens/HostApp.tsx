@@ -1,7 +1,14 @@
 // /host/<CODE> — the TV stage. Chooses a screen from phase/lobbyScreen.
 import { useMemo } from "react";
 import type { HostRoomView, RoomView } from "@opg/protocol";
-import { Card, Marker, Stage, TvHeader, useServerClock } from "@opg/ui";
+import {
+  Card,
+  Marker,
+  Stage,
+  TvHeader,
+  useScreenWakeLock,
+  useServerClock,
+} from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
 import { gameUiFor } from "../games";
 import { Link } from "../router";
@@ -10,41 +17,40 @@ import type { RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
 import { TvFinalScores } from "./TvFinalScores";
 import { TvGamePicker } from "./TvGamePicker";
 import { TvLobby } from "./TvLobby";
+import { TvReconnecting } from "./TvReconnecting";
 import { TvPage } from "./shared";
 
 function MessageScreen({ title, body }: { title: string; body: string }) {
   return (
-    <Stage>
-      <TvPage>
-        <TvHeader variant="brand" />
-        <div
+    <TvPage>
+      <TvHeader variant="brand" />
+      <div
+        style={{
+          flexGrow: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Card
+          variant="L"
+          tilt={-1}
           style={{
-            flexGrow: 1,
+            padding: "60px 68px",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
+            gap: 20,
+            maxWidth: 1100,
           }}
         >
-          <Card
-            variant="L"
-            tilt={-1}
-            style={{
-              padding: "60px 68px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-              maxWidth: 1100,
-            }}
-          >
-            <Marker size={76}>{title}</Marker>
-            <div style={{ fontSize: 38, lineHeight: 1.35 }}>{body}</div>
-            <Link to="/" style={{ fontSize: 30, fontWeight: 700 }}>
-              Back to the start screen
-            </Link>
-          </Card>
-        </div>
-      </TvPage>
-    </Stage>
+          <Marker size={76}>{title}</Marker>
+          <div style={{ fontSize: 38, lineHeight: 1.35 }}>{body}</div>
+          <Link to="/" style={{ fontSize: 30, fontWeight: 700 }}>
+            Back to the start screen
+          </Link>
+        </Card>
+      </div>
+    </TvPage>
   );
 }
 
@@ -68,9 +74,7 @@ function GameStage({
       />
     );
   return (
-    <Stage>
-      <Ui.Host view={gameView} room={view} deadline={deadline} clock={clock} />
-    </Stage>
+    <Ui.Host view={gameView} room={view} deadline={deadline} clock={clock} />
   );
 }
 
@@ -87,24 +91,12 @@ function StartingScreen({ view }: { view: HostRoomView }) {
 
 function LobbyStage({ view }: { view: HostRoomView }) {
   if (view.lobbyScreen === "pick") {
-    return (
-      <Stage>
-        <TvGamePicker view={view} />
-      </Stage>
-    );
+    return <TvGamePicker view={view} />;
   }
   if (view.lobbyScreen === "results" && view.lastResult) {
-    return (
-      <Stage>
-        <TvFinalScores view={view} />
-      </Stage>
-    );
+    return <TvFinalScores view={view} />;
   }
-  return (
-    <Stage>
-      <TvLobby view={view} />
-    </Stage>
-  );
+  return <TvLobby view={view} />;
 }
 
 function HostStage({
@@ -132,6 +124,14 @@ function connectingBody(status: RoomSocketStatus): string {
   return status === "reconnecting"
     ? "Reconnecting to the room."
     : "Finding the room.";
+}
+
+/** True while a live view is on screen and the socket is reconnecting. */
+function isReconnecting(
+  status: RoomSocketStatus,
+  view: HostRoomView | null,
+): boolean {
+  return status === "reconnecting" && view !== null;
 }
 
 function readHostToken(code: string): string | null {
@@ -169,20 +169,34 @@ export function HostApp({ code }: { code: string }) {
   const view = hostViewOf(socket.view);
   const clock = useServerClock(view?.serverNow ?? 0);
 
+  useScreenWakeLock(true);
+
   if (!ownsRoom(hostToken, socket.lastError)) {
     return (
-      <MessageScreen
-        title="This room is hosted on another screen"
-        body="Open this room on the screen that created it, or start a new room here."
-      />
+      <Stage>
+        <MessageScreen
+          title="This room is hosted on another screen"
+          body="Open this room on the screen that created it, or start a new room here."
+        />
+      </Stage>
     );
   }
 
   if (!view) {
     return (
-      <MessageScreen title="Connecting…" body={connectingBody(socket.status)} />
+      <Stage>
+        <MessageScreen
+          title="Connecting…"
+          body={connectingBody(socket.status)}
+        />
+      </Stage>
     );
   }
 
-  return <HostStage view={view} clock={clock} />;
+  return (
+    <Stage>
+      <HostStage view={view} clock={clock} />
+      {isReconnecting(socket.status, view) ? <TvReconnecting /> : null}
+    </Stage>
+  );
 }

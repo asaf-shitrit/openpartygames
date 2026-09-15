@@ -21,6 +21,11 @@
   --opg-font-marker:
     "Permanent Marker", "Marker Felt", "Comic Sans MS", cursive;
 
+  --opg-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --opg-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --opg-dur-micro: 120ms;
+  --opg-dur-medium: 300ms;
+
   --opg-radius-l: 40px 12px 36px 14px / 14px 36px 12px 40px;
   --opg-radius-m: 30px 10px 26px 12px / 12px 26px 10px 30px;
   --opg-radius-m-alt: 12px 30px 10px 26px / 26px 10px 30px 12px;
@@ -101,6 +106,55 @@ a.opg-link:hover {
   color: var(--opg-marker);
 }
 
+/* Motion. Individual translate/scale compose with inline transforms (e.g. tilt). */
+.opg-pressable {
+  transition:
+    translate var(--opg-dur-micro) var(--opg-ease-out),
+    scale var(--opg-dur-micro) var(--opg-ease-out);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .opg-pressable:not(:disabled):not([aria-disabled="true"]):hover {
+    translate: 0 -3px;
+  }
+}
+
+.opg-pressable:not(:disabled):not([aria-disabled="true"]):active {
+  translate: 0 1px;
+  scale: 0.97;
+}
+
+.opg-phase-enter {
+  animation: opg-phase-enter var(--opg-dur-medium) var(--opg-ease-out) both;
+}
+
+@keyframes opg-phase-enter {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.opg-timer-urgent {
+  animation: opg-timer-pulse 1000ms var(--opg-ease-in-out) infinite;
+}
+
+@keyframes opg-timer-pulse {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.08;
+  }
+}
+
 .opg-lined {
   background-color: var(--opg-card);
   background-image:
@@ -124,6 +178,7 @@ a.opg-link:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .opg-root,
   .opg-root * {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;

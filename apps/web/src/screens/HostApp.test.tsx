@@ -3,6 +3,11 @@ import type { RoomView } from "@opg/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeWebSocket, lastSocket, resetFakeSockets } from "./fixtures/socket";
 import {
+  FakeWakeLockSentinel,
+  restoreWakeLock,
+  stubWakeLock,
+} from "./fixtures/wakeLock";
+import {
   makeHostView,
   makePlayer,
   makePlayerView,
@@ -30,6 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  restoreWakeLock();
 });
 
 describe("HostApp", () => {
@@ -152,11 +158,57 @@ describe("HostApp", () => {
     expect(screen.getByText("Reconnecting to the room.")).toBeTruthy();
   });
 
+  it("keeps the board and overlays a reconnect when the socket drops mid-game", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const { container } = render(<HostApp code="BKTZ" />);
+    const socket = connectHost();
+    showState(socket, makeHostView());
+    act(() => socket.serverClose());
+    expect(screen.getByText("Grab your phone!")).toBeTruthy();
+    expect(screen.getByText("Reconnecting…")).toBeTruthy();
+    const overlay = container.querySelector("output");
+    expect(overlay).not.toBeNull();
+    expect(overlay?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("drops the reconnect overlay once a fresh state arrives on an open socket", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    render(<HostApp code="BKTZ" />);
+    const socket = connectHost();
+    showState(socket, makeHostView());
+    act(() => socket.serverClose());
+    expect(screen.getByText("Reconnecting…")).toBeTruthy();
+    act(() => socket.open());
+    showState(socket, makeHostView());
+    expect(screen.queryByText("Reconnecting…")).toBeNull();
+  });
+
+  it("shows no reconnect overlay while the socket stays open", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const { container } = render(<HostApp code="BKTZ" />);
+    const socket = connectHost();
+    showState(socket, makeHostView());
+    expect(screen.queryByText("Reconnecting…")).toBeNull();
+    expect(container.querySelector("output")).toBeNull();
+  });
+
   it("keeps connecting when a frame that is not a host view arrives", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
     render(<HostApp code="BKTZ" />);
     const socket = connectHost();
     showState(socket, makePlayerView());
     expect(screen.getByText("Finding the room.")).toBeTruthy();
+  });
+
+  it("keeps the screen awake while hosting", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const request = vi.fn<() => Promise<FakeWakeLockSentinel>>(() =>
+      Promise.resolve(new FakeWakeLockSentinel()),
+    );
+    stubWakeLock(request);
+    render(<HostApp code="BKTZ" />);
+    const socket = connectHost();
+    showState(socket, makeHostView());
+    expect(request).toHaveBeenCalledWith("screen");
   });
 });

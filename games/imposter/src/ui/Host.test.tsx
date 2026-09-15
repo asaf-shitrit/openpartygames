@@ -91,6 +91,35 @@ describe("Host phases", () => {
     expect(screen.getByText("Points this word")).toBeTruthy();
     expect(screen.getAllByText("1,500")).toHaveLength(2);
   });
+
+  it("wraps the phase in the enter animation and swaps content on a phase change", () => {
+    const first = hostSample("Host: vote");
+    const second = hostSample("Host: result");
+    const clock: ServerClock = { now: () => first.room.serverNow };
+    const { container, rerender } = render(
+      <Host
+        view={first.view}
+        room={first.room}
+        deadline={null}
+        clock={clock}
+      />,
+    );
+    const wrapper = container.querySelector(".opg-phase-enter");
+    expect(wrapper).toBeTruthy();
+    expect(wrapper?.textContent).toContain("Who has the decoy word?");
+
+    rerender(
+      <Host
+        view={second.view}
+        room={second.room}
+        deadline={null}
+        clock={clock}
+      />,
+    );
+    const next = container.querySelector(".opg-phase-enter");
+    expect(next).toBeTruthy();
+    expect(next?.textContent).toContain("The word was");
+  });
 });
 
 describe("Host secrecy", () => {
