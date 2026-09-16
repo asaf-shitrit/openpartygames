@@ -33,6 +33,8 @@ export interface RonOption {
   /** The player whose lie this is, or null for the truth and house decoys. */
   authorId: PlayerId | null;
   isTruth: boolean;
+  /** True for a house decoy that filled the ballot. Absent on earlier snapshots. */
+  isDecoy?: boolean;
 }
 
 const ronFooledLieSchema = z.object({

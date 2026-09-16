@@ -397,6 +397,38 @@ describe("scoring", () => {
   });
 });
 
+describe("house decoys", () => {
+  it("reveals a decoy that fooled someone, paying nobody", () => {
+    const ctx = makeCtx({ n: 3, content: TWO_FACTS });
+    let state = setup(ctx);
+    state = lie(state, "p1", "aaa", ctx);
+    state = lie(state, "p2", "bbb", ctx);
+    // p3 lets the write deadline pass, so the options fall short of MIN_OPTIONS and
+    // the drawn fact's first house decoy fills the last slot.
+    state = onDeadline(state, ctx);
+    expect(state.phase).toBe("vote");
+    const decoyText = state.facts[state.factIndex]?.decoys[0] ?? "";
+    expect(decoyText).not.toBe("");
+    const decoyId = optionIdByText(state, decoyText);
+    state = pick(state, "p1", decoyId, ctx);
+    state = pick(state, "p2", decoyId, ctx);
+    state = pick(state, "p3", optionIdByText(state, "aaa"), ctx);
+    expect(state.phase).toBe("reveal");
+
+    const decoy = state.reveal?.lies.find(
+      (fooled) => fooled.optionId === decoyId,
+    );
+    expect(decoy?.authorId).toBeNull();
+    expect(decoy?.fooledIds).toEqual(["p1", "p2"]);
+    // Two players fell for the decoy, but a decoy has no author to pay.
+    expect(state.pointsThisFact).toEqual({ p1: POINTS_PER_FOOL, p2: 0, p3: 0 });
+    const lieSegments = revealPlan({
+      lies: planLiesOf(state.reveal ?? { lies: [] }),
+    }).filter((segment) => segment.kind === "lie");
+    expect(lieSegments.map((segment) => segment.optionId)).toContain(decoyId);
+  });
+});
+
 describe("view secrecy", () => {
   it("never serializes the truth flag or author ids before reveal", () => {
     const ctx = makeCtx({ n: 3 });

@@ -423,7 +423,8 @@ function resultScores(
 }
 
 function resultFinishedAt(result: GameResultSummary | null): number | null {
-  if (result === null) return null;
+  // A game that ended early shows a plain game-over card, so nothing is staged for it.
+  if (result === null || !result.completed) return null;
   return result.finishedAt;
 }
 

@@ -747,7 +747,8 @@ function scoresOf(
 }
 
 function finishedAtOf(result: GameResultSummary | null): number | null {
-  if (result === null) return null;
+  // A game that ended early shows "Game over" only, so it has no ceremony to anchor.
+  if (result === null || !result.completed) return null;
   return result.finishedAt;
 }
 

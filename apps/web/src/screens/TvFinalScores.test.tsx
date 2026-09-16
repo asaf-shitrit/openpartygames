@@ -194,6 +194,19 @@ describe("TvFinalScores, not completed", () => {
     expect(screen.queryByText(/wins the crown/)).toBeNull();
     expect(screen.queryByText(/share the crown/)).toBeNull();
   });
+
+  it("plays no ceremony cues for a game that ended early", () => {
+    vi.useFakeTimers();
+    const { engine, advanceTo } = setup(
+      { completed: false, scores: { p1: 10, p2: 4 }, winnerIds: [], awards: [] },
+      0,
+    );
+
+    advanceTo(20_000);
+
+    expect(engine.cues).toEqual([]);
+    expect(screen.getAllByText("Game over").length).toBeGreaterThan(0);
+  });
 });
 
 describe("TvFinalScores, footer", () => {

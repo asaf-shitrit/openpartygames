@@ -145,6 +145,7 @@ interface OptionEntry {
   text: string;
   authorId: PlayerId | null;
   isTruth: boolean;
+  isDecoy?: boolean;
 }
 
 function truthEntry(fact: Fact | undefined): OptionEntry[] {
@@ -169,7 +170,7 @@ function addDecoys(entries: OptionEntry[], fact: Fact | undefined): void {
     const normalized = normalizeLie(decoy);
     if (seen.includes(normalized)) continue;
     seen.push(normalized);
-    entries.push({ text: decoy, authorId: null, isTruth: false });
+    entries.push({ text: decoy, authorId: null, isTruth: false, isDecoy: true });
   }
 }
 
@@ -210,15 +211,24 @@ function revealSource(fact: Fact | undefined): Fact["source"] {
   return fact?.source ?? { title: "", url: "" };
 }
 
-/** Every non-truth option, with the players each one fooled. */
+/**
+ * Every lie worth telling the story of, with the players each one fooled. A house decoy
+ * is kept once it fooled someone; a departed player's anonymized lie is not, so it is
+ * never mistaken for a decoy.
+ */
 function revealedLies(
   options: readonly RonOption[],
   votes: Record<PlayerId, string>,
   playerIds: readonly PlayerId[],
 ): RonFooledLie[] {
-  return options
-    .filter((o) => o.authorId !== null)
-    .map((o) => fooledLie(o, votes, playerIds));
+  const lies: RonFooledLie[] = [];
+  for (const option of options) {
+    if (option.isTruth) continue;
+    const lie = fooledLie(option, votes, playerIds);
+    const decoyFooled = option.isDecoy === true && lie.fooledIds.length > 0;
+    if (lie.authorId !== null || decoyFooled) lies.push(lie);
+  }
+  return lies;
 }
 
 function computeReveal(

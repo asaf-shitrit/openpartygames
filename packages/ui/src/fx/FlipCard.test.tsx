@@ -48,6 +48,24 @@ function Harness({ holdMs }: { holdMs?: number }) {
   );
 }
 
+function ToggleHarness() {
+  const [flipped, setFlipped] = useState(false);
+  return (
+    <>
+      <FlipCard
+        back={<div>Face down</div>}
+        front={<div>Secret role</div>}
+        flipped={flipped}
+        onFlip={() => setFlipped(true)}
+        label="Your secret card"
+      />
+      <button type="button" onClick={() => setFlipped(false)}>
+        Hide
+      </button>
+    </>
+  );
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -55,6 +73,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("FlipCard", () => {
@@ -142,6 +161,23 @@ describe("FlipCard", () => {
     );
     expect(screen.getByText("Secret role")).toBeTruthy();
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("cancels the flip animation when the card is hidden again", () => {
+    const animation = document.createElement("div").animate([], 0);
+    const cancel = vi.fn<() => void>();
+    animation.cancel = cancel;
+    vi.spyOn(Element.prototype, "animate").mockReturnValue(animation);
+
+    render(<ToggleHarness />);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Your secret card" }), {
+      key: "Enter",
+    });
+    expect(screen.getByText("Secret role")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }));
+    expect(cancel).toHaveBeenCalled();
+    expect(screen.queryByText("Secret role")).toBeNull();
   });
 
   describe("under reduced motion", () => {

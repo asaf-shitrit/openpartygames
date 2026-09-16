@@ -192,6 +192,18 @@ describe("PhoneResults, not completed", () => {
     expect(screen.getByText("Game over")).toBeTruthy();
     expect(screen.getByText("6 points")).toBeTruthy();
   });
+
+  it("does not buzz the ceremony for a game that ended early", () => {
+    vi.useFakeTimers();
+    const vibrate = stubVibrate();
+    // p2 is 2nd, so the rank beat would buzz "good" if the ceremony ran.
+    const { advanceTo } = setup(makeEndedEarlyResult(), "p2", 0);
+
+    advanceTo(20_000);
+
+    expect(vibrate).not.toHaveBeenCalled();
+    expect(screen.getByText("Game over")).toBeTruthy();
+  });
 });
 
 describe("PhoneResults, an old save", () => {

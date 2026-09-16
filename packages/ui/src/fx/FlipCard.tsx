@@ -103,17 +103,28 @@ function useHoldToFlip(
 
 function useFlipAnimation(flipped: boolean, reduced: boolean) {
   const innerRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<Animation | null>(null);
   const [mountedFlipped] = useState(flipped);
 
   useEffect(() => {
     const el = innerRef.current;
+    // Cancel the finished flip first: its `fill: both` keeps pinning the inner face at
+    // 180deg, which hides both faces once `flipped` goes back to false.
+    animationRef.current?.cancel();
+    animationRef.current = null;
     if (el === null || !flipped || mountedFlipped) return;
     if (reduced) return;
-    el.animate([{ rotate: "y 0deg" }, { rotate: "y 180deg" }], {
-      duration: FLIP_DURATION_MS,
-      easing: "ease-in-out",
-      fill: "both",
-    });
+    const animation = el.animate(
+      [{ rotate: "y 0deg" }, { rotate: "y 180deg" }],
+      {
+        duration: FLIP_DURATION_MS,
+        easing: "ease-in-out",
+        fill: "both",
+      },
+    );
+    // Cancelling an animation rejects its `finished` promise, and nothing waits on it.
+    animation.finished.catch(() => undefined);
+    animationRef.current = animation;
   }, [flipped, mountedFlipped, reduced]);
 
   return { innerRef, mountedFlipped };
