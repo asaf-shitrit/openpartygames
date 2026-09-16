@@ -1243,6 +1243,7 @@ export function restoreRoom(
   const state = Object.assign(blankState(), persisted);
   // A snapshot written by an older build (or a corrupted one) can lack the fields the
   // constructor reads, so normalize the result once here instead of throwing on restore.
-  if (state.lastResult !== null) state.lastResult = resultSummary(state.lastResult);
+  if (state.lastResult !== null)
+    state.lastResult = resultSummary(state.lastResult);
   return new RoomImpl(state, games, newToken);
 }

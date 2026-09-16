@@ -338,7 +338,11 @@ describe("RoomHub broadcast gating", () => {
     await send(lobby.hub, lobby.bo, { t: "kick", playerId: cyId });
 
     expect(lobby.bo.sent).toEqual([
-      { t: "error", code: "not-vip", message: "Only the room leader can do that." },
+      {
+        t: "error",
+        code: "not-vip",
+        message: "Only the room leader can do that.",
+      },
     ]);
     expect(lobby.host.sent).toEqual([]);
     expect(lobby.ada.sent).toEqual([]);

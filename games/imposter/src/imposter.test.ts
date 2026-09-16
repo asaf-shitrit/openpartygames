@@ -654,9 +654,7 @@ describe("typing action", () => {
     const c = makeCtx({ n: 4, seed: 62, content: ONE_PAIR });
     const state = toVotePhase(setup(c), c);
     expect(state.phase).not.toBe("last-chance");
-    expect(onAction(state, "p1", { type: "typing", length: 2 }, c)).toBe(
-      state,
-    );
+    expect(onAction(state, "p1", { type: "typing", length: 2 }, c)).toBe(state);
   });
 
   it("rejects typing from anyone but the imposter", () => {
@@ -664,9 +662,7 @@ describe("typing action", () => {
     const state = toLastChance(c);
     const imp = imposterOf(state);
     const crew = otherPlayer(state.playerIds, imp);
-    expect(onAction(state, crew, { type: "typing", length: 2 }, c)).toBe(
-      state,
-    );
+    expect(onAction(state, crew, { type: "typing", length: 2 }, c)).toBe(state);
   });
 
   it("rejects typing once a guess is already in", () => {
@@ -692,9 +688,7 @@ describe("typing action", () => {
     const state = toLastChance(c);
     const imp = imposterOf(state);
     expect(state.guessLength ?? 0).toBe(0);
-    expect(onAction(state, imp, { type: "typing", length: 0 }, c)).toBe(
-      state,
-    );
+    expect(onAction(state, imp, { type: "typing", length: 0 }, c)).toBe(state);
   });
 
   it("treats a missing guessLength (an old snapshot) as zero", () => {

@@ -78,7 +78,15 @@ export function CountUp({
   const outputRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   // Read the props through a ref so a later change never restarts the count.
-  const stateRef = useRef({ from, to, durationMs, delayMs, prefix, live, reduced });
+  const stateRef = useRef({
+    from,
+    to,
+    durationMs,
+    delayMs,
+    prefix,
+    live,
+    reduced,
+  });
   useEffect(() => {
     stateRef.current = { from, to, durationMs, delayMs, prefix, live, reduced };
   });

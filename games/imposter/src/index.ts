@@ -293,7 +293,10 @@ function startNextWord(state: ImposterState, ctx: Ctx): ImposterState {
  * The next word, with its imposter re-picked when that player has left: a departed
  * imposter would leave the word with nobody holding the decoy.
  */
-function repairNextWordImposter(state: ImposterState, ctx: Ctx): ImposterWord[] {
+function repairNextWordImposter(
+  state: ImposterState,
+  ctx: Ctx,
+): ImposterWord[] {
   const index = state.wordIndex + 1;
   const word = state.words[index];
   if (word === undefined) return state.words;

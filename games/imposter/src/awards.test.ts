@@ -86,9 +86,7 @@ describe("imposterAwards", () => {
   });
 
   it("sharpest-eye requires at least 2 votes for the imposter, just below threshold gets nothing", () => {
-    const history = [
-      record({ imposterId: "p1", votes: { p2: "p1" } }),
-    ];
+    const history = [record({ imposterId: "p1", votes: { p2: "p1" } })];
     expect(imposterAwards(state(history))).not.toContainEqual(
       expect.objectContaining({ id: "sharpest-eye" }),
     );
@@ -180,7 +178,11 @@ describe("imposterAwards", () => {
   it("drops the fourth award type, so a game never shows more than three", () => {
     const history = [
       record({ imposterId: "p1", caught: true, guessCorrect: true }),
-      record({ imposterId: "p2", caught: false, votes: { p3: "p2", p4: "p2" } }),
+      record({
+        imposterId: "p2",
+        caught: false,
+        votes: { p3: "p2", p4: "p2" },
+      }),
       record({ imposterId: "p2", caught: false, votes: { p3: "p2" } }),
       record({ imposterId: "p1", caught: false, votes: {} }),
       record({ imposterId: "p1", caught: false, votes: {} }),

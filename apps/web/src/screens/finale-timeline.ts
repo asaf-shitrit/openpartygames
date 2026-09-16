@@ -118,7 +118,9 @@ export function rankPlayers(
   scores: Readonly<Record<PlayerId, number>>,
   order: readonly PlayerId[],
 ): RankedPlayer[] {
-  const sorted = sortByScore(order.map((id) => ({ id, score: scores[id] ?? 0 })));
+  const sorted = sortByScore(
+    order.map((id) => ({ id, score: scores[id] ?? 0 })),
+  );
   let rank = 0;
   let lastScore: number | null = null;
   return sorted.map((row, index) => {

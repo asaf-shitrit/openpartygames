@@ -8,15 +8,12 @@ function stubRaf() {
   let queue: Array<{ id: number; callback: FrameCallback }> = [];
   let nextId = 1;
   let time = 0;
-  vi.stubGlobal(
-    "requestAnimationFrame",
-    (callback: FrameCallback): number => {
-      const id = nextId;
-      nextId += 1;
-      queue.push({ id, callback });
-      return id;
-    },
-  );
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameCallback): number => {
+    const id = nextId;
+    nextId += 1;
+    queue.push({ id, callback });
+    return id;
+  });
   vi.stubGlobal("cancelAnimationFrame", (id: number): void => {
     queue = queue.filter((entry) => entry.id !== id);
   });

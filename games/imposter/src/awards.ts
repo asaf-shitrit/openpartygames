@@ -38,7 +38,8 @@ function tallyImposterCounts(
   const disguise: Record<PlayerId, number> = {};
   for (const record of history) {
     if (!roster.has(record.imposterId)) continue;
-    if (record.caught && record.guessCorrect) bump(wordThief, record.imposterId);
+    if (record.caught && record.guessCorrect)
+      bump(wordThief, record.imposterId);
     if (!record.caught) bump(disguise, record.imposterId);
   }
   return { wordThief, disguise };
@@ -90,5 +91,7 @@ export function imposterAwards(state: ImposterState): Award[] {
     topAward("sharpest-eye", sharpestEye, 2),
     topAward("trusted-crew", trustedCrew, 3),
   ];
-  return awards.filter((award): award is Award => award !== null).slice(0, MAX_AWARDS);
+  return awards
+    .filter((award): award is Award => award !== null)
+    .slice(0, MAX_AWARDS);
 }

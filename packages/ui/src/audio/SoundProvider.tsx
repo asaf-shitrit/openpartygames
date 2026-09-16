@@ -22,7 +22,9 @@ import type {
 } from "./types";
 import { SILENT_ENGINE } from "./types";
 
-/** The most recent (topmost) claim's music, or null when nothing has claimed the bus. */export function topClaim(claims: readonly MusicId[]): MusicId | null {
+/** The most recent (topmost) claim's music, or null when nothing has claimed the bus. */ export function topClaim(
+  claims: readonly MusicId[],
+): MusicId | null {
   return claims.length === 0 ? null : (claims.at(-1) ?? null);
 }
 
@@ -105,10 +107,9 @@ function useEngineStatus(engine: SoundEngine): SoundStatus {
  *   crossfade once per claim change, the actual `engine.playMusic` call is coalesced into a
  *   single microtask, and skipped entirely when the top claim ends up unchanged.
  */
-function useMusicClaims(engine: SoundEngine): (
-  key: string,
-  music: MusicId | null,
-) => void {
+function useMusicClaims(
+  engine: SoundEngine,
+): (key: string, music: MusicId | null) => void {
   const claimsRef = useRef(new Map<string, MusicId>());
   const playedRef = useRef<MusicId | null>(null);
   const flushScheduledRef = useRef(false);

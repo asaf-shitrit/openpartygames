@@ -9,7 +9,12 @@ import { useReducedMotion } from "../reduced-motion";
 import type { ConfettiPainter } from "./confetti-paint";
 import { canvasPainter } from "./confetti-paint";
 import type { ConfettiBounds, Particle } from "./confetti-physics";
-import { CONFETTI_CAP, settled, spawnBurst, stepParticles } from "./confetti-physics";
+import {
+  CONFETTI_CAP,
+  settled,
+  spawnBurst,
+  stepParticles,
+} from "./confetti-physics";
 import { StickerBurst } from "./StickerBurst";
 
 export interface ConfettiOrigin {
@@ -55,7 +60,9 @@ function defaultColors(): readonly string[] {
   ];
 }
 
-function defaultCreatePainter(canvas: HTMLCanvasElement): ConfettiPainter | null {
+function defaultCreatePainter(
+  canvas: HTMLCanvasElement,
+): ConfettiPainter | null {
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   return canvasPainter(ctx, devicePixelCap());
@@ -92,7 +99,11 @@ function hiddenTab(): boolean {
 }
 
 /** One rAF loop: steps, clears and draws until every particle settles. */
-function startConfettiLoop({ painter, size, particles: initial }: LoopOptions): () => void {
+function startConfettiLoop({
+  painter,
+  size,
+  particles: initial,
+}: LoopOptions): () => void {
   let particles = initial;
   let frameId = 0;
   let cancelled = false;
@@ -135,7 +146,10 @@ interface LiveProps {
   surface: "tv" | "phone";
 }
 
-function launchBurst(canvas: HTMLCanvasElement, props: LiveProps): (() => void) | null {
+function launchBurst(
+  canvas: HTMLCanvasElement,
+  props: LiveProps,
+): (() => void) | null {
   const painter = props.createPainter(canvas);
   if (!painter) return null;
   const size = sizeCanvas(canvas);

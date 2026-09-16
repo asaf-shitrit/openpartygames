@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MAX_AWARDS, cleanPlayerName, normalizeRoomCode, parseClientMessage, ROOM_CODE_RE } from "./index";
+import {
+  MAX_AWARDS,
+  cleanPlayerName,
+  normalizeRoomCode,
+  parseClientMessage,
+  ROOM_CODE_RE,
+} from "./index";
 
 describe("parseClientMessage", () => {
   it("accepts every well-formed message", () => {
@@ -39,7 +45,9 @@ describe("parseClientMessage", () => {
   });
 
   it("drops unknown fields instead of passing them through", () => {
-    expect(parseClientMessage(JSON.stringify({ t: "start-game", extra: 1 }))).toEqual({ t: "start-game" });
+    expect(
+      parseClientMessage(JSON.stringify({ t: "start-game", extra: 1 })),
+    ).toEqual({ t: "start-game" });
   });
 });
 

@@ -1,7 +1,12 @@
 // RoomCore rules tests. Every test drives the room through its public API only:
 // handle() with a fake clock and a counter token generator, exactly like the Worker adapter.
 import { describe, expect, it } from "vitest";
-import type { Award, ClientMessage, PlayerId, ServerMessage } from "@opg/protocol";
+import type {
+  Award,
+  ClientMessage,
+  PlayerId,
+  ServerMessage,
+} from "@opg/protocol";
 import { tapGame } from "./fixtures/tap-game";
 import type {
   Caller,
@@ -172,11 +177,7 @@ function idsOf(players: readonly PlayerWelcome[]): PlayerId[] {
 
 /** Pick the tap game as the VIP and kick off content loading. Leaves the room in "starting". */
 function startTap(h: Harness, ids: PlayerId[], gameId = tapGame.id): void {
-  h.room.handle(
-    vip(h.room, at(ids, 0)),
-    { t: "pick-game", gameId },
-    h.now(),
-  );
+  h.room.handle(vip(h.room, at(ids, 0)), { t: "pick-game", gameId }, h.now());
   h.room.handle(vip(h.room, at(ids, 0)), { t: "start-game" }, h.now());
   h.room.beginGame(CONTENT, h.now());
 }
@@ -1222,7 +1223,11 @@ describe("restore boundaries", () => {
   });
 
   it("restarts blank instead of throwing on a corrupted snapshot", () => {
-    const restored = restoreRoom({ version: 1, data: "{" }, [tapGame], () => "r1");
+    const restored = restoreRoom(
+      { version: 1, data: "{" },
+      [tapGame],
+      () => "r1",
+    );
     expect(restored.hostView(0).lastResult).toBeNull();
   });
 });

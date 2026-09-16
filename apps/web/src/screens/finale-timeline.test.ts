@@ -93,10 +93,7 @@ describe("finaleBeats", () => {
 
 describe("rankPlayers", () => {
   it("ranks by score, highest first", () => {
-    const ranked = rankPlayers(
-      { p1: 10, p2: 30, p3: 5 },
-      ["p1", "p2", "p3"],
-    );
+    const ranked = rankPlayers({ p1: 10, p2: 30, p3: 5 }, ["p1", "p2", "p3"]);
     expect(ranked).toEqual([
       { id: "p2", score: 30, rank: 1 },
       { id: "p1", score: 10, rank: 2 },
@@ -105,10 +102,7 @@ describe("rankPlayers", () => {
   });
 
   it("shares a rank on a tie and skips the next rank", () => {
-    const ranked = rankPlayers(
-      { p1: 20, p2: 20, p3: 5 },
-      ["p1", "p2", "p3"],
-    );
+    const ranked = rankPlayers({ p1: 20, p2: 20, p3: 5 }, ["p1", "p2", "p3"]);
     expect(ranked).toEqual([
       { id: "p1", score: 20, rank: 1 },
       { id: "p2", score: 20, rank: 1 },

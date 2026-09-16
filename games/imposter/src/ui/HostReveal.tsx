@@ -465,39 +465,39 @@ function RevealTile(props: RevealTileProps) {
   const shown = marksForTarget(order, id, drawn);
   return (
     <div data-tile-id={id} style={TILE_SLOT}>
-    <Card
-      variant={index % 2 === 0 ? "M" : "Malt"}
-      tilt={TILTS[index % TILTS.length]}
-      background={props.highlighted ? "var(--opg-highlight-soft)" : undefined}
-      style={tileStyle(props.highlighted)}
-      className="opg-reveal-tile"
-    >
-      <Avatar
-        id={avatarOf(props.players, id)}
-        size={compact ? 88 : 110}
-        alt={avatarLabel(props.players, id)}
-      />
-      <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
-        {nameOf(props.players, id)}
-      </div>
-      <TallyRow count={voters.length} shown={shown} />
-      <VoterRow
-        voters={voters}
-        shown={shown}
-        live={live}
-        players={props.players}
-      />
-      {props.stamp === null ? null : (
-        <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} />
-      )}
-      {props.footprints ? (
-        <div style={{ position: "absolute", right: -22, bottom: -22 }}>
-          <FxIn live={props.live} preset="pop">
-            <Footprints />
-          </FxIn>
+      <Card
+        variant={index % 2 === 0 ? "M" : "Malt"}
+        tilt={TILTS[index % TILTS.length]}
+        background={props.highlighted ? "var(--opg-highlight-soft)" : undefined}
+        style={tileStyle(props.highlighted)}
+        className="opg-reveal-tile"
+      >
+        <Avatar
+          id={avatarOf(props.players, id)}
+          size={compact ? 88 : 110}
+          alt={avatarLabel(props.players, id)}
+        />
+        <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
+          {nameOf(props.players, id)}
         </div>
-      ) : null}
-    </Card>
+        <TallyRow count={voters.length} shown={shown} />
+        <VoterRow
+          voters={voters}
+          shown={shown}
+          live={live}
+          players={props.players}
+        />
+        {props.stamp === null ? null : (
+          <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} />
+        )}
+        {props.footprints ? (
+          <div style={{ position: "absolute", right: -22, bottom: -22 }}>
+            <FxIn live={props.live} preset="pop">
+              <Footprints />
+            </FxIn>
+          </div>
+        ) : null}
+      </Card>
     </div>
   );
 }

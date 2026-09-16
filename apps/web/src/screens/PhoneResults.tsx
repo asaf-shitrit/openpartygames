@@ -484,7 +484,8 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
   });
 
   if (result === null) return <GameOverCard score={0} />;
-  if (!completedOf(result)) return <GameOverCard score={myScoreIn(ranked, me)} />;
+  if (!completedOf(result))
+    return <GameOverCard score={myScoreIn(ranked, me)} />;
 
   const crownLine = crownCopy(
     (result.winnerIds ?? []).map((id) => findPlayerName(view, id)),
