@@ -21,20 +21,18 @@ import {
 import type { Beat, HapticName, Moment, ServerClock } from "@opg/ui";
 import type { ReactNode } from "react";
 import { useRef } from "react";
-import { awardCopyFor } from "../games";
+import { awardCopyFor, describableAwards } from "../games";
 import {
   crownCopy,
   crownCueId,
   finaleBeats,
   ordinal,
   rankPlayers,
+  topRank,
 } from "./finale-timeline";
 import type { RankedPlayer } from "./finale-timeline";
 
-function findPlayerName(
-  view: PlayerRoomView,
-  id: PlayerId | null,
-): string {
+function findPlayerName(view: PlayerRoomView, id: PlayerId | null): string {
   if (!id) return "Someone";
   return view.players.find((player) => player.id === id)?.name ?? "Someone";
 }
@@ -168,7 +166,10 @@ function crownHeadline(amWinner: boolean, crownLine: string | null): string {
   return crownLine ?? "The crown is decided";
 }
 
-function finishedRankText(amWinner: boolean, rank: number | null): string | null {
+function finishedRankText(
+  amWinner: boolean,
+  rank: number | null,
+): string | null {
   if (amWinner || rank === null) return null;
   return `You finished ${ordinal(rank)}`;
 }
@@ -284,8 +285,10 @@ function SettledCard({
 
 /** "3rd place!" or "2nd place!" when this beat has reached my own rank. */
 function rankPlaceCallout(stage: Stage, myRank: number | null): ReactNode {
-  if (stage.secondReached && myRank === 2) return <RankCallout label="2nd place!" />;
-  if (stage.thirdReached && myRank === 3) return <RankCallout label="3rd place!" />;
+  if (stage.secondReached && myRank === 2)
+    return <RankCallout label="2nd place!" />;
+  if (stage.thirdReached && myRank === 3)
+    return <RankCallout label="3rd place!" />;
   return null;
 }
 
@@ -298,7 +301,11 @@ function myAwardCallout(
   const award = awards[stage.latestMyAwardIndex];
   if (award === undefined) return null;
   return (
-    <AwardCallout award={award} live={stage.latestMyAwardLive} gameId={gameId} />
+    <AwardCallout
+      award={award}
+      live={stage.latestMyAwardLive}
+      gameId={gameId}
+    />
   );
 }
 
@@ -337,7 +344,7 @@ function bodyFor(args: {
   if (stage.crownReached) {
     return (
       <CrownCallout
-        amWinner={view.lastResult?.winnerIds.includes(me) ?? false}
+        amWinner={isWinner(view.lastResult, me)}
         live={stage.crownLive}
         crownLine={crownLine}
         rank={myRank}
@@ -382,7 +389,10 @@ interface BeatContext {
   amWinner: boolean;
 }
 
-function myAwardHaptic(ctx: BeatContext, awardIndex: number): HapticName | null {
+function myAwardHaptic(
+  ctx: BeatContext,
+  awardIndex: number,
+): HapticName | null {
   return ctx.awards[awardIndex]?.playerIds.includes(ctx.me) ? "award" : null;
 }
 
@@ -412,25 +422,30 @@ function handleBeatEntry(
 
 function resultAwards(result: GameResultSummary | null): readonly Award[] {
   if (result === null) return [];
-  return result.awards;
+  return result.awards ?? [];
+}
+
+/** Old or skewed payloads can lack `completed`; the crown list is the signal they carried. */
+function completedOf(result: GameResultSummary): boolean {
+  return result.completed ?? result.winnerIds.length > 0;
 }
 
 function resultScores(
   result: GameResultSummary | null,
 ): Readonly<Record<PlayerId, number>> {
   if (result === null) return {};
-  return result.scores;
+  return result.scores ?? {};
 }
 
 function resultFinishedAt(result: GameResultSummary | null): number | null {
   // A game that ended early shows a plain game-over card, so nothing is staged for it.
-  if (result === null || !result.completed) return null;
-  return result.finishedAt;
+  if (result === null || !completedOf(result)) return null;
+  return result.finishedAt ?? 0;
 }
 
 function isWinner(result: GameResultSummary | null, me: PlayerId): boolean {
   if (result === null) return false;
-  return result.winnerIds.includes(me);
+  return (result.winnerIds ?? []).includes(me);
 }
 
 export interface PhoneResultsProps {
@@ -447,8 +462,9 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
   );
   const awards = resultAwards(result);
   const beats = finaleBeats({
-    awardCount: awards.length,
-    rankedCount: ranked.length,
+    // Matches the TV's count, so both devices stage the same ceremony.
+    awardCount: describableAwards(result?.gameId ?? "", awards).length,
+    rankedCount: topRank(ranked),
     crownCue: crownCueId(),
   });
   const moment = useMoment(beats, resultFinishedAt(result), clock);
@@ -459,14 +475,19 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
   const amWinner = isWinner(result, me);
 
   useBeatEntries(beats, moment, (beat) => {
-    handleBeatEntry(beat, { awards, me, myRank, amWinner }, buzz, cardRef.current);
+    handleBeatEntry(
+      beat,
+      { awards, me, myRank, amWinner },
+      buzz,
+      cardRef.current,
+    );
   });
 
   if (result === null) return <GameOverCard score={0} />;
-  if (!result.completed) return <GameOverCard score={myScoreIn(ranked, me)} />;
+  if (!completedOf(result)) return <GameOverCard score={myScoreIn(ranked, me)} />;
 
   const crownLine = crownCopy(
-    result.winnerIds.map((id) => findPlayerName(view, id)),
+    (result.winnerIds ?? []).map((id) => findPlayerName(view, id)),
   );
 
   return (

@@ -1,28 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { makeResult } from "./fixtures/room";
 import {
   crownCopy,
   finaleBeats,
-  finaleDurationMs,
-  finaleSettled,
   joinNames,
   ordinal,
   rankPlayers,
 } from "./finale-timeline";
-
-describe("finaleDurationMs", () => {
-  it("is 16s with no awards", () => {
-    expect(finaleDurationMs(0)).toBe(16000);
-  });
-
-  it("is 19s with one award", () => {
-    expect(finaleDurationMs(1)).toBe(19000);
-  });
-
-  it("is 25s with three awards", () => {
-    expect(finaleDurationMs(3)).toBe(25000);
-  });
-});
 
 describe("finaleBeats", () => {
   it("lays out the wrap, awards, crown-intro, third, second and crown beats", () => {
@@ -105,33 +88,6 @@ describe("finaleBeats", () => {
     expect(beats.some((beat) => beat.id === "third")).toBe(false);
     expect(beats.some((beat) => beat.id === "second")).toBe(false);
     expect(beats.some((beat) => beat.id === "crown")).toBe(true);
-  });
-});
-
-describe("finaleSettled", () => {
-  it("is settled for an old save with finishedAt 0", () => {
-    expect(finaleSettled(makeResult({ finishedAt: 0 }), 1000)).toBe(true);
-  });
-
-  it("is settled when the game did not complete", () => {
-    expect(
-      finaleSettled(makeResult({ finishedAt: 500, completed: false }), 600),
-    ).toBe(true);
-  });
-
-  it("is not settled mid-ceremony", () => {
-    expect(
-      finaleSettled(makeResult({ finishedAt: 1000, completed: true }), 5000),
-    ).toBe(false);
-  });
-
-  it("is settled once the ceremony has run its full duration", () => {
-    const finishedAt = 1000;
-    const r = makeResult({ finishedAt, completed: true, awards: [] });
-    expect(finaleSettled(r, finishedAt + finaleDurationMs(0) - 1)).toBe(
-      false,
-    );
-    expect(finaleSettled(r, finishedAt + finaleDurationMs(0))).toBe(true);
   });
 });
 

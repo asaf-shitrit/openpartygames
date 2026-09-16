@@ -103,12 +103,17 @@ describe("TvCredits", () => {
     }
   });
 
-  it("shows a cue title as the sample credit", () => {
+  it("credits a cue's author under sound effects", () => {
     render(
       <SoundProvider engine={new FakeEngine()}>
         <TvCredits />
       </SoundProvider>,
     );
     expect(screen.getByText("Sound effects")).toBeTruthy();
+    const author = AUDIO_CREDITS[0]?.author ?? "";
+    expect(author).not.toBe("");
+    expect(
+      screen.getByText(new RegExp(author.replace(/[()]/gu, "\\$&"))),
+    ).toBeTruthy();
   });
 });

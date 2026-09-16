@@ -43,13 +43,17 @@ export function isFreshEntry(
   return since >= 0 && since <= graceMs;
 }
 
-/** Prefers timerStartedAt; falls back to deadline - durationMs; null when both are null. */
+/**
+ * Prefers timerStartedAt; falls back to deadline - durationMs; null when both are null.
+ * `timerStartedAt` can arrive as undefined from a Worker that predates the field.
+ */
 export function anchorAt(
-  timerStartedAt: number | null,
+  timerStartedAt: number | null | undefined,
   deadline: number | null,
   durationMs: number,
 ): number | null {
-  if (timerStartedAt !== null) return timerStartedAt;
+  if (timerStartedAt !== null && timerStartedAt !== undefined)
+    return timerStartedAt;
   if (deadline !== null) return deadline - durationMs;
   return null;
 }

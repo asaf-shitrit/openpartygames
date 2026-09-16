@@ -100,9 +100,7 @@ describe("PhoneResults, ceremony from the start", () => {
     expect(screen.getByText(/You finished/).textContent).toBe(
       "You finished 3rd",
     );
-    expect(vibrate).not.toHaveBeenCalledWith([
-      70, 40, 70, 40, 70, 40, 320,
-    ]);
+    expect(vibrate).not.toHaveBeenCalledWith([70, 40, 70, 40, 70, 40, 320]);
   });
 
   it("calls out my own 3rd place moment", () => {

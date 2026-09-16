@@ -141,3 +141,11 @@ export function awardCopyFor(
   if (!ui?.awardCopy) return null;
   return ui.awardCopy(award);
 }
+
+/** The awards the platform can describe: the finale stages one beat per award in here. */
+export function describableAwards(
+  gameId: string,
+  awards: readonly Award[],
+): Award[] {
+  return awards.filter((award) => awardCopyFor(gameId, award) !== null);
+}

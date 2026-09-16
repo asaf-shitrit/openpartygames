@@ -124,6 +124,34 @@ describe("useBeatEntries", () => {
     expect(onEnter).toHaveBeenLastCalledWith(OTHER_BEATS[1]);
   });
 
+  it("does not replay the current beat when the list is rebuilt inside the grace window", () => {
+    const onEnter = vi.fn<(beat: Beat) => void>();
+    const { rerender } = renderEntries({
+      beats: BEATS,
+      moment: momentAt(1, true),
+      onEnter,
+    });
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    // The ceremony shrank (a kick): the same beat now sits in a rebuilt list.
+    rerender({ beats: BEATS.slice(0, 3), moment: momentAt(1, true), onEnter });
+    expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires again when the moment itself restarts", () => {
+    const onEnter = vi.fn<(beat: Beat) => void>();
+    const { rerender } = renderEntries({
+      beats: BEATS,
+      moment: momentAt(3, true),
+      onEnter,
+    });
+    expect(onEnter).toHaveBeenCalledTimes(1);
+
+    rerender({ beats: BEATS, moment: momentAt(0, true), onEnter });
+    expect(onEnter).toHaveBeenCalledTimes(2);
+    expect(onEnter).toHaveBeenLastCalledWith(BEATS[0]);
+  });
+
   it("does nothing before the first beat", () => {
     const onEnter = vi.fn<(beat: Beat) => void>();
     renderEntries({ beats: BEATS, moment: momentAt(-1, false), onEnter });

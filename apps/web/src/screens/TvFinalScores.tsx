@@ -34,7 +34,7 @@ import type {
   MusicId,
   ServerClock,
 } from "@opg/ui";
-import { awardCopyFor } from "../games";
+import { awardCopyFor, describableAwards } from "../games";
 import { PointArrow, TvPage } from "./shared";
 import {
   crownCopy,
@@ -43,6 +43,7 @@ import {
   FINALE_TIMING,
   joinNames,
   rankPlayers,
+  topRank,
 } from "./finale-timeline";
 import type { RankedPlayer } from "./finale-timeline";
 
@@ -72,7 +73,10 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: readonly PlayerSummary[], id: PlayerId | null): string {
+function nameOf(
+  players: readonly PlayerSummary[],
+  id: PlayerId | null,
+): string {
   return findPlayer(players, id)?.name ?? "Someone";
 }
 
@@ -336,7 +340,7 @@ function AwardCard({
         </div>
         <Marker size={30}>{copy.title}</Marker>
         <div style={{ fontSize: 28, fontWeight: 700 }}>{names}</div>
-        <div style={{ fontSize: 22, color: "var(--opg-ink-secondary)" }}>
+        <div style={{ fontSize: 28, color: "var(--opg-ink-secondary)" }}>
           {copy.detail}
         </div>
       </Card>
@@ -402,8 +406,8 @@ function AwardChip({
         borderRadius: "var(--opg-radius-button)",
       }}
     >
-      <Marker size={22}>{copy.title}</Marker>
-      <span style={{ fontSize: 22, fontWeight: 700 }}>{names}</span>
+      <Marker size={28}>{copy.title}</Marker>
+      <span style={{ fontSize: 28, fontWeight: 700 }}>{names}</span>
     </div>
   );
 }
@@ -475,7 +479,11 @@ function CrownIntro({ stage }: { stage: Stage }) {
           borderRadius: 24,
         }}
       />
-      <FxIn live={stage.crownIntroLive} preset="fadeIn" style={{ position: "relative" }}>
+      <FxIn
+        live={stage.crownIntroLive}
+        preset="fadeIn"
+        style={{ position: "relative" }}
+      >
         <Marker size={64}>And the crown goes to…</Marker>
       </FxIn>
     </div>
@@ -511,7 +519,7 @@ function RankReveal({
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span
                 className="opg-marker"
-                style={{ fontSize: 24, color: "var(--opg-ink-secondary)" }}
+                style={{ fontSize: 28, color: "var(--opg-ink-secondary)" }}
               >
                 {label}
               </span>
@@ -592,7 +600,8 @@ function CrownAnnouncer({
   crownLine: string | null;
 }) {
   // A fuller sentence than the on-screen marker, so the two never collide under an exact text match.
-  const text = crownReached && crownLine ? `The crown is decided. ${crownLine}` : "";
+  const text =
+    crownReached && crownLine ? `The crown is decided. ${crownLine}` : "";
   return (
     <output aria-live="polite" style={HIDDEN}>
       {text}
@@ -613,7 +622,14 @@ function NotCompletedView({
   return (
     <TvPage>
       <TvHeader variant="game" gameName={gameName} roomCode={view.code} />
-      <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div
+        style={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 24,
+        }}
+      >
         <Marker size={64}>Game over</Marker>
         <ScoresList ranked={ranked} players={view.players} winners={[]} />
       </div>
@@ -708,7 +724,11 @@ function SettledLayout({
         gap: 20,
       }}
     >
-      <SettledBanner ranked={ranked} players={view.players} crownLine={crownLine} />
+      <SettledBanner
+        ranked={ranked}
+        players={view.players}
+        crownLine={crownLine}
+      />
       <SlimAwardStrip awards={awards} gameId={gameId} players={view.players} />
       <ScoresList ranked={ranked} players={view.players} winners={winners} />
     </FxIn>
@@ -736,7 +756,20 @@ export interface TvFinalScoresProps {
 
 function awardsOf(result: GameResultSummary | null): readonly Award[] {
   if (result === null) return [];
-  return result.awards;
+  return result.awards ?? [];
+}
+
+/** Old or skewed payloads can lack `completed`; the crown list is the signal they carried. */
+function completedOf(result: GameResultSummary): boolean {
+  return result.completed ?? result.winnerIds.length > 0;
+}
+
+function gameIdOf(result: GameResultSummary | null): string {
+  return result?.gameId ?? "";
+}
+
+function winnerIdsOf(result: GameResultSummary): readonly PlayerId[] {
+  return result.winnerIds ?? [];
 }
 
 function scoresOf(
@@ -748,8 +781,8 @@ function scoresOf(
 
 function finishedAtOf(result: GameResultSummary | null): number | null {
   // A game that ended early shows "Game over" only, so it has no ceremony to anchor.
-  if (result === null || !result.completed) return null;
-  return result.finishedAt;
+  if (result === null || !completedOf(result)) return null;
+  return result.finishedAt ?? 0;
 }
 
 function gameNameFor(view: HostRoomView, gameId: string): string {
@@ -771,11 +804,14 @@ export function finaleMusic(
   result: GameResultSummary | null,
   settleReached: boolean,
 ): MusicId | null {
-  if (result === null || !result.completed || settleReached) return "lobby";
+  if (result === null || !completedOf(result) || settleReached) return "lobby";
   return null;
 }
 
-export function TvFinalScores({ view, clock = FALLBACK_CLOCK }: TvFinalScoresProps) {
+export function TvFinalScores({
+  view,
+  clock = FALLBACK_CLOCK,
+}: TvFinalScoresProps) {
   const result = view.lastResult;
   const ranked = rankPlayers(
     scoresOf(result),
@@ -783,8 +819,10 @@ export function TvFinalScores({ view, clock = FALLBACK_CLOCK }: TvFinalScoresPro
   );
   const awards = awardsOf(result);
   const beats = finaleBeats({
-    awardCount: awards.length,
-    rankedCount: ranked.length,
+    // Only awards the game can put into words get a beat, so no empty card is stamped.
+    awardCount: describableAwards(gameIdOf(result), awards).length,
+    // The highest rank on screen decides the third and second beats; a tie for first has neither.
+    rankedCount: topRank(ranked),
     crownCue: crownCueId(),
   });
   const moment = useMoment(beats, finishedAtOf(result), clock);
@@ -796,11 +834,12 @@ export function TvFinalScores({ view, clock = FALLBACK_CLOCK }: TvFinalScoresPro
   useBeatEntries(beats, moment, (beat) => playCueOnEnter(beat, play));
 
   if (result === null) return <EmptyFinalScores code={view.code} />;
-  if (!result.completed) return <NotCompletedView view={view} ranked={ranked} />;
+  if (!completedOf(result))
+    return <NotCompletedView view={view} ranked={ranked} />;
 
-  const gameName = gameNameFor(view, result.gameId);
+  const gameName = gameNameFor(view, gameIdOf(result));
   const crownLine = crownCopy(
-    result.winnerIds.map((id) => nameOf(view.players, id)),
+    winnerIdsOf(result).map((id) => nameOf(view.players, id)),
   );
 
   return (
@@ -814,7 +853,7 @@ export function TvFinalScores({ view, clock = FALLBACK_CLOCK }: TvFinalScoresPro
       <FinaleBody
         view={view}
         ranked={ranked}
-        winners={result.winnerIds}
+        winners={winnerIdsOf(result)}
         crownLine={crownLine}
         stage={stage}
         awards={awards}

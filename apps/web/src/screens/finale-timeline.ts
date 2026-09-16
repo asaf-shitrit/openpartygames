@@ -1,7 +1,7 @@
 // Pure beat timeline for the finale ceremony: awards, then the crown. Anchored on
 // `lastResult.finishedAt`, so the TV and every phone stage the same ~25s moment off the
 // server clock alone, with no per-beat server messages.
-import type { GameResultSummary, PlayerId } from "@opg/protocol";
+import type { PlayerId } from "@opg/protocol";
 import type { Beat, CueId } from "@opg/ui";
 import { CUE_IDS } from "@opg/ui";
 
@@ -17,9 +17,6 @@ export const FINALE_TIMING = {
   drumrollMs: 3000,
 } as const;
 
-/** Tail after the settle beat before the ceremony is fully done (matches the storyboard's 25s total for 3 awards). */
-const SETTLE_TAIL_MS = 3000;
-
 /** ms from the ceremony start to "And the crown goes to…", after every award has stamped in. */
 function crownIntroAtMs(awardCount: number): number {
   return (
@@ -29,11 +26,6 @@ function crownIntroAtMs(awardCount: number): number {
   );
 }
 
-/** Total ceremony length: crownIntroAt + 14000 (settle at +11000, plus a 3s settle tail). */
-export function finaleDurationMs(awardCount: number): number {
-  return crownIntroAtMs(awardCount) + FINALE_TIMING.settleAfterIntroMs + SETTLE_TAIL_MS;
-}
-
 /** "fanfare" once the kit has it, "slam" otherwise. */
 export function crownCueId(): CueId {
   return CUE_IDS.includes("fanfare") ? "fanfare" : "slam";
@@ -41,7 +33,10 @@ export function crownCueId(): CueId {
 
 export interface FinaleBeatsInput {
   awardCount: number;
-  /** How many players have a rank (for a tie, everyone tied for a rank counts once per player). */
+  /**
+   * The highest rank anyone holds (0 when nobody is ranked). A tie for first plays no
+   * third or second beat, because nobody is standing at those ranks.
+   */
   rankedCount: number;
   /** "fanfare" when the kit has it, "slam" otherwise. */
   crownCue: CueId;
@@ -95,13 +90,6 @@ export function finaleBeats(input: FinaleBeatsInput): Beat[] {
   return beats;
 }
 
-/** Settled when finishedAt is 0 (an old save), the game did not complete, or the ceremony has run its course. */
-export function finaleSettled(result: GameResultSummary, now: number): boolean {
-  if (result.finishedAt === 0) return true;
-  if (!result.completed) return true;
-  return now - result.finishedAt >= finaleDurationMs(result.awards.length);
-}
-
 export interface RankedPlayer {
   id: PlayerId;
   score: number;
@@ -140,6 +128,11 @@ export function rankPlayers(
     }
     return { id: row.id, score: row.score, rank };
   });
+}
+
+/** The highest rank anyone holds, which is what decides the third and second beats. */
+export function topRank(ranked: readonly RankedPlayer[]): number {
+  return ranked.reduce((top, row) => Math.max(top, row.rank), 0);
 }
 
 /** "A", "A and B", "A, B and C". */

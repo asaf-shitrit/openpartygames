@@ -125,7 +125,45 @@ describe("TvFinalScores, ceremony from the start", () => {
       0,
     );
 
-    expect(engine.cues).toEqual(["whoosh", "tape", "drumroll", "pop", "pop", "fanfare"]);
+    expect(engine.cues).toEqual([
+      "whoosh",
+      "tape",
+      "drumroll",
+      "pop",
+      "pop",
+      "fanfare",
+    ]);
+  });
+
+  it("plays no tape cue for an award its game cannot describe", () => {
+    vi.useFakeTimers();
+    const { engine, advanceTo } = setup(
+      {
+        awards: [
+          { id: "word-thief", playerIds: ["p1"], value: 2 },
+          { id: "not-a-real-award", playerIds: ["p1"], value: 1 },
+        ],
+      },
+      0,
+    );
+
+    advanceTo(12_000);
+
+    expect(engine.cues.filter((cue) => cue === "tape")).toHaveLength(1);
+  });
+
+  it("plays no rank cues when everyone ties for the lead", () => {
+    vi.useFakeTimers();
+    const { engine, advanceTo } = setup(
+      { scores: { p1: 10, p2: 10, p3: 10 }, winnerIds: ["p1", "p2", "p3"] },
+      0,
+      [PRIYA, SAM, LEE],
+    );
+
+    advanceTo(20_000);
+
+    expect(engine.cues.filter((cue) => cue === "pop")).toHaveLength(0);
+    expect(engine.cues).toContain("fanfare");
   });
 });
 
@@ -198,7 +236,12 @@ describe("TvFinalScores, not completed", () => {
   it("plays no ceremony cues for a game that ended early", () => {
     vi.useFakeTimers();
     const { engine, advanceTo } = setup(
-      { completed: false, scores: { p1: 10, p2: 4 }, winnerIds: [], awards: [] },
+      {
+        completed: false,
+        scores: { p1: 10, p2: 4 },
+        winnerIds: [],
+        awards: [],
+      },
       0,
     );
 

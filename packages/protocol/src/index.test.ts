@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { MAX_AWARDS, cleanPlayerName, normalizeRoomCode, parseClientMessage, ROOM_CODE_RE } from "./index";
-import type { Award, GameResultSummary } from "./index";
 
 describe("parseClientMessage", () => {
   it("accepts every well-formed message", () => {
@@ -64,17 +63,8 @@ describe("room codes", () => {
 });
 
 describe("GameResultSummary", () => {
-  it("caps awards at MAX_AWARDS", () => {
+  it("documents the award cap the SDK enforces", () => {
+    // The cap itself lives in sanitizeAwards (packages/sdk/src/room.ts), tested there.
     expect(MAX_AWARDS).toBe(3);
-    const award: Award = { id: "best-liar", playerIds: ["p1"], value: 2 };
-    const result: GameResultSummary = {
-      gameId: "imposter",
-      scores: { p1: 100 },
-      winnerIds: ["p1"],
-      completed: true,
-      finishedAt: 1000,
-      awards: [award],
-    };
-    expect(result.awards).toHaveLength(1);
   });
 });

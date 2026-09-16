@@ -71,6 +71,11 @@ describe("anchorAt", () => {
   it("keeps timerStartedAt when there is no deadline", () => {
     expect(anchorAt(1000, null, 2000)).toBe(1000);
   });
+
+  it("treats a missing timerStartedAt like null", () => {
+    expect(anchorAt(undefined, 5000, 2000)).toBe(3000);
+    expect(anchorAt(undefined, null, 2000)).toBeNull();
+  });
 });
 
 describe("spacedBeats", () => {
