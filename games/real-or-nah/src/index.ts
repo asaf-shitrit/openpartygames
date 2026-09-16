@@ -170,7 +170,12 @@ function addDecoys(entries: OptionEntry[], fact: Fact | undefined): void {
     const normalized = normalizeLie(decoy);
     if (seen.includes(normalized)) continue;
     seen.push(normalized);
-    entries.push({ text: decoy, authorId: null, isTruth: false, isDecoy: true });
+    entries.push({
+      text: decoy,
+      authorId: null,
+      isTruth: false,
+      isDecoy: true,
+    });
   }
 }
 

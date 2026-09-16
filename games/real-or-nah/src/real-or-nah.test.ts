@@ -617,9 +617,7 @@ describe("onPlayerRemoved edges", () => {
     state = pick(state, "p4", truthId, ctx);
     expect(state.phase).toBe("reveal");
     const planBefore = state.reveal?.planLies;
-    expect(
-      planBefore?.find((p) => p.optionId === p1Lie)?.fooledCount,
-    ).toBe(1);
+    expect(planBefore?.find((p) => p.optionId === p1Lie)?.fooledCount).toBe(1);
 
     // Kicking the only voter fooled by p1's lie drops it from `lies` (now zero-fooled),
     // but the frozen plan, and so the reveal's timing, must not move.
@@ -628,9 +626,9 @@ describe("onPlayerRemoved edges", () => {
     expect(
       after.reveal?.lies.find((l) => l.optionId === p1Lie)?.fooledIds,
     ).toEqual([]);
-    expect(revealPlan({ lies: planLiesOf(after.reveal ?? { lies: [] }) })).toEqual(
-      revealPlan({ lies: planLiesOf(state.reveal ?? { lies: [] }) }),
-    );
+    expect(
+      revealPlan({ lies: planLiesOf(after.reveal ?? { lies: [] }) }),
+    ).toEqual(revealPlan({ lies: planLiesOf(state.reveal ?? { lies: [] }) }));
   });
 
   it("shows a lie's beat with no author once that author is kicked mid-reveal", () => {
