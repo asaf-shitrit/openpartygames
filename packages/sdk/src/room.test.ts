@@ -1178,3 +1178,51 @@ describe("awards", () => {
     expect(lastResult?.awards).toEqual([]);
   });
 });
+
+describe("persisted presence", () => {
+  it("reports a change when the host connects or disconnects", () => {
+    const h = makeRoom();
+    expect(h.room.setHostConnected(true, 0).changed).toBe(true);
+    expect(h.room.setHostConnected(true, 0).changed).toBe(false);
+    expect(h.room.setHostConnected(false, 0).changed).toBe(true);
+    expect(h.room.setHostConnected(false, 0).changed).toBe(false);
+  });
+
+  it("starts the idle clock as a change, so the snapshot records it", () => {
+    const h = makeRoom();
+    const players = joinMany(h.room, ["Maya"], 0);
+    const id = at(idsOf(players), 0);
+
+    expect(h.room.setConnected(id, false, 0).changed).toBe(true);
+    const stored: { emptySince: number | null } = JSON.parse(
+      h.room.snapshot().data,
+    );
+    expect(stored.emptySince).toBe(0);
+    // Nothing moved the second time, so the hub has nothing to write.
+    expect(h.room.setConnected(id, false, 0).changed).toBe(false);
+  });
+});
+
+describe("restore boundaries", () => {
+  it("fills a lastResult that is missing the fields older snapshots never wrote", () => {
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify({ lastResult: { gameId: "tap" } }) },
+      [tapGame],
+      () => "r1",
+    );
+
+    expect(restored.hostView(0).lastResult).toEqual({
+      gameId: "tap",
+      scores: {},
+      winnerIds: [],
+      completed: false,
+      finishedAt: 0,
+      awards: [],
+    });
+  });
+
+  it("restarts blank instead of throwing on a corrupted snapshot", () => {
+    const restored = restoreRoom({ version: 1, data: "{" }, [tapGame], () => "r1");
+    expect(restored.hostView(0).lastResult).toBeNull();
+  });
+});

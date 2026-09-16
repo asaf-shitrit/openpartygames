@@ -76,21 +76,33 @@ interface PendingStart {
  * in their defaults for the view.
  */
 interface StoredResult {
-  gameId: string;
-  scores: Record<PlayerId, number>;
-  winnerIds: PlayerId[];
+  gameId?: string;
+  scores?: Record<PlayerId, number>;
+  winnerIds?: PlayerId[];
   completed?: boolean;
   finishedAt?: number;
   awards?: Award[];
 }
 
+/** Fields older snapshots never wrote, defaulted once so the view type always holds. */
+function storedBase(
+  stored: StoredResult,
+): Pick<GameResultSummary, "gameId" | "scores" | "winnerIds"> {
+  return {
+    gameId: stored.gameId ?? "",
+    scores: stored.scores ?? {},
+    winnerIds: stored.winnerIds ?? [],
+  };
+}
+
 /** Normalizes a persisted result into the view shape, defaulting fields older snapshots lack. */
 export function resultSummary(stored: StoredResult): GameResultSummary {
+  const base = storedBase(stored);
   return {
-    gameId: stored.gameId,
-    scores: stored.scores,
-    winnerIds: stored.winnerIds,
-    completed: stored.completed ?? stored.winnerIds.length > 0,
+    ...base,
+    // Snapshots from before `completed` existed used an empty crown list to mean
+    // "ended early", so this heuristic reconstructs the flag rather than guessing true.
+    completed: stored.completed ?? base.winnerIds.length > 0,
     finishedAt: stored.finishedAt ?? 0,
     awards: stored.awards ?? [],
   };
@@ -220,7 +232,7 @@ class RoomImpl implements RoomCore {
       ? {
           ...state.lastResult,
           scores: { ...state.lastResult.scores },
-          winnerIds: [...state.lastResult.winnerIds],
+          winnerIds: [...(state.lastResult.winnerIds ?? [])],
           awards: state.lastResult.awards?.map((a) => ({
             ...a,
             playerIds: [...a.playerIds],
@@ -265,9 +277,16 @@ class RoomImpl implements RoomCore {
     return this.hostConnected || this.players.some((p) => p.connected);
   }
 
-  private syncEmpty(now: number): void {
-    if (this.hasConnection()) this.emptySince = null;
-    else if (this.emptySince === null) this.emptySince = now;
+  /** The idle clock is persisted, so moving it counts as a change to the room. */
+  private syncEmpty(now: number, out: Out): void {
+    if (this.hasConnection()) {
+      if (this.emptySince === null) return;
+      this.emptySince = null;
+    } else {
+      if (this.emptySince !== null) return;
+      this.emptySince = now;
+    }
+    out.changed = true;
   }
 
   private fail(out: Out, code: ErrorCode, message: string): void {
@@ -348,7 +367,7 @@ class RoomImpl implements RoomCore {
     ) {
       out.changed = true;
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -368,7 +387,7 @@ class RoomImpl implements RoomCore {
     } else {
       this.applyLobbyMessage(caller, message, now, out);
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -465,14 +484,14 @@ class RoomImpl implements RoomCore {
     this.phase = "in-game";
     out.changed = true;
     this.checkGameOver(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
   abortStart(now: number): HandleResult {
     const out = newOut();
     this.abortStartNow(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -491,7 +510,7 @@ class RoomImpl implements RoomCore {
     }
     // VIP disconnected for more than 60s hands the crown to the earliest connected player.
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -536,15 +555,19 @@ class RoomImpl implements RoomCore {
       out.changed = true;
       this.ensureVip(now, out);
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
   setHostConnected(connected: boolean, now: number): HandleResult {
     const out = newOut();
-    // Host presence is not part of any view, so no rebroadcast is needed.
-    this.hostConnected = connected;
-    this.syncEmpty(now);
+    // Host presence is not part of any view, but it is part of the snapshot: the idle
+    // sweep reads it after a restart, so a change here must be persisted.
+    if (this.hostConnected !== connected) {
+      this.hostConnected = connected;
+      out.changed = true;
+    }
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -627,7 +650,8 @@ class RoomImpl implements RoomCore {
     out.reply.push({ t: "welcome", role: "host" });
     if (!this.hostConnected) {
       this.hostConnected = true;
-      this.syncEmpty(now);
+      out.changed = true;
+      this.syncEmpty(now, out);
     }
   }
 
@@ -661,7 +685,7 @@ class RoomImpl implements RoomCore {
       playerId: existing.id,
       token: existing.token,
     });
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return true;
   }
 
@@ -695,7 +719,7 @@ class RoomImpl implements RoomCore {
     });
     out.changed = true;
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
   }
 
   private newPlayerRecord(name: string): PlayerRecord {
@@ -830,7 +854,7 @@ class RoomImpl implements RoomCore {
 
     this.removeFromRunningGame(targetId, now, out);
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
   }
 
   /** Drops a kicked player from the running game and ends it if the room falls below its minimum. */
@@ -1210,7 +1234,15 @@ export function restoreRoom(
     );
   // The data was produced by snapshot() from an InternalState; fields missing from older
   // snapshots fall back to the blank state's defaults.
-  const persisted: Partial<InternalState> = JSON.parse(snapshot.data);
+  let persisted: Partial<InternalState> = {};
+  try {
+    persisted = JSON.parse(snapshot.data);
+  } catch {
+    // A corrupted snapshot restarts the room as blank instead of leaving it unloadable.
+  }
   const state = Object.assign(blankState(), persisted);
+  // A snapshot written by an older build (or a corrupted one) can lack the fields the
+  // constructor reads, so normalize the result once here instead of throwing on restore.
+  if (state.lastResult !== null) state.lastResult = resultSummary(state.lastResult);
   return new RoomImpl(state, games, newToken);
 }

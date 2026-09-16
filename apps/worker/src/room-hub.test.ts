@@ -251,6 +251,17 @@ describe("RoomHub.close", () => {
 
     expect(lobby.storage.deletions).toBe(1);
   });
+  it("persists the host leaving, so a restarted room can still go idle", async () => {
+    const lobby = await makeLobby();
+    await disconnect(lobby, lobby.ada);
+    await disconnect(lobby, lobby.bo);
+    await disconnect(lobby, lobby.cy);
+    await disconnect(lobby, lobby.host);
+
+    const stored = storedRoom(lobby.storage.stored);
+    expect(stored?.hostConnected).toBe(false);
+    expect(stored?.emptySince).not.toBeNull();
+  });
 });
 
 describe("RoomHub effects", () => {
