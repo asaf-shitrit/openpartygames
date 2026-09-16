@@ -193,6 +193,7 @@ function startReveal(state: ImposterState, ctx: Ctx): ImposterState {
     phase: "reveal",
     tally,
     caught,
+    revealPlayerIds: [...state.playerIds],
     deadline: ctx.now + REVEAL_MS,
   };
 }
@@ -263,11 +264,13 @@ function startResult(state: ImposterState, ctx: Ctx): ImposterState {
 }
 
 function startNextWord(state: ImposterState, ctx: Ctx): ImposterState {
+  const words = repairNextWordImposter(state, ctx);
   const nextIndex = state.wordIndex + 1;
-  const word = state.words[nextIndex];
+  const word = words[nextIndex];
   if (word === undefined) return { ...state, finished: true, deadline: null };
   return {
     ...state,
+    words,
     phase: "word-check",
     wordIndex: nextIndex,
     clueOrder: buildClueOrder(state.playerIds, word.imposterId, nextIndex),
@@ -282,7 +285,25 @@ function startNextWord(state: ImposterState, ctx: Ctx): ImposterState {
     deadline: ctx.now + WORD_CHECK_MS,
     guessLength: 0,
     guessLengthAt: null,
+    revealPlayerIds: undefined,
   };
+}
+
+/**
+ * The next word, with its imposter re-picked when that player has left: a departed
+ * imposter would leave the word with nobody holding the decoy.
+ */
+function repairNextWordImposter(state: ImposterState, ctx: Ctx): ImposterWord[] {
+  const index = state.wordIndex + 1;
+  const word = state.words[index];
+  if (word === undefined) return state.words;
+  if (state.playerIds.includes(word.imposterId)) return state.words;
+  if (state.playerIds.length === 0) return state.words;
+  const previous = state.words[index - 1]?.imposterId ?? null;
+  const imposterId = pickImposter(ctx.rng, state.playerIds, previous);
+  return state.words.map((entry, at) =>
+    at === index ? { ...entry, imposterId } : entry,
+  );
 }
 
 /** Next connected, not-yet-done speaker at or after startIndex, or -1. */
@@ -547,7 +568,9 @@ export function onPlayerRemoved(
     clueOrder: state.clueOrder.filter((id) => id !== playerId),
     doneSpeakerIds: state.doneSpeakerIds.filter((id) => id !== playerId),
     votes,
-    tally: survivingTally(state, votes),
+    // Once the votes are public the tally is part of the ceremony: it stays as the
+    // audience saw it, and a departed voter simply stops scoring (scoreWord skips them).
+    tally: isCeremony(state.phase) ? state.tally : survivingTally(state, votes),
     scores: nextScores,
     pointsThisWord: nextPoints,
   };
@@ -561,6 +584,11 @@ export function onPlayerRemoved(
 
 export function isOver(state: ImposterState): boolean {
   return state.finished;
+}
+
+/** True once the votes are public: reveal, last-chance or result. */
+function isCeremony(phase: ImposterPhase): boolean {
+  return phase === "reveal" || phase === "last-chance" || phase === "result";
 }
 
 export function scores(state: ImposterState): Record<PlayerId, number> {

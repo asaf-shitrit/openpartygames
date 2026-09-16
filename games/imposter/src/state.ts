@@ -78,6 +78,11 @@ export interface ImposterState {
   /** Epoch ms of the current phase timeout; null once finished. */
   deadline: number | null;
   /**
+   * The roster the current reveal was built for, frozen when the votes closed so a kick
+   * mid-reveal cannot reshuffle the ceremony. Absent outside a reveal and on older saves.
+   */
+  revealPlayerIds?: PlayerId[];
+  /**
    * Length of the imposter's in-progress guess during last-chance, so the TV
    * can grow/shrink a row of blank tiles without ever seeing the letters.
    * Optional: snapshots saved before this field existed lack it.
@@ -121,6 +126,8 @@ export const imposterHostViewSchema = z.object({
   totals: z.record(z.string(), z.number()),
   // From reveal on, otherwise null.
   tally: z.record(z.string(), z.array(z.string())).nullable(),
+  /** The roster the reveal was built for; null outside the reveal and on older payloads. */
+  revealPlayerIds: z.array(z.string()).nullable().optional(),
   imposterId: z.string().nullable(),
   caught: z.boolean().nullable(),
   decoyWord: z.string().nullable(),

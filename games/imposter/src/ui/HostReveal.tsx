@@ -113,12 +113,14 @@ interface RevealPlan {
 
 function revealPlan(view: ImposterHostView): RevealPlan {
   const tally = view.tally ?? {};
-  const outcome = revealOutcome(tally, view.imposterId, view.playerIds);
-  const order = scratchOrder(tally, view.playerIds);
+  // The frozen roster: a kick mid-reveal must not move the marks or the verdict.
+  const roster = view.revealPlayerIds ?? view.playerIds;
+  const outcome = revealOutcome(tally, view.imposterId, roster);
+  const order = scratchOrder(tally, roster);
   return {
     tally,
     order,
-    topIds: topVoted(tally, view.playerIds),
+    topIds: topVoted(tally, roster),
     outcome,
     beats: hostRevealBeats(outcome, order.length),
   };

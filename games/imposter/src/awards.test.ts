@@ -151,7 +151,7 @@ describe("imposterAwards", () => {
     expect(imposterAwards(s)).toEqual([]);
   });
 
-  it("orders awards best first: word-thief, master-of-disguise, sharpest-eye, trusted-crew", () => {
+  it("orders the awards best first and caps the list at MAX_AWARDS", () => {
     const history = [
       record({ imposterId: "p1", caught: true, guessCorrect: true, votes: {} }),
       record({
@@ -163,15 +163,21 @@ describe("imposterAwards", () => {
       record({ imposterId: "p4", caught: false, votes: { p3: "p4" } }),
     ];
     const ids = imposterAwards(state(history)).map((a) => a.id);
-    expect(ids).toEqual([
-      "word-thief",
-      "master-of-disguise",
-      "sharpest-eye",
-      "trusted-crew",
-    ]);
+    expect(ids).toEqual(["word-thief", "master-of-disguise", "sharpest-eye"]);
   });
 
-  it("can produce all four award types at once", () => {
+  it("awards trusted crew to the players nobody voted for", () => {
+    const history = [
+      record({ imposterId: "p1", caught: true, guessCorrect: false }),
+      record({ imposterId: "p1", caught: true, guessCorrect: false }),
+      record({ imposterId: "p1", caught: true, guessCorrect: false }),
+    ];
+    expect(imposterAwards(state(history)).map((a) => a.id)).toContain(
+      "trusted-crew",
+    );
+  });
+
+  it("drops the fourth award type, so a game never shows more than three", () => {
     const history = [
       record({ imposterId: "p1", caught: true, guessCorrect: true }),
       record({ imposterId: "p2", caught: false, votes: { p3: "p2", p4: "p2" } }),
@@ -181,11 +187,6 @@ describe("imposterAwards", () => {
       record({ imposterId: "p1", caught: false, votes: {} }),
     ];
     const ids = imposterAwards(state(history)).map((a) => a.id);
-    expect(ids).toEqual([
-      "word-thief",
-      "master-of-disguise",
-      "sharpest-eye",
-      "trusted-crew",
-    ]);
+    expect(ids).toEqual(["word-thief", "master-of-disguise", "sharpest-eye"]);
   });
 });

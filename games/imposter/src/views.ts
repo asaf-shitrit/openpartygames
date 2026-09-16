@@ -49,10 +49,17 @@ function revealedDecoyWord(word: ImposterWord | null): string | null {
 /** Everything the host may see once the votes are in. */
 function hostRevealedFields(state: ImposterState, word: ImposterWord | null) {
   if (!isRevealed(state)) {
-    return { tally: null, imposterId: null, caught: null, decoyWord: null };
+    return {
+      tally: null,
+      revealPlayerIds: null,
+      imposterId: null,
+      caught: null,
+      decoyWord: null,
+    };
   }
   return {
     tally: { ...state.tally },
+    revealPlayerIds: state.revealPlayerIds ?? null,
     imposterId: revealedImposterId(word),
     caught: state.caught,
     decoyWord: revealedDecoyWord(word),

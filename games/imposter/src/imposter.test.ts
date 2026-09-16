@@ -24,6 +24,7 @@ import {
   type ImposterState,
   type ImposterWord,
 } from "./index";
+import { buildHostView, buildPlayerView } from "./views";
 
 const PAIRS: WordPairContent["items"] = [
   { crew: "apple", decoy: "apricot" },
@@ -1065,6 +1066,46 @@ describe("onPlayerRemoved", () => {
       withCtx(c, { connectedIds: [b] }),
     );
     expect(stillOpen.phase).toBe("vote");
+  });
+});
+
+describe("ceremony freeze", () => {
+  it("keeps the tally, roster and verdict when a voter is kicked mid-reveal", () => {
+    const c = makeCtx({ n: 4, seed: 51 });
+    let state = toVotePhase(setup(c), c);
+    for (const [voter, target] of Object.entries(votesTied(state))) {
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    if (state.phase === "vote") state = onDeadline(state, c);
+    expect(state.phase).toBe("reveal");
+    const before = buildHostView(state);
+    expect(before.tally).not.toBeNull();
+
+    const after = onPlayerRemoved(state, at(state.playerIds, 0), c);
+    const frozen = buildHostView(after);
+    expect(after.phase).toBe("reveal");
+    expect(frozen.tally).toEqual(before.tally);
+    expect(frozen.revealPlayerIds).toEqual(before.revealPlayerIds);
+    expect(after.caught).toBe(state.caught);
+  });
+
+  it("re-picks the imposter of a later word when they are kicked before it starts", () => {
+    const c = makeCtx({ n: 4, seed: 52 });
+    const start = setup(c);
+    expect(start.words.length).toBeGreaterThan(1);
+    const ghost = start.words[1]?.imposterId ?? "";
+    expect(ghost).not.toBe("");
+
+    let state = playWord(start, c, votesCaught(start), null);
+    state = onPlayerRemoved(state, ghost, c);
+    state = onDeadline(state, c);
+
+    expect(state.phase).toBe("word-check");
+    expect(state.wordIndex).toBe(1);
+    expect(state.playerIds).not.toContain(ghost);
+    expect(state.playerIds).toContain(state.words[1]?.imposterId ?? "");
+    const roles = state.playerIds.map((id) => buildPlayerView(state, id).role);
+    expect(roles.filter((role) => role === "imposter")).toHaveLength(1);
   });
 });
 

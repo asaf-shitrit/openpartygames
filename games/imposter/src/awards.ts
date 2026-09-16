@@ -1,6 +1,7 @@
 // End-of-game awards for Imposter. Pure and deterministic: derived only from
 // state.history (one entry per scored word) and the current roster.
 import type { Award, PlayerId } from "@opg/protocol";
+import { MAX_AWARDS } from "@opg/protocol";
 import type { ImposterState, ImposterWordRecord } from "./state";
 
 /** The award for the top count(s) at or above threshold, or null when nobody qualifies. */
@@ -75,7 +76,7 @@ function tallyTrustedCrew(
   return counts;
 }
 
-/** Best first: word thief, master of disguise, sharpest eye, trusted crew. */
+/** Best first, capped at MAX_AWARDS like every award list the platform draws. */
 export function imposterAwards(state: ImposterState): Award[] {
   const history = state.history ?? [];
   const roster = new Set(state.playerIds);
@@ -89,5 +90,5 @@ export function imposterAwards(state: ImposterState): Award[] {
     topAward("sharpest-eye", sharpestEye, 2),
     topAward("trusted-crew", trustedCrew, 3),
   ];
-  return awards.filter((award): award is Award => award !== null);
+  return awards.filter((award): award is Award => award !== null).slice(0, MAX_AWARDS);
 }
