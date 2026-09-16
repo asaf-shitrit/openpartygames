@@ -1,6 +1,6 @@
 // Real or Nah — phone controller. One phase component per screen.
-import { useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import {
@@ -13,38 +13,57 @@ import {
   PhoneScreen,
   PhoneStrip,
   PRESSABLE_CLASS,
-  Stamp,
   TextInput,
   Timer,
+  useBuzz,
 } from "@opg/ui";
 import {
   LIE_MAX_LENGTH,
-  POINTS_TRUTH,
   type RonAction,
-  type RonFooledLie,
   type RonLieError,
   type RonPlayerView,
-  type RonReveal,
 } from "../types";
-import { Person, PromptText } from "./common";
+import { PromptText } from "./common";
+import { PhoneReveal } from "./PhoneReveal";
 
 export interface PhoneProps {
   view: RonPlayerView;
   room: PlayerRoomView;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: RonAction) => void;
 }
 
-export function Phone({ view, room, deadline, clock, send }: PhoneProps) {
+/** Only the player's own timed actions (writing, voting) get haptics and a draining ring. */
+function timedPhase(phase: RonPlayerView["phase"]): boolean {
+  return phase === "write" || phase === "vote";
+}
+
+export function Phone({ view, room, deadline, timerStartedAt, clock, send }: PhoneProps) {
+  const timed = timedPhase(view.phase);
   return (
     <PhoneScreen>
       <PhoneStrip
         gameName="Real or Nah"
         progress={`Fact ${view.factNumber} of ${view.factCount}`}
-        right={<Timer deadline={deadline} clock={clock} />}
+        right={
+          <Timer
+            deadline={deadline}
+            clock={clock}
+            startedAt={timed ? timerStartedAt : null}
+            haptics={timed}
+          />
+        }
       />
-      <PhoneBody view={view} room={room} send={send} />
+      <PhoneBody
+        view={view}
+        room={room}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
+        send={send}
+      />
     </PhoneScreen>
   );
 }
@@ -52,15 +71,27 @@ export function Phone({ view, room, deadline, clock, send }: PhoneProps) {
 function PhoneBody({
   view,
   room,
+  deadline,
+  timerStartedAt,
+  clock,
   send,
-}: Pick<PhoneProps, "view" | "room" | "send">) {
+}: Omit<PhoneProps, "room"> & { room: PlayerRoomView }) {
   let phase: ReactNode;
   if (view.phase === "write") {
     phase = <WritePhase view={view} send={send} />;
   } else if (view.phase === "vote") {
     phase = <VotePhase view={view} send={send} />;
   } else {
-    phase = <RevealPhase view={view} room={room} />;
+    phase = (
+      <PhoneReveal
+        view={view}
+        players={room.players}
+        myId={room.you}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
+      />
+    );
   }
   return (
     <PhaseEnter phaseKey={`${view.factNumber}:${view.phase}`}>
@@ -116,6 +147,34 @@ function PromptLine({
   );
 }
 
+/** Buzzes "locked" the moment `myLie` first becomes non-null while this stays mounted. */
+function useLieLockedBuzz(
+  myLie: string | null,
+  target: RefObject<HTMLElement | null>,
+): void {
+  const buzz = useBuzz();
+  const wasLocked = useRef(myLie !== null);
+  useEffect(() => {
+    if (myLie !== null && !wasLocked.current) buzz("locked", target.current);
+    wasLocked.current = myLie !== null;
+  }, [myLie, target, buzz]);
+}
+
+/** Buzzes "soft" whenever a rejection is freshly set while this stays mounted. */
+function useLieErrorBuzz(
+  lieError: RonLieError | null,
+  target: RefObject<HTMLElement | null>,
+): void {
+  const buzz = useBuzz();
+  const previous = useRef(lieError);
+  useEffect(() => {
+    if (lieError !== null && lieError !== previous.current) {
+      buzz("soft", target.current);
+    }
+    previous.current = lieError;
+  }, [lieError, target, buzz]);
+}
+
 function WritePhase({
   view,
   send,
@@ -123,9 +182,28 @@ function WritePhase({
   view: RonPlayerView;
   send: (action: RonAction) => void;
 }) {
-  const [text, setText] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  useLieLockedBuzz(view.myLie, rootRef);
+  useLieErrorBuzz(view.lieError, rootRef);
+  return (
+    <div ref={rootRef} style={{ display: "flex", flexDirection: "column", gap: "inherit", flexGrow: 1 }}>
+      {view.myLie ? (
+        <LieLocked view={view} />
+      ) : (
+        <WriteForm view={view} send={send} />
+      )}
+    </div>
+  );
+}
 
-  if (view.myLie) return <LieLocked view={view} />;
+function WriteForm({
+  view,
+  send,
+}: {
+  view: RonPlayerView;
+  send: (action: RonAction) => void;
+}) {
+  const [text, setText] = useState("");
   const ready = text.trim().length > 0;
   return (
     <>
@@ -192,7 +270,40 @@ function LieLocked({ view }: { view: RonPlayerView }) {
   );
 }
 
+/** Buzzes "locked" the moment `myPick` first becomes non-null while this stays mounted. */
+function usePickLockedBuzz(
+  myPick: string | null,
+  target: RefObject<HTMLElement | null>,
+): void {
+  const buzz = useBuzz();
+  const wasLocked = useRef(myPick !== null);
+  useEffect(() => {
+    if (myPick !== null && !wasLocked.current) buzz("locked", target.current);
+    wasLocked.current = myPick !== null;
+  }, [myPick, target, buzz]);
+}
+
 function VotePhase({
+  view,
+  send,
+}: {
+  view: RonPlayerView;
+  send: (action: RonAction) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  usePickLockedBuzz(view.myPick, rootRef);
+  return (
+    <div ref={rootRef} style={{ display: "flex", flexDirection: "column", gap: "inherit", flexGrow: 1 }}>
+      {view.myPick ? (
+        <VoteLocked view={view} />
+      ) : (
+        <VoteForm view={view} send={send} />
+      )}
+    </div>
+  );
+}
+
+function VoteForm({
   view,
   send,
 }: {
@@ -201,8 +312,6 @@ function VotePhase({
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const options = view.options ?? [];
-
-  if (view.myPick) return <VoteLocked view={view} />;
   const canLock = selected !== null;
   return (
     <>
@@ -343,192 +452,5 @@ function VoteLocked({ view }: { view: RonPlayerView }) {
         </div>
       </Card>
     </>
-  );
-}
-
-const PHONE_LABEL = {
-  fontSize: 17,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: "var(--opg-ink-secondary)",
-} as const;
-
-function FoundLine({ found }: { found: boolean }) {
-  const color = found ? "var(--opg-marker)" : "var(--opg-ink-secondary)";
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        fontSize: 18,
-        fontWeight: 700,
-        color,
-      }}
-    >
-      <Icon name={found ? "check" : "eye-off"} size={20} color={color} />
-      <div>
-        {found
-          ? `You found it, +${POINTS_TRUTH.toLocaleString("en-US")}`
-          : "You missed it"}
-      </div>
-    </div>
-  );
-}
-
-function RevealAnswerCard({
-  reveal,
-  found,
-}: {
-  reveal: RonReveal;
-  found: boolean;
-}) {
-  return (
-    <Card
-      tilt={-1}
-      style={{
-        padding: "18px 18px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
-    >
-      <div style={PHONE_LABEL}>The real answer</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <span className="opg-marker" style={{ fontSize: 44 }}>
-          {reveal.answer}
-        </span>
-        <Stamp size={26} tilt={-8}>
-          REAL
-        </Stamp>
-      </div>
-      <FoundLine found={found} />
-    </Card>
-  );
-}
-
-function FactPointsCard({ points }: { points: number }) {
-  return (
-    <Card
-      style={{
-        padding: "14px 16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-      }}
-    >
-      <div style={{ fontSize: 20, fontWeight: 700 }}>This fact</div>
-      <div
-        className="opg-marker"
-        style={{
-          fontSize: 40,
-          color: points > 0 ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
-        }}
-      >
-        +{points.toLocaleString("en-US")}
-      </div>
-    </Card>
-  );
-}
-
-function RevealPhase({
-  view,
-  room,
-}: {
-  view: RonPlayerView;
-  room: PlayerRoomView;
-}) {
-  const reveal = view.reveal;
-  if (!reveal) return null;
-  const myLie = reveal.lies.find((lie) => lie.authorId === room.you);
-  return (
-    <>
-      <RevealAnswerCard
-        reveal={reveal}
-        found={reveal.foundByIds.includes(room.you)}
-      />
-      <MyLieCard lie={myLie} room={room} />
-      <FactPointsCard points={view.myPoints ?? 0} />
-    </>
-  );
-}
-
-function MyLieCard({
-  lie,
-  room,
-}: {
-  lie: RonFooledLie | undefined;
-  room: PlayerRoomView;
-}) {
-  if (!lie) {
-    return (
-      <Card style={{ padding: "14px 16px" }}>
-        <div style={PHONE_LABEL}>Your lie</div>
-        <div style={{ fontSize: 20, fontWeight: 700, marginTop: 6 }}>
-          No lie from you this round
-        </div>
-      </Card>
-    );
-  }
-  const fooled = lie.fooledIds.length > 0;
-  return (
-    <Card
-      variant="M"
-      tilt={1}
-      style={{
-        padding: "14px 16px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-      }}
-    >
-      <div style={PHONE_LABEL}>Your lie</div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-        }}
-      >
-        <div style={{ fontSize: 24, fontWeight: 700 }}>{lie.text}</div>
-        <Stamp size={22} tilt={-6}>
-          NAH
-        </Stamp>
-      </div>
-      {fooled ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 700 }}>Fooled</div>
-          {lie.fooledIds.map((id) => (
-            <Person
-              key={id}
-              room={room}
-              id={id}
-              avatarSize={36}
-              fontSize={18}
-            />
-          ))}
-        </div>
-      ) : (
-        <div
-          style={{
-            fontSize: 18,
-            fontWeight: 700,
-            color: "var(--opg-ink-secondary)",
-          }}
-        >
-          Fooled nobody
-        </div>
-      )}
-    </Card>
   );
 }

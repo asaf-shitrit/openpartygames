@@ -1,79 +1,53 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, renderHook } from "@testing-library/react";
-import { useServerClock, useSoundSetting } from "./clock";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import {
+  CLOCK_SAMPLE_WINDOW,
+  clockOffsetFrom,
+  createServerClock,
+  nextClockSamples,
+} from "./clock";
 
-beforeEach(() => localStorage.clear());
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
-describe("useServerClock", () => {
-  it("returns server time corrected for client clock skew", () => {
-    const serverNow = Date.now() + 60_000;
-    const { result } = renderHook(() => useServerClock(serverNow));
-    expect(Math.abs(result.current.now() - serverNow)).toBeLessThan(2_000);
+describe("nextClockSamples", () => {
+  it("appends the newest sample last", () => {
+    expect(nextClockSamples([1, 2], 3)).toEqual([1, 2, 3]);
   });
 
-  it("updates the offset when the server stamp changes", () => {
-    const { result, rerender } = renderHook(
-      ({ serverNow }: { serverNow: number }) => useServerClock(serverNow),
-      { initialProps: { serverNow: Date.now() } },
-    );
-    const serverNow = Date.now() + 300_000;
-    rerender({ serverNow });
-    expect(Math.abs(result.current.now() - serverNow)).toBeLessThan(2_000);
-  });
-
-  it("keeps a stable clock object across renders", () => {
-    const { result, rerender } = renderHook(
-      ({ serverNow }: { serverNow: number }) => useServerClock(serverNow),
-      { initialProps: { serverNow: Date.now() } },
-    );
-    const first = result.current;
-    rerender({ serverNow: Date.now() + 1_000 });
-    expect(result.current).toBe(first);
+  it("keeps only the newest CLOCK_SAMPLE_WINDOW samples", () => {
+    const many = Array.from({ length: CLOCK_SAMPLE_WINDOW + 3 }, (_, i) => i);
+    const trimmed = nextClockSamples(many, 99);
+    expect(trimmed).toHaveLength(CLOCK_SAMPLE_WINDOW);
+    expect(trimmed.at(-1)).toBe(99);
+    expect(trimmed[0]).toBe(4);
   });
 });
 
-describe("useSoundSetting", () => {
-  it("defaults to unmuted and turns on", () => {
-    const { result } = renderHook(() => useSoundSetting());
-    expect(result.current.muted).toBe(false);
-    act(() => result.current.toggle());
-    expect(result.current.muted).toBe(true);
-    expect(localStorage.getItem("opg:muted")).toBe("1");
+describe("clockOffsetFrom", () => {
+  it("returns 0 when there are no samples", () => {
+    expect(clockOffsetFrom([])).toBe(0);
   });
 
-  it("sets an explicit value and persists it", () => {
-    const { result } = renderHook(() => useSoundSetting());
-    act(() => result.current.setMuted(true));
-    expect(result.current.muted).toBe(true);
-    act(() => result.current.setMuted(false));
-    expect(result.current.muted).toBe(false);
-    expect(localStorage.getItem("opg:muted")).toBe("0");
+  it("picks the largest sample, the least latency-biased estimate", () => {
+    expect(clockOffsetFrom([100, -20, 40])).toBe(100);
+  });
+});
+
+describe("createServerClock", () => {
+  it("adds the current offset to the client clock", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000);
+    const clock = createServerClock(() => 500);
+    expect(clock.now()).toBe(1_500);
   });
 
-  it("reads the muted flag from storage", () => {
-    localStorage.setItem("opg:muted", "1");
-    const { result } = renderHook(() => useSoundSetting());
-    expect(result.current.muted).toBe(true);
-  });
-
-  it("falls back to unmuted when reading storage throws", () => {
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("no storage");
-    });
-    const { result } = renderHook(() => useSoundSetting());
-    expect(result.current.muted).toBe(false);
-  });
-
-  it("keeps the in-memory setting when writing storage throws", () => {
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-      throw new Error("no storage");
-    });
-    const { result } = renderHook(() => useSoundSetting());
-    act(() => result.current.setMuted(true));
-    expect(result.current.muted).toBe(true);
+  it("reads the offset again on every call", () => {
+    let offset = 0;
+    const clock = createServerClock(() => offset);
+    const before = clock.now();
+    offset = 10_000;
+    expect(clock.now()).toBeGreaterThanOrEqual(before + 10_000);
   });
 });

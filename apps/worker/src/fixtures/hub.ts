@@ -36,6 +36,8 @@ export interface StoredRoom {
   code: string;
   phase: string;
   players: unknown[];
+  hostConnected?: boolean;
+  emptySince?: number | null;
 }
 
 /** Decodes the engine state the hub persists inside the opaque snapshot. */

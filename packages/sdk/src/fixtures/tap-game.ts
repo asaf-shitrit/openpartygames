@@ -98,9 +98,14 @@ export const tapGame: GameDefinition<
     return state.over ? state : advance(state, ctx.now);
   },
 
-  onPlayerRemoved(state, playerId) {
+  onPlayerRemoved(state, playerId, ctx) {
     if (!state.tapped.includes(playerId)) return state;
-    return { ...state, tapped: state.tapped.filter((id) => id !== playerId) };
+    // Dropping a tapper rebuilds the round for the rest, so its timer restarts.
+    return {
+      ...state,
+      tapped: state.tapped.filter((id) => id !== playerId),
+      deadline: ctx.now + TAP_ROUND_MS,
+    };
   },
 
   hostView(state) {

@@ -5,7 +5,8 @@ import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 import { Marker, PRESSABLE_CLASS } from "./primitives";
-import { useSoundSetting } from "./clock";
+import { useSound } from "./audio/SoundProvider";
+import type { SoundStatus } from "./audio/types";
 import { useFullscreen } from "./screen";
 
 function RoomChip({
@@ -87,14 +88,32 @@ export function HeaderChip({
   );
 }
 
+interface SoundChipCopy {
+  icon: IconName;
+  label: string;
+}
+
+/** "Tap for sound" until the browser unlocks the audio context, then the mute toggle. */
+function soundChipCopy(status: SoundStatus, muted: boolean): SoundChipCopy {
+  if (muted) return { icon: "sound-off", label: "Sound off" };
+  if (status === "locked") return { icon: "sound-off", label: "Tap for sound" };
+  return { icon: "sound", label: "Sound on" };
+}
+
 function SoundChip({ height, fontSize }: { height: number; fontSize: number }) {
-  const { muted, toggle } = useSoundSetting();
+  const sound = useSound();
+  const copy = soundChipCopy(sound.status, sound.muted);
+  function onClick(): void {
+    // The click is a user gesture, so a locked context resumes here whatever the mute state.
+    if (sound.status === "locked") sound.unlock();
+    if (sound.muted || sound.status !== "locked") sound.toggleMuted();
+  }
   return (
     <HeaderChip
-      icon={muted ? "sound-off" : "sound"}
-      label={muted ? "Sound off" : "Sound on"}
-      onClick={toggle}
-      pressed={!muted}
+      icon={copy.icon}
+      label={copy.label}
+      onClick={onClick}
+      pressed={!sound.muted}
       height={height}
       fontSize={fontSize}
     />

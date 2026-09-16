@@ -21,16 +21,25 @@ async function playWord(tv: Page, phones: Phone[]): Promise<void> {
       const imposter = await findImposter(phones);
       await takeClues(phones);
       await voteOut(tv, phones, imposter);
-      await expect(tv.getByText(/gets one last chance/)).toBeVisible();
+      await expect(tv.getByText(/One last chance/)).toBeVisible();
       await sendWrongGuess(imposter);
+      // The stamp slams in first; "The word was" follows about 1s later.
+      await expect(tv.getByText(/nope/i).first()).toBeVisible();
       await expect(tv.getByText("The word was")).toBeVisible();
-      await expect(tv.getByText("Nope", { exact: true })).toBeVisible();
+}
+
+/** Every word card starts face down: hold to peek before its role text is readable. */
+async function peekCard(phone: Phone): Promise<void> {
+      await phone.page
+            .getByRole("button", { name: "Your secret card" })
+            .click({ timeout: 20_000 });
 }
 
 /** The one phone whose word screen says it got the decoy. */
 async function findImposter(phones: Phone[]): Promise<Phone> {
       const claims = await Promise.all(
             phones.map(async (phone) => {
+                  await peekCard(phone);
                   await phone.page
                         .getByText(/you're the imposter|here's your word/i)
                         .first()

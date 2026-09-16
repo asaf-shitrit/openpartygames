@@ -15,6 +15,26 @@ export function playerFor(room: Room, id: PlayerId): PlayerSummary | undefined {
         return room.players.find((p) => p.id === id);
 }
 
+/** Looks a player up directly in a roster, for components that only get `players`. */
+export function findPlayer(
+        players: PlayerSummary[],
+        id: PlayerId | null,
+): PlayerSummary | null {
+        if (!id) return null;
+        return players.find((player) => player.id === id) ?? null;
+}
+
+export function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
+        return findPlayer(players, id)?.name ?? id ?? "Someone";
+}
+
+export function avatarOf(
+        players: PlayerSummary[],
+        id: PlayerId | null,
+): AvatarId | null {
+        return findPlayer(players, id)?.avatar ?? null;
+}
+
 export interface PersonTagProps {
         name: string;
         avatar: AvatarId | null;

@@ -1,6 +1,57 @@
 // design/TVCredits.dc.html — route /credits.
-import { Card, Highlight, Marker, TvHeader } from "@opg/ui";
+import {
+  AUDIO_CREDITS,
+  Card,
+  Highlight,
+  Marker,
+  MUSIC_CREDITS,
+  TvHeader,
+} from "@opg/ui";
+import type { AudioCredit, AudioLicense, MusicCredit } from "@opg/ui";
 import { TvPage } from "./shared";
+
+export interface SoundCreditLine {
+  author: string;
+  licenses: readonly AudioLicense[];
+}
+
+/** One line per author, with every license that author's samples carry. */
+export function soundCreditLines(
+  credits: readonly AudioCredit[],
+): SoundCreditLine[] {
+  const byAuthor = new Map<string, Set<AudioLicense>>();
+  for (const credit of credits) {
+    const licenses = byAuthor.get(credit.author) ?? new Set<AudioLicense>();
+    licenses.add(credit.license);
+    byAuthor.set(credit.author, licenses);
+  }
+  return [...byAuthor].map(([author, licenses]) => ({
+    author,
+    licenses: [...licenses],
+  }));
+}
+
+const LICENSE_LABELS = {
+  "CC0-1.0": "CC0",
+  "CC-BY-3.0": "CC BY 3.0",
+  "CC-BY-4.0": "CC BY 4.0",
+} satisfies Record<AudioLicense, string>;
+
+function licenseNote(lines: readonly SoundCreditLine[]): string {
+  const labels = new Set<string>();
+  for (const line of lines) {
+    for (const license of line.licenses) labels.add(LICENSE_LABELS[license]);
+  }
+  return [...labels].join(" · ");
+}
+
+/** One line per music file: title, author and exact license, so CC-BY attribution is precise. */
+export function musicCreditLines(credits: readonly MusicCredit[]): string[] {
+  return credits.map(
+    (credit) =>
+      `${credit.title} — ${credit.author} (${LICENSE_LABELS[credit.license]})`,
+  );
+}
 
 interface CreditCard {
   title: string;
@@ -9,6 +60,9 @@ interface CreditCard {
   variant: "M" | "Malt";
   tilt: number;
 }
+
+const SOUND_LINES = soundCreditLines(AUDIO_CREDITS);
+const MUSIC_LINES = musicCreditLines(MUSIC_CREDITS);
 
 const CARDS: CreditCard[] = [
   {
@@ -19,15 +73,14 @@ const CARDS: CreditCard[] = [
   },
   {
     title: "Music",
-    lines: ["No music tracks yet"],
-    note: "CC0 or CC BY only",
+    lines: MUSIC_LINES,
     variant: "Malt",
     tilt: 1,
   },
   {
     title: "Sound effects",
-    lines: ["No sound effects yet"],
-    note: "CC0 or CC BY only",
+    lines: SOUND_LINES.map((line) => line.author),
+    note: licenseNote(SOUND_LINES),
     variant: "M",
     tilt: -0.5,
   },

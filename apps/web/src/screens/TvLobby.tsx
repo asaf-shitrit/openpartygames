@@ -1,4 +1,5 @@
 // design/Main.dc.html — TV lobby with the room code, QR and joined players.
+import { useEffect, useMemo, useRef } from "react";
 import type { HostRoomView, PlayerSummary } from "@opg/protocol";
 import { MAX_PLAYERS } from "@opg/protocol";
 import {
@@ -10,6 +11,10 @@ import {
   Tally,
   Tape,
   TvHeader,
+  playFx,
+  useArrivals,
+  useCue,
+  useReducedMotion,
 } from "@opg/ui";
 import { PointArrow, QrCode, ScanArrow, TvPage } from "./shared";
 import { ShowOnTvChip } from "./ShowOnTv";
@@ -42,27 +47,45 @@ function SeatBadge({ player }: { player: PlayerSummary }) {
   return null;
 }
 
-function Seat({ player, index }: { player: PlayerSummary; index: number }) {
+function Seat({
+  player,
+  index,
+  arrived,
+}: {
+  player: PlayerSummary;
+  index: number;
+  arrived: boolean;
+}) {
+  const reduced = useReducedMotion();
+  const cue = useCue();
+  const seatRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!arrived) return;
+    playFx(seatRef.current, "pop", reduced);
+    cue("pop");
+  }, [arrived, reduced, cue]);
   return (
-    <Card
-      variant={index % 2 === 0 ? "M" : "Malt"}
-      tilt={[-2, 1.5, -1, 2][index % 4]}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        padding: "18px 10px 16px",
-      }}
-    >
-      <Avatar id={player.avatar} size={124} />
-      <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1 }}>
-        {player.name}
-      </div>
-      <div style={{ height: 46, display: "flex", alignItems: "center" }}>
-        <SeatBadge player={player} />
-      </div>
-    </Card>
+    <div ref={seatRef}>
+      <Card
+        variant={index % 2 === 0 ? "M" : "Malt"}
+        tilt={[-2, 1.5, -1, 2][index % 4]}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 8,
+          padding: "18px 10px 16px",
+        }}
+      >
+        <Avatar id={player.avatar} size={124} />
+        <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1 }}>
+          {player.name}
+        </div>
+        <div style={{ height: 46, display: "flex", alignItems: "center" }}>
+          <SeatBadge player={player} />
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -170,6 +193,10 @@ function SeatGrid({
   players: PlayerSummary[];
   emptySeats: number;
 }) {
+  const playerIds = useMemo(() => players.map((player) => player.id), [
+    players,
+  ]);
+  const arrivals = useArrivals(playerIds);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <div
@@ -192,7 +219,12 @@ function SeatGrid({
         }}
       >
         {players.map((player, index) => (
-          <Seat key={player.id} player={player} index={index} />
+          <Seat
+            key={player.id}
+            player={player}
+            index={index}
+            arrived={arrivals.includes(player.id)}
+          />
         ))}
         {Array.from({ length: emptySeats }, (_, i) => (
           <OpenSeat

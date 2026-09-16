@@ -8,7 +8,7 @@ import type {
   PlayerSummary,
 } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import { useScreenWakeLock, useServerClock } from "@opg/ui";
+import { useScreenWakeLock } from "@opg/ui";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
@@ -20,6 +20,7 @@ import { PhoneJoin } from "./PhoneJoin";
 import { PhoneKicked } from "./PhoneKicked";
 import { PhoneLobby } from "./PhoneLobby";
 import { PhoneReconnecting } from "./PhoneReconnecting";
+import { PhoneResults } from "./PhoneResults";
 import { PhoneVipControls } from "./PhoneVipControls";
 import { PhoneWaiting } from "./PhoneWaiting";
 
@@ -94,11 +95,6 @@ function findMe(view: PlayerRoomView): PlayerSummary | null {
   return view.players.find((p) => p.id === view.you) ?? null;
 }
 
-function serverNowFor(view: PlayerRoomView | null): number {
-  if (view) return view.serverNow;
-  return 0;
-}
-
 function meFor(view: PlayerRoomView | null): PlayerSummary | null {
   if (!view) return null;
   return findMe(view);
@@ -169,15 +165,64 @@ function JoinStage({ code, busy, error, onJoin }: JoinStageProps) {
 interface LobbyStageProps {
   view: PlayerRoomView;
   socket: RoomSocket;
+  clock: ServerClock;
   error: string | null;
   showPicker: boolean;
   onDonePicker: () => void;
   onChangeAvatar: () => void;
 }
 
+function VipControls({ view, socket, error }: {
+  view: PlayerRoomView;
+  socket: RoomSocket;
+  error: string | null;
+}) {
+  return (
+    <PhoneVipControls
+      view={view}
+      error={error}
+      onPickGame={(gameId) => socket.send({ t: "pick-game", gameId })}
+      onSetPack={(packId, enabled) =>
+        socket.send({ t: "set-pack", packId, enabled })
+      }
+      onSetLocked={(locked) => socket.send({ t: "set-locked", locked })}
+      onKick={(playerIdToKick) =>
+        socket.send({ t: "kick", playerId: playerIdToKick })
+      }
+      onStartGame={() => socket.send({ t: "start-game" })}
+    />
+  );
+}
+
+/** Results stay up until the VIP picks, toggles a pack or starts; the VIP keeps their controls above it. */
+function ResultsStage({
+  view,
+  socket,
+  clock,
+  error,
+}: {
+  view: PlayerRoomView;
+  socket: RoomSocket;
+  clock: ServerClock;
+  error: string | null;
+}) {
+  const isVip = view.you === view.vipId;
+  return (
+    <>
+      <PhoneResults view={view} clock={clock} />
+      {isVip ? <VipControls view={view} socket={socket} error={error} /> : null}
+    </>
+  );
+}
+
+function showsResults(view: PlayerRoomView): boolean {
+  return view.lobbyScreen === "results" && view.lastResult !== null;
+}
+
 function LobbyStage({
   view,
   socket,
+  clock,
   error,
   showPicker,
   onDonePicker,
@@ -192,22 +237,11 @@ function LobbyStage({
       />
     );
   }
+  if (showsResults(view)) {
+    return <ResultsStage view={view} socket={socket} clock={clock} error={error} />;
+  }
   if (view.you === view.vipId) {
-    return (
-      <PhoneVipControls
-        view={view}
-        error={error}
-        onPickGame={(gameId) => socket.send({ t: "pick-game", gameId })}
-        onSetPack={(packId, enabled) =>
-          socket.send({ t: "set-pack", packId, enabled })
-        }
-        onSetLocked={(locked) => socket.send({ t: "set-locked", locked })}
-        onKick={(playerIdToKick) =>
-          socket.send({ t: "kick", playerId: playerIdToKick })
-        }
-        onStartGame={() => socket.send({ t: "start-game" })}
-      />
-    );
+    return <VipControls view={view} socket={socket} error={error} />;
   }
   return (
     <PhoneLobby
@@ -259,6 +293,7 @@ function RunningGame({ view, game, me, socket, clock }: RunningGameProps) {
         view={game.view}
         room={view}
         deadline={game.deadline}
+        timerStartedAt={game.timerStartedAt}
         clock={clock}
         send={(action: z.core.util.JSONType) =>
           socket.send({ t: "game-action", action })
@@ -293,7 +328,7 @@ function GameStage({ view, socket, clock }: GameStageProps) {
 export function PlayerApp({ code }: { code: string }) {
   const socket = useRoomSocket({ code, role: "player" });
   const view = playerViewFrom(socket);
-  const clock = useServerClock(serverNowFor(view));
+  const clock = socket.clock;
 
   const playerId = playerIdFor(view, socket);
   const [joinedName, setJoinedName] = useState("");
@@ -355,6 +390,7 @@ export function PlayerApp({ code }: { code: string }) {
     <LobbyStage
       view={view}
       socket={socket}
+      clock={clock}
       error={error}
       showPicker={showPickerFor(playerId, code, pickerOverride)}
       onDonePicker={donePicker}

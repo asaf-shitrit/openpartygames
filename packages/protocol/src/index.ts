@@ -77,10 +77,27 @@ export interface PackSummary {
   itemCount: number;
 }
 
+export interface Award {
+  /** Game-defined id such as "best-liar"; the game's UI turns it into words. */
+  id: string;
+  /** Everyone who shares it (ties). */
+  playerIds: PlayerId[];
+  /** The number the award cites, e.g. people fooled. */
+  value: number;
+}
+
+export const MAX_AWARDS = 3;
+
 export interface GameResultSummary {
   gameId: string;
   scores: Record<PlayerId, number>;
   winnerIds: PlayerId[];
+  /** False when the VIP ended the game early or too few players remained. */
+  completed: boolean;
+  /** Epoch ms the game ended; anchors the finale ceremony. 0 for results saved before this field existed. */
+  finishedAt: number;
+  /** Best first; empty when the game ended early or has no awards. */
+  awards: Award[];
 }
 
 export interface ActiveGameView {
@@ -89,6 +106,8 @@ export interface ActiveGameView {
   view: unknown;
   /** Epoch ms of the current phase deadline, or null when nothing is timed. */
   deadline: number | null;
+  /** Epoch ms when `deadline` was last set to its current value; null when nothing is timed. */
+  timerStartedAt: number | null;
 }
 
 export interface RoomViewBase {

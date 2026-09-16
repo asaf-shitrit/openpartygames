@@ -37,6 +37,7 @@ function renderPhone(
       view={view}
       room={room}
       deadline={room.game?.deadline ?? null}
+      timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
       send={send}
     />,
@@ -122,6 +123,7 @@ describe("Phone vote phase", () => {
         view={first.view}
         room={first.room}
         deadline={null}
+        timerStartedAt={null}
         clock={clock}
         send={vi.fn<(action: RonAction) => void>()}
       />,
@@ -135,39 +137,35 @@ describe("Phone vote phase", () => {
         view={second.view}
         room={second.room}
         deadline={null}
+        timerStartedAt={second.room.game?.timerStartedAt ?? null}
         clock={clock}
         send={vi.fn<(action: RonAction) => void>()}
       />,
     );
     const next = container.querySelector(".opg-phase-enter");
     expect(next).toBeTruthy();
-    expect(next?.textContent).toContain("The real answer");
+    expect(next?.textContent).toContain("The truth: emus");
   });
 });
 
 describe("Phone reveal phase", () => {
-  it("shows the points for the fact and who the lie fooled", () => {
+  it("shows the settled personal cards: fooled, fooling, and the truth missed", () => {
     renderPhone("Phone: reveal");
-    expect(screen.getByText("The real answer")).toBeTruthy();
-    expect(screen.getByText("REAL")).toBeTruthy();
-    expect(screen.getByText("You missed it")).toBeTruthy();
-    expect(screen.getByText(/^cane toads$/)).toBeTruthy();
-    expect(screen.getByText("Fooled")).toBeTruthy();
-    expect(screen.getByText("Sam")).toBeTruthy();
-    expect(screen.getByText("Noa")).toBeTruthy();
+    expect(screen.getByText("Maya's lie got you")).toBeTruthy();
+    expect(screen.getByText("You fooled Sam and Noa!")).toBeTruthy();
     expect(screen.getByText("+1,000")).toBeTruthy();
+    expect(screen.getByText("The truth: emus")).toBeTruthy();
   });
 
-  it("celebrates the truth and a lie that fooled nobody", () => {
+  it("celebrates finding the truth", () => {
     renderPhone("Phone: Dov found the truth");
-    expect(screen.getByText("You found it, +1,000")).toBeTruthy();
-    expect(screen.getByText("Fooled nobody")).toBeTruthy();
-    expect(screen.getByText("+1,000")).toBeTruthy();
+    expect(screen.getByText("You found it!")).toBeTruthy();
   });
 
-  it("says so when the player never wrote a lie", () => {
+  it("keeps the round's answer on screen when the player never wrote a lie", () => {
     renderPhone("Phone: Dov missed a round");
-    expect(screen.getByText("No lie from you this round")).toBeTruthy();
-    expect(screen.getByText("+0")).toBeTruthy();
+    expect(screen.queryByText("Your lie fooled nobody")).toBeNull();
+    // Nothing personal to stage, but the truth still lands so the screen is never blank.
+    expect(screen.getByText(/The truth: |You found it!/)).toBeTruthy();
   });
 });

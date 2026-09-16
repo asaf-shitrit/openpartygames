@@ -1,7 +1,50 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { App } from "./App";
+import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
+import { App, lazyEngine } from "./App";
 import { resetFakeSockets } from "./screens/fixtures/socket";
+
+class FakeEngine implements SoundEngine {
+  preloadCount = 0;
+
+  status(): SoundStatus {
+    return "running";
+  }
+
+  subscribe(): () => void {
+    return () => {
+      /* status never changes */
+    };
+  }
+
+  unlock(): void {
+    /* nothing to resume */
+  }
+
+  setMuted(): void {
+    /* nothing to mute */
+  }
+
+  preload(): void {
+    this.preloadCount += 1;
+  }
+
+  play(): CueHandle {
+    return {
+      stop() {
+        /* nothing is playing */
+      },
+    };
+  }
+
+  playMusic(): void {
+    /* no music in tests */
+  }
+
+  stopAll(): void {
+    /* nothing is playing */
+  }
+}
 
 function renderAt(path: string) {
   window.history.pushState(null, "", path);
@@ -62,5 +105,35 @@ describe("App routing", () => {
   it("renders the privacy page", () => {
     renderAt("/privacy");
     expect(screen.getByText("Privacy")).toBeTruthy();
+  });
+
+  it("uses the injected engine on TV routes", () => {
+    const engine = new FakeEngine();
+    window.history.pushState(null, "", "/credits");
+    render(<App engine={engine} />);
+    expect(engine.preloadCount).toBe(1);
+  });
+
+  it("keeps phone routes on the silent engine", () => {
+    const engine = new FakeEngine();
+    window.history.pushState(null, "", "/join");
+    render(<App engine={engine} />);
+    expect(engine.preloadCount).toBe(0);
+  });
+
+  it("lazy-loads the dev sound board", async () => {
+    renderAt("/dev/sounds");
+    expect(await screen.findByText("Sound board")).toBeTruthy();
+  });
+});
+
+describe("lazyEngine", () => {
+  it("builds the engine only when asked, and only once", () => {
+    const create = vi.fn<() => SoundEngine>(() => new FakeEngine());
+    const get = lazyEngine(create);
+    expect(create).not.toHaveBeenCalled();
+    const first = get();
+    expect(get()).toBe(first);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 });

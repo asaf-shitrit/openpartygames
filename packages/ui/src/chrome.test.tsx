@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeaderChip, PhoneStrip, PlayerChip, TvHeader } from "./chrome";
+import { SoundProvider } from "./audio/SoundProvider";
+import { FakeSoundEngine } from "./fixtures/audio";
 
 type PropertyOwner = Document | HTMLElement;
 
@@ -246,5 +254,52 @@ describe("PlayerChip", () => {
     render(<PlayerChip name="Nia" avatar={null} />);
     expect(screen.getByText("Nia")).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();
+  });
+});
+
+describe("sound chip", () => {
+  it("says Sound on while running and mutes on click", () => {
+    const engine = new FakeSoundEngine("running");
+    render(
+      <SoundProvider engine={engine}>
+        <TvHeader variant="brand" />
+      </SoundProvider>,
+    );
+    const on = screen.getByRole("button", { name: "Sound on" });
+    expect(on.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(on);
+    expect(screen.getByText("Sound off")).toBeTruthy();
+    expect(engine.muteHistory).toContain(true);
+  });
+
+  it("says Sound off while muted, and one click unmutes and unlocks", () => {
+    localStorage.setItem("opg:muted", "1");
+    const engine = new FakeSoundEngine("locked");
+    render(
+      <SoundProvider engine={engine}>
+        <TvHeader variant="brand" />
+      </SoundProvider>,
+    );
+    const off = screen.getByRole("button", { name: "Sound off" });
+    expect(off.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(off);
+    // The click is the gesture that resumes audio, so no second tap is needed.
+    expect(engine.unlockCount).toBe(1);
+    expect(engine.muteHistory).toContain(false);
+  });
+
+  it("says Tap for sound while locked and unlocks on click", () => {
+    const engine = new FakeSoundEngine("locked");
+    render(
+      <SoundProvider engine={engine}>
+        <TvHeader variant="brand" />
+      </SoundProvider>,
+    );
+    const locked = screen.getByRole("button", { name: "Tap for sound" });
+    expect(locked.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(locked);
+    // The chip unlocks, and so does the provider's page-wide click listener; resuming twice is harmless.
+    expect(engine.unlockCount).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: "Sound on" })).toBeTruthy();
   });
 });

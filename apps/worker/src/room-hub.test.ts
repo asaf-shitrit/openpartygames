@@ -251,6 +251,17 @@ describe("RoomHub.close", () => {
 
     expect(lobby.storage.deletions).toBe(1);
   });
+  it("persists the host leaving, so a restarted room can still go idle", async () => {
+    const lobby = await makeLobby();
+    await disconnect(lobby, lobby.ada);
+    await disconnect(lobby, lobby.bo);
+    await disconnect(lobby, lobby.cy);
+    await disconnect(lobby, lobby.host);
+
+    const stored = storedRoom(lobby.storage.stored);
+    expect(stored?.hostConnected).toBe(false);
+    expect(stored?.emptySince).not.toBeNull();
+  });
 });
 
 describe("RoomHub effects", () => {
@@ -311,6 +322,115 @@ describe("RoomHub effects", () => {
     expect(lobby.host.lastHostView()?.phase).toBe("lobby");
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+describe("RoomHub broadcast gating", () => {
+  it("sends no state frames when a game action is rejected", async () => {
+    const lobby = await makeLobby();
+    const cyId = welcomedPlayerId(lobby.cy) ?? "";
+    lobby.host.clearSent();
+    lobby.ada.clearSent();
+    lobby.bo.clearSent();
+    lobby.cy.clearSent();
+
+    // Only the VIP (Ada) may kick; Bo's attempt is rejected and changes nothing.
+    await send(lobby.hub, lobby.bo, { t: "kick", playerId: cyId });
+
+    expect(lobby.bo.sent).toEqual([
+      {
+        t: "error",
+        code: "not-vip",
+        message: "Only the room leader can do that.",
+      },
+    ]);
+    expect(lobby.host.sent).toEqual([]);
+    expect(lobby.ada.sent).toEqual([]);
+    expect(lobby.cy.sent).toEqual([]);
+  });
+
+  it("sends no state frames when an action is a no-op", async () => {
+    const lobby = await makeLobby();
+    await send(lobby.hub, lobby.bo, { t: "set-avatar", avatar: "cat" });
+    lobby.host.clearSent();
+    lobby.ada.clearSent();
+    lobby.bo.clearSent();
+    lobby.cy.clearSent();
+
+    // Setting the same avatar again changes nothing.
+    await send(lobby.hub, lobby.bo, { t: "set-avatar", avatar: "cat" });
+
+    expect(lobby.bo.sent).toEqual([]);
+    expect(lobby.host.sent).toEqual([]);
+    expect(lobby.ada.sent).toEqual([]);
+    expect(lobby.cy.sent).toEqual([]);
+  });
+
+  it("still broadcasts to every socket when an action changes the room", async () => {
+    const lobby = await makeLobby();
+    lobby.host.clearSent();
+    lobby.ada.clearSent();
+    lobby.cy.clearSent();
+
+    await send(lobby.hub, lobby.bo, { t: "set-avatar", avatar: "cat" });
+
+    expect(lobby.host.lastHostView()).toBeDefined();
+    expect(lobby.ada.lastPlayerView()).toBeDefined();
+    expect(lobby.cy.lastPlayerView()).toBeDefined();
+  });
+
+  it("gives a reconnecting host-hello only its own view when nothing changed", async () => {
+    const lobby = await makeLobby();
+    lobby.ada.clearSent();
+    lobby.bo.clearSent();
+    lobby.cy.clearSent();
+    lobby.host.clearSent();
+
+    await send(lobby.hub, lobby.host, {
+      t: "host-hello",
+      hostToken: "host-token",
+    });
+
+    expect(lobby.host.welcome()).toEqual({ t: "welcome", role: "host" });
+    expect(lobby.host.lastHostView()).toBeDefined();
+    expect(lobby.ada.sent).toEqual([]);
+    expect(lobby.bo.sent).toEqual([]);
+    expect(lobby.cy.sent).toEqual([]);
+  });
+
+  it("gives a second-tab player rejoin only its own view when nothing changed", async () => {
+    const lobby = await makeLobby();
+    const token = welcomedToken(lobby.ada) ?? "";
+    lobby.host.clearSent();
+    lobby.ada.clearSent();
+    lobby.bo.clearSent();
+    lobby.cy.clearSent();
+
+    const second = accept(lobby);
+    await send(lobby.hub, second, { t: "join", name: "Ada", token });
+
+    expect(welcomedPlayerId(second)).not.toBeNull();
+    expect(second.lastPlayerView()).toBeDefined();
+    expect(lobby.host.sent).toEqual([]);
+    expect(lobby.ada.sent).toEqual([]);
+    expect(lobby.bo.sent).toEqual([]);
+    expect(lobby.cy.sent).toEqual([]);
+  });
+
+  it("sends nothing on an alarm tick that changes nothing", async () => {
+    const lobby = await makeLobby();
+    lobby.host.clearSent();
+    lobby.ada.clearSent();
+    lobby.bo.clearSent();
+    lobby.cy.clearSent();
+    lobby.clock.advance(1000);
+
+    await lobby.hub.alarm();
+
+    expect(lobby.host.sent).toEqual([]);
+    expect(lobby.ada.sent).toEqual([]);
+    expect(lobby.bo.sent).toEqual([]);
+    expect(lobby.cy.sent).toEqual([]);
   });
 });
 

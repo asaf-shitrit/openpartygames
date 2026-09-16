@@ -100,7 +100,10 @@ export async function expectFinalScores(tv: Page): Promise<void> {
   await expect(
     tv.locator(".opg-marker").filter({ hasText: "Final scores" }),
   ).toBeVisible({ timeout: 60_000 });
-  await expect(tv.getByText(/win(s)? the crown/)).toBeVisible();
+  // The finale ceremony lands the crown about 19–25s after the game ends; ties share it.
+  await expect(tv.getByText(/(wins|share) the crown/).first()).toBeVisible({
+    timeout: 60_000,
+  });
 }
 
 /** Runs `action` `count` times; recursion keeps the await out of a loop. */

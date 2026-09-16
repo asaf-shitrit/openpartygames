@@ -4,9 +4,11 @@
 
 import {
   AVATARS,
+  MAX_AWARDS,
   MAX_PLAYERS,
   cleanPlayerName,
   type ActiveGameView,
+  type Award,
   type AvatarId,
   type ClientMessage,
   type ErrorCode,
@@ -58,12 +60,71 @@ interface GameRuntime {
   playerIds: PlayerId[];
   content: GameContent;
   deadline: number | null;
+  /** Epoch ms the current deadline was set; optional because pre-change snapshots lack it. */
+  timerStartedAt?: number | null;
   startedAt: number;
 }
 
 interface PendingStart {
   gameId: string;
   playerIds: PlayerId[];
+}
+
+/**
+ * The result as persisted. Older snapshots only ever wrote `gameId`, `scores` and
+ * `winnerIds`, so the fields added later are optional here; `resultSummary` fills
+ * in their defaults for the view.
+ */
+interface StoredResult {
+  gameId?: string;
+  scores?: Record<PlayerId, number>;
+  winnerIds?: PlayerId[];
+  completed?: boolean;
+  finishedAt?: number;
+  awards?: Award[];
+}
+
+/** Fields older snapshots never wrote, defaulted once so the view type always holds. */
+function storedBase(
+  stored: StoredResult,
+): Pick<GameResultSummary, "gameId" | "scores" | "winnerIds"> {
+  return {
+    gameId: stored.gameId ?? "",
+    scores: stored.scores ?? {},
+    winnerIds: stored.winnerIds ?? [],
+  };
+}
+
+/** Normalizes a persisted result into the view shape, defaulting fields older snapshots lack. */
+export function resultSummary(stored: StoredResult): GameResultSummary {
+  const base = storedBase(stored);
+  return {
+    ...base,
+    // Snapshots from before `completed` existed used an empty crown list to mean
+    // "ended early", so this heuristic reconstructs the flag rather than guessing true.
+    completed: stored.completed ?? base.winnerIds.length > 0,
+    finishedAt: stored.finishedAt ?? 0,
+    awards: stored.awards ?? [],
+  };
+}
+
+/**
+ * Keeps only players still in the game, drops awards left with no players, and caps
+ * the list at MAX_AWARDS while keeping order. Pure so tests can call it directly.
+ */
+export function sanitizeAwards(
+  awards: readonly Award[],
+  playerIds: readonly PlayerId[],
+): Award[] {
+  const roster = new Set(playerIds);
+  const kept: Award[] = [];
+  for (const award of awards) {
+    if (kept.length >= MAX_AWARDS) break;
+    const ids = award.playerIds.filter((id) => roster.has(id));
+    if (ids.length === 0) continue;
+    kept.push({ ...award, playerIds: ids });
+  }
+  return kept;
 }
 
 interface InternalState {
@@ -79,7 +140,7 @@ interface InternalState {
   phase: RoomPhase;
   packCatalog: PackMeta[];
   packEnabled: Record<string, boolean>;
-  lastResult: GameResultSummary | null;
+  lastResult: StoredResult | null;
   game: GameRuntime | null;
   pending: PendingStart | null;
   hostConnected: boolean;
@@ -146,7 +207,7 @@ class RoomImpl implements RoomCore {
   private phase: RoomPhase;
   private packCatalog: PackMeta[];
   private packEnabled: Record<string, boolean>;
-  private lastResult: GameResultSummary | null;
+  private lastResult: StoredResult | null;
   private game: GameRuntime | null;
   private pending: PendingStart | null;
   private hostConnected: boolean;
@@ -171,7 +232,11 @@ class RoomImpl implements RoomCore {
       ? {
           ...state.lastResult,
           scores: { ...state.lastResult.scores },
-          winnerIds: [...state.lastResult.winnerIds],
+          winnerIds: [...(state.lastResult.winnerIds ?? [])],
+          awards: state.lastResult.awards?.map((a) => ({
+            ...a,
+            playerIds: [...a.playerIds],
+          })),
         }
       : null;
     this.game = state.game
@@ -212,9 +277,16 @@ class RoomImpl implements RoomCore {
     return this.hostConnected || this.players.some((p) => p.connected);
   }
 
-  private syncEmpty(now: number): void {
-    if (this.hasConnection()) this.emptySince = null;
-    else if (this.emptySince === null) this.emptySince = now;
+  /** The idle clock is persisted, so moving it counts as a change to the room. */
+  private syncEmpty(now: number, out: Out): void {
+    if (this.hasConnection()) {
+      if (this.emptySince === null) return;
+      this.emptySince = null;
+    } else {
+      if (this.emptySince !== null) return;
+      this.emptySince = now;
+    }
+    out.changed = true;
   }
 
   private fail(out: Out, code: ErrorCode, message: string): void {
@@ -264,10 +336,18 @@ class RoomImpl implements RoomCore {
     return { players, connectedIds, rng: this.rng, now, content: game.content };
   }
 
-  private refreshDeadline(): void {
+  /**
+   * Recomputes the deadline and re-anchors `timerStartedAt` whenever its value changes.
+   * A new phase always gets `ctx.now + duration`, which differs from the old deadline unless the
+   * phase began in the same millisecond the previous one did, so value equality means "no change".
+   */
+  private setDeadline(now: number): void {
     if (!this.game) return;
     const def = this.gameDef(this.game.gameId);
-    this.game.deadline = def ? def.nextDeadline(this.game.state) : null;
+    const next = def ? def.nextDeadline(this.game.state) : null;
+    if (next === this.game.deadline) return;
+    this.game.deadline = next;
+    this.game.timerStartedAt = next === null ? null : now;
   }
 
   // ---------- public API ----------
@@ -287,7 +367,7 @@ class RoomImpl implements RoomCore {
     ) {
       out.changed = true;
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -307,7 +387,7 @@ class RoomImpl implements RoomCore {
     } else {
       this.applyLobbyMessage(caller, message, now, out);
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -390,26 +470,28 @@ class RoomImpl implements RoomCore {
       (id) => this.getPlayer(id) !== undefined,
     );
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
+    const deadline = def.nextDeadline(state);
     this.game = {
       gameId: def.id,
       state,
       playerIds,
       content,
-      deadline: def.nextDeadline(state),
+      deadline,
+      timerStartedAt: deadline === null ? null : now,
       startedAt: now,
     };
     this.pending = null;
     this.phase = "in-game";
     out.changed = true;
     this.checkGameOver(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
   abortStart(now: number): HandleResult {
     const out = newOut();
     this.abortStartNow(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -428,7 +510,7 @@ class RoomImpl implements RoomCore {
     }
     // VIP disconnected for more than 60s hands the crown to the earliest connected player.
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -442,7 +524,7 @@ class RoomImpl implements RoomCore {
     if (deadline === null || deadline > now) return false;
     const before = game.state;
     game.state = def.onDeadline(game.state, this.makeCtx(game, now));
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
     return this.deadlineMoved(game, def, before, deadline);
@@ -473,15 +555,19 @@ class RoomImpl implements RoomCore {
       out.changed = true;
       this.ensureVip(now, out);
     }
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return result(out);
   }
 
   setHostConnected(connected: boolean, now: number): HandleResult {
     const out = newOut();
-    // Host presence is not part of any view, so no rebroadcast is needed.
-    this.hostConnected = connected;
-    this.syncEmpty(now);
+    // Host presence is not part of any view, but it is part of the snapshot: the idle
+    // sweep reads it after a restart, so a change here must be persisted.
+    if (this.hostConnected !== connected) {
+      this.hostConnected = connected;
+      out.changed = true;
+    }
+    this.syncEmpty(now, out);
     return result(out);
   }
 
@@ -564,7 +650,8 @@ class RoomImpl implements RoomCore {
     out.reply.push({ t: "welcome", role: "host" });
     if (!this.hostConnected) {
       this.hostConnected = true;
-      this.syncEmpty(now);
+      out.changed = true;
+      this.syncEmpty(now, out);
     }
   }
 
@@ -598,7 +685,7 @@ class RoomImpl implements RoomCore {
       playerId: existing.id,
       token: existing.token,
     });
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
     return true;
   }
 
@@ -632,7 +719,7 @@ class RoomImpl implements RoomCore {
     });
     out.changed = true;
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
   }
 
   private newPlayerRecord(name: string): PlayerRecord {
@@ -767,7 +854,7 @@ class RoomImpl implements RoomCore {
 
     this.removeFromRunningGame(targetId, now, out);
     this.ensureVip(now, out);
-    this.syncEmpty(now);
+    this.syncEmpty(now, out);
   }
 
   /** Drops a kicked player from the running game and ends it if the room falls below its minimum. */
@@ -792,7 +879,7 @@ class RoomImpl implements RoomCore {
       targetId,
       this.makeCtx(game, now),
     );
-    this.refreshDeadline();
+    this.setDeadline(now);
     if (game.playerIds.length < def.minPlayers) {
       this.finishGame(now, false, out);
     } else {
@@ -851,7 +938,7 @@ class RoomImpl implements RoomCore {
       this.game.state,
       this.makeCtx(this.game, now),
     );
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
   }
@@ -917,7 +1004,7 @@ class RoomImpl implements RoomCore {
     );
     if (next === game.state) return;
     game.state = next;
-    this.refreshDeadline();
+    this.setDeadline(now);
     out.changed = true;
     this.checkGameOver(now, out);
   }
@@ -937,8 +1024,16 @@ class RoomImpl implements RoomCore {
     const def = this.gameDef(game.gameId);
     const scores = this.collectScores(game, def);
     const winnerIds = this.awardCrowns(game, scores, completed);
+    const awards = this.gameAwards(game, def, completed);
 
-    this.lastResult = { gameId: game.gameId, scores, winnerIds };
+    this.lastResult = {
+      gameId: game.gameId,
+      scores,
+      winnerIds,
+      completed,
+      finishedAt: now,
+      awards,
+    };
     this.phase = "lobby";
     this.lobbyScreen = "results";
     for (const p of this.players) p.waitingForNextGame = false;
@@ -973,6 +1068,16 @@ class RoomImpl implements RoomCore {
     const winnerIds = game.playerIds.filter((id) => (scores[id] ?? 0) === top);
     this.crown(winnerIds);
     return winnerIds;
+  }
+
+  /** Only a completed game gets awards; they are sanitized against the surviving roster. */
+  private gameAwards(
+    game: GameRuntime,
+    def: AnyGame | undefined,
+    completed: boolean,
+  ): Award[] {
+    if (!completed) return [];
+    return sanitizeAwards(def?.awards?.(game.state) ?? [], game.playerIds);
   }
 
   private topScore(
@@ -1011,7 +1116,7 @@ class RoomImpl implements RoomCore {
       })),
       selectedGameId: this.selectedGameId,
       packs: this.packSummaries(),
-      lastResult: this.lastResult,
+      lastResult: this.lastResult ? resultSummary(this.lastResult) : null,
       serverNow: now,
     };
   }
@@ -1042,6 +1147,15 @@ class RoomImpl implements RoomCore {
       }));
   }
 
+  /** The shared envelope every active-game view carries. */
+  private gameViewBase(game: GameRuntime) {
+    return {
+      id: game.gameId,
+      deadline: game.deadline,
+      timerStartedAt: game.timerStartedAt ?? null,
+    };
+  }
+
   private activeGame(
     now: number,
     role: "host" | "player",
@@ -1051,7 +1165,7 @@ class RoomImpl implements RoomCore {
     if (this.phase !== "in-game" || !game) return null;
     const def = this.gameDef(game.gameId);
     if (!def) return null;
-    const base = { id: game.gameId, deadline: game.deadline };
+    const base = this.gameViewBase(game);
     if (role === "host")
       return { ...base, view: def.hostView(game.state, { now }) };
     if (playerId === undefined || !game.playerIds.includes(playerId)) {
@@ -1120,7 +1234,16 @@ export function restoreRoom(
     );
   // The data was produced by snapshot() from an InternalState; fields missing from older
   // snapshots fall back to the blank state's defaults.
-  const persisted: Partial<InternalState> = JSON.parse(snapshot.data);
+  let persisted: Partial<InternalState> = {};
+  try {
+    persisted = JSON.parse(snapshot.data);
+  } catch {
+    // A corrupted snapshot restarts the room as blank instead of leaving it unloadable.
+  }
   const state = Object.assign(blankState(), persisted);
+  // A snapshot written by an older build (or a corrupted one) can lack the fields the
+  // constructor reads, so normalize the result once here instead of throwing on restore.
+  if (state.lastResult !== null)
+    state.lastResult = resultSummary(state.lastResult);
   return new RoomImpl(state, games, newToken);
 }

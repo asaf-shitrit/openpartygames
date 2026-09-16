@@ -1,38 +1,37 @@
 // Real or Nah — TV host stage. One phase component per screen.
-import type { CSSProperties } from "react";
+import { useEffect, useRef } from "react";
+import type { CSSProperties, RefObject } from "react";
 import type { HostRoomView, PlayerId } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import {
   Avatar,
   Card,
-  Highlight,
   Icon,
   LinedCard,
   Marker,
   PhaseEnter,
-  Stamp,
+  playFx,
   Tape,
   Timer,
   TvHeader,
+  useArrivals,
+  useCue,
+  useMusic,
+  useReducedMotion,
 } from "@opg/ui";
-import { POINTS_TRUTH, type RonFooledLie, type RonHostView } from "../types";
-import {
-  Person,
-  PersonTag,
-  PromptText,
-  playerAvatar,
-  playerFor,
-  playerName,
-} from "./common";
+import type { RonHostView } from "../types";
+import { PromptText, playerAvatar, playerFor, playerName } from "./common";
+import { HostReveal } from "./HostReveal";
 
 export interface HostProps {
   view: RonHostView;
   room: HostRoomView;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
 }
 
-export function Host({ view, room, deadline, clock }: HostProps) {
+export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps) {
   return (
     <div
       style={{
@@ -51,32 +50,60 @@ export function Host({ view, room, deadline, clock }: HostProps) {
         roomCode={room.code}
       />
       <PhaseEnter phaseKey={`${view.factNumber}:${view.phase}`}>
-        <HostBody view={view} room={room} deadline={deadline} clock={clock} />
+        <HostBody
+          view={view}
+          room={room}
+          deadline={deadline}
+          timerStartedAt={timerStartedAt}
+          clock={clock}
+        />
       </PhaseEnter>
     </div>
   );
 }
 
-function HostBody({ view, room, deadline, clock }: HostProps) {
+function HostBody({ view, room, deadline, timerStartedAt, clock }: HostProps) {
   if (view.phase === "write") {
     return (
-      <WritePhase view={view} room={room} deadline={deadline} clock={clock} />
+      <WritePhase
+        view={view}
+        room={room}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
+      />
     );
   }
   if (view.phase === "vote") {
-    return <VotePhase view={view} deadline={deadline} clock={clock} />;
+    return (
+      <VotePhase
+        view={view}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
+      />
+    );
   }
-  return <RevealPhase view={view} room={room} />;
+  return (
+    <HostReveal
+      view={view}
+      players={room.players}
+      deadline={deadline}
+      timerStartedAt={timerStartedAt}
+      clock={clock}
+    />
+  );
 }
 
 interface PhaseProps {
   view: RonHostView;
   room: HostRoomView;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
 }
 
-function WritePhase({ view, room, deadline, clock }: PhaseProps) {
+function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps) {
   return (
     <>
       <div
@@ -103,6 +130,7 @@ function WritePhase({ view, room, deadline, clock }: PhaseProps) {
         </div>
         <TimerSide
           deadline={deadline}
+          timerStartedAt={timerStartedAt}
           clock={clock}
           size={190}
           note="left to write"
@@ -115,11 +143,13 @@ function WritePhase({ view, room, deadline, clock }: PhaseProps) {
 
 function TimerSide({
   deadline,
+  timerStartedAt,
   clock,
   size,
   note,
 }: {
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
   size: number;
   note: string;
@@ -134,7 +164,13 @@ function TimerSide({
         paddingTop: 6,
       }}
     >
-      <Timer deadline={deadline} clock={clock} size={size} />
+      <Timer
+        deadline={deadline}
+        clock={clock}
+        size={size}
+        startedAt={timerStartedAt}
+        ticks
+      />
       <div
         style={{
           fontSize: 30,
@@ -148,6 +184,22 @@ function TimerSide({
   );
 }
 
+function useTilePops(
+  arrivedIds: readonly PlayerId[],
+  tileRefs: RefObject<Map<PlayerId, HTMLElement>>,
+): void {
+  const play = useCue();
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (arrivedIds.length > 0) {
+      play("pop");
+      for (const id of arrivedIds) {
+        playFx(tileRefs.current.get(id) ?? null, "pop", reduced);
+      }
+    }
+  }, [arrivedIds, play, reduced, tileRefs]);
+}
+
 function WriteProgress({
   view,
   room,
@@ -156,6 +208,9 @@ function WriteProgress({
   room: HostRoomView;
 }) {
   const count = Math.max(1, view.playerIds.length);
+  const tileRefs = useRef(new Map<PlayerId, HTMLElement>());
+  const arrivals = useArrivals(view.submittedIds);
+  useTilePops(arrivals, tileRefs);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
@@ -177,6 +232,10 @@ function WriteProgress({
             room={room}
             id={id}
             done={view.submittedIds.includes(id)}
+            registerRef={(el) => {
+              if (el) tileRefs.current.set(id, el);
+              else tileRefs.current.delete(id);
+            }}
           />
         ))}
       </div>
@@ -220,14 +279,16 @@ function LieTile({
   room,
   id,
   done,
+  registerRef,
 }: {
   room: HostRoomView;
   id: PlayerId;
   done: boolean;
+  registerRef: (el: HTMLElement | null) => void;
 }) {
   const player = playerFor(room, id);
   return (
-    <div style={lieTileStyle(done)}>
+    <div ref={registerRef} style={lieTileStyle(done)}>
       <Avatar
         id={playerAvatar(player)}
         size={72}
@@ -248,8 +309,9 @@ function LieTile({
   );
 }
 
-function VotePhase({ view, deadline, clock }: Omit<PhaseProps, "room">) {
+function VotePhase({ view, deadline, timerStartedAt, clock }: Omit<PhaseProps, "room">) {
   const options = view.options ?? [];
+  useMusic("tension");
   return (
     <>
       <div
@@ -276,7 +338,7 @@ function VotePhase({ view, deadline, clock }: Omit<PhaseProps, "room">) {
             style={{ fontSize: 48, fontWeight: 700, lineHeight: 1.3 }}
           />
         </Card>
-        <VotedSide view={view} deadline={deadline} clock={clock} />
+        <VotedSide view={view} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 28 }}>
         <Marker size={68}>Which one is real?</Marker>
@@ -309,8 +371,19 @@ function VotePhase({ view, deadline, clock }: Omit<PhaseProps, "room">) {
 function VotedSide({
   view,
   deadline,
+  timerStartedAt,
   clock,
-}: Pick<PhaseProps, "view" | "deadline" | "clock">) {
+}: Pick<PhaseProps, "view" | "deadline" | "timerStartedAt" | "clock">) {
+  const play = useCue();
+  const reduced = useReducedMotion();
+  const countRef = useRef<HTMLDivElement>(null);
+  const arrivals = useArrivals(view.votedIds);
+  useEffect(() => {
+    if (arrivals.length > 0) {
+      play("pop");
+      playFx(countRef.current, "pop", reduced);
+    }
+  }, [arrivals, play, reduced]);
   return (
     <div
       style={{
@@ -320,8 +393,15 @@ function VotedSide({
         gap: 10,
       }}
     >
-      <Timer deadline={deadline} clock={clock} size={170} />
+      <Timer
+        deadline={deadline}
+        clock={clock}
+        size={170}
+        startedAt={timerStartedAt}
+        ticks
+      />
       <div
+        ref={countRef}
         style={{
           display: "flex",
           alignItems: "center",
@@ -363,286 +443,6 @@ function VoteOption({ text, index }: { text: string; index: number }) {
       }}
     >
       {text}
-    </div>
-  );
-}
-
-function RevealPhase({
-  view,
-  room,
-}: {
-  view: RonHostView;
-  room: HostRoomView;
-}) {
-  if (!view.reveal) return null;
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "640px minmax(0, 1fr)",
-        gap: 56,
-        flexGrow: 1,
-        alignItems: "start",
-      }}
-    >
-      <TruthCard view={view} room={room} />
-      <LiesList lies={view.reveal.lies} room={room} />
-    </div>
-  );
-}
-
-const LABEL = {
-  fontSize: 28,
-  fontWeight: 700,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: "var(--opg-ink-secondary)",
-} as const;
-
-function TruthCard({ view, room }: { view: RonHostView; room: HostRoomView }) {
-  const reveal = view.reveal;
-  if (!reveal) return null;
-  return (
-    <Card
-      variant="L"
-      tilt={-1.5}
-      style={{
-        position: "relative",
-        marginTop: 18,
-        padding: "48px 48px 40px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-      }}
-    >
-      <Tape left={220} top={-24} width={190} height={48} rotate={-3} />
-      <div style={LABEL}>The truth</div>
-      <PromptText
-        prompt={view.prompt}
-        answer={reveal.answer}
-        style={{ fontSize: 34, lineHeight: 1.35 }}
-      />
-      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-        <Highlight style={{ padding: "0 16px" }}>
-          <span style={{ fontSize: 108, fontWeight: 700 }}>
-            {reveal.answer}
-          </span>
-        </Highlight>
-        <Stamp size={56} tilt={-8}>
-          REAL
-        </Stamp>
-      </div>
-      <FoundBy room={room} ids={reveal.foundByIds} />
-      <div style={{ fontSize: 28, color: "var(--opg-ink-secondary)" }}>
-        Source: Wikipedia, “{reveal.source.title}”
-      </div>
-    </Card>
-  );
-}
-
-function FoundBy({ room, ids }: { room: HostRoomView; ids: PlayerId[] }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        marginTop: 6,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 20,
-        }}
-      >
-        <div style={{ fontSize: 32, fontWeight: 700 }}>Found by</div>
-        {ids.length > 0 ? (
-          <Marker
-            size={40}
-            color="var(--opg-marker)"
-            style={{ transform: "rotate(-3deg)" }}
-          >
-            +{POINTS_TRUTH.toLocaleString("en-US")} each
-          </Marker>
-        ) : null}
-      </div>
-      {ids.length > 0 ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 36,
-            flexWrap: "wrap",
-          }}
-        >
-          {ids.map((id) => (
-            <Person
-              key={id}
-              room={room}
-              id={id}
-              avatarSize={72}
-              fontSize={34}
-            />
-          ))}
-        </div>
-      ) : (
-        <div
-          style={{
-            fontSize: 32,
-            fontWeight: 700,
-            color: "var(--opg-ink-secondary)",
-          }}
-        >
-          Nobody found it
-        </div>
-      )}
-    </div>
-  );
-}
-
-const LIE_GRID = {
-  display: "grid",
-  gridTemplateColumns: "290px 96px 196px minmax(0, 1fr) 130px",
-  gap: 20,
-  alignItems: "center",
-} as const;
-
-/** Highest scoring lie first. ES2022 has no Array#toSorted, so sort by hand. */
-function sortByPoints(lies: readonly RonFooledLie[]): RonFooledLie[] {
-  const remaining = [...lies];
-  const sorted: RonFooledLie[] = [];
-  while (remaining.length > 0) {
-    const best = Math.max(...remaining.map((lie) => lie.points));
-    const at = remaining.findIndex((lie) => lie.points === best);
-    sorted.push(...remaining.splice(at, 1));
-  }
-  return sorted;
-}
-
-function LiesList({
-  lies,
-  room,
-}: {
-  lies: RonFooledLie[];
-  room: HostRoomView;
-}) {
-  const sorted = sortByPoints(lies);
-  const rowHeight = sorted.length > 6 ? 68 : 92;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Marker size={60}>The lies</Marker>
-      <div
-        style={{
-          ...LIE_GRID,
-          padding: "0 28px",
-          fontSize: 28,
-          fontWeight: 700,
-          color: "var(--opg-ink-secondary)",
-        }}
-      >
-        <div>Lie</div>
-        <div />
-        <div>Written by</div>
-        <div>Fooled</div>
-        <div style={{ textAlign: "right" }}>Points</div>
-      </div>
-      {sorted.map((lie, index) => (
-        <LieRow
-          key={lie.optionId}
-          lie={lie}
-          room={room}
-          alt={index % 2 === 1}
-          minHeight={rowHeight}
-        />
-      ))}
-    </div>
-  );
-}
-
-function lieRowStyle(alt: boolean, fooled: boolean, minHeight: number) {
-  return {
-    ...LIE_GRID,
-    minHeight,
-    padding: "12px 24px",
-    background: fooled ? "var(--opg-card)" : "rgba(255, 255, 255, 0.6)",
-    border: fooled ? "4px solid var(--opg-ink)" : "4px dashed var(--opg-muted)",
-    borderRadius: alt ? "var(--opg-radius-m-alt)" : "var(--opg-radius-m)",
-  };
-}
-
-function FooledCell({ lie, room }: { lie: RonFooledLie; room: HostRoomView }) {
-  if (lie.fooledIds.length === 0) {
-    return (
-      <div
-        style={{
-          fontSize: 28,
-          fontWeight: 700,
-          color: "var(--opg-ink-secondary)",
-        }}
-      >
-        Fooled nobody
-      </div>
-    );
-  }
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        flexWrap: "wrap",
-      }}
-    >
-      {lie.fooledIds.map((id) => (
-        <Person key={id} room={room} id={id} avatarSize={44} fontSize={28} />
-      ))}
-    </div>
-  );
-}
-
-function LieRow({
-  lie,
-  room,
-  alt,
-  minHeight,
-}: {
-  lie: RonFooledLie;
-  room: HostRoomView;
-  alt: boolean;
-  minHeight: number;
-}) {
-  const author = lie.authorId ? playerFor(room, lie.authorId) : undefined;
-  const fooled = lie.fooledIds.length > 0;
-  return (
-    <div style={lieRowStyle(alt, fooled, minHeight)}>
-      <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.2 }}>
-        {lie.text}
-      </div>
-      <div style={{ justifySelf: "start" }}>
-        <Stamp size={30} tilt={-6}>
-          NAH
-        </Stamp>
-      </div>
-      <PersonTag
-        name={author?.name ?? "House lie"}
-        avatar={author?.avatar ?? null}
-        avatarSize={52}
-        fontSize={30}
-      />
-      <FooledCell lie={lie} room={room} />
-      <div
-        className="opg-marker"
-        style={{
-          textAlign: "right",
-          fontSize: 40,
-          color: fooled ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
-        }}
-      >
-        +{lie.points.toLocaleString("en-US")}
-      </div>
     </div>
   );
 }

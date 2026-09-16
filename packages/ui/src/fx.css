@@ -1,0 +1,74 @@
+/* Effect kit: doodle keyframes for the TV stage. Movement only through the
+   individual translate/scale/rotate/opacity/stroke properties, so inline tilt
+   and Stage scale stay intact. Under reduced motion styles.css shortens these
+   to a no-op; JS-driven effects decide about fades on their own. */
+
+/* Sticker burst: a small pop with a per-sticker delay set inline. */
+.opg-fx-sticker {
+  animation: opg-fx-pop 280ms var(--opg-ease-out) both;
+}
+
+@keyframes opg-fx-pop {
+  0% {
+    scale: 0;
+  }
+  60% {
+    scale: 1.15;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+/* Tally scratch: a mark drawn on with a dash-offset animation. */
+.opg-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: opg-draw 220ms var(--opg-ease-out) forwards;
+}
+
+@keyframes opg-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Opacity-only fade, kept visible in the reduced-motion rule. */
+.opg-fx-fade {
+  animation: opg-fx-fade 200ms var(--opg-ease-out) both;
+}
+
+@keyframes opg-fx-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Timer ring drain: dash-offset goes from full (0) to empty (100) over the timer's
+   own duration, driven by a negative animation-delay so no per-second render is needed. */
+@keyframes opg-ring-drain {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 100;
+  }
+}
+
+.opg-ring-drain {
+  animation-name: opg-ring-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opg-ring-drain {
+    animation: none !important;
+  }
+}

@@ -1,4 +1,5 @@
 // design/TVGamePicker.dc.html — lobby pick screen (brand header + Room chip).
+import { useEffect, useRef, useState } from "react";
 import type {
   AvatarId,
   GameSummary,
@@ -17,6 +18,9 @@ import {
   Stamp,
   Switch,
   TvHeader,
+  playFx,
+  useCue,
+  useReducedMotion,
 } from "@opg/ui";
 import type { CardProps, IconName } from "@opg/ui";
 import { TvPage } from "./shared";
@@ -32,6 +36,24 @@ function ratingLabel(rating: Rating): string {
   return "Family";
 }
 
+interface PickedState {
+  previous: string;
+  justPicked: string | null;
+}
+
+/** The game id that just became selected, or null on mount and on every unchanged render. */
+function useJustPicked(selectedGameId: string): string | null {
+  const [state, setState] = useState<PickedState>(() => ({
+    previous: selectedGameId,
+    justPicked: null,
+  }));
+  if (state.previous !== selectedGameId) {
+    setState({ previous: selectedGameId, justPicked: selectedGameId });
+    return selectedGameId;
+  }
+  return state.justPicked;
+}
+
 type CardLook = Pick<CardProps, "variant" | "tilt" | "background">;
 
 /** The highlighted look for the picked game, the quiet one for the rest. */
@@ -45,43 +67,56 @@ function cardLook(selected: boolean): CardLook {
 function GameCard({
   game,
   selected,
+  justPicked,
 }: {
   game: GameSummary;
   selected: boolean;
+  justPicked: boolean;
 }) {
+  const reduced = useReducedMotion();
+  const cue = useCue();
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!justPicked) return;
+    playFx(cardRef.current, "pop", reduced);
+    cue("tape");
+  }, [justPicked, reduced, cue]);
   return (
-    <Card
-      {...cardLook(selected)}
-      style={{
-        padding: "32px 32px 34px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
-    >
-      {selected ? (
-        <Stamp
-          size={38}
-          tilt={6}
-          style={{ position: "absolute", right: 22, top: 26 }}
-        >
-          <Icon name="check" size={34} />
-          <span>Picked</span>
-        </Stamp>
-      ) : null}
-      <Icon name={gameIcon(game.id)} size={120} color="var(--opg-ink)" />
-      <Marker size={64}>{game.name}</Marker>
-      <div style={{ fontSize: 34, lineHeight: 1.3 }}>{game.blurb}</div>
-      <div
+    <div ref={cardRef}>
+      <Card
+        {...cardLook(selected)}
         style={{
-          fontSize: 30,
-          fontWeight: 700,
-          color: "var(--opg-ink-secondary)",
+          padding: "32px 32px 34px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
         }}
       >
-        {game.minPlayers}–{game.maxPlayers} players · about {game.minutes} min
-      </div>
-    </Card>
+        {selected ? (
+          <Stamp
+            size={38}
+            tilt={6}
+            style={{ position: "absolute", right: 22, top: 26 }}
+          >
+            <Icon name="check" size={34} />
+            <span>Picked</span>
+          </Stamp>
+        ) : null}
+        <Icon name={gameIcon(game.id)} size={120} color="var(--opg-ink)" />
+        <Marker size={64}>{game.name}</Marker>
+        <div style={{ fontSize: 34, lineHeight: 1.3 }}>{game.blurb}</div>
+        <div
+          style={{
+            fontSize: 30,
+            fontWeight: 700,
+            color: "var(--opg-ink-secondary)",
+          }}
+        >
+          {game.minPlayers}–{game.maxPlayers} players · about {game.minutes}{" "}
+          min
+        </div>
+      </Card>
+    </div>
   );
 }
 
@@ -248,6 +283,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
   const vip = pickPlayer(view.players, view.vipId);
   const selectedGame = pickGame(view.games, view.selectedGameId);
   const active = countActivePlayers(view.players);
+  const justPicked = useJustPicked(view.selectedGameId);
 
   return (
     <TvPage>
@@ -277,6 +313,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
               key={game.id}
               game={game}
               selected={game.id === view.selectedGameId}
+              justPicked={game.id === justPicked}
             />
           ))}
         </div>

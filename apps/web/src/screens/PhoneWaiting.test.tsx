@@ -19,7 +19,12 @@ function setup(patch: Parameters<typeof makePlayerView>[0] = {}) {
         players: [ME, SAM, LEE],
         you: "p1",
         games: [makeGame()],
-        game: { id: "imposter", view: null, deadline: null },
+        game: {
+          id: "imposter",
+          view: null,
+          deadline: null,
+          timerStartedAt: null,
+        },
         ...patch,
       })}
     />,

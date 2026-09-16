@@ -15,11 +15,14 @@ export async function playRealOrNah(tv: Page, phones: Phone[]): Promise<void> {
 export async function playOneFact(tv: Page, phones: Phone[]): Promise<void> {
   await expect(
     tv.getByText("Write a believable lie on your phone"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 45000 });
   await submitLies(phones);
   await expect(tv.getByText("Which one is real?")).toBeVisible();
   await lockVotes(phones);
-  await expect(tv.getByText("The truth")).toBeVisible();
+  // The reveal now lasts up to 30s (intro, duds, one beat per fooler, the truth,
+  // then standings), so give it more than the default timeout to land.
+  await expect(tv.getByText("The truth")).toBeVisible({ timeout: 45000 });
+  await expect(tv.getByText("Standings")).toBeVisible({ timeout: 45000 });
 }
 
 async function submitLies(phones: Phone[]): Promise<void> {

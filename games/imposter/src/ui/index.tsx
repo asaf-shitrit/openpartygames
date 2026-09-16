@@ -7,9 +7,10 @@ import type {
 } from "../state";
 import { Host } from "./Host";
 import { Phone } from "./Phone";
+import { imposterAwardCopy } from "./award-copy";
 
 export const imposterUi: GameUi<
   ImposterHostView,
   ImposterPlayerView,
   ImposterAction
-> = { Host, Phone };
+> = { Host, Phone, awardCopy: imposterAwardCopy };

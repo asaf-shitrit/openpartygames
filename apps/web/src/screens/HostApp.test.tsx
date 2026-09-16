@@ -1,6 +1,8 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { RoomView } from "@opg/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SoundProvider } from "@opg/ui";
+import type { CueHandle, CueId, MusicId, SoundEngine, SoundStatus } from "@opg/ui";
 import { FakeWebSocket, lastSocket, resetFakeSockets } from "./fixtures/socket";
 import {
   FakeWakeLockSentinel,
@@ -15,6 +17,58 @@ import {
 } from "./fixtures/room";
 import { realOrNahPreviews } from "@opg/game-real-or-nah/ui";
 import { HostApp } from "./HostApp";
+
+class FakeEngine implements SoundEngine {
+  readonly cues: CueId[] = [];
+  readonly musicCalls: (MusicId | null)[] = [];
+
+  status(): SoundStatus {
+    return "running";
+  }
+
+  subscribe(): () => void {
+    return () => {
+      /* status never changes */
+    };
+  }
+
+  unlock(): void {
+    /* nothing to resume */
+  }
+
+  setMuted(): void {
+    /* nothing to mute */
+  }
+
+  preload(): void {
+    /* no samples */
+  }
+
+  play(cue: CueId): CueHandle {
+    this.cues.push(cue);
+    return {
+      stop() {
+        /* nothing is playing */
+      },
+    };
+  }
+
+  playMusic(id: MusicId | null): void {
+    this.musicCalls.push(id);
+  }
+
+  stopAll(): void {
+    /* nothing is playing */
+  }
+}
+
+function renderHost(engine: SoundEngine, code = "BKTZ") {
+  return render(
+    <SoundProvider engine={engine}>
+      <HostApp code={code} />
+    </SoundProvider>,
+  );
+}
 
 function connectHost(): FakeWebSocket {
   const socket = lastSocket();
@@ -37,6 +91,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
   restoreWakeLock();
 });
+
+
+/** Music claims reach the engine on a microtask, so same-commit changes coalesce. */
+async function flushMusicClaims(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
 
 describe("HostApp", () => {
   it("explains that the room is hosted elsewhere when there is no host token", () => {
@@ -129,7 +191,12 @@ describe("HostApp", () => {
       socket,
       makeHostView({
         phase: "in-game",
-        game: { id: "real-or-nah", view: preview.view, deadline: null },
+        game: {
+          id: "real-or-nah",
+          view: preview.view,
+          deadline: null,
+          timerStartedAt: null,
+        },
       }),
     );
     expect(screen.getByText(/went to war against/)).toBeTruthy();
@@ -143,7 +210,12 @@ describe("HostApp", () => {
       socket,
       makeHostView({
         phase: "in-game",
-        game: { id: "no-such-game", view: {}, deadline: null },
+        game: {
+          id: "no-such-game",
+          view: {},
+          deadline: null,
+          timerStartedAt: null,
+        },
       }),
     );
     expect(screen.getByText("Game not found")).toBeTruthy();
@@ -210,5 +282,54 @@ describe("HostApp", () => {
     const socket = connectHost();
     showState(socket, makeHostView());
     expect(request).toHaveBeenCalledWith("screen");
+  });
+
+  it("claims the lobby music for the join and pick screens", async () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const engine = new FakeEngine();
+    renderHost(engine);
+    const socket = connectHost();
+    showState(socket, makeHostView({ lobbyScreen: "join" }));
+    await flushMusicClaims();
+    expect(engine.musicCalls).toEqual(["lobby"]);
+    showState(socket, makeHostView({ lobbyScreen: "pick" }));
+    await flushMusicClaims();
+    expect(engine.musicCalls).toEqual(["lobby"]);
+  });
+
+  it("drops the music while starting and in-game", async () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const engine = new FakeEngine();
+    renderHost(engine);
+    const socket = connectHost();
+    showState(socket, makeHostView());
+    await flushMusicClaims();
+    expect(engine.musicCalls).toEqual(["lobby"]);
+    showState(socket, makeHostView({ phase: "starting" }));
+    await flushMusicClaims();
+    expect(engine.musicCalls).toEqual(["lobby", null]);
+  });
+
+  it("plays the start stinger on a live phase change to starting, not on mount", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const engine = new FakeEngine();
+    renderHost(engine);
+    const socket = connectHost();
+    showState(socket, makeHostView({ phase: "starting" }));
+    expect(engine.cues).not.toContain("jingle-start");
+    showState(socket, makeHostView());
+    showState(socket, makeHostView({ phase: "starting" }));
+    expect(engine.cues).toContain("jingle-start");
+  });
+
+  it("plays a whoosh on a live screen change but not on the first screen shown", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    const engine = new FakeEngine();
+    renderHost(engine);
+    const socket = connectHost();
+    showState(socket, makeHostView({ lobbyScreen: "join" }));
+    expect(engine.cues).not.toContain("whoosh");
+    showState(socket, makeHostView({ lobbyScreen: "pick" }));
+    expect(engine.cues).toContain("whoosh");
   });
 });

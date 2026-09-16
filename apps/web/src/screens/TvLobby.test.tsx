@@ -1,8 +1,53 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { SoundProvider } from "@opg/ui";
+import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
 import { makeHostView, makePlayer } from "./fixtures/room";
 import { TvLobby } from "./TvLobby";
+
+class FakeEngine implements SoundEngine {
+  readonly cues: CueId[] = [];
+
+  status(): SoundStatus {
+    return "running";
+  }
+
+  subscribe(): () => void {
+    return () => {
+      /* status never changes */
+    };
+  }
+
+  unlock(): void {
+    /* nothing to resume */
+  }
+
+  setMuted(): void {
+    /* nothing to mute */
+  }
+
+  preload(): void {
+    /* no samples */
+  }
+
+  play(cue: CueId): CueHandle {
+    this.cues.push(cue);
+    return {
+      stop() {
+        /* nothing is playing */
+      },
+    };
+  }
+
+  playMusic(): void {
+    /* nothing to play */
+  }
+
+  stopAll(): void {
+    /* nothing is playing */
+  }
+}
 
 afterEach(cleanup);
 
@@ -57,5 +102,41 @@ describe("TvLobby", () => {
     expect(
       screen.getByRole("dialog", { name: "Show this on your TV" }),
     ).toBeTruthy();
+  });
+
+  it("plays no pop on the first mount, even with players already seated", () => {
+    const engine = new FakeEngine();
+    render(
+      <SoundProvider engine={engine}>
+        <TvLobby
+          view={makeHostView({ players: [makePlayer({ id: "p1" })] })}
+        />
+      </SoundProvider>,
+    );
+    expect(engine.cues).toEqual([]);
+  });
+
+  it("pops a seat once a new player arrives", () => {
+    const engine = new FakeEngine();
+    const { rerender } = render(
+      <SoundProvider engine={engine}>
+        <TvLobby
+          view={makeHostView({ players: [makePlayer({ id: "p1" })] })}
+        />
+      </SoundProvider>,
+    );
+    rerender(
+      <SoundProvider engine={engine}>
+        <TvLobby
+          view={makeHostView({
+            players: [
+              makePlayer({ id: "p1" }),
+              makePlayer({ id: "p2", name: "Sam" }),
+            ],
+          })}
+        />
+      </SoundProvider>,
+    );
+    expect(engine.cues).toEqual(["pop"]);
   });
 });

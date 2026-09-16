@@ -1,19 +1,25 @@
 // /host/<CODE> — the TV stage. Chooses a screen from phase/lobbyScreen.
-import { useMemo } from "react";
-import type { HostRoomView, RoomView } from "@opg/protocol";
+import { useEffect, useMemo, useRef } from "react";
+import type { HostRoomView, RoomPhase, RoomView } from "@opg/protocol";
 import {
   Card,
   Marker,
+  PhaseEnter,
   Stage,
   TvHeader,
+  playFx,
+  useCue,
+  useMusic,
+  useReducedMotion,
   useScreenWakeLock,
-  useServerClock,
 } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
 import { gameUiFor } from "../games";
 import { Link } from "../router";
 import { useRoomSocket } from "../useRoomSocket";
 import type { RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
+import { screenKey } from "./screen-key";
+import { screenMusic } from "./screen-music";
 import { TvFinalScores } from "./TvFinalScores";
 import { TvGamePicker } from "./TvGamePicker";
 import { TvLobby } from "./TvLobby";
@@ -58,11 +64,13 @@ function GameStage({
   view,
   gameView,
   deadline,
+  timerStartedAt,
   clock,
 }: {
   view: HostRoomView;
   gameView: unknown;
   deadline: number | null;
+  timerStartedAt: number | null;
   clock: ServerClock;
 }) {
   const Ui = gameUiFor(view.game?.id ?? view.selectedGameId);
@@ -74,32 +82,97 @@ function GameStage({
       />
     );
   return (
-    <Ui.Host view={gameView} room={view} deadline={deadline} clock={clock} />
+    <Ui.Host
+      view={gameView}
+      room={view}
+      deadline={deadline}
+      timerStartedAt={timerStartedAt}
+      clock={clock}
+    />
   );
 }
 
 function StartingScreen({ view }: { view: HostRoomView }) {
   const gameName =
     view.games.find((g) => g.id === view.selectedGameId)?.name ?? "the game";
+  const reduced = useReducedMotion();
+  const titleRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    playFx(titleRef.current, "tapeOn", reduced);
+  }, [reduced]);
   return (
-    <MessageScreen
-      title={`Starting ${gameName}…`}
-      body="Get ready. The first round is coming up."
-    />
+    <TvPage>
+      <TvHeader variant="brand" />
+      <div
+        style={{
+          flexGrow: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Card
+          variant="L"
+          tilt={-1}
+          style={{
+            padding: "60px 68px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            maxWidth: 1100,
+          }}
+        >
+          <div ref={titleRef}>
+            <Marker size={76}>{`Starting ${gameName}…`}</Marker>
+          </div>
+          <div style={{ fontSize: 38, lineHeight: 1.35 }}>
+            Get ready. The first round is coming up.
+          </div>
+        </Card>
+      </div>
+    </TvPage>
   );
 }
 
-function LobbyStage({ view }: { view: HostRoomView }) {
+function LobbyStage({
+  view,
+  clock,
+}: {
+  view: HostRoomView;
+  clock: ServerClock;
+}) {
   if (view.lobbyScreen === "pick") {
     return <TvGamePicker view={view} />;
   }
   if (view.lobbyScreen === "results" && view.lastResult) {
-    return <TvFinalScores view={view} />;
+    return <TvFinalScores view={view} clock={clock} />;
   }
   return <TvLobby view={view} />;
 }
 
-function HostStage({
+/** Plays the start stinger the moment the phase becomes "starting", never on mount. */
+function useStartStinger(phase: RoomPhase): void {
+  const cue = useCue();
+  const previousRef = useRef(phase);
+  useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = phase;
+    if (phase === "starting" && previous !== "starting") cue("jingle-start");
+  }, [phase, cue]);
+}
+
+/** Plays a whoosh on every screen change after the first, keyed by the caller's `key`. */
+function useScreenTransitionCue(key: string): void {
+  const cue = useCue();
+  const previousRef = useRef(key);
+  useEffect(() => {
+    const previous = previousRef.current;
+    previousRef.current = key;
+    if (previous !== key) cue("whoosh");
+  }, [key, cue]);
+}
+
+function HostScreen({
   view,
   clock,
 }: {
@@ -113,11 +186,30 @@ function HostStage({
         view={view}
         gameView={view.game.view}
         deadline={view.game.deadline}
+        timerStartedAt={view.game.timerStartedAt}
         clock={clock}
       />
     );
   }
-  return <LobbyStage view={view} />;
+  return <LobbyStage view={view} clock={clock} />;
+}
+
+function HostStage({
+  view,
+  clock,
+}: {
+  view: HostRoomView;
+  clock: ServerClock;
+}) {
+  useMusic(screenMusic(view));
+  useStartStinger(view.phase);
+  const key = screenKey(view);
+  useScreenTransitionCue(key);
+  return (
+    <PhaseEnter phaseKey={key}>
+      <HostScreen view={view} clock={clock} />
+    </PhaseEnter>
+  );
 }
 
 function connectingBody(status: RoomSocketStatus): string {
@@ -167,7 +259,7 @@ export function HostApp({ code }: { code: string }) {
     enabled: Boolean(hostToken),
   });
   const view = hostViewOf(socket.view);
-  const clock = useServerClock(view?.serverNow ?? 0);
+  const clock = socket.clock;
 
   useScreenWakeLock(true);
 
