@@ -173,6 +173,13 @@ describe("fxSpec reduced motion", () => {
 });
 
 describe("playFx", () => {
+  it("passes the delay to the animation, so a held first frame does not flash", () => {
+    const spy = vi.spyOn(Element.prototype, "animate");
+    const el = document.createElement("div");
+    playFx(el, "slam", false, 200);
+    expect(spy.mock.calls[0]?.[1]).toMatchObject({ delay: 200 });
+  });
+
   it("returns null when there is no element", () => {
     expect(playFx(null, "slam", false)).toBeNull();
   });

@@ -195,11 +195,12 @@ export function LetterTiles({
     cappedRevealed,
   );
   return (
-    <div
+    <figure
       aria-label={accessibleLabel}
       style={{
         display: "flex",
         gap: Math.round(tileSize * TILE_GAP_RATIO),
+        margin: 0,
         ...style,
       }}
     >
@@ -211,6 +212,6 @@ export function LetterTiles({
           mountCounts={mountCounts}
         />
       ))}
-    </div>
+    </figure>
   );
 }

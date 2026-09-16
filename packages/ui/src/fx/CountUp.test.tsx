@@ -70,8 +70,8 @@ describe("CountUp", () => {
     const { container } = render(
       <CountUp from={0} to={1000} durationMs={1000} live />,
     );
-    const span = container.querySelector("span");
-    expect(span?.textContent).toBe("0");
+    const value = container.querySelector("figure");
+    expect(value?.textContent).toBe("0");
 
     act(() => {
       raf.flush(0);
@@ -79,21 +79,21 @@ describe("CountUp", () => {
     act(() => {
       raf.flush(500);
     });
-    const midway = span?.textContent ?? "";
+    const midway = value?.textContent ?? "";
     expect(midway).not.toBe("0");
     expect(midway).not.toBe("1,000");
 
     act(() => {
       raf.flush(500);
     });
-    expect(span?.textContent).toBe("1,000");
+    expect(value?.textContent).toBe("1,000");
     expect(raf.pending()).toBe(0);
   });
 
   it("shows `to` immediately when not live", () => {
     const raf = stubRaf();
     const { container } = render(<CountUp from={0} to={1000} live={false} />);
-    expect(container.querySelector("span")?.textContent).toBe("1,000");
+    expect(container.querySelector("figure")?.textContent).toBe("1,000");
     expect(raf.pending()).toBe(0);
   });
 
@@ -113,16 +113,16 @@ describe("CountUp", () => {
     const { container } = render(
       <CountUp from={0} to={1000} durationMs={1000} live />,
     );
-    expect(container.querySelector("span")?.textContent).toBe("1,000");
+    expect(container.querySelector("figure")?.textContent).toBe("1,000");
     expect(raf.pending()).toBe(0);
   });
 
-  it("always exposes the final value as the accessible label", () => {
+  it("always exposes the final value as the accessible name", () => {
     const raf = stubRaf();
     const { container } = render(
       <CountUp from={0} to={1500} durationMs={1000} live />,
     );
-    expect(container.querySelector("span")?.getAttribute("aria-label")).toBe(
+    expect(container.querySelector("figure")?.getAttribute("aria-label")).toBe(
       "1,500",
     );
     act(() => {
@@ -131,13 +131,13 @@ describe("CountUp", () => {
     act(() => {
       raf.flush(400);
     });
-    expect(container.querySelector("span")?.getAttribute("aria-label")).toBe(
+    expect(container.querySelector("figure")?.getAttribute("aria-label")).toBe(
       "1,500",
     );
   });
 
   it("adds the prefix to the counted value", () => {
     render(<CountUp from={0} to={1000} live={false} prefix="+" />);
-    expect(document.querySelector("span")?.textContent).toBe("+1,000");
+    expect(document.querySelector("figure")?.textContent).toBe("+1,000");
   });
 });

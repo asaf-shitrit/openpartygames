@@ -22,12 +22,14 @@ import type {
 } from "./types";
 import { SILENT_ENGINE } from "./types";
 
-/** The most recent (topmost) claim's music, or null when nothing has claimed the bus. */
-export function topClaim(claims: readonly MusicId[]): MusicId | null {
+/** The most recent (topmost) claim's music, or null when nothing has claimed the bus. */export function topClaim(claims: readonly MusicId[]): MusicId | null {
   return claims.length === 0 ? null : (claims.at(-1) ?? null);
 }
 
 const SOUND_KEY = "opg:muted";
+
+/** How many in-flight cues `useCue` keeps a handle for, so unmounting can still silence them. */
+const MAX_TRACKED_CUES = 16;
 
 /**
  * Events that count as a user gesture for resuming audio. A touch `pointerdown` does not count
@@ -200,6 +202,7 @@ export function SoundProvider({ engine, children }: SoundProviderProps) {
 /** The current sound engine, status and mute flag. Falls back to silence outside a provider. */
 export function useSound(): SoundContextValue {
   const provided = useContext(SoundContext);
+  // Without a provider a component still gets a working mute flag (persisted), just no sound.
   const fallback = useSoundValue(SILENT_ENGINE);
   return provided ?? fallback;
 }
@@ -251,7 +254,14 @@ export function useCue(): (cue: CueId, options?: CueOptions) => CueHandle {
           inner.stop();
         },
       };
-      activeHandles().add(handle);
+      const handles = activeHandles();
+      handles.add(handle);
+      // Cues are short, so the newest few are all that can still be audible when this
+      // unmounts; a handle per beat would otherwise pile up for a whole game.
+      if (handles.size > MAX_TRACKED_CUES) {
+        const oldest = handles.values().next().value;
+        if (oldest !== undefined) handles.delete(oldest);
+      }
       return handle;
     },
     [activeHandles, engine],

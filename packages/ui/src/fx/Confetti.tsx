@@ -193,7 +193,8 @@ export function Confetti({
 
   if (!live) return null;
   if (reduced) return <StickerBurst live count={10} />;
-  if (unsupported) return null;
+  // No 2d context (an old or locked-down browser): keep the celebration with stickers.
+  if (unsupported) return <StickerBurst live count={10} />;
 
   return <canvas ref={canvasRef} aria-hidden="true" style={CANVAS_STYLE} />;
 }

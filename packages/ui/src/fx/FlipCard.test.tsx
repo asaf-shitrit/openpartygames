@@ -170,9 +170,12 @@ describe("FlipCard", () => {
     vi.spyOn(Element.prototype, "animate").mockReturnValue(animation);
 
     render(<ToggleHarness />);
-    fireEvent.keyDown(screen.getByRole("button", { name: "Your secret card" }), {
-      key: "Enter",
-    });
+    fireEvent.keyDown(
+      screen.getByRole("button", { name: "Your secret card" }),
+      {
+        key: "Enter",
+      },
+    );
     expect(screen.getByText("Secret role")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));

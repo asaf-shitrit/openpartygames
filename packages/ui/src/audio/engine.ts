@@ -56,24 +56,28 @@ function cueDurationMs(
   return recipeDurationMs(recipeFor(cue, options?.durationMs));
 }
 
-/** Dips the music bus for a loud cue, then recovers once the cue has finished. */
-function duckMusicBus(
-  musicBus: WebGainNode,
-  backend: AudioBackend,
-  cue: CueId,
-  durationMs: number,
-): void {
-  if (!DUCKING_CUES.includes(cue)) return;
-  const now = backend.currentTime();
-  musicBus.gain.cancelScheduledValues(now);
-  musicBus.gain.setValueAtTime(musicBus.gain.value, now);
-  musicBus.gain.linearRampToValueAtTime(MUSIC_DUCK_GAIN, now + DUCK_DOWN_SEC);
-  const recoverAt = now + (durationMs + DUCK_RECOVER_DELAY_MS) / 1000;
-  musicBus.gain.setValueAtTime(MUSIC_DUCK_GAIN, recoverAt);
-  musicBus.gain.linearRampToValueAtTime(
-    MUSIC_DEFAULT_GAIN,
-    recoverAt + DUCK_RECOVER_SEC,
-  );
+/**
+ * Dips the music bus for loud cues. The returned duck remembers the latest recovery, so a short
+ * cue overlapping a long one cannot bring the music back mid-roll.
+ */
+function createMusicDucker(musicBus: WebGainNode, backend: AudioBackend) {
+  let recoverAt = 0;
+  return function duck(cue: CueId, durationMs: number): void {
+    if (!DUCKING_CUES.includes(cue)) return;
+    const now = backend.currentTime();
+    recoverAt = Math.max(
+      recoverAt,
+      now + (durationMs + DUCK_RECOVER_DELAY_MS) / 1000,
+    );
+    musicBus.gain.cancelScheduledValues(now);
+    musicBus.gain.setValueAtTime(musicBus.gain.value, now);
+    musicBus.gain.linearRampToValueAtTime(MUSIC_DUCK_GAIN, now + DUCK_DOWN_SEC);
+    musicBus.gain.setValueAtTime(MUSIC_DUCK_GAIN, recoverAt);
+    musicBus.gain.linearRampToValueAtTime(
+      MUSIC_DEFAULT_GAIN,
+      recoverAt + DUCK_RECOVER_SEC,
+    );
+  };
 }
 
 /** Fades one music voice to silence and stops its source once the fade finishes. */
@@ -185,6 +189,7 @@ function createCuePlayer(
   musicBus: WebGainNode,
 ): CuePlayer {
   const playing = new Set<CueHandle>();
+  const duck = createMusicDucker(musicBus, backend);
 
   /**
    * Tracks one in-flight voice so `stopAll` can reach it, and removes it once its own sound has
@@ -227,7 +232,7 @@ function createCuePlayer(
     if (!canPlay) return SILENT_HANDLE;
     const buffer = samples.get(cue);
     const durationMs = cueDurationMs(cue, options, buffer);
-    duckMusicBus(musicBus, backend, cue, durationMs);
+    duck(cue, durationMs);
     const lifetimeMs = (options?.delayMs ?? 0) + durationMs;
     return track(startCue(cue, options, buffer), lifetimeMs);
   }
@@ -268,6 +273,8 @@ function createLiveEngine(backend: AudioBackend): SoundEngine {
   const listeners = new Set<() => void>();
   let status: SoundStatus = "locked";
   let muted = false;
+  /** The cue asked for while locked, played once the unlocking gesture resumes the context. */
+  let pending: { cue: CueId; options?: CueOptions } | null = null;
 
   function emit(): void {
     for (const listener of listeners) listener();
@@ -279,7 +286,16 @@ function createLiveEngine(backend: AudioBackend): SoundEngine {
     music.resync();
     if (next === status) return;
     status = next;
+    flushPending();
     emit();
+  }
+
+  /** The gesture that unlocks audio also asked for a cue: play it now instead of dropping it. */
+  function flushPending(): void {
+    const queued = pending;
+    pending = null;
+    if (queued === null || muted) return;
+    cuePlayer.play(queued.cue, queued.options, true);
   }
 
   function unlock(): void {
@@ -294,7 +310,14 @@ function createLiveEngine(backend: AudioBackend): SoundEngine {
 
   function play(cue: CueId, options?: CueOptions): CueHandle {
     refresh();
-    return cuePlayer.play(cue, options, !muted && status === "running");
+    if (muted) return cuePlayer.play(cue, options, false);
+    if (status !== "running") {
+      // Remember only the newest locked cue; the unlocking gesture plays it right after.
+      pending = { cue, options };
+      return SILENT_HANDLE;
+    }
+    pending = null;
+    return cuePlayer.play(cue, options, true);
   }
 
   backend.onStateChange(refresh);

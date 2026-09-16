@@ -21,6 +21,15 @@ function runningEngine() {
   return { backend, engine };
 }
 
+/** The last time the music bus is scheduled to come back up. */
+function musicRecoveryOf(backend: FakeAudioBackend): number {
+  const events = backend.context.gains[1]?.gain.events ?? [];
+  const times = events
+    .filter((event) => event.kind === "set" && event.value === 0.12)
+    .map((event) => event.time);
+  return Math.max(...times);
+}
+
 describe("silent engine", () => {
   it("is used when there is no backend", () => {
     const engine = createSoundEngine(null);
@@ -102,7 +111,7 @@ describe("live engine", () => {
     expect(backend.renders[0]?.gain).toBe(1);
   });
 
-  it("prefers a loaded sample and folds in its manifest gain", async () => {
+  it("prefers a loaded sample and passes the cue's gain to it", async () => {
     const { backend, engine } = runningEngine();
     engine.preload();
     await flush();
@@ -239,5 +248,30 @@ describe("music", () => {
     const musicBus = backend.context.gains[1];
     engine.play("pop");
     expect(musicBus?.gain.events).toEqual([]);
+  });
+
+  it("keeps the music ducked until the longest overlapping cue finishes", () => {
+    const solo = runningEngine();
+    solo.engine.play("slam");
+    const soloRecovery = musicRecoveryOf(solo.backend);
+    expect(soloRecovery).toBeGreaterThan(0);
+
+    const { backend, engine } = runningEngine();
+    engine.play("drumroll");
+    engine.play("slam");
+
+    expect(musicRecoveryOf(backend)).toBeGreaterThan(soloRecovery);
+  });
+
+  it("plays the cue asked for while locked once the gesture unlocks", async () => {
+    const backend = new FakeAudioBackend();
+    const engine = createSoundEngine(backend);
+    engine.play("slam");
+    expect(backend.renders).toEqual([]);
+
+    engine.unlock();
+    await flush();
+
+    expect(backend.renders).toHaveLength(1);
   });
 });

@@ -25,7 +25,7 @@ function textFor(value: number, prefix: string | undefined): string {
 }
 
 interface CountUpRun {
-  el: HTMLSpanElement;
+  el: HTMLElement;
   from: number;
   to: number;
   durationMs: number;
@@ -75,7 +75,7 @@ export function CountUp({
   style,
   className,
 }: CountUpProps) {
-  const spanRef = useRef<HTMLSpanElement>(null);
+  const outputRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   // Read the props through a ref so a later change never restarts the count.
   const stateRef = useRef({ from, to, durationMs, delayMs, prefix, live, reduced });
@@ -84,7 +84,7 @@ export function CountUp({
   });
 
   useEffect(() => {
-    const el = spanRef.current;
+    const el = outputRef.current;
     if (el === null) return undefined;
     const state = stateRef.current;
     if (!state.live || state.reduced) {
@@ -103,13 +103,13 @@ export function CountUp({
   }, []);
 
   return (
-    <span
-      ref={spanRef}
+    <figure
+      ref={outputRef}
       className={className}
-      style={style}
+      style={{ display: "inline-block", margin: 0, ...style }}
       aria-label={textFor(to, prefix)}
     >
       {textFor(live && !reduced ? from : to, prefix)}
-    </span>
+    </figure>
   );
 }

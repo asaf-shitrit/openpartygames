@@ -154,7 +154,10 @@ function flippedFaceStyle(backFace: boolean): CSSProperties {
   };
 }
 
-function crossfadeFaceStyle(visible: boolean, backFace: boolean): CSSProperties {
+function crossfadeFaceStyle(
+  visible: boolean,
+  backFace: boolean,
+): CSSProperties {
   return {
     ...FACE_STYLE,
     ...facePositionStyle(backFace),
@@ -214,12 +217,11 @@ export function FlipCard({
       onKeyDown={(event) => handleKeyDown(event, flipped, onFlip)}
     >
       <div ref={innerRef} style={innerStyle(flipped, reduced)}>
-        <div style={faceTransitionStyle(reduced, !showFront, true)}>
-          {back}
-        </div>
+        <div style={faceTransitionStyle(reduced, !showFront, true)}>{back}</div>
         <div
           style={faceTransitionStyle(reduced, showFront, false)}
           aria-hidden={!showFront}
+          aria-live="polite"
         >
           {showFront ? front : null}
         </div>

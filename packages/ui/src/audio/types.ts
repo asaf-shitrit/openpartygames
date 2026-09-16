@@ -54,7 +54,7 @@ export interface SoundEngine {
   play(cue: CueId, options?: CueOptions): CueHandle;
   /** Crossfades to this music bed, or fades out to silence when `id` is null. */
   playMusic(id: MusicId | null): void;
-  /** Stops everything that is playing. */
+  /** Stops every cue that is still playing. Music keeps playing until it is faded out. */
   stopAll(): void;
 }
 
