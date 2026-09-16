@@ -43,6 +43,33 @@ function renderMoments(moments: readonly DevMoment[]) {
   render(<MomentPlayer moments={moments} />);
 }
 
+/** Scrubs the shared reveal slider, in ms. */
+function scrubTo(ms: number): void {
+  fireEvent.change(screen.getByLabelText("Scrub the reveal"), {
+    target: { value: String(ms) },
+  });
+}
+
+/** The TV surface's text with whitespace collapsed. */
+function tvText(): string {
+  return (document.querySelector(".opg-grid-tv")?.textContent ?? "").replace(
+    /\s+/gu,
+    " ",
+  );
+}
+
+const DEV_MOMENTS = devMoments(FIXTURES);
+
+/** The moment the dev table gives this chip, e.g. the caught and wrong reveals. */
+function momentForChip(chip: string): DevMoment {
+  const found = DEV_MOMENTS.find((moment) => moment.chip === chip);
+  if (found === undefined) throw new Error(`no moment with chip ${chip}`);
+  return found;
+}
+
+const CAUGHT_REVEAL = momentForChip("caught");
+const WRONG_REVEAL = momentForChip("wrong");
+
 describe("elapsedAt", () => {
   it("holds the base value while paused", () => {
     expect(elapsedAt(null, 3000, 9999, 12_000)).toBe(3000);
@@ -122,9 +149,23 @@ describe("MomentPlayer", () => {
 
   it("switches the TV content when another moment is picked", async () => {
     const user = userEvent.setup();
-    renderMoments(TWO_MOMENTS);
-    await user.click(screen.getByRole("button", { name: "b" }));
-    expect(screen.getByRole("button", { name: "✓ b" })).toBeTruthy();
+    renderMoments([CAUGHT_REVEAL, WRONG_REVEAL]);
+
+    // Between the verdict (8s) and the unmask (9s): the caught reveal has stamped.
+    scrubTo(8500);
+    expect(tvText()).toContain("Imposter!");
+    expect(tvText()).not.toContain("Not the imposter");
+
+    await user.click(screen.getByRole("button", { name: WRONG_REVEAL.chip }));
+    expect(
+      screen.getByRole("button", { name: `✓ ${WRONG_REVEAL.chip}` }),
+    ).toBeTruthy();
+    scrubTo(0);
+    scrubTo(8500);
+
+    // The wrong-vote reveal replaced it, verdict and all.
+    expect(tvText()).toContain("Not the imposter");
+    expect(tvText()).not.toContain("Imposter!");
   });
 
   it("restarts the clock after a scrub", () => {

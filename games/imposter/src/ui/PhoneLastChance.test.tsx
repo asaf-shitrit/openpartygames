@@ -257,23 +257,30 @@ describe("GuessWaiting", () => {
       />,
     );
 
+    // A 1300ms window before the switch carries one slow beat (1100ms apart).
     act(() => {
       fakeNow = 1100;
       vi.advanceTimersByTime(1100);
     });
-    const slowCalls = vibrate.mock.calls.length;
-    expect(slowCalls).toBeGreaterThan(0);
-
     vibrate.mockClear();
+    act(() => {
+      fakeNow = 2400;
+      vi.advanceTimersByTime(1300);
+    });
+    const slowBeats = vibrate.mock.calls.length;
+    expect(slowBeats).toBe(1);
+
+    // Past the 5s mark the same window carries two fast beats (650ms apart).
     act(() => {
       fakeNow = 3000;
-      vi.advanceTimersByTime(1900);
+      vi.advanceTimersByTime(600);
     });
     vibrate.mockClear();
     act(() => {
-      fakeNow += 650;
-      vi.advanceTimersByTime(650);
+      fakeNow = 4300;
+      vi.advanceTimersByTime(1300);
     });
-    expect(vibrate.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(vibrate.mock.calls.length).toBe(2);
+    expect(vibrate.mock.calls.length).toBeGreaterThan(slowBeats);
   });
 });

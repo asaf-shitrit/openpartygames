@@ -162,8 +162,10 @@ describe("Phone reveal phase", () => {
     expect(screen.getByText("You found it!")).toBeTruthy();
   });
 
-  it("says so when the player never wrote a lie", () => {
+  it("keeps the round's answer on screen when the player never wrote a lie", () => {
     renderPhone("Phone: Dov missed a round");
     expect(screen.queryByText("Your lie fooled nobody")).toBeNull();
+    // Nothing personal to stage, but the truth still lands so the screen is never blank.
+    expect(screen.getByText(/The truth: |You found it!/)).toBeTruthy();
   });
 });
