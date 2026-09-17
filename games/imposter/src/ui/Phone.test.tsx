@@ -248,6 +248,81 @@ describe("voting", () => {
     expect(send).toHaveBeenCalledWith({ type: "vote", target: "priya" });
   });
 
+  it("lets a player vote again after a kick clears their locked vote", async () => {
+    const selecting = playerSample("Phone: Dov vote selecting");
+    const locked = playerSample("Phone: Dov vote locked in");
+    const clock: ServerClock = { now: () => selecting.room.serverNow };
+    const send = mockSend();
+    const phoneFor = (view: ImposterPlayerView) => (
+      <Phone
+        view={view}
+        room={selecting.room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
+        send={send}
+      />
+    );
+    const { rerender } = render(phoneFor(selecting.view));
+    await userEvent.click(submitButton("Priya's avatar Priya"));
+    await userEvent.click(submitButton("Lock in vote"));
+    rerender(phoneFor(locked.view));
+    expect(screen.getByText("Vote locked in")).toBeTruthy();
+
+    // Priya was kicked, so the server dropped Dov's vote and sent a fresh ballot.
+    rerender(
+      phoneFor({
+        ...selecting.view,
+        voteCandidates: selecting.view.voteCandidates.filter(
+          (id) => id !== "priya",
+        ),
+      }),
+    );
+    await userEvent.click(submitButton("Maya's avatar Maya"));
+    await userEvent.click(submitButton("Lock in vote"));
+    expect(send).toHaveBeenLastCalledWith({ type: "vote", target: "maya" });
+  });
+
+  it("lets a player vote again when their vote was dropped before it landed", async () => {
+    const selecting = playerSample("Phone: Dov vote selecting");
+    const clock: ServerClock = { now: () => selecting.room.serverNow };
+    const send = mockSend();
+    const { rerender } = render(
+      <Phone
+        view={selecting.view}
+        room={selecting.room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
+        send={send}
+      />,
+    );
+    await userEvent.click(submitButton("Priya's avatar Priya"));
+    await userEvent.click(submitButton("Lock in vote"));
+    expect(send).toHaveBeenCalledWith({ type: "vote", target: "priya" });
+
+    // Priya left before the vote landed: myVote stays null and the roster shrinks.
+    const ballot: ImposterPlayerView = {
+      ...selecting.view,
+      voteCandidates: selecting.view.voteCandidates.filter(
+        (id) => id !== "priya",
+      ),
+    };
+    rerender(
+      <Phone
+        view={ballot}
+        room={selecting.room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
+        send={send}
+      />,
+    );
+    await userEvent.click(submitButton("Maya's avatar Maya"));
+    await userEvent.click(submitButton("Lock in vote"));
+    expect(send).toHaveBeenLastCalledWith({ type: "vote", target: "maya" });
+  });
+
   it("buzzes 'locked' the moment the server view reports the vote is in", () => {
     const selecting = playerSample("Phone: Dov vote selecting");
     const locked = playerSample("Phone: Dov vote locked in");
