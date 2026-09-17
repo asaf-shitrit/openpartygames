@@ -37,6 +37,11 @@ describe("TallyScratch", () => {
     expect(screen.getByLabelText("2 votes")).toBeTruthy();
   });
 
+  it("says vote, not votes, for a single mark", () => {
+    render(<TallyScratch count={4} drawn={1} />);
+    expect(screen.getByLabelText("1 vote")).toBeTruthy();
+  });
+
   it("uses a caller label when given", () => {
     render(<TallyScratch count={5} drawn={2} label="Two votes so far" />);
     expect(screen.getByLabelText("Two votes so far")).toBeTruthy();

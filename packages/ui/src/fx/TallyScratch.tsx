@@ -22,6 +22,10 @@ function markPath(index: number, size: number): string {
     return `M${8 + index * GAP} 6 l-3 ${size - 12}`;
 }
 
+function votesLabel(shown: number): string {
+    return shown === 1 ? "1 vote" : `${shown} votes`;
+}
+
 export function TallyScratch({
     count,
     drawn,
@@ -36,7 +40,7 @@ export function TallyScratch({
         key: markPath(index, size),
         scratched: index >= drawnAtMount,
     }));
-    const accessibleLabel = label ?? `${shown} votes`;
+    const accessibleLabel = label ?? votesLabel(shown);
     return (
         <svg
             width={count * GAP}
