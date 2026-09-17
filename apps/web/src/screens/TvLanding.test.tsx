@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
+import { LANDING_GAMES } from "../games";
 import { TvLanding } from "./TvLanding";
 
 class FakeEngine implements SoundEngine {
@@ -128,6 +129,14 @@ describe("TvLanding", () => {
     expect(
       screen.getByRole("dialog", { name: "Show this on your TV" }),
     ).toBeTruthy();
+  });
+
+  it("shows every landing game's name, including a third game", () => {
+    render(<TvLanding />);
+    expect(LANDING_GAMES.length).toBeGreaterThanOrEqual(3);
+    for (const game of LANDING_GAMES) {
+      expect(screen.getByText(game.name)).toBeTruthy();
+    }
   });
 
   it("unlocks sound inside the Start click", async () => {

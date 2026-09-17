@@ -50,6 +50,7 @@ class FakeEngine implements SoundEngine {
 
 const IMPOSTER = makeGame({ id: "imposter", name: "Imposter" });
 const DRAW = makeGame({ id: "draw", name: "Draw It" });
+const CHARADES = makeGame({ id: "charades", name: "Charades" });
 
 function switchState(name: string): string | null {
   return screen.getByRole("switch", { name }).getAttribute("aria-checked");
@@ -172,6 +173,22 @@ describe("TvGamePicker", () => {
       </SoundProvider>,
     );
     expect(engine.cues).toEqual([]);
+  });
+
+  it("shows all three games and lets the third be picked", () => {
+    render(
+      <TvGamePicker
+        view={makeHostView({
+          games: [IMPOSTER, DRAW, CHARADES],
+          selectedGameId: "charades",
+        })}
+      />,
+    );
+    expect(screen.getByText("Imposter")).toBeTruthy();
+    expect(screen.getByText("Draw It")).toBeTruthy();
+    expect(screen.getByText("Charades")).toBeTruthy();
+    expect(screen.getAllByText("Picked").length).toBe(1);
+    expect(screen.getByText("Charades packs")).toBeTruthy();
   });
 
   it("pops and tapes the newly picked card when the pick changes live", () => {

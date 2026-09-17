@@ -1,0 +1,27 @@
+{
+  "name": "@opg/game-most-likely-to",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui/index.tsx",
+    "./preview": "./src/ui/preview.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opg/protocol": "workspace:*",
+    "@opg/sdk": "workspace:*",
+    "@opg/ui": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "react": "^19.3.0"
+  }
+}

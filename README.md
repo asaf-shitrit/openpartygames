@@ -7,10 +7,11 @@ OpenPartyGames is a free, open-source party game platform. One screen — a lapt
 - The first player to join is the VIP and drives the game from their phone, so the host screen can sit across the room.
 - Rooms hold 3 to 8 players. Everyone plays; nobody sits out.
 
-Two games are in the MVP:
+Three games so far:
 
 - **Imposter** — everyone gets a secret word on their phone except the imposter, who knows their role and sees a decoy word. Give clues out loud, then vote.
 - **Real or Nah** — an obscure fact with a blank. Everyone writes a believable fake answer, then the room votes for the one that's true.
+- **Most Likely To** — "Who's most likely to…?" Everyone votes for a friend (or themselves), the TV shows who picked whom, and you score by voting with the room.
 
 Game content lives in versioned, licensed, rated packs in this repo. Code is AGPL-3.0, packs are CC BY-SA 4.0 by default. See [LICENSE](LICENSE).
 
@@ -127,16 +128,18 @@ To turn it on in your fork, do steps 1–9 above, then:
 ## Project layout
 
 ```text
-apps/web/            React + Vite app: host stage (TV) and phone UI
-apps/worker/         Worker entry, Room Durable Object, D1 migrations, wrangler.jsonc
-packages/protocol/   Wire types and parseClientMessage
-packages/sdk/        Game SDK types, seeded rng, RoomCore, testing harness
-packages/ui/         Doodle Notebook UI kit: tokens, fonts, components, avatars
-games/imposter/      Imposter rules and Host/Phone UI
-games/real-or-nah/   Real or Nah rules and Host/Phone UI
-packs/imposter/      word-pair packs (JSON)
-packs/real-or-nah/   fact packs (JSON)
-scripts/             pack validation, pack seed, pack submission, icons and share card
+apps/web/             React + Vite app: host stage (TV) and phone UI
+apps/worker/          Worker entry, Room Durable Object, D1 migrations, wrangler.jsonc
+packages/protocol/    Wire types and parseClientMessage
+packages/sdk/         Game SDK types, seeded rng, RoomCore, testing harness
+packages/ui/          Doodle Notebook UI kit: tokens, fonts, components, avatars
+games/imposter/       Imposter rules and Host/Phone UI
+games/real-or-nah/    Real or Nah rules and Host/Phone UI
+games/most-likely-to/ Most Likely To rules and Host/Phone UI
+packs/imposter/       word-pair packs (JSON)
+packs/real-or-nah/    fact packs (JSON)
+packs/most-likely-to/ superlative prompt packs (JSON)
+scripts/              pack validation, pack seed, pack submission, icons and share card
 ```
 
 ## Quality gates

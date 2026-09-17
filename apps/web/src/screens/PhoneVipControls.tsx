@@ -18,7 +18,7 @@ import {
   PRESSABLE_CLASS,
   Switch,
 } from "@opg/ui";
-import type { IconName } from "@opg/ui";
+import { gameIconFor } from "../games";
 
 export interface PhoneVipControlsProps {
   view: PlayerRoomView;
@@ -28,12 +28,6 @@ export interface PhoneVipControlsProps {
   onSetLocked: (locked: boolean) => void;
   onKick: (playerId: string) => void;
   onStartGame: () => void;
-}
-
-function gameIcon(id: string): IconName {
-  if (id === "imposter") return "mask";
-  if (id === "real-or-nah") return "cards";
-  return "cards";
 }
 
 function ratingLabel(rating: Rating): string {
@@ -133,7 +127,7 @@ function GameButton({
           justifyContent: "space-between",
         }}
       >
-        <Icon name={gameIcon(game.id)} size={40} />
+        <Icon name={gameIconFor(game.id)} size={40} />
         {selected ? (
           <div
             style={{
