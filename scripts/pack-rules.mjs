@@ -1,6 +1,7 @@
-// Shared, dependency-free rules for content packs (packs/imposter/*.json and
-// packs/real-or-nah/*.json). Used by scripts/validate-packs.mjs and
-// scripts/build-pack-seed.mjs, and covered by scripts/pack-rules.test.ts.
+// Shared, dependency-free rules for content packs (packs/imposter/*.json,
+// packs/real-or-nah/*.json and packs/most-likely-to/*.json). Used by
+// scripts/validate-packs.mjs and scripts/build-pack-seed.mjs, and covered by
+// scripts/pack-rules.test.ts.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -8,6 +9,7 @@ import path from "node:path";
 export const KIND_BY_FOLDER = Object.freeze({
   imposter: "word-pairs",
   "real-or-nah": "facts",
+  "most-likely-to": "superlatives",
 });
 
 export const ALLOWED_RATINGS = Object.freeze(["family", "teen", "adult"]);
@@ -20,6 +22,7 @@ export const ALLOWED_LANGUAGES = Object.freeze(["en"]);
 
 export const MAX_WORD_LENGTH = 24;
 export const MAX_ANSWER_LENGTH = 40;
+export const MAX_SUPERLATIVE_LENGTH = 80;
 
 const KEBAB_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PLACEHOLDER = "____";
@@ -111,10 +114,17 @@ export function validatePack(pack, opts = {}) {
   }
 
   const expectedKind = KIND_BY_FOLDER[folder];
-  if (expectedKind === "word-pairs") errors.push(...wordPairErrors(pack.items));
-  if (expectedKind === "facts") errors.push(...factErrors(pack.items));
+  const itemErrors = ITEM_ERRORS_BY_KIND[expectedKind];
+  if (itemErrors) errors.push(...itemErrors(pack.items));
   return errors;
 }
+
+/** Per-kind item validators, keyed by content kind (not by folder). */
+const ITEM_ERRORS_BY_KIND = Object.freeze({
+  "word-pairs": wordPairErrors,
+  facts: factErrors,
+  superlatives: superlativeErrors,
+});
 
 function idErrors(pack, filename) {
   if (!isKebabCase(pack.id)) {
@@ -217,7 +227,7 @@ function factItemErrors(item, index, seenIds) {
   const at = `items[${index}]`;
   if (!isRecord(item)) return [`${at}: item must be an object`];
   return [
-    ...factIdErrors(item.id, at, seenIds),
+    ...itemIdErrors(item.id, at, seenIds),
     ...promptErrors(item.prompt, at),
     ...answerErrors(item.answer, at),
     ...decoyErrors(item, at),
@@ -225,7 +235,8 @@ function factItemErrors(item, index, seenIds) {
   ];
 }
 
-function factIdErrors(id, at, seenIds) {
+/** Shared `id` check: non-empty string, unique within the pack. */
+function itemIdErrors(id, at, seenIds) {
   if (!isText(id) || id.trim() === "") {
     return [`${at}.id: must be a non-empty string`];
   }
@@ -290,4 +301,93 @@ function sourceErrors(source, at) {
   return isText(source.url) && source.url.startsWith("https://")
     ? []
     : [`${at}.source.url: must start with https://`];
+}
+
+// ---------- superlatives ("Who's most likely to …?") ----------
+
+const PROMPT_END_PUNCTUATION = /[?.!]$/u;
+const BANNED_PROMPT_STARTS = Object.freeze(["most likely", "who", "to "]);
+
+function superlativeErrors(items) {
+  const errors = [];
+  const seenIds = new Set();
+  const seenPrompts = new Set();
+  items.forEach((item, index) => {
+    errors.push(...superlativeItemErrors(item, index, seenIds, seenPrompts));
+  });
+  return errors;
+}
+
+function superlativeItemErrors(item, index, seenIds, seenPrompts) {
+  const at = `items[${index}]`;
+  if (!isRecord(item)) return [`${at}: item must be an object`];
+  return [
+    ...itemIdErrors(item.id, at, seenIds),
+    ...superlativePromptErrors(item.prompt, at, seenPrompts),
+  ];
+}
+
+function superlativePromptErrors(prompt, at, seenPrompts) {
+  if (!isText(prompt)) return [`${at}.prompt: must be a string`];
+  if (prompt.trim() === "") return [`${at}.prompt: must be a non-empty string`];
+  return [
+    ...promptWhitespaceErrors(prompt, at),
+    ...promptLengthErrors(prompt, at),
+    ...promptCaseErrors(prompt, at),
+    ...promptPunctuationErrors(prompt, at),
+    ...promptPlaceholderErrors(prompt, at),
+    ...promptStartErrors(prompt, at),
+    ...promptDuplicateErrors(prompt, at, seenPrompts),
+  ];
+}
+
+function promptWhitespaceErrors(prompt, at) {
+  return prompt !== prompt.trim()
+    ? [`${at}.prompt: must not have leading or trailing whitespace`]
+    : [];
+}
+
+function promptLengthErrors(prompt, at) {
+  const length = codePoints(prompt).length;
+  return length > MAX_SUPERLATIVE_LENGTH
+    ? [
+        `${at}.prompt: "${prompt}" is ${length} characters (max ${MAX_SUPERLATIVE_LENGTH})`,
+      ]
+    : [];
+}
+
+function promptCaseErrors(prompt, at) {
+  const first = codePoints(prompt)[0];
+  return first !== first.toLowerCase()
+    ? [`${at}.prompt: "${prompt}" must not start with an uppercase letter`]
+    : [];
+}
+
+function promptPunctuationErrors(prompt, at) {
+  return PROMPT_END_PUNCTUATION.test(prompt)
+    ? [`${at}.prompt: "${prompt}" must not end with "?", "." or "!"`]
+    : [];
+}
+
+function promptPlaceholderErrors(prompt, at) {
+  return prompt.includes(PLACEHOLDER)
+    ? [`${at}.prompt: must not contain "${PLACEHOLDER}"`]
+    : [];
+}
+
+function promptStartErrors(prompt, at) {
+  const lower = prompt.toLowerCase();
+  const banned = BANNED_PROMPT_STARTS.find((start) => lower.startsWith(start));
+  return banned !== undefined
+    ? [`${at}.prompt: "${prompt}" must not start with "${banned}"`]
+    : [];
+}
+
+function promptDuplicateErrors(prompt, at, seenPrompts) {
+  const key = prompt.toLowerCase().replace(/\s+/gu, " ").trim();
+  if (seenPrompts.has(key)) {
+    return [`${at}.prompt: duplicate prompt "${prompt}"`];
+  }
+  seenPrompts.add(key);
+  return [];
 }

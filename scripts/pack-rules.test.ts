@@ -86,8 +86,47 @@ const fact = (overrides: Partial<FactFields> = {}): FactFields => ({
   ...overrides,
 });
 
+interface SuperlativeFields {
+  id: string;
+  prompt: string;
+}
+
+interface SuperlativePackFields {
+  id: string;
+  name: string;
+  kind: string;
+  rating: string;
+  language: string;
+  license: string;
+  attribution: string;
+  items: SuperlativeFields[];
+}
+
+const validSuperlativePack = (
+  items: SuperlativeFields[],
+): SuperlativePackFields => ({
+  id: "sample-superlatives",
+  name: "Sample superlatives",
+  kind: "superlatives",
+  rating: "family",
+  language: "en",
+  license: "CC0-1.0",
+  attribution: "Written for the test.",
+  items,
+});
+
 const wordOpts = { folder: "imposter", filename: "sample-pack.json" };
 const factOpts = { folder: "real-or-nah", filename: "sample-facts.json" };
+const superlativeOpts = {
+  folder: "most-likely-to",
+  filename: "sample-superlatives.json",
+};
+
+/** A superlative pack with an arbitrary `items` array, for malformed-item tests. */
+const superlativePackWithRawItems = (items: unknown[]) => ({
+  ...validSuperlativePack([]),
+  items,
+});
 
 describe("normalizeAnswer", () => {
   it("lowercases, trims and collapses whitespace", () => {
@@ -218,6 +257,170 @@ describe("validatePack facts", () => {
     ).join("\n");
     expect(errors).toMatch(/max 40/);
     expect(errors).toMatch(/https:\/\//);
+  });
+});
+
+describe("validatePack superlatives", () => {
+  it("accepts a valid pack", () => {
+    expect(
+      validatePack(
+        validSuperlativePack([
+          { id: "cats", prompt: "adopt a dozen cats" },
+          { id: "band", prompt: "start a band with no instruments" },
+        ]),
+        superlativeOpts,
+      ),
+    ).toEqual([]);
+  });
+
+  it("requires items to be objects", () => {
+    expect(
+      validatePack(
+        superlativePackWithRawItems([null]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/item must be an object/);
+  });
+
+  it("requires a unique, non-empty id", () => {
+    const errors = validatePack(
+      validSuperlativePack([
+        { id: "", prompt: "adopt a dozen cats" },
+        { id: "same", prompt: "adopt a dozen cats" },
+        { id: "same", prompt: "start a band with no instruments" },
+      ]),
+      superlativeOpts,
+    ).join("\n");
+    expect(errors).toMatch(/\.id: must be a non-empty string/);
+    expect(errors).toMatch(/duplicate id "same"/);
+  });
+
+  it("requires a non-empty prompt string", () => {
+    expect(
+      validatePack(
+        superlativePackWithRawItems([{ id: "a", prompt: 5 }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/\.prompt: must be a string/);
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: "   " }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/\.prompt: must be a non-empty string/);
+  });
+
+  it("rejects leading or trailing whitespace", () => {
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: " adopt a cat" }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/leading or trailing whitespace/);
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: "adopt a cat " }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/leading or trailing whitespace/);
+  });
+
+  it("accepts exactly 80 code points and rejects 81, counting emoji as one", () => {
+    const at80 = "🍕".repeat(80);
+    const at81 = "🍕".repeat(81);
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: at80 }]),
+        superlativeOpts,
+      ),
+    ).toEqual([]);
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: at81 }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/is 81 characters \(max 80\)/);
+  });
+
+  it("rejects an uppercase first character", () => {
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: "Adopt a dozen cats" }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/must not start with an uppercase letter/);
+  });
+
+  it("accepts a prompt that starts with an emoji", () => {
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: "🍕 eat pizza for breakfast" }]),
+        superlativeOpts,
+      ),
+    ).toEqual([]);
+  });
+
+  it("rejects trailing question marks, periods and exclamation points", () => {
+    for (const prompt of [
+      "adopt a dozen cats?",
+      "adopt a dozen cats.",
+      "adopt a dozen cats!",
+    ]) {
+      expect(
+        validatePack(
+          validSuperlativePack([{ id: "a", prompt }]),
+          superlativeOpts,
+        ).join(),
+      ).toMatch(/must not end with "\?", "\." or "!"/);
+    }
+  });
+
+  it('rejects prompts starting with "most likely", "who" or "to "', () => {
+    for (const prompt of [
+      "most likely adopt a cat",
+      "who adopts a cat first",
+      "to adopt a cat",
+    ]) {
+      expect(
+        validatePack(
+          validSuperlativePack([{ id: "a", prompt }]),
+          superlativeOpts,
+        ).join(),
+      ).toMatch(/must not start with/);
+    }
+  });
+
+  it("rejects a blank placeholder", () => {
+    expect(
+      validatePack(
+        validSuperlativePack([{ id: "a", prompt: "adopt a ____ cat" }]),
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/must not contain "____"/);
+  });
+
+  it("rejects duplicate prompts, comparing case and whitespace loosely", () => {
+    const errors = validatePack(
+      validSuperlativePack([
+        { id: "a", prompt: "adopt a dozen cats" },
+        { id: "b", prompt: "adopt   a  dozen   cats" },
+        { id: "c", prompt: "adopt A Dozen CATS" },
+      ]),
+      superlativeOpts,
+    );
+    expect(errors).toEqual([
+      'items[1].prompt: duplicate prompt "adopt   a  dozen   cats"',
+      'items[2].prompt: duplicate prompt "adopt A Dozen CATS"',
+    ]);
+  });
+
+  it("requires the kind to match the folder", () => {
+    expect(
+      validatePack(
+        { ...validSuperlativePack([{ id: "a", prompt: "adopt a cat" }]), kind: "facts" },
+        superlativeOpts,
+      ).join(),
+    ).toMatch(/must be "superlatives"/);
   });
 });
 
