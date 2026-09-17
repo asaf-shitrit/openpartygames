@@ -637,12 +637,23 @@ function VoteLocked(
 }
 
 function VoteView(props: SectionProps) {
-  const { view, players, deadline, clock, send } = props;
-  const [pick, setPick] = useState<PlayerId | null>(null);
-  const [sent, setSent] = useState(false);
+  const { view } = props;
   const lockRef = useRef<HTMLDivElement>(null);
   useVoteLockBuzz(view.myVote, lockRef);
   if (view.myVote !== null) return <VoteLocked {...props} pulseRef={lockRef} />;
+  const formKey = `${view.wordNumber}:${view.voteCandidates.join(",")}`;
+  return <VoteForm key={formKey} {...props} />;
+}
+
+/**
+ * The picking form. It unmounts while a vote is locked and is keyed by word and roster,
+ * so a kick that clears `myVote`, a vote the server dropped because its target left,
+ * or a new word always starts from a clean pick/sent state.
+ */
+function VoteForm(props: SectionProps) {
+  const { view, players, deadline, clock, send } = props;
+  const [pick, setPick] = useState<PlayerId | null>(null);
+  const [sent, setSent] = useState(false);
   return (
     <>
       <Strip
