@@ -187,6 +187,30 @@ describe("createMemoryContentSource", () => {
     expect(loaded.items).toHaveLength(1);
   });
 
+  it("loads superlative packs by kind", async () => {
+    const superlatives = createMemoryContentSource([
+      {
+        meta: {
+          id: "mlt",
+          name: "Everyday",
+          kind: "superlatives",
+          rating: "family",
+          language: "en",
+          itemCount: 1,
+        },
+        content: {
+          kind: "superlatives",
+          items: [{ id: "cats", prompt: "adopt a dozen cats" }],
+        },
+      },
+    ]);
+    const loaded = await superlatives.loadContent("superlatives", ["mlt"]);
+    expect(loaded).toEqual({
+      kind: "superlatives",
+      items: [{ id: "cats", prompt: "adopt a dozen cats" }],
+    });
+  });
+
   it("returns an empty kind payload when no packs match", async () => {
     const loaded = await source.loadContent("facts", []);
     expect(loaded).toEqual({ kind: "facts", items: [] });
