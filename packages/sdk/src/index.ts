@@ -4,6 +4,7 @@ export type * from "./types";
 //   createRoom(options: CreateRoomOptions): RoomCore
 //   restoreRoom(snapshot: RoomSnapshot, games: AnyGame[], newToken: () => string): RoomCore
 //   normalizeAnswer(text: string): string   (lowercase, trim, strip punctuation and leading a/an/the, collapse spaces)
+export { mergeContent } from "./content";
 export { createRng, restoreRng } from "./rng";
 export { createRoom, restoreRoom } from "./room";
 export { normalizeAnswer } from "./text";

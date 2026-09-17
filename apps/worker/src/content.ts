@@ -1,10 +1,12 @@
 import type { Rating } from "@opg/protocol";
 import type {
   ContentKind,
+  ContentOf,
   ContentSource,
   Fact,
   GameContent,
   PackMeta,
+  Superlative,
   WordPair,
 } from "@opg/sdk";
 
@@ -59,8 +61,8 @@ export function createContentSource(reader: PackReader): ContentSource {
       packIds: string[],
     ): Promise<GameContent> {
       // No enabled packs: skip the query, the game start fails on empty content.
-      if (packIds.length === 0) return emptyContent(kind);
-      return itemsFromRows(kind, await reader.items(packIds, kind));
+      if (packIds.length === 0) return contentFromRows(kind, []);
+      return contentFromRows(kind, await reader.items(packIds, kind));
     },
   };
 }
@@ -76,16 +78,18 @@ function toPackMeta(row: PackRow): PackMeta {
   };
 }
 
-function emptyContent(kind: ContentKind): GameContent {
-  return kind === "word-pairs"
-    ? { kind: "word-pairs", items: [] }
-    : { kind: "facts", items: [] };
-}
+/** Rows to a content payload, one entry per kind; a missing kind is a type error. */
+const CONTENT_FROM_ROWS = {
+  "word-pairs": (rows) => ({ kind: "word-pairs", items: rows.map(wordPairFromRow) }),
+  facts: (rows) => ({ kind: "facts", items: rows.map(factFromRow) }),
+  superlatives: (rows) => ({
+    kind: "superlatives",
+    items: rows.map(superlativeFromRow),
+  }),
+} satisfies { [K in ContentKind]: (rows: ItemRow[]) => ContentOf<K> };
 
-function itemsFromRows(kind: ContentKind, rows: ItemRow[]): GameContent {
-  return kind === "word-pairs"
-    ? { kind: "word-pairs", items: rows.map(wordPairFromRow) }
-    : { kind: "facts", items: rows.map(factFromRow) };
+function contentFromRows(kind: ContentKind, rows: ItemRow[]): GameContent {
+  return CONTENT_FROM_ROWS[kind](rows);
 }
 
 function wordPairFromRow(row: ItemRow): WordPair {
@@ -96,14 +100,20 @@ function wordPairFromRow(row: ItemRow): WordPair {
 
 function factFromRow(row: ItemRow): Fact {
   const item = parseItem(row.data);
-  if ("prompt" in item) return item;
+  if ("answer" in item) return item;
   throw new Error("pack item is not a fact");
 }
 
+function superlativeFromRow(row: ItemRow): Superlative {
+  const item = parseItem(row.data);
+  if ("prompt" in item && !("answer" in item)) return item;
+  throw new Error("pack item is not a superlative");
+}
+
 /** Parses one pack item; malformed JSON aborts the game start (fail loudly). */
-function parseItem(data: string): WordPair | Fact {
+function parseItem(data: string): WordPair | Fact | Superlative {
   try {
-    const item: WordPair | Fact = JSON.parse(data);
+    const item: WordPair | Fact | Superlative = JSON.parse(data);
     return item;
   } catch {
     throw new Error("pack item is not valid JSON");

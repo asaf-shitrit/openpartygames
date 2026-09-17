@@ -30,8 +30,6 @@ export interface Rng {
 
 // ---------- Content ----------
 
-export type ContentKind = "word-pairs" | "facts";
-
 export interface WordPair {
   /** Word every crew member sees, e.g. "giraffe". */
   crew: string;
@@ -51,6 +49,12 @@ export interface Fact {
   source: { title: string; url: string };
 }
 
+/** One "Who's most likely to …?" prompt; `prompt` finishes it, e.g. "adopt a dozen cats". */
+export interface Superlative {
+  id: string;
+  prompt: string;
+}
+
 export interface WordPairContent {
   kind: "word-pairs";
   items: WordPair[];
@@ -61,7 +65,21 @@ export interface FactContent {
   items: Fact[];
 }
 
-export type GameContent = WordPairContent | FactContent;
+export interface SuperlativeContent {
+  kind: "superlatives";
+  items: Superlative[];
+}
+
+/**
+ * Every content payload. Adding a kind here makes each per-kind table fail
+ * typecheck until it has an entry.
+ */
+export type GameContent = WordPairContent | FactContent | SuperlativeContent;
+
+export type ContentKind = GameContent["kind"];
+
+/** The content payload of one kind. */
+export type ContentOf<K extends ContentKind> = Extract<GameContent, { kind: K }>;
 
 export interface PackMeta {
   id: string;

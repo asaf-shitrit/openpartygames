@@ -112,6 +112,62 @@ describe("createContentSource.loadContent", () => {
     expect(content.items).toHaveLength(1);
   });
 
+  it("merges superlatives", async () => {
+    const { reader: source, itemCalls } = reader(() =>
+      rowsOf({ id: "cats", prompt: "adopt a dozen cats" }),
+    );
+
+    const content = await createContentSource(source).loadContent(
+      "superlatives",
+      ["everyday"],
+    );
+
+    expect(content).toEqual({
+      kind: "superlatives",
+      items: [{ id: "cats", prompt: "adopt a dozen cats" }],
+    });
+    expect(itemCalls).toEqual([
+      { packIds: ["everyday"], kind: "superlatives" },
+    ]);
+  });
+
+  it("returns empty superlatives without a query when no pack is enabled", async () => {
+    const { reader: source, itemCalls } = reader(() => rowsOf());
+
+    expect(
+      await createContentSource(source).loadContent("superlatives", []),
+    ).toEqual({ kind: "superlatives", items: [] });
+    expect(itemCalls).toEqual([]);
+  });
+
+  it("does not load a superlative as a fact", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf({ id: "cats", prompt: "adopt a dozen cats" }),
+    );
+
+    await expect(
+      createContentSource(source).loadContent("facts", ["a"]),
+    ).rejects.toThrow("pack item is not a fact");
+  });
+
+  it.each([
+    { crew: "cat", decoy: "dog" },
+    {
+      id: "crow",
+      prompt: "A group of crows is called a ____.",
+      answer: "murder",
+      alternates: [],
+      decoys: [],
+      source: { title: "Crow", url: "https://example.com/crow" },
+    },
+  ])("does not load %j as a superlative", async (item) => {
+    const { reader: source } = reader(() => rowsOf(item));
+
+    await expect(
+      createContentSource(source).loadContent("superlatives", ["a"]),
+    ).rejects.toThrow("pack item is not a superlative");
+  });
+
   it("skips the query when no pack is enabled", async () => {
     const { reader: source, itemCalls } = reader(() => rowsOf());
 
@@ -128,6 +184,16 @@ describe("createContentSource.loadContent", () => {
     await expect(
       createContentSource(source).loadContent("facts", ["a"]),
     ).rejects.toThrow("pack item is not valid JSON");
+  });
+
+  it("does not load a superlative as a word pair", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf({ id: "cats", prompt: "adopt a dozen cats" }),
+    );
+
+    await expect(
+      createContentSource(source).loadContent("word-pairs", ["a"]),
+    ).rejects.toThrow("pack item is not a word pair");
   });
 
   it("throws when an item is not the shape its kind needs", async () => {

@@ -13,6 +13,7 @@ import type {
   RoomSnapshot,
   WordPair,
 } from "@opg/sdk";
+import { mergeContent } from "@opg/sdk";
 import { GAMES } from "../games";
 import {
   RoomHub,
@@ -199,9 +200,7 @@ export class FakeContent implements ContentSource {
   async loadContent(kind: ContentKind): Promise<GameContent> {
     this.loadCalls += 1;
     if (this.contentFails) throw new Error("content unavailable");
-    return kind === "word-pairs"
-      ? { kind: "word-pairs", items: this.wordPairs }
-      : { kind: "facts", items: [] };
+    return mergeContent(kind, [{ kind: "word-pairs", items: this.wordPairs }]);
   }
 }
 

@@ -3,6 +3,7 @@
 // The clock is fake — it only moves when every bot is waiting, to the next deadline.
 
 import type { GameResultSummary, PlayerId, ServerMessage } from "@opg/protocol";
+import { mergeContent } from "./content";
 import { createRng } from "./rng";
 import { createRoom } from "./room";
 import type {
@@ -10,7 +11,6 @@ import type {
   Caller,
   ContentKind,
   ContentSource,
-  Fact,
   GameContent,
   PackMeta,
   PlaythroughOptions,
@@ -18,7 +18,6 @@ import type {
   Rng,
   RoomCore,
   RoomEffect,
-  WordPair,
 } from "./types";
 
 // ---------- In-memory content ----------
@@ -41,19 +40,10 @@ export function createMemoryContentSource(
       packIds: string[],
     ): Promise<GameContent> {
       const wanted = new Set(packIds);
-      const wordPairs: WordPair[] = [];
-      const facts: Fact[] = [];
-      for (const pack of packs) {
-        if (!wanted.has(pack.meta.id)) continue;
-        if (kind === "word-pairs" && pack.content.kind === "word-pairs") {
-          wordPairs.push(...pack.content.items);
-        } else if (kind === "facts" && pack.content.kind === "facts") {
-          facts.push(...pack.content.items);
-        }
-      }
-      return kind === "word-pairs"
-        ? { kind: "word-pairs", items: wordPairs }
-        : { kind: "facts", items: facts };
+      return mergeContent(
+        kind,
+        packs.filter((p) => wanted.has(p.meta.id)).map((p) => p.content),
+      );
     },
   };
 }
