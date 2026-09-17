@@ -4,6 +4,11 @@ import {
   imposterPlayerViewSchema,
 } from "@opg/game-imposter";
 import { imposterUi } from "@opg/game-imposter/ui";
+import {
+  mltHostViewSchema,
+  mltPlayerViewSchema,
+} from "@opg/game-most-likely-to";
+import { mostLikelyToUi } from "@opg/game-most-likely-to/ui";
 import { ronHostViewSchema, ronPlayerViewSchema } from "@opg/game-real-or-nah";
 import { realOrNahUi } from "@opg/game-real-or-nah/ui";
 import type { Award, AvatarId } from "@opg/protocol";
@@ -45,7 +50,22 @@ export const LANDING_GAMES: LandingGame[] = [
     icon: "cards",
     avatar: "toast",
   },
+  {
+    id: "most-likely-to",
+    name: "Most Likely To",
+    blurb: "Vote on who fits the prompt. Score by reading the room.",
+    minPlayers: 3,
+    maxPlayers: 8,
+    minutes: 12,
+    icon: "point",
+    avatar: "cat",
+  },
 ];
+
+/** A landing game's icon, or the generic cards icon when the id is unknown. */
+export function gameIconFor(id: string): IconName {
+  return LANDING_GAMES.find((game) => game.id === id)?.icon ?? "cards";
+}
 
 type AnyGameUi = GameUi<unknown, unknown, z.core.util.JSONType>;
 type HostProps = ComponentProps<AnyGameUi["Host"]>;
@@ -124,6 +144,14 @@ const GAME_UIS = new Map<string, AnyGameUi>([
       ui: realOrNahUi,
       hostViewSchema: ronHostViewSchema,
       playerViewSchema: ronPlayerViewSchema,
+    }),
+  ],
+  [
+    "most-likely-to",
+    registerGame({
+      ui: mostLikelyToUi,
+      hostViewSchema: mltHostViewSchema,
+      playerViewSchema: mltPlayerViewSchema,
     }),
   ],
 ]);

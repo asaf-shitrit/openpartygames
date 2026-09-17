@@ -20,6 +20,7 @@ const ICON_NAMES = [
   "monitor",
   "expand",
   "kick",
+  "point",
 ] satisfies IconName[];
 
 function firstChild(container: HTMLElement): HTMLElement | SVGElement {

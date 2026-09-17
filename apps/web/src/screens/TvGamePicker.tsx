@@ -22,13 +22,9 @@ import {
   useCue,
   useReducedMotion,
 } from "@opg/ui";
-import type { CardProps, IconName } from "@opg/ui";
+import type { CardProps } from "@opg/ui";
+import { gameIconFor } from "../games";
 import { TvPage } from "./shared";
-
-function gameIcon(id: string): IconName {
-  if (id === "imposter") return "mask";
-  return "cards";
-}
 
 function ratingLabel(rating: Rating): string {
   if (rating === "adult") return "Adult";
@@ -64,14 +60,50 @@ function cardLook(selected: boolean): CardLook {
   return { variant: "Malt", tilt: 1 };
 }
 
+interface CardMetrics {
+  padding: string;
+  gap: number;
+  icon: number;
+  name: number;
+  blurb: number;
+  meta: number;
+  stamp: number;
+}
+
+/** Roomier metrics for two games, denser ones once a third game has to fit. */
+function cardMetrics(compact: boolean): CardMetrics {
+  if (compact) {
+    return {
+      padding: "22px 24px 24px",
+      gap: 8,
+      icon: 72,
+      name: 46,
+      blurb: 28,
+      meta: 28,
+      stamp: 30,
+    };
+  }
+  return {
+    padding: "32px 32px 34px",
+    gap: 14,
+    icon: 120,
+    name: 64,
+    blurb: 34,
+    meta: 30,
+    stamp: 38,
+  };
+}
+
 function GameCard({
   game,
   selected,
   justPicked,
+  compact,
 }: {
   game: GameSummary;
   selected: boolean;
   justPicked: boolean;
+  compact: boolean;
 }) {
   const reduced = useReducedMotion();
   const cue = useCue();
@@ -81,33 +113,40 @@ function GameCard({
     playFx(cardRef.current, "pop", reduced);
     cue("tape");
   }, [justPicked, reduced, cue]);
+  const metrics = cardMetrics(compact);
   return (
     <div ref={cardRef}>
       <Card
         {...cardLook(selected)}
         style={{
-          padding: "32px 32px 34px",
+          padding: metrics.padding,
           display: "flex",
           flexDirection: "column",
-          gap: 14,
+          gap: metrics.gap,
         }}
       >
         {selected ? (
           <Stamp
-            size={38}
+            size={metrics.stamp}
             tilt={6}
-            style={{ position: "absolute", right: 22, top: 26 }}
+            style={{ position: "absolute", right: 22, top: 22 }}
           >
-            <Icon name="check" size={34} />
+            <Icon name="check" size={metrics.stamp - 4} />
             <span>Picked</span>
           </Stamp>
         ) : null}
-        <Icon name={gameIcon(game.id)} size={120} color="var(--opg-ink)" />
-        <Marker size={64}>{game.name}</Marker>
-        <div style={{ fontSize: 34, lineHeight: 1.3 }}>{game.blurb}</div>
+        <Icon
+          name={gameIconFor(game.id)}
+          size={metrics.icon}
+          color="var(--opg-ink)"
+        />
+        <Marker size={metrics.name}>{game.name}</Marker>
+        <div style={{ fontSize: metrics.blurb, lineHeight: 1.3 }}>
+          {game.blurb}
+        </div>
         <div
           style={{
-            fontSize: 30,
+            fontSize: metrics.meta,
             fontWeight: 700,
             color: "var(--opg-ink-secondary)",
           }}
@@ -284,6 +323,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
   const selectedGame = pickGame(view.games, view.selectedGameId);
   const active = countActivePlayers(view.players);
   const justPicked = useJustPicked(view.selectedGameId);
+  const compactCards = view.games.length > 2;
 
   return (
     <TvPage>
@@ -303,9 +343,10 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: 40,
+            gridTemplateColumns: `repeat(${compactCards ? 3 : 2}, minmax(0, 1fr))`,
+            gap: compactCards ? 28 : 40,
             paddingTop: 8,
+            alignContent: "start",
           }}
         >
           {view.games.map((game) => (
@@ -314,6 +355,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
               game={game}
               selected={game.id === view.selectedGameId}
               justPicked={game.id === justPicked}
+              compact={compactCards}
             />
           ))}
         </div>

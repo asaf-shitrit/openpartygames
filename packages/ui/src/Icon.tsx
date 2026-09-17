@@ -15,7 +15,8 @@ export type IconName =
   | "cards"
   | "monitor"
   | "expand"
-  | "kick";
+  | "kick"
+  | "point";
 
 interface IconSpec {
   viewBox: string;
@@ -160,6 +161,19 @@ const ICONS = {
       <>
         <path d="M14 4h5v16h-5" />
         <path d="M10 12H3M6 9l-3 3 3 3" />
+      </>
+    ),
+  },
+  point: {
+    viewBox: "0 0 100 100",
+    strokeWidth: 6,
+    nodes: (
+      <>
+        <path d="M36 38H86a6 6 0 0 1 0 12H60" />
+        <path d="M60 50c5 0 8 3 8 6.5S65 63 60 63" />
+        <path d="M60 63c5 0 8 3 8 6.5S65 76 60 76" />
+        <path d="M60 76c4 0 6 2.5 6 5.5S64 87 60 87H38c-12 0-22-10-22-22V56c0-10 8-18 18-18" />
+        <path d="M36 38l8-10c3-4 9-4 11 1l-3 9" />
       </>
     ),
   },

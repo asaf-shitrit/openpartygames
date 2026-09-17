@@ -104,6 +104,24 @@ describe("PhoneVipControls", () => {
     expect(screen.getByText("Turn on at least one pack")).toBeTruthy();
   });
 
+  it("shows all three games and lets the third be picked", async () => {
+    const { handlers, user } = setup({
+      games: [
+        makeGame(),
+        makeGame({ id: "real-or-nah", name: "Real or Nah" }),
+        makeGame({ id: "most-likely-to", name: "Most Likely To" }),
+      ],
+    });
+    expect(screen.getByText("Imposter")).toBeTruthy();
+    expect(screen.getByText("Real or Nah")).toBeTruthy();
+    expect(screen.getByText("Most Likely To")).toBeTruthy();
+    const gameButton = screen.getByRole("button", {
+      name: /most likely to/i,
+    });
+    await user.click(gameButton);
+    expect(handlers.onPickGame).toHaveBeenCalledWith("most-likely-to");
+  });
+
   it("sends set-locked when an unlocked room is locked", async () => {
     const { handlers, user } = setup();
     await user.click(screen.getByRole("switch", { name: "Lock room" }));

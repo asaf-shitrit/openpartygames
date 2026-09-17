@@ -71,6 +71,9 @@ importers:
       '@opg/game-imposter':
         specifier: workspace:*
         version: link:../../games/imposter
+      '@opg/game-most-likely-to':
+        specifier: workspace:*
+        version: link:../../games/most-likely-to
       '@opg/game-real-or-nah':
         specifier: workspace:*
         version: link:../../games/real-or-nah
@@ -114,6 +117,9 @@ importers:
       '@opg/game-imposter':
         specifier: workspace:*
         version: link:../../games/imposter
+      '@opg/game-most-likely-to':
+        specifier: workspace:*
+        version: link:../../games/most-likely-to
       '@opg/game-real-or-nah':
         specifier: workspace:*
         version: link:../../games/real-or-nah
@@ -129,6 +135,28 @@ importers:
         version: 4.131.2(@types/node@26.5.1)
 
   games/imposter:
+    dependencies:
+      '@opg/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@opg/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@opg/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      react:
+        specifier: ^19.3.0
+        version: 19.3.0
+
+  games/most-likely-to:
     dependencies:
       '@opg/protocol':
         specifier: workspace:*

@@ -89,18 +89,25 @@ function LandingHero({
 }
 
 function GameShowcase() {
+  const compact = LANDING_GAMES.length > 2;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: compact ? 16 : 28,
+      }}
+    >
       {LANDING_GAMES.map((game, index) => (
         <Card
           key={game.id}
           variant={index === 0 ? "L" : "Malt"}
           tilt={index === 0 ? -1.5 : 1}
           style={{
-            padding: "24px 32px",
+            padding: compact ? "16px 24px" : "24px 32px",
             display: "flex",
             flexDirection: "column",
-            gap: 10,
+            gap: compact ? 6 : 10,
           }}
         >
           {index === 0 ? (
@@ -114,10 +121,12 @@ function GameShowcase() {
               gap: 16,
             }}
           >
-            <Marker size={56}>{game.name}</Marker>
-            <Avatar id={game.avatar} size={76} />
+            <Marker size={compact ? 42 : 56}>{game.name}</Marker>
+            <Avatar id={game.avatar} size={compact ? 52 : 76} />
           </div>
-          <div style={{ fontSize: 30, lineHeight: 1.3 }}>{game.blurb}</div>
+          <div style={{ fontSize: compact ? 28 : 30, lineHeight: 1.3 }}>
+            {game.blurb}
+          </div>
           <div
             style={{
               fontSize: 28,

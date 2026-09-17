@@ -38,12 +38,13 @@ Packs are JSON files under `packs/`. The rules live in `scripts/pack-rules.mjs`;
 
 - `packs/imposter/*.json` holds word-pair packs (`kind: "word-pairs"`).
 - `packs/real-or-nah/*.json` holds fact packs (`kind: "facts"`).
+- `packs/most-likely-to/*.json` holds superlative prompt packs (`kind: "superlatives"`). There is no issue form for these yet, so send new prompts as a pull request.
 
 Every pack declares:
 
 - `id` — kebab-case, and it must match the filename.
 - `name`, `attribution`.
-- `kind` — `word-pairs` in `packs/imposter/`, `facts` in `packs/real-or-nah/`.
+- `kind` — `word-pairs` in `packs/imposter/`, `facts` in `packs/real-or-nah/`, `superlatives` in `packs/most-likely-to/`.
 - `rating` — `family`, `teen` or `adult`.
 - `language` — `en` for now.
 - `license` — `CC0-1.0`, `CC-BY-4.0` or `CC-BY-SA-4.0`.
@@ -63,6 +64,13 @@ Facts are `{ id, prompt, answer, alternates, decoys, source }`:
 - `alternates` — array of other accepted spellings
 - `decoys` — at least 2, and none may normalize to the answer or an alternate
 - `source` — `{ "title": "...", "url": "https://..." }`; every fact cites its source
+
+Superlatives are `{ id, prompt }`, where `prompt` finishes "Who's most likely to …?":
+
+- `id` — non-empty and unique within the pack
+- `prompt` — at most 80 characters, starts lowercase, no ending `?`, `.` or `!` (the game adds the question mark)
+- no prompt may start with "most likely", "who" or "to", or repeat another prompt in the pack
+- keep it playful: habits, quirks, harmless hypotheticals. Nothing about looks, bodies, intelligence, money, dating, alcohol or drugs, crime, health or protected traits. Family and teen packs are on by default, so every prompt has to be fine in a classroom.
 
 ## Licensing
 

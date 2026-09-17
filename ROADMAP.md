@@ -38,6 +38,12 @@ What the SDK provides, or will provide. Each game below lists the capabilities i
 | **Imposter** | Everyone gets a secret word, except the imposter, who knows their role and gets a decoy from the same family. Give clues out loud, then vote. A caught imposter can steal points by guessing the real word. | Undercover, Word Imposter | `rooms` `timers` `turns` `secret` `vote` `packs` |
 | **Real or Nah** | Write a fake answer to an obscure fact, then vote for the real one. Score for finding the truth and for fooling others. | Fibbage | `rooms` `timers` `text` `vote` `packs` |
 
+## Built after the MVP
+
+| Game | How it plays | Inspired by | Needs |
+|---|---|---|---|
+| **Most Likely To** | Vote on which friend best fits the prompt, yourself included. Score by voting with the room; the TV shows who picked whom. The template to copy for your first game. | Party staple | `vote` `packs` |
+
 ## Phase 2: Drawing games
 
 In build order. Doodle Bluff reuses Real or Nah's flow, while Quick Sketch needs live drawing sync.
@@ -56,7 +62,6 @@ Community votes decide the order.
 
 | Game | How it plays | Inspired by | Needs |
 |---|---|---|---|
-| **Most Likely To** | Vote on which friend best fits the prompt. *Good first game for contributors.* | Party staple | `vote` `packs` |
 | **Quip Clash** | Two players answer the same funny prompt head to head; the room votes. | Quiplash | `text` `vote` `packs` |
 | **Guesstimate** | Everyone estimates a number, then bets on whose guess is closest. | Wits & Wagers | `text` `vote` `packs` |
 | **Two Truths** | Players submit facts about themselves; everyone else spots the lie. | Two Truths and a Lie | `text` `vote` |

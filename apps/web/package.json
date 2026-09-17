@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@opg/game-imposter": "workspace:*",
+    "@opg/game-most-likely-to": "workspace:*",
     "@opg/game-real-or-nah": "workspace:*",
     "@opg/protocol": "workspace:*",
     "@opg/ui": "workspace:*",
