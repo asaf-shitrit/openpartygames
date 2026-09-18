@@ -35,7 +35,10 @@ jobs:
       - run: pnpm build
 
   # Full games against the real Worker, Room Durable Object and a local D1.
+  # Pull requests only: a rebase merge puts the same tree on main, and the smoke
+  # job below re-proves it boots rather than replaying seven minutes of browsers.
   e2e:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -56,10 +59,29 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
+  # What runs on main in place of the full suite: create a room, join it and play
+  # a round against the real Worker, Room Durable Object and D1. No browsers and no
+  # Playwright download, so it answers "does the merged commit actually work" in
+  # about a minute instead of holding the deploy for ten.
+  smoke:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # e2e:api's global setup prepares the D1 directory and starts wrangler itself.
+      - run: pnpm e2e:api
+
   # Merging to main deploys straight to production once every check passes.
   # Forks without a CLOUDFLARE_ACCOUNT_ID repository variable skip this job.
   deploy:
-    needs: [check, e2e]
+    needs: [check, smoke]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CLOUDFLARE_ACCOUNT_ID != ''
     runs-on: ubuntu-latest
     environment:
