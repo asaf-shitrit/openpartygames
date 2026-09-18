@@ -23,6 +23,7 @@ What the SDK provides, or will provide. Each game below lists the capabilities i
 | `secret` | Per-player private info and roles | Phase 1 (Imposter) |
 | `vote` | Vote on players or options, tally, reveal | Phase 1 |
 | `text` | Typed answers, duplicate detection, too-close-to-the-truth check | Phase 1 (Real or Nah) |
+| `no-tv` | Playing with no shared screen: every phone carries the stage above its own controls. Games opt in with `noTv` | Phase 2 |
 | `canvas` | Drawing on the phone, synced to the host screen | Phase 2 |
 | `chain` | Pass-along rounds where one player's output is the next player's input | Phase 2 |
 | `teams` | Split the room into teams | Phase 3 |

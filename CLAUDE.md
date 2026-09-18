@@ -1,6 +1,6 @@
 # OpenPartyGames
 
-Open-source Jackbox-style party games: one host screen (TV/laptop) plus phones joining by room code. Cloudflare Workers + Durable Objects + D1, TypeScript, React + Vite. Intent: `intent/0001-platform-mvp.md`. Plan and rules: `plan/0001-platform-mvp.md`. Designs: `design/*.dc.html` (open in a browser at frame size) and `design/AVATARS.md`.
+Open-source Jackbox-style party games. Two ways to play: a host screen (TV/laptop) plus phones joining by room code, or phones alone with no shared screen, where each phone carries the stage above its own controls. Games opt into the second with `GameDefinition.noTv`; rooms carry `sharedScreen`. TV mode is the default and is unchanged by it. Cloudflare Workers + Durable Objects + D1, TypeScript, React + Vite. Intent: `intent/0001-platform-mvp.md`. Plan and rules: `plan/0001-platform-mvp.md`. Designs: `design/*.dc.html` (open in a browser at frame size) and `design/AVATARS.md`.
 
 ## Commands
 
