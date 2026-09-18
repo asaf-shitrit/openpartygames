@@ -27,7 +27,7 @@ No-TV mode is a second way to play: every player is on their own phone, nobody h
 | Support | **Opt-in per game.** A game declares whether it plays with no shared screen; the default is that it does not |
 | Which games | **Most Likely To and Imposter opt in. Real or Nah stays TV-only** for now (§6) |
 | Sound | **Stays off.** Phones remain silent, haptics only. No nominated speaker phone |
-| Joining | People **read the room code aloud**, the same 4 consonants the TV shows today. No invite-link share sheet, no QR on the starter's phone |
+| Joining | People **read the room code aloud**, the same 4 consonants the TV shows today. ~~No invite-link share sheet, no QR on the starter's phone~~ — **reversed after the mode shipped, see §10.18** |
 | Order | This mode lands **before the next game**, with those two games retrofitted as part of it |
 
 ## What I verified first
@@ -204,6 +204,8 @@ The room has to know which mode it is in, because `stage` and the game picker bo
 ### Sharing the code
 
 **Decided: people read the code aloud.** No share sheet, no QR on the starter's phone. That is the right call for a room where everyone is sitting together, and it removes the awkward "point your phone at my phone" moment.
+
+> **Reversed after the mode shipped (§10.18).** The starter's phone now carries a QR of the join URL, and tapping it opens the share sheet. Reading the code aloud still works and is still what the screen leads with; it is simply no longer the only way in.
 
 **Verified gap:** the room code is barely visible on a phone today.
 
@@ -477,3 +479,10 @@ Settled with the maintainer on 2026-09-18. Every recommendation in the draft was
 The rule: **name what a thing is or needs, never what the room lacks.** So a game that cannot run without a shared screen reads "Plays on a shared screen." rather than "Needs a TV screen."; the lobby control is "Add a shared screen" rather than "Use a TV"; and the room chrome carries no mode badge at all, because the presence of the control already says which mode the room is in. Where a TV genuinely is an option worth offering, it is offered as one — "Playing with a TV or laptop? Open this page there for the big screen." — rather than as a thing the room is missing.
 
 `sharedScreen` and `noTv` stay as they are in code. This decision is about player-visible copy, not identifiers.
+
+**18. The starter's phone carries a QR and a share link after all.**
+**Decided, reversing the "joining" row in the decisions table and §5.** The original call — code read aloud, no QR, no share sheet — was made to avoid the awkward "point your phone at my phone" moment, and that reasoning still holds for a room sitting together. What it did not weigh heavily enough is §10.9's own finding: the alphabet was chosen so codes cannot spell words, **not** so they survive being heard across a noisy room, and it carries the whole B/D/P/T/V/Z rhyming set plus M/N and S/F. Reading four consonants aloud was the single point of failure for getting into a room, and the mitigation shipped for it — spelling the code out, plus a sounds-alike hint on the join error — helps the person who mishears but does nothing for the person who cannot hear at all.
+
+So the room-code hero now carries a QR of the join URL, and **tapping it opens the share sheet**, falling back to copying the link where there is no share API. The code is still the hero and still the thing the screen leads with. This also quietly serves a case the mode never addressed: someone joining from the next room, or a player who is not in earshot.
+
+**This supersedes the assumption in [plan/0003-doodle-bluff.md](0003-doodle-bluff.md)'s no-TV section**, which states that no invite link or QR exists in a no-TV room and that Doodle Bluff adds no dependency on either. The second half stays true — Doodle Bluff still surfaces neither — but the first half is now wrong, and that document should be corrected when the game lands.
