@@ -1,0 +1,9 @@
+import { defineProject } from "vitest/config";
+
+// Logic tests run in node; UI tests opt into a DOM with `// @vitest-environment happy-dom`.
+export default defineProject({
+  test: { include: ["src/**/*.test.{ts,tsx}"], environment: "node", passWithNoTests: true,
+    // Report every source file so untested code counts as 0% instead of being skipped.
+    coverage: { include: ["src/**/*.{ts,tsx}"], exclude: ["src/**/*.test.{ts,tsx}", "src/**/fixtures/**", "src/**/preview.ts", "src/**/*.d.ts"] },
+  },
+});
