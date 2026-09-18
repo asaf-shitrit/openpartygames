@@ -55,6 +55,14 @@ export interface Superlative {
   prompt: string;
 }
 
+/** One thing to draw, e.g. "a cat riding a skateboard". */
+export interface DrawingPrompt {
+  id: string;
+  prompt: string;
+  /** House titles used to top up a thin ballot when too few players titled the drawing. */
+  houseTitles: string[];
+}
+
 export interface WordPairContent {
   kind: "word-pairs";
   items: WordPair[];
@@ -70,11 +78,20 @@ export interface SuperlativeContent {
   items: Superlative[];
 }
 
+export interface DrawingPromptContent {
+  kind: "drawing-prompts";
+  items: DrawingPrompt[];
+}
+
 /**
  * Every content payload. Adding a kind here makes each per-kind table fail
  * typecheck until it has an entry.
  */
-export type GameContent = WordPairContent | FactContent | SuperlativeContent;
+export type GameContent =
+  | WordPairContent
+  | FactContent
+  | SuperlativeContent
+  | DrawingPromptContent;
 
 export type ContentKind = GameContent["kind"];
 

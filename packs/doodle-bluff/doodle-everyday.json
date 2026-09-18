@@ -1,0 +1,441 @@
+{
+  "id": "doodle-everyday",
+  "name": "Everyday",
+  "kind": "drawing-prompts",
+  "rating": "family",
+  "language": "en",
+  "license": "CC0-1.0",
+  "attribution": "Original prompts written for OpenPartyGames, released into the public domain under CC0-1.0.",
+  "items": [
+    {
+      "id": "cat-riding-a-skateboard",
+      "prompt": "a cat riding a skateboard",
+      "houseTitles": [
+        "a dog on a scooter",
+        "a squirrel driving a bus",
+        "a hamster in a shopping trolley",
+        "a duck on a unicycle"
+      ]
+    },
+    {
+      "id": "dog-wearing-sunglasses",
+      "prompt": "a dog wearing sunglasses",
+      "houseTitles": [
+        "a cat wearing a bow tie",
+        "a parrot wearing a top hat",
+        "a rabbit wearing a raincoat",
+        "a turtle wearing a backpack"
+      ]
+    },
+    {
+      "id": "elephant-balancing-on-a-beach-ball",
+      "prompt": "an elephant balancing on a beach ball",
+      "houseTitles": [
+        "a bear balancing on a barrel",
+        "a seal balancing on a ball",
+        "a giraffe balancing on a skateboard",
+        "a penguin balancing on a surfboard"
+      ]
+    },
+    {
+      "id": "penguin-ice-skating",
+      "prompt": "a penguin ice skating",
+      "houseTitles": [
+        "a polar bear skiing",
+        "a seal sledding",
+        "a fox ice skating",
+        "an otter snowboarding"
+      ]
+    },
+    {
+      "id": "giraffe-reaching-for-a-cloud",
+      "prompt": "a giraffe reaching for a cloud",
+      "houseTitles": [
+        "an elephant reaching for a kite",
+        "a zebra reaching for an apple",
+        "a bear reaching for a balloon",
+        "a monkey reaching for a banana"
+      ]
+    },
+    {
+      "id": "squirrel-carrying-a-giant-acorn",
+      "prompt": "a squirrel carrying a giant acorn",
+      "houseTitles": [
+        "a chipmunk carrying a giant nut",
+        "a mouse carrying a giant cheese wedge",
+        "an ant carrying a giant leaf",
+        "a beaver carrying a giant log"
+      ]
+    },
+    {
+      "id": "turtle-wearing-a-backpack",
+      "prompt": "a turtle wearing a backpack",
+      "houseTitles": [
+        "a snail wearing a tiny hat",
+        "a crab wearing sunglasses",
+        "a frog wearing a raincoat",
+        "a lizard wearing a scarf"
+      ]
+    },
+    {
+      "id": "fish-jumping-through-a-hoop",
+      "prompt": "a fish jumping through a hoop",
+      "houseTitles": [
+        "a dolphin jumping over a wave",
+        "a seal jumping through a ring",
+        "a frog jumping over a puddle",
+        "a cat jumping over a fence"
+      ]
+    },
+    {
+      "id": "bird-building-a-nest-out-of-string",
+      "prompt": "a bird building a nest out of string",
+      "houseTitles": [
+        "a squirrel building a nest out of leaves",
+        "a spider spinning a web out of ribbon",
+        "a beaver building a dam out of sticks",
+        "an ant building a hill out of sand"
+      ]
+    },
+    {
+      "id": "snail-racing-a-turtle",
+      "prompt": "a snail racing a turtle",
+      "houseTitles": [
+        "a tortoise racing a hare",
+        "an ant racing a beetle",
+        "a slug racing a worm",
+        "a crab racing a lobster"
+      ]
+    },
+    {
+      "id": "cow-jumping-over-a-fence",
+      "prompt": "a cow jumping over a fence",
+      "houseTitles": [
+        "a horse jumping over a hurdle",
+        "a goat jumping off a rock",
+        "a sheep jumping over a puddle",
+        "a pig jumping into mud"
+      ]
+    },
+    {
+      "id": "chicken-crossing-a-busy-street",
+      "prompt": "a chicken crossing a busy street",
+      "houseTitles": [
+        "a duck crossing a pond",
+        "a goose crossing a road",
+        "a rooster crossing a farmyard",
+        "a turkey crossing a field"
+      ]
+    },
+    {
+      "id": "rabbit-hopping-through-a-garden",
+      "prompt": "a rabbit hopping through a garden",
+      "houseTitles": [
+        "a squirrel hopping across a lawn",
+        "a frog hopping over stones",
+        "a kangaroo hopping across a field",
+        "a deer hopping over a fence"
+      ]
+    },
+    {
+      "id": "bear-fishing-in-a-river",
+      "prompt": "a bear fishing in a river",
+      "houseTitles": [
+        "a raccoon washing food in a stream",
+        "an otter floating on its back",
+        "a heron standing in shallow water",
+        "a beaver swimming with a log"
+      ]
+    },
+    {
+      "id": "mouse-hiding-in-a-cheese-wedge",
+      "prompt": "a mouse hiding in a cheese wedge",
+      "houseTitles": [
+        "a rat hiding in a shoe box",
+        "a hamster hiding in a tissue box",
+        "a gerbil hiding under a blanket",
+        "a squirrel hiding in a hollow log"
+      ]
+    },
+    {
+      "id": "spider-spinning-a-web-between-two-trees",
+      "prompt": "a spider spinning a web between two trees",
+      "houseTitles": [
+        "a caterpillar spinning a cocoon",
+        "a bee building a honeycomb",
+        "an ant digging a tunnel",
+        "a worm burrowing through dirt"
+      ]
+    },
+    {
+      "id": "horse-galloping-through-a-meadow",
+      "prompt": "a horse galloping through a meadow",
+      "houseTitles": [
+        "a deer running through a forest",
+        "a zebra running across a plain",
+        "a dog running on a beach",
+        "a cat sprinting across a yard"
+      ]
+    },
+    {
+      "id": "lion-napping-in-the-sun",
+      "prompt": "a lion napping in the sun",
+      "houseTitles": [
+        "a tiger stretching in the grass",
+        "a cat curled up on a windowsill",
+        "a dog sleeping on a porch",
+        "a panther resting on a branch"
+      ]
+    },
+    {
+      "id": "monkey-swinging-from-a-vine",
+      "prompt": "a monkey swinging from a vine",
+      "houseTitles": [
+        "a squirrel leaping between branches",
+        "a sloth hanging from a tree",
+        "a koala clinging to a trunk",
+        "a gibbon swinging across a gap"
+      ]
+    },
+    {
+      "id": "koala-hugging-a-tree",
+      "prompt": "a koala hugging a tree",
+      "houseTitles": [
+        "a panda hugging a bamboo stalk",
+        "a sloth clinging to a branch",
+        "a cat hugging a scratching post",
+        "a dog hugging a pillow"
+      ]
+    },
+    {
+      "id": "octopus-juggling-shells",
+      "prompt": "an octopus juggling shells",
+      "houseTitles": [
+        "a crab juggling pebbles",
+        "a seal juggling balls",
+        "an otter juggling rocks",
+        "a monkey juggling coconuts"
+      ]
+    },
+    {
+      "id": "whale-spouting-water",
+      "prompt": "a whale spouting water",
+      "houseTitles": [
+        "a dolphin leaping from the sea",
+        "a fish blowing bubbles",
+        "a seal splashing in the surf",
+        "an otter floating on waves"
+      ]
+    },
+    {
+      "id": "crab-pinching-a-beach-ball",
+      "prompt": "a crab pinching a beach ball",
+      "houseTitles": [
+        "a lobster pinching a bucket handle",
+        "a starfish stuck to a rock",
+        "a seagull pecking at a sandwich",
+        "a turtle crawling across sand"
+      ]
+    },
+    {
+      "id": "bee-buzzing-around-a-flower",
+      "prompt": "a bee buzzing around a flower",
+      "houseTitles": [
+        "a butterfly landing on a petal",
+        "a hummingbird hovering near a bloom",
+        "a ladybug crawling on a leaf",
+        "a dragonfly resting on a stem"
+      ]
+    },
+    {
+      "id": "person-walking-a-dog-in-the-rain",
+      "prompt": "a person walking a dog in the rain",
+      "houseTitles": [
+        "a child flying a kite on a windy day",
+        "a jogger running past a fountain",
+        "a cyclist riding through a puddle",
+        "a gardener watering flowers in a storm"
+      ]
+    },
+    {
+      "id": "chef-flipping-a-pancake",
+      "prompt": "a chef flipping a pancake",
+      "houseTitles": [
+        "a baker frosting a cake",
+        "a cook stirring a big pot",
+        "a waiter carrying a stack of plates",
+        "a farmer milking a cow"
+      ]
+    },
+    {
+      "id": "kid-building-a-sandcastle",
+      "prompt": "a kid building a sandcastle",
+      "houseTitles": [
+        "a family setting up a picnic",
+        "a dog digging a hole at the beach",
+        "a crab crawling near a sandcastle",
+        "a surfer riding a wave"
+      ]
+    },
+    {
+      "id": "grandmother-knitting-a-sweater",
+      "prompt": "a grandmother knitting a sweater",
+      "houseTitles": [
+        "a tailor sewing on a button",
+        "an artist painting a portrait",
+        "a child coloring with crayons",
+        "a student doodling in a notebook"
+      ]
+    },
+    {
+      "id": "farmer-driving-a-tractor",
+      "prompt": "a farmer driving a tractor",
+      "houseTitles": [
+        "a firefighter driving a fire truck",
+        "a mail carrier riding a bike",
+        "a bus driver honking a horn",
+        "a gardener pushing a wheelbarrow"
+      ]
+    },
+    {
+      "id": "snowman-melting-in-the-sun",
+      "prompt": "a snowman melting in the sun",
+      "houseTitles": [
+        "a sandcastle crumbling in the tide",
+        "an ice cream cone melting on the sidewalk",
+        "a balloon popping at a party",
+        "an umbrella blowing inside out"
+      ]
+    },
+    {
+      "id": "kite-stuck-in-a-tree",
+      "prompt": "a kite stuck in a tree",
+      "houseTitles": [
+        "a balloon floating away over rooftops",
+        "a frisbee stuck on a roof",
+        "a ball bouncing off a fence",
+        "a soccer ball flying over a wall"
+      ]
+    },
+    {
+      "id": "turtle-sunbathing-on-a-log",
+      "prompt": "a turtle sunbathing on a log",
+      "houseTitles": [
+        "a lizard basking on a rock",
+        "a frog sitting on a lily pad",
+        "a duck floating on a pond",
+        "an otter lounging on a riverbank"
+      ]
+    },
+    {
+      "id": "squirrel-stealing-a-picnic-sandwich",
+      "prompt": "a squirrel stealing a picnic sandwich",
+      "houseTitles": [
+        "a raccoon raiding a trash can",
+        "a seagull swooping at a fry",
+        "a dog stealing a hot dog",
+        "a cat knocking a cup off a table"
+      ]
+    },
+    {
+      "id": "dog-chasing-its-own-tail",
+      "prompt": "a dog chasing its own tail",
+      "houseTitles": [
+        "a puppy chasing a butterfly",
+        "a kitten chasing a laser dot",
+        "a toddler chasing bubbles",
+        "a duckling chasing its mother"
+      ]
+    },
+    {
+      "id": "parrot-repeating-a-joke",
+      "prompt": "a parrot repeating a joke",
+      "houseTitles": [
+        "an owl staring silently at night",
+        "a crow perched on a fence",
+        "a pigeon pecking at crumbs",
+        "a seagull squawking at the shore"
+      ]
+    },
+    {
+      "id": "camel-walking-across-sand-dunes",
+      "prompt": "a camel walking across sand dunes",
+      "houseTitles": [
+        "a horse trotting through a desert",
+        "a lizard scurrying across hot sand",
+        "a goat climbing a rocky hill",
+        "a donkey carrying baskets"
+      ]
+    },
+    {
+      "id": "hedgehog-rolling-into-a-ball",
+      "prompt": "a hedgehog rolling into a ball",
+      "houseTitles": [
+        "an armadillo curling up",
+        "a pillbug rolling into a ball",
+        "a cat curling into a loaf",
+        "a puppy curling up asleep"
+      ]
+    },
+    {
+      "id": "goat-standing-on-a-rock",
+      "prompt": "a goat standing on a rock",
+      "houseTitles": [
+        "a sheep standing on a hillside",
+        "a mountain lion perched on a ledge",
+        "a llama standing on a hill",
+        "an ibex balancing on a cliff edge"
+      ]
+    },
+    {
+      "id": "flamingo-standing-on-one-leg",
+      "prompt": "a flamingo standing on one leg",
+      "houseTitles": [
+        "a stork balancing on a fence post",
+        "a heron wading in shallow water",
+        "a crane standing in a marsh",
+        "a duck resting on one foot"
+      ]
+    },
+    {
+      "id": "owl-perched-on-a-branch-at-night",
+      "prompt": "an owl perched on a branch at night",
+      "houseTitles": [
+        "a bat hanging upside down",
+        "a raccoon peeking from a hollow tree",
+        "a firefly glowing in the dark",
+        "a cricket resting on a leaf"
+      ]
+    },
+    {
+      "id": "duck-leading-her-ducklings-across-a-road",
+      "prompt": "a duck leading her ducklings across a road",
+      "houseTitles": [
+        "a hen leading chicks around a yard",
+        "a mother cat carrying a kitten",
+        "a goose herding goslings to a pond",
+        "a sheepdog herding a flock"
+      ]
+    },
+    {
+      "id": "raccoon-washing-an-apple-in-a-stream",
+      "prompt": "a raccoon washing an apple in a stream",
+      "houseTitles": [
+        "an otter cracking a shell on its belly",
+        "a beaver gnawing on a branch",
+        "a bear catching a fish midair",
+        "a fox digging in the snow"
+      ]
+    },
+    {
+      "id": "puppy-tangled-in-a-garden-hose",
+      "prompt": "a puppy tangled in a garden hose",
+      "houseTitles": [
+        "a kitten tangled in yarn",
+        "a goat tangled in a rope",
+        "a rabbit stuck in a fence gap",
+        "a duckling tangled in pond reeds"
+      ]
+    }
+  ]
+}

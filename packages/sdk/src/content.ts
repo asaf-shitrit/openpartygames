@@ -57,6 +57,10 @@ const CONTENT_MERGERS = {
       superlativeIdentity,
     ),
   }),
+  "drawing-prompts": (contents) => ({
+    kind: "drawing-prompts",
+    items: contents.flatMap((c) => (c.kind === "drawing-prompts" ? c.items : [])),
+  }),
 } satisfies { [K in ContentKind]: Merger<K> };
 
 /**

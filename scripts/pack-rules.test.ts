@@ -116,16 +116,72 @@ const validSuperlativePack = (
   items,
 });
 
+interface DrawingPromptFields {
+  id: string;
+  prompt: string;
+  houseTitles: string[];
+}
+
+interface DrawingPromptPackFields {
+  id: string;
+  name: string;
+  kind: string;
+  rating: string;
+  language: string;
+  license: string;
+  attribution: string;
+  items: DrawingPromptFields[];
+}
+
+const HOUSE_TITLES = [
+  "a dog on a scooter",
+  "a squirrel driving a bus",
+  "a hamster in a shopping trolley",
+  "a duck on a unicycle",
+];
+
+const drawingPrompt = (
+  overrides: Partial<DrawingPromptFields> = {},
+): DrawingPromptFields => ({
+  id: "cat-riding-a-skateboard",
+  prompt: "a cat riding a skateboard",
+  houseTitles: HOUSE_TITLES,
+  ...overrides,
+});
+
+const validDrawingPromptPack = (
+  items: DrawingPromptFields[],
+): DrawingPromptPackFields => ({
+  id: "sample-drawing-prompts",
+  name: "Sample drawing prompts",
+  kind: "drawing-prompts",
+  rating: "family",
+  language: "en",
+  license: "CC0-1.0",
+  attribution: "Written for the test.",
+  items,
+});
+
 const wordOpts = { folder: "imposter", filename: "sample-pack.json" };
 const factOpts = { folder: "real-or-nah", filename: "sample-facts.json" };
 const superlativeOpts = {
   folder: "most-likely-to",
   filename: "sample-superlatives.json",
 };
+const drawingPromptOpts = {
+  folder: "doodle-bluff",
+  filename: "sample-drawing-prompts.json",
+};
 
 /** A superlative pack with an arbitrary `items` array, for malformed-item tests. */
 const superlativePackWithRawItems = (items: unknown[]) => ({
   ...validSuperlativePack([]),
+  items,
+});
+
+/** A drawing-prompt pack with an arbitrary `items` array, for malformed-item tests. */
+const drawingPromptPackWithRawItems = (items: unknown[]) => ({
+  ...validDrawingPromptPack([]),
   items,
 });
 
@@ -422,6 +478,236 @@ describe("validatePack superlatives", () => {
         superlativeOpts,
       ).join(),
     ).toMatch(/must be "superlatives"/);
+  });
+});
+
+describe("validatePack drawing prompts", () => {
+  it("accepts a valid pack", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([
+          drawingPrompt(),
+          drawingPrompt({
+            id: "a-bear-in-a-bathtub",
+            prompt: "a bear in a bathtub",
+            houseTitles: [
+              "a moose in a hammock",
+              "a goat on a trampoline",
+              "a sloth in a kiddie pool",
+              "a raccoon in a bubble bath",
+            ],
+          }),
+        ]),
+        drawingPromptOpts,
+      ),
+    ).toEqual([]);
+  });
+
+  it("requires items to be objects", () => {
+    expect(
+      validatePack(
+        drawingPromptPackWithRawItems([null]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/item must be an object/);
+  });
+
+  it("requires a unique, non-empty id", () => {
+    const errors = validatePack(
+      validDrawingPromptPack([
+        drawingPrompt({ id: "" }),
+        drawingPrompt({ id: "same" }),
+        drawingPrompt({ id: "same", prompt: "a bear in a bathtub" }),
+      ]),
+      drawingPromptOpts,
+    ).join("\n");
+    expect(errors).toMatch(/\.id: must be a non-empty string/);
+    expect(errors).toMatch(/duplicate id "same"/);
+  });
+
+  it("requires a non-empty prompt string", () => {
+    expect(
+      validatePack(
+        drawingPromptPackWithRawItems([
+          { id: "a", prompt: 5, houseTitles: HOUSE_TITLES },
+        ]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/\.prompt: must be a string/);
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: "   " })]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/\.prompt: must be a non-empty string/);
+  });
+
+  it("rejects leading or trailing whitespace", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: " a cat on a skateboard" })]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/leading or trailing whitespace/);
+  });
+
+  it("accepts exactly 60 code points and rejects 61, counting emoji as one", () => {
+    const at60 = "🍕".repeat(60);
+    const at61 = "🍕".repeat(61);
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: at60 })]),
+        drawingPromptOpts,
+      ),
+    ).toEqual([]);
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: at61 })]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/is 61 characters \(max 60\)/);
+  });
+
+  it("rejects an uppercase first character", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: "A cat on a skateboard" })]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/must not start with an uppercase letter/);
+  });
+
+  it("rejects trailing question marks, periods and exclamation points", () => {
+    for (const prompt of [
+      "a cat on a skateboard?",
+      "a cat on a skateboard.",
+      "a cat on a skateboard!",
+    ]) {
+      expect(
+        validatePack(
+          validDrawingPromptPack([drawingPrompt({ prompt })]),
+          drawingPromptOpts,
+        ).join(),
+      ).toMatch(/must not end with "\?", "\." or "!"/);
+    }
+  });
+
+  it("rejects a blank placeholder", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([drawingPrompt({ prompt: "a cat on a ____" })]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/must not contain "____"/);
+  });
+
+  it("rejects duplicate prompts, comparing case and whitespace loosely", () => {
+    const errors = validatePack(
+      validDrawingPromptPack([
+        drawingPrompt({ id: "a" }),
+        drawingPrompt({ id: "b", prompt: "a cat   riding  a skateboard" }),
+        drawingPrompt({ id: "c", prompt: "a Cat Riding A Skateboard" }),
+      ]),
+      drawingPromptOpts,
+    );
+    expect(errors).toEqual([
+      'items[1].prompt: duplicate prompt "a cat   riding  a skateboard"',
+      'items[2].prompt: duplicate prompt "a Cat Riding A Skateboard"',
+    ]);
+  });
+
+  it("rejects giveaway words that make a prompt unreadable-free", () => {
+    for (const prompt of [
+      "draw the word cat",
+      "spell out your favorite animal",
+      "a sign with something written on it",
+    ]) {
+      expect(
+        validatePack(
+          validDrawingPromptPack([drawingPrompt({ prompt })]),
+          drawingPromptOpts,
+        ).join(),
+      ).toMatch(/must be drawable without writing words/);
+    }
+  });
+
+  it("requires at least 4 house titles", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([
+          drawingPrompt({
+            houseTitles: ["a dog on a scooter", "a squirrel driving a bus", "a hamster in a trolley"],
+          }),
+        ]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/houseTitles: must have at least 4 entries \(found 3\)/);
+  });
+
+  it("requires houseTitles to be an array", () => {
+    expect(
+      validatePack(
+        drawingPromptPackWithRawItems([{ id: "a", prompt: "a cat on a skateboard" }]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/houseTitles: must be an array/);
+  });
+
+  it("rejects a house title that normalizes to the prompt", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([
+          drawingPrompt({
+            prompt: "a cat riding a skateboard",
+            houseTitles: [
+              "a Cat Riding a Skateboard",
+              "a dog on a scooter",
+              "a squirrel driving a bus",
+              "a hamster in a trolley",
+            ],
+          }),
+        ]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/normalizes to the prompt or another house title/);
+  });
+
+  it("rejects two house titles that normalize to each other", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([
+          drawingPrompt({
+            houseTitles: [
+              "a dog on a scooter",
+              "a  Dog   on a Scooter",
+              "a squirrel driving a bus",
+              "a hamster in a trolley",
+            ],
+          }),
+        ]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/normalizes to the prompt or another house title/);
+  });
+
+  it("rejects a too-long house title", () => {
+    expect(
+      validatePack(
+        validDrawingPromptPack([
+          drawingPrompt({ houseTitles: ["🍕".repeat(61), ...HOUSE_TITLES.slice(1)] }),
+        ]),
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/is 61 characters \(max 60\)/);
+  });
+
+  it("requires the kind to match the folder", () => {
+    expect(
+      validatePack(
+        { ...validDrawingPromptPack([drawingPrompt()]), kind: "superlatives" },
+        drawingPromptOpts,
+      ).join(),
+    ).toMatch(/must be "drawing-prompts"/);
   });
 });
 
