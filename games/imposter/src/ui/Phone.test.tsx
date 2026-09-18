@@ -59,6 +59,7 @@ function renderPhone(label: string, send: (action: ImposterAction) => void) {
       timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
       send={send}
+      stage={null}
     />,
   );
 }
@@ -194,6 +195,7 @@ describe("clue turn", () => {
         timerStartedAt={room.serverNow}
         clock={freshClock}
         send={mockSend()}
+        stage={null}
       />,
     );
     expect(freshVibrate).toHaveBeenCalledWith([90, 60, 90]);
@@ -208,6 +210,7 @@ describe("clue turn", () => {
         timerStartedAt={room.serverNow - 5000}
         clock={freshClock}
         send={mockSend()}
+        stage={null}
       />,
     );
     expect(staleVibrate).not.toHaveBeenCalled();
@@ -261,6 +264,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+        stage={null}
       />
     );
     const { rerender } = render(phoneFor(selecting.view));
@@ -295,6 +299,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     await userEvent.click(submitButton("Priya's avatar Priya"));
@@ -316,6 +321,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     await userEvent.click(submitButton("Maya's avatar Maya"));
@@ -336,6 +342,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={mockSend()}
+        stage={null}
       />,
     );
     expect(lockVibrate).not.toHaveBeenCalled();
@@ -348,6 +355,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={mockSend()}
+        stage={null}
       />,
     );
     expect(lockVibrate).toHaveBeenCalledWith([25, 40, 25]);
@@ -370,6 +378,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={mockSend()}
+        stage={null}
       />,
     );
     const wrapper = container.querySelector(".opg-phase-enter");
@@ -384,6 +393,7 @@ describe("voting", () => {
         timerStartedAt={second.room.game?.timerStartedAt ?? null}
         clock={clock}
         send={mockSend()}
+        stage={null}
       />,
     );
     const next = container.querySelector(".opg-phase-enter");

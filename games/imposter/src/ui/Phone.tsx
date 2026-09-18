@@ -21,12 +21,16 @@ import {
 } from "@opg/ui";
 import type {
   ImposterAction,
+  ImposterHostView,
   ImposterPhase,
   ImposterPlayerView,
 } from "../state";
 import { GuessView, GuessWaiting } from "./PhoneLastChance";
 import { PhoneReveal } from "./PhoneReveal";
 import { PhoneResult } from "./PhoneResult";
+import { StageClues } from "./stage/Clues";
+import { StageVote } from "./stage/Vote";
+import { StageWordCheck } from "./stage/WordCheck";
 
 function findPlayer(
   players: PlayerSummary[],
@@ -80,6 +84,8 @@ interface SectionProps {
   timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: ImposterAction) => void;
+  /** The host view, in a no-TV room only; null in a room with a shared screen. */
+  stage: ImposterHostView | null;
 }
 
 export type { SectionProps };
@@ -325,8 +331,24 @@ function WordCardBack() {
   );
 }
 
+/** The stage region above the card: deliberately empty during word-check (§4), the clue-order
+ * strip during clues. Never both a secret and a look-at-me stage at once. */
+function WordCardStage({
+  phase,
+  stage,
+  players,
+}: {
+  phase: ImposterPhase;
+  stage: ImposterHostView | null;
+  players: PlayerSummary[];
+}) {
+  if (stage === null) return null;
+  if (phase === "word-check") return <StageWordCheck />;
+  return <StageClues view={stage} players={players} />;
+}
+
 function WordCard(props: SectionProps) {
-  const { view, players, me, deadline, clock } = props;
+  const { view, players, me, deadline, clock, stage } = props;
   const [revealed, setRevealed] = useState(false);
   const [everRevealed, setEverRevealed] = useState(false);
   const buzz = useBuzz();
@@ -351,6 +373,7 @@ function WordCard(props: SectionProps) {
         progress={progressFor(view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
+      <WordCardStage phase={view.phase} stage={stage} players={players} />
       <ClueBanner view={view} players={players} me={me} />
       <div
         ref={wrapRef}
@@ -430,7 +453,7 @@ function useOnceOnMount(effect: () => void): void {
 }
 
 function YourTurn(props: SectionProps) {
-  const { view, me, deadline, timerStartedAt, clock, send, players } = props;
+  const { view, me, deadline, timerStartedAt, clock, send, players, stage } = props;
   const [hidden, setHidden] = useState(false);
   const toggle = () => setHidden((value) => !value);
   const next = nameOf(players, view.nextSpeakerId);
@@ -449,6 +472,7 @@ function YourTurn(props: SectionProps) {
   return (
     <>
       <Strip progress={progressFor(view)} right={<MeTag me={me} />} />
+      {stage === null ? null : <StageClues view={stage} players={players} />}
       <div ref={noteRef}>
         <StickyNote
           tilt={-1.5}
@@ -598,7 +622,7 @@ function useVoteLockBuzz(
 function VoteLocked(
   props: SectionProps & { pulseRef?: RefObject<HTMLDivElement | null> },
 ) {
-  const { view, players, deadline, clock, pulseRef } = props;
+  const { view, players, deadline, clock, pulseRef, stage } = props;
   const votedFor = findPlayer(players, view.myVote);
   return (
     <>
@@ -606,6 +630,7 @@ function VoteLocked(
         progress={progressFor(view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
+      {stage === null ? null : <StageVote view={stage} players={players} />}
       <div ref={pulseRef}>
         <Card
           variant="M"
@@ -651,7 +676,7 @@ function VoteView(props: SectionProps) {
  * or a new word always starts from a clean pick/sent state.
  */
 function VoteForm(props: SectionProps) {
-  const { view, players, deadline, clock, send } = props;
+  const { view, players, deadline, clock, send, stage } = props;
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
   return (
@@ -660,6 +685,7 @@ function VoteForm(props: SectionProps) {
         progress={progressFor(view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
+      {stage === null ? null : <StageVote view={stage} players={players} />}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <Marker size={32} style={{ lineHeight: 1.15 }}>
           Who&apos;s the imposter?
@@ -748,6 +774,8 @@ export interface PhoneProps {
   timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: ImposterAction) => void;
+  /** The host view, in a no-TV room only; null in a room with a shared screen. */
+  stage: ImposterHostView | null;
 }
 
 export function Phone({
@@ -757,6 +785,7 @@ export function Phone({
   timerStartedAt,
   clock,
   send,
+  stage,
 }: PhoneProps) {
   return (
     <PhoneScreen>
@@ -769,6 +798,7 @@ export function Phone({
           timerStartedAt,
           clock,
           send,
+          stage,
         })}
       </PhaseEnter>
     </PhoneScreen>

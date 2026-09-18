@@ -180,13 +180,22 @@ export function personalReveal(
   };
 }
 
-/** Phone beats: intro(0), suspense(5500), personal(200ms after the TV's beat, with haptic), next(10500). */
-export function phoneRevealBeats(caught: boolean, haptic: HapticName): Beat[] {
+/**
+ * Phone beats: intro(0), suspense(5500), personal (haptic), next(10500). The personal beat
+ * follows the TV's big beat by `followMs` (default PHONE_FOLLOW_MS) so a phone never spoils
+ * the TV's beat. In a no-TV room there is no TV to follow, so the caller passes 0: the stage
+ * and the personal line land together.
+ */
+export function phoneRevealBeats(
+  caught: boolean,
+  haptic: HapticName,
+  followMs: number = PHONE_FOLLOW_MS,
+): Beat[] {
   const tvMs = caught ? REVEAL_TIMING.verdictMs : REVEAL_TIMING.unmaskMs;
   return [
     { id: "intro", atMs: 0 },
     { id: "suspense", atMs: REVEAL_TIMING.suspenseMs },
-    { id: "personal", atMs: tvMs + PHONE_FOLLOW_MS, haptic },
+    { id: "personal", atMs: tvMs + followMs, haptic },
     { id: "next", atMs: REVEAL_TIMING.nextMs },
   ];
 }

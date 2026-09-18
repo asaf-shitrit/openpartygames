@@ -80,6 +80,7 @@ function setup(view: ImposterPlayerView, elapsedMs: number) {
       clock={clock}
       send={vi.fn<(action: ImposterAction) => void>()}
       progress="Word 3 of 6"
+      stage={null}
     />,
   );
   return { advanceTo, rendered };
