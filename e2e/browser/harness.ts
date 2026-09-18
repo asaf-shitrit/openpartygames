@@ -26,6 +26,26 @@ export async function startRoom(tv: Page): Promise<string> {
   return code;
 }
 
+/** A phone lands on "/", starts a room with no shared screen and becomes its VIP. */
+export async function startRoomFromPhone(
+  browser: Browser,
+  name: string,
+): Promise<{ code: string; starter: Phone }> {
+  const context = await browser.newContext({ ...devices["Pixel 5"] });
+  const page = await context.newPage();
+  await page.goto("/");
+  await expect(page.getByText("Party games for")).toBeVisible();
+  await page.getByRole("button", { name: /Start a room/ }).click();
+  await page.waitForURL(/\/[A-Z]{4}$/);
+  const code = page.url().split("/").pop() ?? "";
+  expect(code).toMatch(/^[A-Z]{4}$/);
+  await page.getByLabel("Your name").fill(name);
+  await page.getByRole("button", { name: "Join" }).click();
+  await page.getByRole("button", { name: "That's me" }).click();
+  await expect(page.getByText("You're the VIP")).toBeVisible();
+  return { code, starter: { name, context, page } };
+}
+
 /** Waits for the TV lobby, which is what phones scan the room code off. */
 export async function expectTvLobby(tv: Page, code: string): Promise<void> {
   await expect(tv.getByText("Grab your phone!")).toBeVisible();

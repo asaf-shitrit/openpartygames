@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import type {
+  CreateRoomResponse,
   HostRoomView,
   PlayerRoomView,
   RoomView,
@@ -21,6 +22,13 @@ import {
   type RonPlayerView,
 } from "../../games/real-or-nah/src/types";
 import {
+  mltHostViewSchema,
+  mltPlayerViewSchema,
+  type MltHostView,
+  type MltPlayerView,
+} from "../../games/most-likely-to/src/state";
+import {
+  BASE_URL,
   createRoom,
   health,
   hostClient,
@@ -354,6 +362,170 @@ async function closeAll(
   await lobby.host.close();
 }
 
+// ---------- No-TV lobby: player sockets only, never a host-hello ----------
+
+interface NoTvLobby {
+  code: string;
+  players: SocketClient[];
+}
+
+/**
+ * Wraps a predicate that reads a view with `playerViewOf`/`mltStageOf` (which throw before
+ * any frame has arrived) so it can run inside `waitFor`'s synchronous first check, before
+ * this socket's first `state` frame lands.
+ */
+function safe(
+  predicate: (client: SocketClient) => boolean,
+): (client: SocketClient) => boolean {
+  return (client) => {
+    try {
+      return predicate(client);
+    } catch {
+      return false;
+    }
+  };
+}
+
+async function createNoTvRoom(): Promise<CreateRoomResponse> {
+  const response = await fetch(`${BASE_URL}/api/rooms`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sharedScreen: false }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `POST /api/rooms -> ${response.status}: ${await response.text()}`,
+    );
+  }
+  const body: CreateRoomResponse = await response.json();
+  return body;
+}
+
+async function makeNoTvLobby(playerCount = 3): Promise<NoTvLobby> {
+  const created = await createNoTvRoom();
+  const players = await Promise.all(
+    PLAYER_NAMES.slice(0, playerCount).map((name) =>
+      playerClient(created.code, name),
+    ),
+  );
+  await Promise.all(
+    players.map((player) =>
+      player.waitFor(
+        safe((client) => playerViewOf(client).players.length === playerCount),
+        WAIT_MS,
+        "all players joined (no-tv)",
+      ),
+    ),
+  );
+  return { code: created.code, players };
+}
+
+/** The VIP among a no-TV lobby's players, read off any player's own view. */
+function noTvVipOf(lobby: NoTvLobby): SocketClient {
+  const withView = lobby.players.find((client) => client.latest !== null);
+  if (!withView) throw new Error("no player view yet");
+  const vipId = playerViewOf(withView).vipId;
+  const vip = lobby.players.find((client) => client.playerId === vipId);
+  if (!vip) throw new Error("VIP client not found");
+  return vip;
+}
+
+/** The stage a no-TV room's active game carries: literally the host view, on every player. */
+function mltStageOf(client: SocketClient): MltHostView {
+  const view = playerViewOf(client);
+  if (view.game === null) throw new Error("player has no active game");
+  return mltHostViewSchema.parse(view.game.stage);
+}
+
+function mltPlayerGameViewOf(client: SocketClient): MltPlayerView {
+  const view = playerViewOf(client);
+  if (view.game === null) throw new Error("player has no active game");
+  return mltPlayerViewSchema.parse(view.game.view);
+}
+
+async function startMostLikelyToNoTv(lobby: NoTvLobby): Promise<void> {
+  const vip = noTvVipOf(lobby);
+  vip.send({ t: "pick-game", gameId: "most-likely-to" });
+  await Promise.all(
+    lobby.players.map((player) =>
+      player.waitFor(
+        safe(
+          (client) => playerViewOf(client).selectedGameId === "most-likely-to",
+        ),
+        WAIT_MS,
+        "pick most-likely-to (no-tv)",
+      ),
+    ),
+  );
+  vip.send({ t: "start-game" });
+  await Promise.all(
+    lobby.players.map((player) =>
+      player.waitFor(
+        safe((client) => playerViewOf(client).game !== null),
+        WAIT_MS,
+        "start most-likely-to (no-tv)",
+      ),
+    ),
+  );
+}
+
+function mltSignature(stage: MltHostView): string {
+  return JSON.stringify({
+    phase: stage.phase,
+    round: stage.roundNumber,
+    voted: stage.votedIds,
+  });
+}
+
+/** One no-TV Most Likely To action for the current phase, driven off the shared stage. */
+function actMostLikelyToNoTv(stage: MltHostView, lobby: NoTvLobby): void {
+  const vip = noTvVipOf(lobby);
+  if (stage.phase === "reveal") {
+    vip.send({ t: "skip-phase" });
+    return;
+  }
+  const voterId = stage.playerIds.find((id) => !stage.votedIds.includes(id));
+  const voter = lobby.players.find((player) => player.playerId === voterId);
+  if (!voter) {
+    vip.send({ t: "skip-phase" });
+    return;
+  }
+  const target = mltPlayerGameViewOf(voter).voteCandidates[0] ?? voterId;
+  voter.send({ t: "game-action", action: { type: "vote", target } });
+}
+
+/** Drives a no-TV Most Likely To game to its results screen, one state change per step. */
+async function playMostLikelyToNoTv(
+  lobby: NoTvLobby,
+  step = 0,
+): Promise<void> {
+  if (step > MAX_STEPS) {
+    throw new Error("most-likely-to (no-tv) game exceeded its step budget");
+  }
+  const reference = lobby.players[0];
+  if (!reference) throw new Error("expected at least one player");
+  const view = playerViewOf(reference);
+  if (view.lobbyScreen === "results" && view.game === null) return;
+  if (view.game === null) {
+    await sleep(20);
+    await playMostLikelyToNoTv(lobby, step + 1);
+    return;
+  }
+  const stage = mltStageOf(reference);
+  const before = mltSignature(stage);
+  actMostLikelyToNoTv(stage, lobby);
+  await reference.waitFor((client) => {
+    const nextView = playerViewOf(client);
+    if (nextView.game === null) return nextView.lobbyScreen === "results";
+    return mltSignature(mltHostViewSchema.parse(nextView.game.stage)) !== before;
+  }, WAIT_MS, `most-likely-to (no-tv) phase ${stage.phase}`);
+  await playMostLikelyToNoTv(lobby, step + 1);
+}
+
+async function closeAllPlayers(lobby: NoTvLobby): Promise<void> {
+  await Promise.all(lobby.players.map((client) => client.close()));
+}
+
 describe("api e2e", () => {
   it("serves a health check", async () => {
     const result = await health();
@@ -530,5 +702,104 @@ describe("api e2e", () => {
       "game ended",
     );
     await closeAll(lobby, [rejoined]);
+  });
+
+  it("creates a shared-screen room when POST /api/rooms has no body", async () => {
+    const { code, hostToken } = await newRoom();
+    const host = await hostClient(code, hostToken);
+    await host.waitFor(
+      (client) => client.welcomes.some((welcome) => welcome.role === "host"),
+      WAIT_MS,
+      "host welcome (default room)",
+    );
+    await host.waitFor(
+      (client) => client.latest !== null,
+      WAIT_MS,
+      "host view (default room)",
+    );
+    expect(hostViewOf(host).sharedScreen).toBe(true);
+    await host.close();
+  });
+
+  it("plays a full Most Likely To game with no shared screen and no host socket", async () => {
+    const lobby = await makeNoTvLobby(3);
+    const [alice] = lobby.players;
+    if (!alice) throw new Error("expected at least one player");
+
+    expect(playerViewOf(alice).sharedScreen).toBe(false);
+
+    await startMostLikelyToNoTv(lobby);
+
+    // Every player carries the shared stage; it is literally the host view, so it
+    // must be identical across every connection at the same moment.
+    await Promise.all(
+      lobby.players.map((player) =>
+        player.waitFor(
+          safe((client) => mltStageOf(client).phase === "vote"),
+          WAIT_MS,
+          "vote stage (no-tv)",
+        ),
+      ),
+    );
+    const stages = lobby.players.map((player) => mltStageOf(player));
+    const [firstStage, ...restStages] = stages;
+    expect(firstStage).toBeDefined();
+    for (const stage of restStages) {
+      expect(stage).toEqual(firstStage);
+    }
+    for (const player of lobby.players) {
+      expect(playerViewOf(player).sharedScreen).toBe(false);
+    }
+
+    await playMostLikelyToNoTv(lobby);
+
+    const finalView = playerViewOf(alice);
+    expect(finalView.lobbyScreen).toBe("results");
+    expect(finalView.lastResult?.gameId).toBe("most-likely-to");
+    expect((finalView.lastResult?.winnerIds ?? []).length).toBeGreaterThan(0);
+
+    // No host socket ever connected to this room: `hostClient` was never called above.
+    await closeAllPlayers(lobby);
+  });
+
+  it("keeps a player's stage null when the room has a shared screen", async () => {
+    const lobby = await makeLobby(3);
+    await startGame(lobby, "most-likely-to");
+    const other = lobby.players[0];
+    if (!other) throw new Error("expected a player");
+    await other.waitFor(
+      safe((client) => playerViewOf(client).game !== null),
+      WAIT_MS,
+      "most-likely-to started (shared screen)",
+    );
+    const view = playerViewOf(other);
+    expect(view.sharedScreen).toBe(true);
+    expect(view.game?.stage ?? null).toBeNull();
+    await closeAll(lobby);
+  });
+
+  it("refuses to start a TV-only game with no shared screen", async () => {
+    const lobby = await makeNoTvLobby(3);
+    const vip = noTvVipOf(lobby);
+    vip.send({ t: "pick-game", gameId: "real-or-nah" });
+    await Promise.all(
+      lobby.players.map((player) =>
+        player.waitFor(
+          safe((client) => playerViewOf(client).selectedGameId === "real-or-nah"),
+          WAIT_MS,
+          "pick real-or-nah (no-tv)",
+        ),
+      ),
+    );
+    vip.send({ t: "start-game" });
+    await vip.waitFor(
+      (client) =>
+        client.errors.some((error) => error.code === "invalid-action"),
+      WAIT_MS,
+      "invalid-action (no-tv start real-or-nah)",
+    );
+    const refusal = vip.errors.find((error) => error.code === "invalid-action");
+    expect(refusal?.message).toBe("This game plays on a shared screen.");
+    await closeAllPlayers(lobby);
   });
 });
