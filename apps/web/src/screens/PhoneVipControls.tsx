@@ -6,6 +6,7 @@ import type {
   PlayerRoomView,
   Rating,
 } from "@opg/protocol";
+import { useState } from "react";
 import {
   Avatar,
   Button,
@@ -18,6 +19,7 @@ import {
   PRESSABLE_CLASS,
   Switch,
 } from "@opg/ui";
+import { QrCode } from "./shared";
 import { gameIconFor } from "../games";
 
 export interface PhoneVipControlsProps {
@@ -144,6 +146,8 @@ function GameButton({
       aria-pressed={selected}
       style={{
         padding: "10px 12px 12px",
+        // Fill the cell the equal-height grid hands out.
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: 4,
@@ -219,6 +223,9 @@ function GamePicker({
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          // Equal rows, so a tile carrying a blocked reason does not make its
+          // neighbour look like a different kind of thing.
+          gridAutoRows: "1fr",
           gap: 12,
         }}
       >
@@ -498,9 +505,20 @@ function StartButton({
     <div
       style={{
         marginTop: "auto",
+        // The picker, the packs and the player list together run well past a phone
+        // screen, so the primary action rides the bottom of the viewport instead of
+        // sitting at the end of the scroll where it cannot be reached.
+        position: "sticky",
+        bottom: 0,
         display: "flex",
         flexDirection: "column",
         gap: 6,
+        // Full-bleed paper behind it, since the list scrolls underneath.
+        marginInline: -18,
+        paddingInline: 18,
+        paddingTop: 12,
+        paddingBottom: "calc(6px + env(safe-area-inset-bottom, 0px))",
+        background: "var(--opg-paper)",
       }}
     >
       {error ? (
@@ -556,7 +574,7 @@ function RoomCodeHero({ code }: { code: string }) {
     >
       <div
         style={{
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: 700,
           letterSpacing: "0.1em",
           textTransform: "uppercase",
@@ -590,20 +608,73 @@ function RoomCodeHero({ code }: { code: string }) {
           </span>
         ))}
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          fontSize: 17,
-          fontWeight: 700,
-        }}
-      >
-        <Icon name="sound" size={22} />
-        <div>Say this out loud</div>
-      </div>
+      <JoinShare code={code} />
     </Card>
   );
+}
+
+/** A QR to scan and a link to send, for anyone not close enough to hear the code. */
+function JoinShare({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const joinUrl = `${window.location.origin}/${code}`;
+
+  function share() {
+    // Feature-detected rather than assumed: a share sheet on a phone, the clipboard
+    // on anything else. Both can be refused, and that is fine — the code is on screen.
+    // The check is hoisted because narrowing on `navigator` itself would leave the
+    // other branch unreachable, since the DOM lib declares `share` as always present.
+    const canShare = "share" in navigator;
+    if (canShare) {
+      void navigator.share({ title: "Join my game", url: joinUrl }).catch(noop);
+      return;
+    }
+    void navigator.clipboard
+      .writeText(joinUrl)
+      .then(() => setCopied(true))
+      .catch(noop);
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 6,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <button
+        type="button"
+        className={PRESSABLE_CLASS}
+        onClick={share}
+        aria-label="Share the link to join this room"
+        style={{
+          padding: 8,
+          background: "var(--opg-paper)",
+          border: "none",
+          borderRadius: 12,
+          cursor: "pointer",
+          lineHeight: 0,
+        }}
+      >
+        <QrCode value={joinUrl} size={132} />
+      </button>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "var(--opg-ink-secondary)",
+        }}
+      >
+        {copied ? "Link copied" : "Scan it, or tap to share"}
+      </div>
+    </div>
+  );
+}
+
+function noop() {
+  // A cancelled share sheet and a blocked clipboard are both fine: the code is on screen.
 }
 
 function gameLimits(game: GameSummary | null) {
