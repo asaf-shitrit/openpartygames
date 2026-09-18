@@ -21,6 +21,7 @@ const BASE: Omit<ImposterState, "phase"> = {
   playerIds: PLAYER_IDS,
   clueOrder: PLAYER_IDS,
   clueIndex: 0,
+    turnStartedAt: 0,
   doneSpeakerIds: [],
   votes: {},
   tally: {},

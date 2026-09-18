@@ -169,6 +169,8 @@ describe("clue turn", () => {
     renderPhone("Phone: Priya watching Dov's clue", mockSend());
     expect(screen.getByText("Dov is giving a clue")).toBeTruthy();
     expect(screen.getByText("You're up next!")).toBeTruthy();
+    expect(screen.getByText("2 of 6")).toBeTruthy();
+    expect(screen.queryByRole("timer")).toBeNull();
     cleanup();
     renderPhone("Phone: Sam watching Dov's clue", mockSend());
     expect(screen.getByText("You're up after Priya")).toBeTruthy();
@@ -178,22 +180,28 @@ describe("clue turn", () => {
     const send = mockSend();
     renderPhone("Phone: Dov your turn", send);
     expect(screen.getByText("Your turn!")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.getByText("of 6")).toBeTruthy();
+    expect(screen.queryByRole("timer")).toBeNull();
     await userEvent.click(submitButton("I'm done"));
     expect(send).toHaveBeenCalledWith({ type: "done" });
     expect(send).toHaveBeenCalledTimes(1);
   });
 
+  // Keyed on the turn's own timestamp rather than the phase deadline, because the clue
+  // phase no longer has one: every turn after the first would otherwise arrive silently.
   it("buzzes 'turn' when a fresh turn starts, but not on a stale reconnect", () => {
     const { view, room } = playerSample("Phone: Dov your turn");
+    const clock: ServerClock = { now: () => room.serverNow };
+
     const freshVibrate = stubVibrate();
-    const freshClock: ServerClock = { now: () => room.serverNow };
     render(
       <Phone
-        view={view}
+        view={{ ...view, turnStartedAt: room.serverNow }}
         room={room}
-        deadline={room.serverNow + 30000}
-        timerStartedAt={room.serverNow}
-        clock={freshClock}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
         send={mockSend()}
         stage={null}
       />,
@@ -204,16 +212,35 @@ describe("clue turn", () => {
     const staleVibrate = stubVibrate();
     render(
       <Phone
-        view={view}
+        view={{ ...view, turnStartedAt: room.serverNow - 5000 }}
         room={room}
-        deadline={room.serverNow + 30000}
-        timerStartedAt={room.serverNow - 5000}
-        clock={freshClock}
+        deadline={null}
+        timerStartedAt={null}
+        clock={clock}
         send={mockSend()}
         stage={null}
       />,
     );
     expect(staleVibrate).not.toHaveBeenCalled();
+  });
+
+  // The regression this replaced: with no deadline, timerStartedAt stops changing after
+  // the first speaker, so a later turn must still buzz on its own timestamp alone.
+  it("buzzes a later turn even though the phase deadline never moved", () => {
+    const { view, room } = playerSample("Phone: Dov your turn");
+    const vibrate = stubVibrate();
+    render(
+      <Phone
+        view={{ ...view, turnStartedAt: room.serverNow }}
+        room={room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={{ now: () => room.serverNow }}
+        send={mockSend()}
+        stage={null}
+      />,
+    );
+    expect(vibrate).toHaveBeenCalledWith([90, 60, 90]);
   });
 });
 

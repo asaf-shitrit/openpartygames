@@ -5,7 +5,6 @@ import type { PlayerId } from "@opg/protocol";
 // Timing constants (the UI imports these).
 export const WORDS_PER_GAME = 6;
 export const WORD_CHECK_MS = 8000;
-export const CLUE_TURN_MS = 30000;
 export const VOTE_MS = 45000;
 export const REVEAL_MS = 12000;
 export const LAST_CHANCE_MS = 15000;
@@ -62,6 +61,11 @@ export interface ImposterState {
  clueOrder: PlayerId[];
  /** Index into clueOrder of the speaker whose turn it is. */
  clueIndex: number;
+  /**
+   * Epoch ms the current clue turn began. The clue phase has no deadline, so this is what
+   * tells a phone a turn is fresh rather than one it reconnected into mid-way.
+   */
+  turnStartedAt: number;
  doneSpeakerIds: PlayerId[];
  /** voterId -> targetId for the current word. */
  votes: Record<PlayerId, PlayerId>;
@@ -154,6 +158,8 @@ export const imposterPlayerViewSchema = z.object({
  clueOrder: z.array(z.string()),
  currentSpeakerId: z.string().nullable(),
  isMyTurn: z.boolean(),
+ /** Epoch ms this clue turn began, so a phone can tell a fresh turn from a reconnect. */
+ turnStartedAt: z.number(),
  nextSpeakerId: z.string().nullable(),
  myVote: z.string().nullable(),
  voteCandidates: z.array(z.string()),

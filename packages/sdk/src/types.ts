@@ -141,6 +141,12 @@ export interface GameDefinition<State, Action, HostView, PlayerView, C extends G
   onDeadline(state: State, ctx: GameContext<C>): State;
   /** A player was kicked mid-game. ctx.players no longer contains them. */
   onPlayerRemoved(state: State, playerId: PlayerId, ctx: GameContext<C>): State;
+  /**
+   * A player's connection flipped (ctx.connectedIds changed) while this game is running.
+   * Return the same state object when nothing should happen. Optional: most games have no
+   * phase that depends on who is connected right now, so it defaults to a no-op.
+   */
+  onPlayersChanged?(state: State, ctx: GameContext<C>): State;
   hostView(state: State, ctx: ViewContext): HostView;
   /** Must never include another player's secrets. */
   playerView(state: State, playerId: PlayerId, ctx: ViewContext): PlayerView;

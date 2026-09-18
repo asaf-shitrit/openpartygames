@@ -171,6 +171,7 @@ export function buildPlayerView(
     clueOrder: [...state.clueOrder],
     currentSpeakerId: speaker,
     isMyTurn: speaker === playerId,
+    turnStartedAt: state.turnStartedAt,
     nextSpeakerId: nextSpeakerId(state, speaker),
     myVote: state.votes[playerId] ?? null,
     voteCandidates: state.playerIds.filter((id) => id !== playerId),

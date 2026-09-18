@@ -570,9 +570,24 @@ class RoomImpl implements RoomCore {
       p.disconnectedAt = connected ? null : now;
       out.changed = true;
       this.ensureVip(now, out);
+      this.notifyPlayersChanged(now, out);
     }
     this.syncEmpty(now, out);
     return result(out);
+  }
+
+  /** Gives the running game a chance to react to a connection flip, e.g. skip an absent speaker. */
+  private notifyPlayersChanged(now: number, out: Out): void {
+    const game = this.game;
+    if (this.phase !== "in-game" || !game) return;
+    const def = this.gameDef(game.gameId);
+    if (!def?.onPlayersChanged) return;
+    const next = def.onPlayersChanged(game.state, this.makeCtx(game, now));
+    if (next === game.state) return;
+    game.state = next;
+    this.setDeadline(now);
+    out.changed = true;
+    this.checkGameOver(now, out);
   }
 
   setHostConnected(connected: boolean, now: number): HandleResult {
