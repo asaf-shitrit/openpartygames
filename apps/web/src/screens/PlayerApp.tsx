@@ -186,6 +186,9 @@ function VipControls({ view, socket, error }: {
         socket.send({ t: "set-pack", packId, enabled })
       }
       onSetLocked={(locked) => socket.send({ t: "set-locked", locked })}
+      onSetSharedScreen={(sharedScreen) =>
+        socket.send({ t: "set-shared-screen", sharedScreen })
+      }
       onKick={(playerIdToKick) =>
         socket.send({ t: "kick", playerId: playerIdToKick })
       }

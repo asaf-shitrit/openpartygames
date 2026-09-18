@@ -18,6 +18,7 @@ interface Handlers {
   onPickGame: ReturnType<typeof vi.fn<(id: string) => void>>;
   onSetPack: ReturnType<typeof vi.fn<(id: string, enabled: boolean) => void>>;
   onSetLocked: ReturnType<typeof vi.fn<(locked: boolean) => void>>;
+  onSetSharedScreen: ReturnType<typeof vi.fn<(value: boolean) => void>>;
   onKick: ReturnType<typeof vi.fn<(id: string) => void>>;
   onStartGame: ReturnType<typeof vi.fn<() => void>>;
 }
@@ -30,6 +31,7 @@ function setup(
     onPickGame: vi.fn<(id: string) => void>(),
     onSetPack: vi.fn<(id: string, enabled: boolean) => void>(),
     onSetLocked: vi.fn<(locked: boolean) => void>(),
+    onSetSharedScreen: vi.fn<(value: boolean) => void>(),
     onKick: vi.fn<(id: string) => void>(),
     onStartGame: vi.fn<() => void>(),
   };
@@ -192,5 +194,78 @@ describe("PhoneVipControls", () => {
     expect(formatPlayerCount(2)).toBe("2 players");
     setup({ players: [makePlayer({ id: "p1", name: "Maya", isVip: true })] });
     expect(screen.getByText("Room BKTZ · 1 player")).toBeTruthy();
+  });
+
+  it("shows a game that plays on a shared screen as selectable, dimmed and labelled", async () => {
+    const { handlers, user } = setup({
+      games: [
+        makeGame({ noTv: true }),
+        makeGame({ id: "real-or-nah", name: "Real or Nah", noTv: false }),
+      ],
+      sharedScreen: false,
+    });
+    const tile = screen.getByRole("button", { name: /real or nah/i });
+    expect(tile.getAttribute("style")).toContain("opacity: 0.45");
+    expect(screen.getByText("Plays on a shared screen.")).toBeTruthy();
+    await user.click(tile);
+    expect(handlers.onPickGame).toHaveBeenCalledWith("real-or-nah");
+  });
+
+  it("disables start with the reason when the picked game needs a shared screen", () => {
+    setup({
+      games: [makeGame({ id: "real-or-nah", name: "Real or Nah", noTv: false })],
+      selectedGameId: "real-or-nah",
+      sharedScreen: false,
+    });
+    expect(
+      screen.getByRole("button", { name: /start real or nah/i }),
+    ).toHaveProperty("disabled", true);
+    expect(
+      screen.getByText(
+        "Real or Nah plays on a shared screen. Turn that on to start it.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("sends set-shared-screen when the toggle is flipped", async () => {
+    const { handlers, user } = setup({ sharedScreen: false });
+    await user.click(
+      screen.getByRole("switch", { name: "Add a shared screen" }),
+    );
+    expect(handlers.onSetSharedScreen).toHaveBeenCalledWith(true);
+  });
+
+  it("names the shared-screen games the toggle would add", () => {
+    setup({
+      games: [
+        makeGame({ noTv: true }),
+        makeGame({ id: "real-or-nah", name: "Real or Nah", noTv: false }),
+      ],
+      sharedScreen: false,
+    });
+    expect(
+      screen.getByText("Play on a TV or laptop — adds Real or Nah"),
+    ).toBeTruthy();
+  });
+
+  it("says the shared screen is already on", () => {
+    setup({ sharedScreen: true });
+    expect(
+      screen.getByText("A shared screen is on for this room."),
+    ).toBeTruthy();
+  });
+
+  it("spells out the room code as the hero in a no-TV room", () => {
+    setup({ sharedScreen: false, code: "BKTZ" });
+    expect(screen.getByText("Your room code")).toBeTruthy();
+    expect(screen.getByText("Say this out loud")).toBeTruthy();
+    for (const letter of "BKTZ") {
+      expect(screen.getAllByText(letter).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("drops the hero code in a shared-screen room", () => {
+    setup({ sharedScreen: true });
+    expect(screen.queryByText("Your room code")).toBeNull();
   });
 });

@@ -155,7 +155,11 @@ export function PhoneWaiting({ view }: { view: PlayerRoomView }) {
 
   return (
     <PhoneScreen>
-      <PhoneStrip gameName={waitingGameName(view)} progress="In progress" />
+      <PhoneStrip
+        gameName={waitingGameName(view)}
+        progress="In progress"
+        roomCode={view.sharedScreen ? undefined : view.code}
+      />
 
       <WaitingHeader name={meName(me)} avatar={meAvatar(me)} />
 

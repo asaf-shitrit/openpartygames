@@ -217,7 +217,7 @@ export function TvLanding() {
     setBusy(true);
     setError(null);
     try {
-      const { code, hostToken } = await createRoom();
+      const { code, hostToken } = await createRoom(true);
       try {
         localStorage.setItem(`opg:host:${code}`, hostToken);
       } catch {

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { makePlayer, makePlayerView } from "./fixtures/room";
+import { makeGame, makePlayer, makePlayerView } from "./fixtures/room";
 import { PhoneLobby } from "./PhoneLobby";
 
 const ME = makePlayer({
@@ -113,5 +113,46 @@ describe("PhoneLobby", () => {
   it("hides leave without a handler", () => {
     setup();
     expect(screen.queryByRole("button", { name: /leave room/i })).toBeNull();
+  });
+
+  it("shows the selected game and the blocked reason in a no-TV room", () => {
+    setup({
+      you: "p2",
+      vipId: "p1",
+      sharedScreen: false,
+      games: [
+        makeGame({ noTv: false }),
+        makeGame({ id: "most-likely-to", name: "Most Likely To", noTv: true }),
+      ],
+      selectedGameId: "imposter",
+    });
+    expect(screen.getByText("Priya picked")).toBeTruthy();
+    expect(screen.getByText("Imposter")).toBeTruthy();
+    expect(screen.getByText("One of you has a decoy word.")).toBeTruthy();
+    expect(screen.getByText("3–8 players · about 15 min")).toBeTruthy();
+    expect(screen.getByText("Plays on a shared screen.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Priya can pick Most Likely To, or add a shared screen.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("drops the blocked reason when the picked game plays with no shared screen", () => {
+    setup({
+      you: "p2",
+      vipId: "p1",
+      sharedScreen: false,
+      games: [makeGame({ noTv: true })],
+      selectedGameId: "imposter",
+    });
+    expect(screen.getByText("Imposter")).toBeTruthy();
+    expect(screen.queryByText("Plays on a shared screen.")).toBeNull();
+    expect(screen.queryByText(/add a shared screen/)).toBeNull();
+  });
+
+  it("hides the selected game in a shared-screen room", () => {
+    setup({ you: "p2", vipId: "p1", sharedScreen: true });
+    expect(screen.queryByText("Priya picked")).toBeNull();
   });
 });

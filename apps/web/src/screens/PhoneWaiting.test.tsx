@@ -75,4 +75,14 @@ describe("PhoneWaiting", () => {
     setup({ sharedScreen: false });
     expect(screen.getByText("Hang tight until then.")).toBeTruthy();
   });
+
+  it("shows the room code in a no-TV room, the rejoin path for a dead phone", () => {
+    setup({ sharedScreen: false });
+    expect(screen.getByText("Room BKTZ")).toBeTruthy();
+  });
+
+  it("hides the room code in a shared-screen room", () => {
+    setup({ sharedScreen: true });
+    expect(screen.queryByText("Room BKTZ")).toBeNull();
+  });
 });

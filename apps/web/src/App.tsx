@@ -11,6 +11,7 @@ import { matchRoute, routeSurface, type Route, type Surface } from "./routes";
 import { usePathname } from "./router";
 import { HostApp } from "./screens/HostApp";
 import { PhoneJoinRoute } from "./screens/PhoneJoinRoute";
+import { PhoneLanding } from "./screens/PhoneLanding";
 import { PlayerApp } from "./screens/PlayerApp";
 import { Privacy } from "./screens/Privacy";
 import { TvCredits } from "./screens/TvCredits";
@@ -58,7 +59,7 @@ function RouteView({ route }: { route: Route }) {
   if (route.kind === "host") return <HostApp code={route.code} />;
   if (route.kind === "join") return <PhoneJoinRoute />;
   if (route.kind === "player") return <PlayerApp code={route.code} />;
-  if (isNarrowTouch()) return <PhoneJoinRoute />;
+  if (isNarrowTouch()) return <PhoneLanding />;
   return (
     <Stage>
       <TvLanding />
