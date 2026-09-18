@@ -391,3 +391,70 @@ function promptDuplicateErrors(prompt, at, seenPrompts) {
   seenPrompts.add(key);
   return [];
 }
+
+// ---------- cross-pack duplicates ----------
+// Enabled packs merge into one pool at runtime (packages/sdk/src/content.ts), so the same item
+// showing up in two packs of the same kind becomes a repeat round even though each pack, checked
+// alone, has no duplicates. `crossPackErrors` mirrors that runtime identity: the exact `crew`
+// word for word-pairs, the normalized prompt for facts and superlatives (their `id` is only
+// unique within one pack, so it can't be the identity here).
+
+const CROSS_PACK_IDENTITY = Object.freeze({
+  "word-pairs": (item) =>
+    isText(item.crew) && item.crew.trim() !== ""
+      ? { key: item.crew, value: item.crew, field: "crew" }
+      : null,
+  facts: (item) =>
+    isText(item.prompt)
+      ? { key: normalizeAnswer(item.prompt), value: item.prompt, field: "prompt" }
+      : null,
+  superlatives: (item) =>
+    isText(item.prompt)
+      ? { key: normalizeAnswer(item.prompt), value: item.prompt, field: "prompt" }
+      : null,
+});
+
+/**
+ * Duplicate item identities across packs of the same kind. Only checks packs whose own
+ * validation already passed (`validatePack` returned no errors), so a malformed pack doesn't
+ * cascade into cross-pack noise. `entries` is the shape `loadPacks` returns.
+ */
+export function crossPackErrors(entries) {
+  const byKind = new Map();
+  for (const entry of entries) {
+    const kind = entry.pack?.kind;
+    if (!isText(kind) || !CROSS_PACK_IDENTITY[kind]) continue;
+    const forKind = byKind.get(kind) ?? [];
+    forKind.push(entry);
+    byKind.set(kind, forKind);
+  }
+  return [...byKind.entries()].flatMap(([kind, kindEntries]) =>
+    crossPackErrorsForKind(kind, kindEntries),
+  );
+}
+
+function crossPackErrorsForKind(kind, entries) {
+  const identityOf = CROSS_PACK_IDENTITY[kind];
+  const seen = new Map();
+  const errors = [];
+  for (const entry of entries) {
+    for (const item of entry.pack.items ?? []) {
+      errors.push(...crossPackItemErrors(entry, item, identityOf, seen));
+    }
+  }
+  return errors;
+}
+
+function crossPackItemErrors(entry, item, identityOf, seen) {
+  if (!isRecord(item)) return [];
+  const identity = identityOf(item);
+  if (identity === null) return [];
+  const prior = seen.get(identity.key);
+  if (prior === undefined) {
+    seen.set(identity.key, { pack: entry.pack.id, value: identity.value });
+    return [];
+  }
+  return [
+    `packs/${entry.folder}/${entry.filename}: ${identity.field} "${identity.value}" also appears in pack "${prior.pack}" (as "${prior.value}")`,
+  ];
+}

@@ -168,6 +168,29 @@ describe("createContentSource.loadContent", () => {
     ).rejects.toThrow("pack item is not a superlative");
   });
 
+  it("dedupes items shared by two enabled packs, keeping the first row", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf(
+        { crew: "giraffe", decoy: "zebra" },
+        { crew: "giraffe", decoy: "camel" },
+        { crew: "otter", decoy: "seal" },
+      ),
+    );
+
+    const content = await createContentSource(source).loadContent("word-pairs", [
+      "a",
+      "b",
+    ]);
+
+    expect(content).toEqual({
+      kind: "word-pairs",
+      items: [
+        { crew: "giraffe", decoy: "zebra" },
+        { crew: "otter", decoy: "seal" },
+      ],
+    });
+  });
+
   it("skips the query when no pack is enabled", async () => {
     const { reader: source, itemCalls } = reader(() => rowsOf());
 

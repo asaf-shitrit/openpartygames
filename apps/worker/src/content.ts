@@ -1,4 +1,5 @@
 import type { Rating } from "@opg/protocol";
+import { dedupeContent } from "@opg/sdk";
 import type {
   ContentKind,
   ContentOf,
@@ -62,7 +63,10 @@ export function createContentSource(reader: PackReader): ContentSource {
     ): Promise<GameContent> {
       // No enabled packs: skip the query, the game start fails on empty content.
       if (packIds.length === 0) return contentFromRows(kind, []);
-      return contentFromRows(kind, await reader.items(packIds, kind));
+      // Enabled packs can share an item (a duplicate isn't caught by per-pack validation);
+      // dedupe here so a game never draws the same round twice. Rows come back ordered by
+      // pack id (itemsSql), so the surviving copy is deterministic for a given pack selection.
+      return dedupeContent(contentFromRows(kind, await reader.items(packIds, kind)));
     },
   };
 }

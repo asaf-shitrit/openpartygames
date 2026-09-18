@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  crossPackErrors,
   isKebabCase,
   loadPacks,
   normalizeAnswer,
@@ -436,5 +437,101 @@ describe("shipped packs", () => {
       ),
     );
     expect(failures).toEqual([]);
+  });
+});
+
+describe("crossPackErrors", () => {
+  it("flags two word-pairs packs that share a crew word, naming both packs and the value", () => {
+    const entries = [
+      {
+        folder: "imposter",
+        filename: "pack-a.json",
+        pack: validWordPack({ id: "pack-a", items: [{ crew: "cat", decoy: "dog" }] }),
+      },
+      {
+        folder: "imposter",
+        filename: "pack-b.json",
+        pack: validWordPack({ id: "pack-b", items: [{ crew: "cat", decoy: "puma" }] }),
+      },
+    ];
+
+    const errors = crossPackErrors(entries);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("packs/imposter/pack-b.json");
+    expect(errors[0]).toContain("pack-a");
+    expect(errors[0]).toContain("cat");
+  });
+
+  it("flags two fact packs sharing a prompt, up to normalization", () => {
+    const entries = [
+      {
+        folder: "real-or-nah",
+        filename: "pack-a.json",
+        pack: { ...validFactPack([fact()]), id: "pack-a" },
+      },
+      {
+        folder: "real-or-nah",
+        filename: "pack-b.json",
+        pack: {
+          ...validFactPack([fact({ id: "two", prompt: "  a group of crows is called a ____!  " })]),
+          id: "pack-b",
+        },
+      },
+    ];
+
+    const errors = crossPackErrors(entries);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("packs/real-or-nah/pack-b.json");
+    expect(errors[0]).toContain("pack-a");
+  });
+
+  it("flags two superlative packs sharing a prompt", () => {
+    const entries = [
+      {
+        folder: "most-likely-to",
+        filename: "pack-a.json",
+        pack: { ...validSuperlativePack([{ id: "a", prompt: "adopt a cat" }]), id: "pack-a" },
+      },
+      {
+        folder: "most-likely-to",
+        filename: "pack-b.json",
+        pack: { ...validSuperlativePack([{ id: "b", prompt: "adopt a cat" }]), id: "pack-b" },
+      },
+    ];
+
+    const errors = crossPackErrors(entries);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("packs/most-likely-to/pack-b.json");
+  });
+
+  it("does not flag packs of different kinds sharing a value, or packs with no overlap", () => {
+    const entries = [
+      {
+        folder: "imposter",
+        filename: "pack-a.json",
+        pack: validWordPack({ id: "pack-a", items: [{ crew: "cat", decoy: "dog" }] }),
+      },
+      {
+        folder: "imposter",
+        filename: "pack-b.json",
+        pack: validWordPack({ id: "pack-b", items: [{ crew: "lion", decoy: "tiger" }] }),
+      },
+      {
+        folder: "most-likely-to",
+        filename: "pack-c.json",
+        pack: { ...validSuperlativePack([{ id: "c", prompt: "cat" }]), id: "pack-c" },
+      },
+    ];
+
+    expect(crossPackErrors(entries)).toEqual([]);
+  });
+
+  it("passes on the real repo packs", () => {
+    const rootDir = fileURLToPath(new URL("..", import.meta.url));
+    const validEntries = loadPacks(rootDir).filter(
+      (entry) => validatePack(entry.pack, entry).length === 0,
+    );
+    expect(validEntries.length).toBeGreaterThan(0);
+    expect(crossPackErrors(validEntries)).toEqual([]);
   });
 });
