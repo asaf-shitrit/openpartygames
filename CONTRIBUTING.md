@@ -25,12 +25,15 @@ A game is one pure, deterministic rule module plus React UI.
 - Rules are pure and deterministic. No `Date.now()`, `Math.random()`, timers or I/O. Use `ctx.now` for time and `ctx.rng` for randomness, so replays and tests are reproducible.
 - A player's view must never contain another player's secret — not the imposter's identity, not the decoy word, not which option is the truth.
 - `games/<id>/src/ui/` exports a `GameUi` with a Host component (the shared screen) and a Phone component (one player's view).
+- Playing with no shared screen is **opt-in**. A game that can carry its whole ceremony on a phone sets `noTv: true` on its `GameDefinition`; one that says nothing stays shared-screen only, and the picker explains why rather than hiding it. The Phone component then receives a `stage` prop, which is the host view unchanged and `null` in a room with a shared screen — so `stage !== null` is the flag, and a game can never put something on the stage that is not already on the shared screen. Each stage section lives in its own small file under `src/ui/stage/`; the existing phase switch keeps owning dispatch. `games/most-likely-to/` is the worked example.
+- Phones are silent with no shared screen, so **every audio cue needs a visual equivalent** there, and a verdict needs a visible change large enough to read with no sound and no buzz — iOS Safari has no Vibration API, so an iPhone gets neither.
 
 Required tests for a game:
 
 - Unit tests for the rules: each phase transition, scoring and edge cases.
 - A bot playthrough at 3 players and at 8 players, including a disconnect and rejoin, using the SDK testing harness.
 - UI tests with `@testing-library/react` for the Host and Phone components.
+- A game declaring `noTv` also needs a test asserting its stage deep-equals its host view across every phase, so the two cannot drift.
 
 ## Content packs
 

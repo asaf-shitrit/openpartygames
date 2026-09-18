@@ -1,17 +1,23 @@
 # OpenPartyGames
 
-OpenPartyGames is a free, open-source party game platform. One screen — a laptop or a TV — runs the show. Everyone else plays from their phone browser. No app, no account, no login.
+OpenPartyGames is a free, open-source party game platform. Everyone plays from their phone browser. No app, no account, no login.
 
-- The host screen creates a room and shows a room code, a QR code and an invite link.
+Two ways to play, and games say which they support:
+
+- **With a shared screen.** A laptop or a TV runs the show, showing a room code, a QR code and an invite link, and carrying the reveals. Every game works this way.
+- **On phones alone.** Every player on their own phone: one starts the room, everyone reads the code out loud to join, and each phone carries the shared stage above that player's own controls. Nothing is passed around or held up.
+
+Either way:
+
 - Players join by scanning the QR code or typing the code, then pick a name and an avatar.
-- The first player to join is the VIP and drives the game from their phone, so the host screen can sit across the room.
-- Rooms hold 3 to 8 players. Everyone plays; nobody sits out.
+- The first player to join is the VIP and drives the game from their phone, so a shared screen can sit across the room.
+- Rooms hold 3 to 8 players either way. Everyone plays; nobody sits out.
 
 Three games so far:
 
 - **Imposter** — everyone gets a secret word on their phone except the imposter, who knows their role and sees a decoy word. Give clues out loud, then vote.
 - **Real or Nah** — an obscure fact with a blank. Everyone writes a believable fake answer, then the room votes for the one that's true.
-- **Most Likely To** — "Who's most likely to…?" Everyone votes for a friend (or themselves), the TV shows who picked whom, and you score by voting with the room.
+- **Most Likely To** — "Who's most likely to…?" Everyone votes for a friend (or themselves), the room sees who picked whom, and you score by voting with the room.
 
 Game content lives in versioned, licensed, rated packs in this repo. Code is AGPL-3.0, packs are CC BY-SA 4.0 by default. See [LICENSE](LICENSE).
 
@@ -19,9 +25,17 @@ Game content lives in versioned, licensed, rated packs in this repo. Code is AGP
 
 Play now at **[openpartygames.org](https://openpartygames.org)**.
 
+With a shared screen:
+
 1. Open it on a TV or laptop and start a room.
 2. Everyone else scans the QR code with their phone, or goes to [openpartygames.org/join](https://openpartygames.org/join) and types the room code.
 3. The first player to join picks the game.
+
+On phones alone:
+
+1. Open it on your phone and start a room.
+2. Read the room code out loud. Everyone types it in.
+3. You started it, so you pick the game. Games that need a shared screen say so, and you can add one later without starting over.
 
 Want your own copy? [Run it locally](#run-it-locally) or [self-host it on Cloudflare](#self-host-on-cloudflare).
 
