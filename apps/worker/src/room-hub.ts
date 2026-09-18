@@ -140,7 +140,11 @@ export class RoomHub {
   }
 
   /** Creates the room. Returns false when another active room already owns this code. */
-  async init(code: string, hostToken: string): Promise<boolean> {
+  async init(
+    code: string,
+    hostToken: string,
+    sharedScreen = true,
+  ): Promise<boolean> {
     const now = this.options.now();
     if (this.room && !this.room.isIdleSince(now, IDLE_MS)) return false;
 
@@ -151,6 +155,7 @@ export class RoomHub {
       seed: this.options.seed(),
       now,
       newToken: this.options.newToken,
+      sharedScreen,
     });
     this.room = room;
 

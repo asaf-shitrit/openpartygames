@@ -4,6 +4,7 @@ import {
   cleanPlayerName,
   normalizeRoomCode,
   parseClientMessage,
+  parseCreateRoomRequest,
   ROOM_CODE_RE,
 } from "./index";
 
@@ -17,6 +18,7 @@ describe("parseClientMessage", () => {
       { t: "pick-game", gameId: "imposter" },
       { t: "set-pack", packId: "animals", enabled: false },
       { t: "set-locked", locked: true },
+      { t: "set-shared-screen", sharedScreen: false },
       { t: "kick", playerId: "p1" },
       { t: "start-game" },
       { t: "skip-phase" },
@@ -36,6 +38,7 @@ describe("parseClientMessage", () => {
       JSON.stringify({ t: "nope" }),
       JSON.stringify({ t: "set-avatar", avatar: "dragon" }),
       JSON.stringify({ t: "set-pack", packId: "animals", enabled: "yes" }),
+      JSON.stringify({ t: "set-shared-screen", sharedScreen: "yes" }),
       JSON.stringify({ t: "join", name: "x".repeat(65) }),
       JSON.stringify({ t: "host-hello" }),
       "x".repeat(5000),
@@ -59,6 +62,20 @@ describe("cleanPlayerName", () => {
   it("rejects empty and overlong names", () => {
     expect(cleanPlayerName("   ")).toBeNull();
     expect(cleanPlayerName("abcdefghijklm")).toBeNull();
+  });
+});
+
+describe("parseCreateRoomRequest", () => {
+  it("defaults to a shared-screen room for a missing, empty or malformed body", () => {
+    expect(parseCreateRoomRequest("")).toEqual({});
+    expect(parseCreateRoomRequest("not json")).toEqual({});
+    expect(parseCreateRoomRequest(JSON.stringify({ sharedScreen: "nope" }))).toEqual({});
+  });
+
+  it("reads an explicit sharedScreen value", () => {
+    expect(
+      parseCreateRoomRequest(JSON.stringify({ sharedScreen: false })),
+    ).toEqual({ sharedScreen: false });
   });
 });
 

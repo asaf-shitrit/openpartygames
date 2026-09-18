@@ -67,6 +67,8 @@ export interface GameSummary {
   minPlayers: number;
   maxPlayers: number;
   minutes: number;
+  /** True when the game plays with no shared screen. */
+  noTv: boolean;
 }
 
 export interface PackSummary {
@@ -104,6 +106,8 @@ export interface ActiveGameView {
   id: string;
   /** Game-specific host or player view. Each game package exports its own view types. */
   view: unknown;
+  /** The host view, in a no-TV room only; null in a room with a shared screen. Everything in it is already public. */
+  stage: unknown;
   /** Epoch ms of the current phase deadline, or null when nothing is timed. */
   deadline: number | null;
   /** Epoch ms when `deadline` was last set to its current value; null when nothing is timed. */
@@ -125,6 +129,8 @@ export interface RoomViewBase {
   game: ActiveGameView | null;
   /** Server clock when the view was built, so clients can correct timers for clock skew. */
   serverNow: number;
+  /** False in a no-TV room: every player carries the shared stage on their own phone. */
+  sharedScreen: boolean;
 }
 
 export interface HostRoomView extends RoomViewBase {
@@ -152,6 +158,7 @@ export const clientMessageSchema = z.discriminatedUnion("t", [
   z.object({ t: z.literal("pick-game"), gameId: shortText() }),
   z.object({ t: z.literal("set-pack"), packId: shortText(), enabled: z.boolean() }),
   z.object({ t: z.literal("set-locked"), locked: z.boolean() }),
+  z.object({ t: z.literal("set-shared-screen"), sharedScreen: z.boolean() }),
   z.object({ t: z.literal("kick"), playerId: shortText() }),
   z.object({ t: z.literal("start-game") }),
   z.object({ t: z.literal("skip-phase") }),
@@ -194,6 +201,13 @@ export interface CreateRoomResponse {
   hostToken: string;
 }
 
+/** Body of POST /api/rooms. Omitting `sharedScreen` (today's clients) makes a TV room. */
+export const createRoomRequestSchema = z.object({
+  sharedScreen: z.boolean().optional(),
+});
+
+export type CreateRoomRequest = z.infer<typeof createRoomRequestSchema>;
+
 export interface RoomInfoResponse {
   code: string;
   exists: boolean;
@@ -227,6 +241,16 @@ export function parseClientMessage(raw: string | ArrayBuffer): ClientMessage | n
   if (raw instanceof ArrayBuffer || raw.length > MAX_MESSAGE_LENGTH) return null;
   const result = clientMessageSchema.safeParse(parseJson(raw));
   return result.success ? result.data : null;
+}
+
+/**
+ * Parses a POST /api/rooms body. A missing body, an empty body and one that is
+ * not valid JSON all fall back to `{}` (a shared-screen room): an older web
+ * client sends no body at all and must keep working.
+ */
+export function parseCreateRoomRequest(raw: string): CreateRoomRequest {
+  const result = createRoomRequestSchema.safeParse(parseJson(raw));
+  return result.success ? result.data : {};
 }
 
 /** Trims and collapses whitespace; returns null if the name is empty or too long. */

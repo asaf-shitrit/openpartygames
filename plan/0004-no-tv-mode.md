@@ -429,8 +429,8 @@ Settled with the maintainer on 2026-09-18. Every recommendation in the draft was
 **2. `stage = hostView` versus per-game player-view fields.**
 **Decided:** `stage = hostView`. It is one wire field instead of three schema changes, and the secrecy invariant becomes mechanical rather than a review judgement.
 
-**3. Payload size.** `stage` roughly doubles the in-game frame. Rooms cap at 9 sockets (`plan/0001:20`) and the host views here are a few hundred bytes, so this should be fine — but it is unmeasured.
-**Decided:** Measure Imposter's reveal in slice 2 and record it. Any future game whose host view carries an image must not simply inherit `stage`.
+**3. Payload size.** `stage` roughly doubles the in-game frame. Rooms cap at 9 sockets (`plan/0001:20`) and the host views here are a few hundred bytes, so this should be fine — but it was unmeasured.
+**Decided and now measured.** Imposter's reveal at 8 players, the largest host view in the product, one player frame: **572 bytes without `stage`, 1,215 bytes with it — a delta of 643 bytes.** So the estimate held: `stage` costs 2.1x, and the absolute number is small enough that it does not change any conclusion in this plan. At the 8-socket worst case that is ~5 KB more per broadcast across the whole room. `apps/worker/src/stage-payload.test.ts` keeps the measurement honest, asserting ranges rather than exact byte counts so incidental view-shape drift does not fail the build while a real regression still would. The caveat stands: **any future game whose host view carries an image must not simply inherit `stage`** — Doodle Bluff is the first such game and [plan/0003-doodle-bluff.md](0003-doodle-bluff.md) sizes its own payload separately.
 
 **4. New `ErrorCode` versus reusing `invalid-action`.**
 **Decided:** Reuse `invalid-action`. An added code is *invisible* to an older client, which drops the whole frame (`useRoomSocket.ts:52-67,101-103`).

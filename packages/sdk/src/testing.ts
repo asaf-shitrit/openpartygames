@@ -117,6 +117,7 @@ function openBotSession(options: PlaythroughOptions): BotSession {
     seed: options.seed,
     now: 0,
     newToken,
+    sharedScreen: options.sharedScreen ?? true,
   });
   const log: string[] = [];
   room.handle({ kind: "host" }, { t: "host-hello", hostToken: HOST_TOKEN }, 0);

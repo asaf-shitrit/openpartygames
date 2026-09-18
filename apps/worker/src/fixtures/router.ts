@@ -11,7 +11,8 @@ import {
 
 export class FakeRooms implements RoomNamespace {
   readonly taken: Set<string>;
-  readonly initCalls: { code: string; hostToken: string }[] = [];
+  readonly initCalls: { code: string; hostToken: string; sharedScreen: boolean }[] =
+    [];
   readonly forwarded: string[] = [];
   infoCalls = 0;
   info: RoomInfoResponse | null = null;
@@ -22,8 +23,8 @@ export class FakeRooms implements RoomNamespace {
 
   getByName(_code: string): RoomStub {
     return {
-      init: async (initCode, hostToken) => {
-        this.initCalls.push({ code: initCode, hostToken });
+      init: async (initCode, hostToken, sharedScreen = true) => {
+        this.initCalls.push({ code: initCode, hostToken, sharedScreen });
         return !this.taken.has(initCode);
       },
       info: async () => {
@@ -75,14 +76,17 @@ export class RoutesHarness {
     this.rooms = new FakeRooms(options.taken ?? []);
   }
 
+  /** `body` is sent verbatim, so a test can send well-formed JSON, an empty string or garbage text. */
   request(
     method: string,
     path: string,
     headers: Record<string, string> = {},
+    body?: string,
   ): Promise<Response> {
     const request = new Request(`https://party.test${path}`, {
       method,
       headers,
+      body,
     });
     return createRouter(this.deps())(request);
   }
