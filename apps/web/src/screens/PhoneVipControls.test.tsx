@@ -258,10 +258,25 @@ describe("PhoneVipControls", () => {
   it("spells out the room code as the hero in a no-TV room", () => {
     setup({ sharedScreen: false, code: "BKTZ" });
     expect(screen.getByText("Your room code")).toBeTruthy();
-    expect(screen.getByText("Say this out loud")).toBeTruthy();
     for (const letter of "BKTZ") {
       expect(screen.getAllByText(letter).length).toBeGreaterThan(0);
     }
+  });
+
+  it("offers the join link as a QR you can also tap to share", () => {
+    setup({ sharedScreen: false, code: "BKTZ" });
+    const share = screen.getByLabelText("Share the link to join this room");
+    expect(share).toBeTruthy();
+    // The QR encodes the join URL, so a scan lands on the room rather than the home page.
+    expect(share.querySelector("svg.opg-qr")).toBeTruthy();
+    expect(screen.getByText("Scan it, or tap to share")).toBeTruthy();
+  });
+
+  it("keeps the join link off a shared-screen room, where the TV shows it", () => {
+    setup({ sharedScreen: true });
+    expect(
+      screen.queryByLabelText("Share the link to join this room"),
+    ).toBeNull();
   });
 
   it("drops the hero code in a shared-screen room", () => {
