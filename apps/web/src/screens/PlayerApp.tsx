@@ -298,6 +298,7 @@ function RunningGame({ view, game, me, socket, clock }: RunningGameProps) {
         send={(action: z.core.util.JSONType) =>
           socket.send({ t: "game-action", action })
         }
+        stage={game.stage}
       />
       {vipBar(me, socket)}
     </>

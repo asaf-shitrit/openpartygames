@@ -168,10 +168,27 @@ function YouCard({
   );
 }
 
-function VipNote({ vipName, isYou }: { vipName: string; isYou: boolean }) {
-  const line = isYou
-    ? "You're the VIP and pick the game."
-    : `${vipName} is the VIP and picks the game. Watch the TV.`;
+function vipNoteLine(
+  vipName: string,
+  isYou: boolean,
+  sharedScreen: boolean,
+): string {
+  if (isYou) return "You're the VIP and pick the game.";
+  const picks = `${vipName} is the VIP and picks the game.`;
+  if (sharedScreen) return `${picks} Watch the TV.`;
+  return picks;
+}
+
+function VipNote({
+  vipName,
+  isYou,
+  sharedScreen,
+}: {
+  vipName: string;
+  isYou: boolean;
+  sharedScreen: boolean;
+}) {
+  const line = vipNoteLine(vipName, isYou, sharedScreen);
   return (
     <StickyNote
       tilt={1}
@@ -264,7 +281,11 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
 
       <YouCard me={me} onChangeAvatar={onChangeAvatar} />
 
-      <VipNote vipName={vipLabel(vip)} isYou={isVipYou(vip, view.you)} />
+      <VipNote
+        vipName={vipLabel(vip)}
+        isYou={isVipYou(vip, view.you)}
+        sharedScreen={view.sharedScreen}
+      />
 
       <Marker size={28} style={{ lineHeight: 1.15 }}>
         Who's here ({view.players.length})

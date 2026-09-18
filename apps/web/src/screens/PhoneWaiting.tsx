@@ -25,7 +25,7 @@ function WaitingNote() {
         A game is already running. You'll join when the next one starts.
       </div>
       <div style={{ fontSize: 18, lineHeight: 1.3 }}>
-        Watch the TV in the meantime.
+        Hang tight until then.
       </div>
     </StickyNote>
   );

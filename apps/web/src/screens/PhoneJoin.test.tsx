@@ -49,7 +49,7 @@ describe("PhoneJoin", () => {
     expect(screen.getByText("Enter a name.")).toBeTruthy();
   });
 
-  it("reports a missing room", async () => {
+  it("reports a missing room with a sounds-alike hint", async () => {
     stubFetch(async () =>
       Response.json({ error: "not-found" }, { status: 404 }),
     );
@@ -59,6 +59,26 @@ describe("PhoneJoin", () => {
     await user.click(screen.getByRole("button", { name: /join/i }));
     await waitFor(() =>
       expect(screen.getByText("That room code doesn't exist.")).toBeTruthy(),
+    );
+    expect(
+      screen.getByText(
+        "Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("reports too many tries when the join limiter kicks in", async () => {
+    stubFetch(async () =>
+      Response.json({ error: "rate-limited" }, { status: 429 }),
+    );
+    const { user } = renderForm();
+    await user.type(screen.getByLabelText("Room code"), "BKTZ");
+    await user.type(screen.getByLabelText("Your name"), "Priya");
+    await user.click(screen.getByRole("button", { name: /join/i }));
+    await waitFor(() =>
+      expect(
+        screen.getByText("Too many tries. Wait a moment and try again."),
+      ).toBeTruthy(),
     );
   });
 
@@ -135,6 +155,12 @@ describe("PhoneJoin", () => {
       "disabled",
       true,
     );
+  });
+
+  it("hints where the code comes from without naming a TV", () => {
+    renderForm();
+    expect(screen.getByText("Ask someone in the room")).toBeTruthy();
+    expect(screen.queryByText(/TV/)).toBeNull();
   });
 
   it("types into the name field when it is clicked, not the room code", async () => {

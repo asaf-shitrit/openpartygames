@@ -309,10 +309,10 @@ function myAwardCallout(
   );
 }
 
-function teaserCallout(stage: Stage): ReactNode {
+function teaserCallout(stage: Stage, sharedScreen: boolean): ReactNode {
   return (
     <EyesOnTv
-      title="Eyes on the TV"
+      title={sharedScreen ? "Eyes on the TV" : "Almost time"}
       detail="Awards are coming…"
       tempo={stage.crownIntroReached ? "fast" : "slow"}
     />
@@ -354,7 +354,7 @@ function bodyFor(args: {
   return (
     rankPlaceCallout(stage, myRank) ??
     myAwardCallout(stage, awards, gameId) ??
-    teaserCallout(stage)
+    teaserCallout(stage, view.sharedScreen)
   );
 }
 

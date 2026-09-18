@@ -526,6 +526,7 @@ function commonRoom(
 ) {
   return {
     code: "BKTZ",
+    sharedScreen: true,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
     players: PLAYERS,
@@ -535,7 +536,7 @@ function commonRoom(
     selectedGameId: "imposter",
     packs: [],
     lastResult: null,
-    game: { id: "imposter", view, deadline, timerStartedAt },
+    game: { id: "imposter", view, stage: null, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
   };
 }

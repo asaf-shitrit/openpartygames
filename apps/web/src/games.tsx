@@ -71,7 +71,7 @@ type AnyGameUi = GameUi<unknown, unknown, z.core.util.JSONType>;
 type HostProps = ComponentProps<AnyGameUi["Host"]>;
 type PhoneProps = ComponentProps<AnyGameUi["Phone"]>;
 
-interface GameEntry<HostView, PlayerView, Action extends z.core.util.JSONType> {
+export interface GameEntry<HostView, PlayerView, Action extends z.core.util.JSONType> {
   ui: GameUi<HostView, PlayerView, Action>;
   hostViewSchema: ZodType<HostView>;
   playerViewSchema: ZodType<PlayerView>;
@@ -89,7 +89,7 @@ function ViewMismatch() {
  * Adapts a typed game UI to the registry's untyped shape. Views arrive over the socket, so
  * each adapter parses them with the game's own schema before rendering.
  */
-function registerGame<
+export function registerGame<
   HostView,
   PlayerView,
   Action extends z.core.util.JSONType,
@@ -111,6 +111,13 @@ function registerGame<
   function RegisteredPhone(props: PhoneProps) {
     const parsed = playerViewSchema.safeParse(props.view);
     if (!parsed.success) return <ViewMismatch />;
+    // Null passes straight through (a shared-screen room carries no stage); a stage that
+    // fails to parse also becomes null rather than crashing the phone.
+    let stage: HostView | null = null;
+    if (props.stage !== null) {
+      const parsedStage = hostViewSchema.safeParse(props.stage);
+      if (parsedStage.success) stage = parsedStage.data;
+    }
     return (
       <ui.Phone
         view={parsed.data}
@@ -119,6 +126,7 @@ function registerGame<
         timerStartedAt={props.timerStartedAt}
         clock={props.clock}
         send={(action: Action) => props.send(action)}
+        stage={stage}
       />
     );
   }

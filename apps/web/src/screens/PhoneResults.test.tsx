@@ -37,6 +37,7 @@ function setup(
   result: ReturnType<typeof makeResultWithAwards>,
   you: string,
   elapsedMs: number,
+  patch: Parameters<typeof makePlayerView>[0] = {},
 ) {
   let fakeNow = FINISHED_AT + elapsedMs;
   const clock: ServerClock = { now: () => fakeNow };
@@ -57,6 +58,7 @@ function setup(
         players: [PRIYA, SAM, LEE],
         lobbyScreen: "results",
         lastResult: result,
+        ...patch,
       })}
       clock={clock}
     />,
@@ -75,6 +77,13 @@ describe("PhoneResults, ceremony from the start", () => {
     advanceTo(2100);
     expect(screen.getByText("Word thief")).toBeTruthy();
     expect(vibrate).toHaveBeenCalledWith([80, 50, 80]);
+  });
+
+  it("shows neutral teaser copy with no shared screen", () => {
+    vi.useFakeTimers();
+    setup(makeResultWithAwards(), "p1", 0, { sharedScreen: false });
+    expect(screen.getByText("Almost time")).toBeTruthy();
+    expect(screen.queryByText("Eyes on the TV")).toBeNull();
   });
 
   it("buzzes crown for the winner at the crown beat", () => {

@@ -22,6 +22,7 @@ function setup(patch: Parameters<typeof makePlayerView>[0] = {}) {
         game: {
           id: "imposter",
           view: null,
+          stage: null,
           deadline: null,
           timerStartedAt: null,
         },
@@ -63,5 +64,15 @@ describe("PhoneWaiting", () => {
   it("falls back when the player is not in the room view", () => {
     setup({ you: "ghost" });
     expect(screen.getByText("You're in, player!")).toBeTruthy();
+  });
+
+  it("shows neutral waiting copy in a shared-screen room", () => {
+    setup({ sharedScreen: true });
+    expect(screen.getByText("Hang tight until then.")).toBeTruthy();
+  });
+
+  it("shows the same neutral waiting copy with no shared screen", () => {
+    setup({ sharedScreen: false });
+    expect(screen.getByText("Hang tight until then.")).toBeTruthy();
   });
 });

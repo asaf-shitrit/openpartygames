@@ -286,6 +286,7 @@ function PhonePreview({
           key={mountKey}
           view={fixture.view}
           room={fixture.room}
+          stage={null}
           deadline={fixture.room.game?.deadline ?? null}
           timerStartedAt={anchorFor(fixture)}
           clock={clock}

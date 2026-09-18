@@ -73,6 +73,7 @@ function testView(): RoomView {
     role: "player",
     you: "p1",
     code: "BKTZ",
+    sharedScreen: true,
     phase: "lobby",
     lobbyScreen: "join",
     players: [],
