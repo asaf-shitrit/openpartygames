@@ -27,7 +27,13 @@ describe("screenKey", () => {
   it("keys an in-game phase by the running game's id", () => {
     const view = makeHostView({
       phase: "in-game",
-      game: { id: "imposter", view: {}, deadline: null, timerStartedAt: null },
+      game: {
+        id: "imposter",
+        view: {},
+        stage: null,
+        deadline: null,
+        timerStartedAt: null,
+      },
     });
     expect(screenKey(view)).toBe("game:imposter");
   });

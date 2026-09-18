@@ -30,6 +30,7 @@ export function makeGame(patch: Partial<GameSummary> = {}): GameSummary {
     minPlayers: 3,
     maxPlayers: 8,
     minutes: 15,
+    noTv: false,
     ...patch,
   };
 }
@@ -127,6 +128,7 @@ const BASE_VIEW: RoomViewBase = {
   lastResult: null,
   game: null,
   serverNow: 1_700_000_000_000,
+  sharedScreen: true,
 };
 
 export function makeHostView(

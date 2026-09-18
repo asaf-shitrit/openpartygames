@@ -389,6 +389,7 @@ function commonRoom(
 ) {
   return {
     code: "BKTZ",
+    sharedScreen: true,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
     players: PLAYERS,
@@ -402,6 +403,7 @@ function commonRoom(
         minPlayers: 3,
         maxPlayers: 8,
         minutes: 15,
+        noTv: false,
       },
     ],
     selectedGameId: "real-or-nah",
@@ -415,7 +417,7 @@ function commonRoom(
       },
     ],
     lastResult: null,
-    game: { id: "real-or-nah", view, deadline, timerStartedAt },
+    game: { id: "real-or-nah", view, stage: null, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
   };
 }

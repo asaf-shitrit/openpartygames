@@ -68,6 +68,14 @@ describe("PhoneLobby", () => {
     ).toBeTruthy();
   });
 
+  it("drops the TV line for a non-VIP with no shared screen", () => {
+    setup({ you: "p2", vipId: "p1", sharedScreen: false });
+    expect(
+      screen.getByText("Priya is the VIP and picks the game."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Watch the TV/)).toBeNull();
+  });
+
   it("shows crowns for you and for another player", () => {
     setup();
     expect(screen.getByText("2 crowns")).toBeTruthy();

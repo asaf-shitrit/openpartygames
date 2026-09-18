@@ -141,16 +141,34 @@ function CodeField({
         }}
       >
         <Icon name="monitor" size={22} color="var(--opg-ink-secondary)" />
-        <div>It's on the TV</div>
+        <div>Ask someone in the room</div>
       </div>
     </div>
   );
 }
 
-function ErrorLine({ message }: { message: string }) {
+interface JoinErrorResult {
+  message: string;
+  hint?: string;
+}
+
+function ErrorLine({ error }: { error: JoinErrorResult }) {
   return (
-    <div style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker)" }}>
-      {message}
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker)" }}>
+        {error.message}
+      </div>
+      {error.hint ? (
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: "var(--opg-ink-secondary)",
+          }}
+        >
+          {error.hint}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -160,7 +178,7 @@ interface JoinFormProps {
   name: string;
   onCodeChange: (value: string) => void;
   onNameChange: (value: string) => void;
-  shownError: string | null;
+  shownError: JoinErrorResult | null;
   pending: boolean;
   onSubmit: () => void;
 }
@@ -195,7 +213,7 @@ function JoinForm({
         maxLength={12}
         placeholder="Your name"
       />
-      {shownError ? <ErrorLine message={shownError} /> : null}
+      {shownError ? <ErrorLine error={shownError} /> : null}
       <Button size="lg" fullWidth disabled={pending} onClick={onSubmit}>
         <span>{pending ? "Joining…" : "Join"}</span>
         <Icon name="arrow-right" size={24} color="var(--opg-paper)" />
@@ -210,35 +228,47 @@ const JOIN_ERRORS = {
   missing: "That room code doesn't exist.",
   full: "That room is full or locked.",
   unreachable: "Could not reach the room. Check your connection.",
+  rateLimited: "Too many tries. Wait a moment and try again.",
 } as const;
 
+const SOUNDS_ALIKE_HINT =
+  "Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again.";
+
+/** The room code wasn't found, with a hint for the most likely reason why. */
+function missingRoomError(): JoinErrorResult {
+  return { message: JOIN_ERRORS.missing, hint: SOUNDS_ALIKE_HINT };
+}
+
 /** Problems the player can fix in the form itself. */
-function localJoinError(code: string, name: string): string | null {
-  if (code.length !== ROOM_CODE_LENGTH) return JOIN_ERRORS.code;
-  if (name.length === 0) return JOIN_ERRORS.name;
+function localJoinError(code: string, name: string): JoinErrorResult | null {
+  if (code.length !== ROOM_CODE_LENGTH) return { message: JOIN_ERRORS.code };
+  if (name.length === 0) return { message: JOIN_ERRORS.name };
   return null;
 }
 
 /** Maps a room lookup onto the message to show, or null when the join can proceed. */
-function roomJoinError(info: RoomInfoResponse): string | null {
-  if (!info.exists) return JOIN_ERRORS.missing;
-  if (!info.joinable && !info.inGame) return JOIN_ERRORS.full;
+function roomJoinError(info: RoomInfoResponse): JoinErrorResult | null {
+  if (!info.exists) return missingRoomError();
+  if (!info.joinable && !info.inGame) return { message: JOIN_ERRORS.full };
   return null;
 }
 
 async function joinError(
   cleanCode: string,
   cleanName: string,
-): Promise<string | null> {
+): Promise<JoinErrorResult | null> {
   const local = localJoinError(cleanCode, cleanName);
   if (local) return local;
   try {
     return roomJoinError(await getRoomInfo(cleanCode));
   } catch (err) {
     if (err instanceof ApiError && err.code === "not-found") {
-      return JOIN_ERRORS.missing;
+      return missingRoomError();
     }
-    return JOIN_ERRORS.unreachable;
+    if (err instanceof ApiError && err.code === "rate-limited") {
+      return { message: JOIN_ERRORS.rateLimited };
+    }
+    return { message: JOIN_ERRORS.unreachable };
   }
 }
 
@@ -253,7 +283,7 @@ export function PhoneJoin({
     normalizeRoomCode(initialCode).slice(0, ROOM_CODE_LENGTH),
   );
   const [name, setName] = useState(initialName);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<JoinErrorResult | null>(null);
   const [checking, setChecking] = useState(false);
 
   const setCodeInput = (value: string) => {
@@ -279,7 +309,7 @@ export function PhoneJoin({
     onJoin(cleanCode, cleanName);
   };
 
-  const shownError = localError ?? error;
+  const shownError = localError ?? (error ? { message: error } : null);
   const pending = busy || checking;
   const handleSubmit = () => {
     void submit();

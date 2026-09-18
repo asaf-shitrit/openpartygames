@@ -60,9 +60,24 @@ async function readError(res: Response): Promise<ApiError> {
   );
 }
 
-/** POST /api/rooms — creates a room and returns its code and host token. */
-export async function createRoom(): Promise<CreateRoomResponse> {
-  const res = await fetch("/api/rooms", { method: "POST" });
+/** The fetch init for POST /api/rooms; omitting `sharedScreen` sends no body, matching an older client. */
+function createRoomInit(sharedScreen?: boolean): RequestInit {
+  if (sharedScreen === undefined) return { method: "POST" };
+  return {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sharedScreen }),
+  };
+}
+
+/**
+ * POST /api/rooms — creates a room and returns its code and host token.
+ * Omitting `sharedScreen` (the default) makes a shared-screen room, same as an older client.
+ */
+export async function createRoom(
+  sharedScreen?: boolean,
+): Promise<CreateRoomResponse> {
+  const res = await fetch("/api/rooms", createRoomInit(sharedScreen));
   if (!res.ok) throw await readError(res);
   const body = await parseJson(res, createRoomSchema);
   if (!body) throw new ApiError("internal", "Unexpected room response");

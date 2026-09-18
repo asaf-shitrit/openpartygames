@@ -194,6 +194,7 @@ describe("HostApp", () => {
         game: {
           id: "real-or-nah",
           view: preview.view,
+          stage: null,
           deadline: null,
           timerStartedAt: null,
         },
@@ -213,6 +214,7 @@ describe("HostApp", () => {
         game: {
           id: "no-such-game",
           view: {},
+          stage: null,
           deadline: null,
           timerStartedAt: null,
         },

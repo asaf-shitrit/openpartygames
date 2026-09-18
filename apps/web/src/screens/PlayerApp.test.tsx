@@ -185,6 +185,7 @@ describe("PlayerApp", () => {
           game: {
             id: "imposter",
             view: {},
+            stage: null,
             deadline: null,
             timerStartedAt: null,
           },
@@ -201,6 +202,51 @@ describe("PlayerApp", () => {
     const preview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!preview) throw new Error("missing phone preview");
     act(() => socket.receive({ t: "state", view: preview.room }));
+    expect(screen.getByText(/went to war against/)).toBeTruthy();
+  });
+
+  it("keeps rendering the game when a shared stage rides along with the view", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(<PlayerApp code="BKTZ" />);
+    const socket = joinPlayer();
+    const phonePreview = realOrNahPreviews.find((p) => p.surface === "phone");
+    const hostPreview = realOrNahPreviews.find((p) => p.surface === "host");
+    if (!phonePreview || !hostPreview) throw new Error("missing preview");
+    const room = phonePreview.room;
+    if (room.role !== "player" || !room.game) throw new Error("expected a phone room with a game");
+    const game = room.game;
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: {
+          ...room,
+          sharedScreen: false,
+          game: { ...game, stage: hostPreview.view },
+        },
+      }),
+    );
+    expect(screen.getByText(/went to war against/)).toBeTruthy();
+  });
+
+  it("keeps rendering the game when the shared stage is malformed", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(<PlayerApp code="BKTZ" />);
+    const socket = joinPlayer();
+    const phonePreview = realOrNahPreviews.find((p) => p.surface === "phone");
+    if (!phonePreview) throw new Error("missing phone preview");
+    const room = phonePreview.room;
+    if (room.role !== "player" || !room.game) throw new Error("expected a phone room with a game");
+    const game = room.game;
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: {
+          ...room,
+          sharedScreen: false,
+          game: { ...game, stage: { totally: "not a host view" } },
+        },
+      }),
+    );
     expect(screen.getByText(/went to war against/)).toBeTruthy();
   });
 
@@ -328,6 +374,7 @@ describe("PlayerApp", () => {
           game: {
             id: "no-such-game",
             view: {},
+            stage: null,
             deadline: null,
             timerStartedAt: null,
           },
@@ -349,6 +396,7 @@ describe("PlayerApp", () => {
           game: {
             id: "imposter",
             view: null,
+            stage: null,
             deadline: null,
             timerStartedAt: null,
           },
