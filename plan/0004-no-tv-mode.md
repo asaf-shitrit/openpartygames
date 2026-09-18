@@ -1,14 +1,16 @@
 # Plan: No-TV mode (a room with no shared screen)
 
 Author: Asaf Shitrit.
-Status: **draft for discussion. Nothing here is built and no feature code was written for it.**
+Status: **decided and being built.** Every open decision in this draft was settled on 2026-09-18; §10 records how. Where an earlier section still reads "proposed", §10 is what was chosen.
 Inputs: [intent/0001-platform-mvp.md](../intent/0001-platform-mvp.md), [plan/0001-platform-mvp.md](0001-platform-mvp.md), [plan/0002-game-feel.md](0002-game-feel.md), [ROADMAP.md](../ROADMAP.md).
 
 Two reading conventions:
 
 - **Verified** means I read it. Every such claim cites `file:line`.
-- **Proposed** is a recommendation in this draft and is not decided.
-- Line numbers are from `origin/main`, except citations under `games/most-likely-to/`, which only exist on the open `most-likely-to` branch (PR #5).
+- **Proposed** marked a recommendation while this was a draft. All of them were accepted; see §10.
+- Line numbers are from the `most-likely-to` branch (PR #5), which this branch is based on, so citations under `games/most-likely-to/` resolve.
+
+Scope of the build: slices 1 through 5. Design artboards are written and approved before any UI code (§9). The human playtest (§10.14) stays with the maintainer.
 
 ## Context
 
@@ -417,48 +419,54 @@ The cue-to-visual table `plan/0002:306` still owes, done for real: every beat wi
 5. **Manual, `pnpm dev`:** a TV pass at 1920×1080 proving nothing regressed, then no-TV passes at 390px and 430px wide, portrait, on a real iPhone (no vibration) and a real Android (vibration). Compare each phase against its design file.
 6. **Secrecy:** the per-game `stage === hostView` table test, plus a manual read of every no-TV phase asking "could the person next to me learn something from this screen".
 
-## 10. Risks and open decisions
+## 10. Decisions
 
-Each has a recommendation. None is decided.
+Settled with the maintainer on 2026-09-18. Every recommendation in the draft was accepted; the reasoning that led to each is kept because it is the reason the decision holds.
 
 **1. Explicit room mode versus deriving it from host presence.**
-→ Explicit, set at creation, VIP-flippable in the lobby, frozen during a game. Deriving from `hostConnected` flips on every TV reload (`room-hub.ts:200-213`).
+**Decided:** Explicit, set at creation, VIP-flippable in the lobby, frozen during a game. Deriving from `hostConnected` flips on every TV reload (`room-hub.ts:200-213`).
 
 **2. `stage = hostView` versus per-game player-view fields.**
-→ `stage = hostView`. It is one wire field instead of three schema changes, and the secrecy invariant becomes mechanical rather than a review judgement.
+**Decided:** `stage = hostView`. It is one wire field instead of three schema changes, and the secrecy invariant becomes mechanical rather than a review judgement.
 
 **3. Payload size.** `stage` roughly doubles the in-game frame. Rooms cap at 9 sockets (`plan/0001:20`) and the host views here are a few hundred bytes, so this should be fine — but it is unmeasured.
-→ Measure Imposter's reveal in slice 2 and record it. Any future game whose host view carries an image must not simply inherit `stage`.
+**Decided:** Measure Imposter's reveal in slice 2 and record it. Any future game whose host view carries an image must not simply inherit `stage`.
 
 **4. New `ErrorCode` versus reusing `invalid-action`.**
-→ Reuse `invalid-action`. An added code is *invisible* to an older client, which drops the whole frame (`useRoomSocket.ts:52-67,101-103`).
+**Decided:** Reuse `invalid-action`. An added code is *invisible* to an older client, which drops the whole frame (`useRoomSocket.ts:52-67,101-103`).
 
 **5. Hidden versus disabled in the picker.**
-→ Disabled with "Needs a TV screen." A hidden game looks broken and cannot explain itself.
+**Decided:** Disabled with "Needs a TV screen." A hidden game looks broken and cannot explain itself.
 
 **6. The grace window for a late phone.**
-→ Leave `CUE_GRACE_MS` at 600. A late buzz is worse than none. Make settled states complete instead.
+**Decided:** Leave `CUE_GRACE_MS` at 600. A late buzz is worse than none. Make settled states complete instead.
 
 **7. `PHONE_FOLLOW_MS` in no-TV mode.**
-→ 0. It exists only to avoid spoiling a TV that is not there.
+**Decided:** 0. It exists only to avoid spoiling a TV that is not there.
 
 **8. Minimum players.**
-→ Unchanged at 3 (`packages/protocol/src/index.ts:32-33`). No-TV mode removes a device, not a seat. Worth stating so nobody assumes it enables two-player rooms.
+**Decided:** Unchanged at 3 (`packages/protocol/src/index.ts:32-33`). No-TV mode removes a device, not a seat. Worth stating so nobody assumes it enables two-player rooms.
 
 **9. Room-code audibility.** The alphabet was chosen so codes cannot spell words, not so they survive a noisy room (`protocol:27-28`).
-→ Do not change the alphabet; it is in URLs, in `ROOM_CODE_RE` (`:30`) and in every e2e assertion. Spell it out visually and add the sounds-alike hint. Revisit only if playtests show repeated failures.
+**Decided:** Do not change the alphabet; it is in URLs, in `ROOM_CODE_RE` (`:30`) and in every e2e assertion. Spell it out visually and add the sounds-alike hint. Revisit only if playtests show repeated failures.
 
 **10. Can a no-TV room gain a TV mid-session?**
-→ Yes, in the lobby only, using the host token the starter's phone already holds. Never mid-game.
+**Decided:** Yes, in the lobby only, using the host token the starter's phone already holds. Never mid-game.
 
 **11. Daily room cap.** Creating a room gets easier, so more rooms get created. The cap is 150 (`apps/worker/src/routes.ts:11`) and the cost model assumed TV-hosted sessions (`intent/0001-platform-mvp.md:151`).
-→ No change now. Watch the counter for the first weeks and retune, exactly as the intent already plans to.
+**Decided:** No change now. Watch the counter for the first weeks and retune, exactly as the intent already plans to.
 
 **12. Two of three games supported is a worse first impression than all three.**
-→ Accept it, and make the blocked-game flow good (§7) rather than hiding the game. Someone whose group plays Real or Nah every week will meet that screen on their first no-TV night, and what they read there decides whether the mode feels unfinished or deliberate. Revisit Real or Nah once the other two have been played without a TV.
+**Decided:** Accept it, and make the blocked-game flow good (§7) rather than hiding the game. Someone whose group plays Real or Nah every week will meet that screen on their first no-TV night, and what they read there decides whether the mode feels unfinished or deliberate. Revisit Real or Nah once the other two have been played without a TV.
 
 **13. Imposter is the game most worth having here and the most work.**
-→ Keep it second, after the pattern is proven on Most Likely To. The temptation will be to start with Imposter because it is the one people want without a TV. Its reveal is 808 lines and its last-chance phase is the hardest silent moment in the product; inventing the stage pattern there would be the expensive way to learn it.
+**Decided:** Keep it second, after the pattern is proven on Most Likely To. The temptation will be to start with Imposter because it is the one people want without a TV. Its reveal is 808 lines and its last-chance phase is the hardest silent moment in the product; inventing the stage pattern there would be the expensive way to learn it.
 
 **14. Does the room feel dead with everyone looking down?**
-→ The real risk of the whole mode, and no amount of engineering answers it. The mitigation is that haptics land on every phone at the same instant, which is a cue to look *up*. Playtest slice 3 with real people before committing to slice 4.
+**Decided:** The real risk of the whole mode, and no amount of engineering answers it. The mitigation is that haptics land on every phone at the same instant, which is a cue to look *up*. Playtest slice 3 with real people before committing to slice 4.
+
+**15. Design artboards before UI code.**
+**Decided:** Every no-TV screen gets a `design/PhoneNoTv*.dc.html` artboard, approved, before the component is written. This is not the usual order in this repo, and it is deliberate: §1 establishes that nothing scales down from 1920×1080, so every stage region is new artwork rather than a re-layout. Twelve artboards — four platform screens, two for Most Likely To, six for Imposter — registered on a new `no-tv` page in `design/canvas.json`. The stage-versus-controls division is settled on the Most Likely To vote screen and copied from there, for the same reason slice 3 comes before slice 4.
+
+**16. The silent-feedback pass is in scope, not a follow-up.**
+**Decided:** Slice 5 ships with the mode. The cue-to-visual table `plan/0002-game-feel.md:306` still owes is written for real, and the shared `Suspense` element lands in `packages/ui/src/fx/` as part of slice 3 rather than slice 5, because Most Likely To's reveal and Imposter's last-chance both need it before slice 5 would arrive. The reasoning is §3: with no TV the visuals are the whole feedback channel, so a drumroll with no visual substitute is not a polish item, it is a phase that reads as a frozen screen. The real-iPhone pass — no Vibration API, so no sound and no buzz — stays a manual step for the maintainer.
