@@ -6,10 +6,14 @@ import type { MltHostView, MltPlayerView } from "../../state";
 import { mostLikelyToPreviews, REVEAL_PREVIEW_START } from "../preview";
 import { StageReveal } from "./Reveal";
 
+const matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, "vibrate");
+  if (matchMediaDescriptor === undefined) Reflect.deleteProperty(window, "matchMedia");
+  else Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
 });
 
 function stubVibrate() {
@@ -19,6 +23,18 @@ function stubVibrate() {
     value: vibrate,
   });
   return vibrate;
+}
+
+function stubReducedMotion(matches: boolean): void {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (media: string) => ({
+      media,
+      matches,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
+  });
 }
 
 function isHostView(
@@ -157,5 +173,25 @@ describe("StageReveal, other outcomes", () => {
     vi.useFakeTimers();
     setup("Host: reveal no votes", 11200);
     expect(stampText()).toBe("No votes?!");
+  });
+});
+
+describe("StageReveal, reduced motion", () => {
+  it("still buzzes the heartbeat during suspense, ring fixed rather than animating", () => {
+    stubReducedMotion(true);
+    const vibrate = stubVibrate();
+    vi.useFakeTimers();
+    const { advanceTo } = setup("Host: reveal picked", 5500);
+    advanceTo(6000);
+    expect(vibrate).toHaveBeenCalled();
+    expect(screen.getByText("Verdict incoming")).toBeTruthy();
+  });
+
+  it("lands on the complete, readable settled state with every text equivalent present", () => {
+    stubReducedMotion(true);
+    vi.useFakeTimers();
+    setup("Host: reveal picked", 12000);
+    expect(stampText()).toBe("Most likely!");
+    expect(screen.getByText("Next prompt coming up")).toBeTruthy();
   });
 });

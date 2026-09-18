@@ -643,6 +643,14 @@ function UnmaskFooter({
   );
 }
 
+/** The sticky note text at the "next" beat: same words the TV and the no-TV stage both use. */
+export function nextNoteText(view: ImposterHostView, players: PlayerSummary[]): string {
+  const imposter = nameOf(players, view.imposterId);
+  return view.caught === true
+    ? `One last chance, ${imposter}…`
+    : `${imposter} slipped away: +1,000`;
+}
+
 function NextNote({
   view,
   players,
@@ -652,11 +660,7 @@ function NextNote({
   players: PlayerSummary[];
   stage: Stage;
 }) {
-  const imposter = nameOf(players, view.imposterId);
-  const caught = view.caught === true;
-  const note = caught
-    ? `One last chance, ${imposter}…`
-    : `${imposter} slipped away: +1,000`;
+  const note = nextNoteText(view, players);
   return (
     <div
       data-testid="reveal-next-note"

@@ -6,6 +6,7 @@ import {
   MomentPlayer,
   devMoments,
   elapsedAt,
+  noTvFixturesFor,
   phoneFixturesFor,
   secondsLabel,
   toPreviewFixtures,
@@ -128,6 +129,25 @@ describe("phoneFixturesFor", () => {
   });
 });
 
+describe("noTvFixturesFor", () => {
+  it("picks the Phone (no-TV) reveal fixture, distinct from the shared-screen one", () => {
+    const noTv = noTvFixturesFor("reveal", FIXTURES);
+    expect(noTv.length).toBeGreaterThan(0);
+    for (const fixture of noTv) {
+      expect(fixture.label.toLowerCase()).toContain("no-tv");
+      expect(fixture.label.toLowerCase()).toContain("reveal");
+    }
+  });
+
+  it("picks the Phone (no-TV) result fixture", () => {
+    const noTv = noTvFixturesFor("result", FIXTURES);
+    expect(noTv.length).toBeGreaterThan(0);
+    for (const fixture of noTv) {
+      expect(fixture.label.toLowerCase()).toContain("no-tv");
+    }
+  });
+});
+
 describe("secondsLabel", () => {
   it("shows one decimal", () => {
     expect(secondsLabel(0)).toBe("0.0s");
@@ -189,5 +209,19 @@ describe("MomentPlayer", () => {
   it("shows an empty state when there are no moments", () => {
     renderMoments([]);
     expect(screen.getByText("No moments found.")).toBeTruthy();
+  });
+
+  it("shows a no-TV column beside the TV and shared-screen phones", () => {
+    renderMoments([CAUGHT_REVEAL]);
+    expect(screen.getByText("Phones (no TV)")).toBeTruthy();
+    expect(screen.getByText("Phones (shared screen)")).toBeTruthy();
+  });
+
+  it("the no-TV phone stages the same verdict as the TV, with no TV mounted for it", () => {
+    renderMoments([CAUGHT_REVEAL]);
+    scrubTo(8500);
+    const grids = document.querySelectorAll(".opg-grid-phone");
+    const noTvGrid = grids[grids.length - 1];
+    expect(noTvGrid?.textContent).toContain("Imposter!");
   });
 });

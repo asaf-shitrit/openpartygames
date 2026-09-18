@@ -12,10 +12,12 @@ import {
   Avatar,
   Card,
   CountUp,
+  FxIn,
   Highlight,
   LetterTiles,
   Marker,
   reached,
+  Suspense,
   useMoment,
 } from "@opg/ui";
 import { resultDurationMs, type ImposterHostView } from "../../state";
@@ -23,6 +25,7 @@ import {
   hostResultBeats,
   lettersRevealed,
   previousTotals,
+  RESULT_TIMING,
   resultPath,
   standingsOrder,
 } from "../result-timeline";
@@ -46,13 +49,20 @@ function CancelledCard() {
 }
 
 interface Stage {
+  verdictReached: boolean;
+  verdictLive: boolean;
   wordReached: boolean;
+  wordLive: boolean;
   countReached: boolean;
 }
 
 function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
+  const isLive = (id: string) => moment.live && moment.beatId === id;
   return {
+    verdictReached: reached(moment, beats, "verdict"),
+    verdictLive: isLive("verdict"),
     wordReached: reached(moment, beats, "word"),
+    wordLive: isLive("word"),
     countReached: reached(moment, beats, "count"),
   };
 }
@@ -62,6 +72,16 @@ function verdictChipText(path: ResultPath, guessCorrect: boolean | null): string
   return guessCorrect === true ? "Stolen!" : "Nope";
 }
 
+/** The caught path holds the chip back for the 3.5s verdict beat, same as the TV's slam;
+ * the escaped path has no suspense beat of its own, so its word beat (t=0) gates it instead. */
+function verdictShown(path: ResultPath, stage: Stage): boolean {
+  return path === "caught" ? stage.verdictReached : stage.wordReached;
+}
+
+function verdictLive(path: ResultPath, stage: Stage): boolean {
+  return path === "caught" ? stage.verdictLive : stage.wordLive;
+}
+
 const CHIP: CSSProperties = {
   alignSelf: "flex-start",
   padding: "2px 14px",
@@ -69,14 +89,25 @@ const CHIP: CSSProperties = {
   borderRadius: "var(--opg-radius-button)",
 };
 
-function VerdictChip({ text }: { text: string | null }) {
+function VerdictChip({
+  text,
+  shown,
+  live,
+}: {
+  text: string | null;
+  shown: boolean;
+  live: boolean;
+}) {
   if (text === null) return null;
+  if (!shown) return <div style={{ minHeight: 28 }} />;
   return (
-    <div style={CHIP}>
-      <Marker size={20} color="var(--opg-marker)">
-        {text}
-      </Marker>
-    </div>
+    <FxIn live={live} preset="pop">
+      <div style={CHIP}>
+        <Marker size={20} color="var(--opg-marker)">
+          {text}
+        </Marker>
+      </div>
+    </FxIn>
   );
 }
 
@@ -98,16 +129,42 @@ function GuessLine({
   imposter,
   guess,
   revealed,
+  suspenseStartedAt,
+  verdictReached,
+  clock,
 }: {
   imposter: string;
   guess: string;
   revealed: number;
+  suspenseStartedAt: number | null;
+  verdictReached: boolean;
+  clock: ServerClock;
 }) {
   const length = Array.from(guess).length;
   if (length === 0) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 16, fontWeight: 400 }}>{imposter} guessed</div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          // The ring's text equivalent sits below it (Suspense positions its label at
+          // bottom: -22px), so this row needs headroom or it overlaps the tiles beneath it.
+          paddingBottom: verdictReached || suspenseStartedAt === null ? 0 : 22,
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 400 }}>{imposter} guessed</div>
+        {verdictReached || suspenseStartedAt === null ? null : (
+          <Suspense
+            startedAt={suspenseStartedAt}
+            durationMs={RESULT_TIMING.caught.verdictMs}
+            clock={clock}
+            size={40}
+            label="Checking…"
+          />
+        )}
+      </div>
       <LetterTiles length={length} letters={guess} revealed={revealed} live size={28} />
     </div>
   );
@@ -220,6 +277,53 @@ function StandingsCard({ order, players, me, from, to, live }: StandingsCardProp
   );
 }
 
+interface ResultDerived {
+  revealed: number;
+  suspenseStartedAt: number | null;
+}
+
+/** The letters-flipped count and the drumroll ring's anchor: both only apply to the caught path. */
+function resultDerived(
+  path: ResultPath,
+  beats: readonly Beat[],
+  moment: Moment,
+  startedAt: number | null,
+): ResultDerived {
+  return {
+    revealed: path === "caught" ? lettersRevealed(beats, moment) : 0,
+    suspenseStartedAt: path === "caught" ? startedAt : null,
+  };
+}
+
+interface StandingsData {
+  prevTotals: Record<PlayerId, number>;
+  order: PlayerId[];
+}
+
+/** Standings run from the pre-word totals up to the current ones. */
+function standingsData(view: ImposterHostView): StandingsData {
+  const totals = view.totals;
+  const prevTotals =
+    view.pointsThisWord === null ? totals : previousTotals(totals, view.pointsThisWord);
+  return { prevTotals, order: standingsOrder(view.playerIds, totals) };
+}
+
+interface GuessSlotProps {
+  path: ResultPath;
+  imposter: string;
+  guess: string;
+  revealed: number;
+  suspenseStartedAt: number | null;
+  verdictReached: boolean;
+  clock: ServerClock;
+}
+
+/** The guessed-word tiles, only for the caught path -- escaped and cancelled have no guess. */
+function GuessSlot({ path, ...guessLine }: GuessSlotProps) {
+  if (path !== "caught") return null;
+  return <GuessLine {...guessLine} />;
+}
+
 export interface StageResultProps {
   view: ImposterHostView;
   players: PlayerSummary[];
@@ -241,27 +345,30 @@ export function StageResult(props: StageResultProps) {
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, resultDurationMs(view.caught));
   const moment = useMoment(beats, startedAt, clock);
   const stage = stageFromMoment(moment, beats);
-  const revealed = path === "caught" ? lettersRevealed(beats, moment) : 0;
+  const { revealed, suspenseStartedAt } = resultDerived(path, beats, moment, startedAt);
 
   if (path === "cancelled") return <CancelledCard />;
 
-  const totals = view.totals;
-  const prevTotals =
-    view.pointsThisWord === null ? totals : previousTotals(totals, view.pointsThisWord);
-  const order = standingsOrder(view.playerIds, totals);
+  const { prevTotals, order } = standingsData(view);
 
   return (
     <>
       <Card variant="M" tilt={0.6} style={CARD_STYLE}>
-        <VerdictChip text={verdictChipText(path, view.guessCorrect)} />
+        <VerdictChip
+          text={verdictChipText(path, view.guessCorrect)}
+          shown={verdictShown(path, stage)}
+          live={verdictLive(path, stage)}
+        />
         <WordLine crewWord={view.crewWord} shown={stage.wordReached} />
-        {path === "caught" ? (
-          <GuessLine
-            imposter={nameOf(players, view.imposterId)}
-            guess={view.guess ?? ""}
-            revealed={revealed}
-          />
-        ) : null}
+        <GuessSlot
+          path={path}
+          imposter={nameOf(players, view.imposterId)}
+          guess={view.guess ?? ""}
+          revealed={revealed}
+          suspenseStartedAt={suspenseStartedAt}
+          verdictReached={stage.verdictReached}
+          clock={clock}
+        />
         <SummaryNote view={view} players={players} shown={stage.wordReached} />
       </Card>
       <StandingsCard
@@ -269,7 +376,7 @@ export function StageResult(props: StageResultProps) {
         players={players}
         me={me}
         from={prevTotals}
-        to={totals}
+        to={view.totals}
         live={stage.countReached}
       />
     </>

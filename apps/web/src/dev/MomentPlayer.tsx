@@ -1,6 +1,7 @@
 // /dev/moments — replay the Imposter reveal, last-chance and result previews on a
 // scrubbable fake clock. Dev-only.
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { HostRoomView, PlayerRoomView } from "@opg/protocol";
 import { Button, Chip, Marker, TvHeader } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
@@ -52,6 +53,7 @@ export interface DevMoment {
 }
 
 const REVEAL_PHONE_PREFIX = "phone:";
+const NO_TV_PHONE_PREFIX = "phone (no-tv):";
 const TV_WIDTH = 1920;
 const TV_HEIGHT = 1080;
 const TV_SCALE = 0.5;
@@ -180,6 +182,23 @@ export function phoneFixturesFor(
   );
 }
 
+function isNoTvFor(fixture: PreviewFixture, kind: MomentKind): fixture is PhonePreview {
+  if (fixture.surface !== "phone") return false;
+  const label = fixture.label.toLowerCase();
+  return label.startsWith(NO_TV_PHONE_PREFIX) && label.includes(phoneKeyword(kind));
+}
+
+/** The no-TV phone fixtures for this moment kind: `preview.ts`'s "Phone (no-TV): …" entries,
+ * each carrying the same stage the phone would receive from a real no-TV room. */
+export function noTvFixturesFor(
+  kind: MomentKind,
+  fixtures: readonly PreviewFixture[],
+): PhonePreview[] {
+  return fixtures.filter((fixture): fixture is PhonePreview =>
+    isNoTvFor(fixture, kind),
+  );
+}
+
 /** The moment's clock anchor: `timerStartedAt`, or the fixture's server clock. */
 export function anchorFor(fixture: PreviewFixture): number {
   return fixture.room.game?.timerStartedAt ?? fixture.room.serverNow;
@@ -293,6 +312,127 @@ function PhonePreview({
           send={send}
         />
       </div>
+    </div>
+  );
+}
+
+/** The no-TV column: same phone fixture, `stage` filled from the host fixture's own view --
+ * exactly what a real no-TV room sends, per `def.hostView(state, ctx)` (plan/0004-no-tv-mode.md §1). */
+function NoTvPreview({
+  fixture,
+  stage,
+  elapsedMs,
+  mountKey,
+}: {
+  fixture: PhonePreview;
+  stage: ImposterHostView;
+  elapsedMs: number;
+  mountKey: string;
+}) {
+  const Phone = imposterUi.Phone;
+  const send: (action: ImposterAction) => void = ignoreAction;
+  const clock: ServerClock = { now: () => anchorFor(fixture) + elapsedMs };
+  return (
+    <div
+      style={{
+        width: PHONE_WIDTH * PHONE_SCALE,
+        height: PHONE_HEIGHT * PHONE_SCALE,
+        overflow: "hidden",
+        border: "4px solid var(--opg-marker)",
+        borderRadius: 18,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        className="opg-root opg-grid-phone"
+        style={{
+          width: PHONE_WIDTH,
+          height: PHONE_HEIGHT,
+          transform: `scale(${PHONE_SCALE})`,
+          transformOrigin: "top left",
+        }}
+      >
+        <Phone
+          key={mountKey}
+          view={fixture.view}
+          room={fixture.room}
+          stage={stage}
+          deadline={fixture.room.game?.deadline ?? null}
+          timerStartedAt={anchorFor(fixture)}
+          clock={clock}
+          send={send}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Column({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ fontSize: 20, fontWeight: 700 }}>{title}</div>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignContent: "flex-start",
+          gap: 24,
+          maxHeight: TV_HEIGHT * TV_SCALE,
+          overflowY: "auto",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+interface MomentColumnsProps {
+  selected: DevMoment;
+  playback: Playback;
+  mountKey: string;
+}
+
+/** The TV, shared-screen-phone and no-TV-phone columns for the selected moment. */
+function MomentColumns({ selected, playback, mountKey }: MomentColumnsProps) {
+  const phones = phoneFixturesFor(selected.kind, ALL_FIXTURES);
+  const noTvPhones = noTvFixturesFor(selected.kind, ALL_FIXTURES);
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+      <Column title="TV">
+        <TvPreview
+          fixture={selected.fixture}
+          elapsedMs={playback.elapsed}
+          mountKey={mountKey}
+        />
+      </Column>
+      <Column title="Phones (shared screen)">
+        {phones.map((fixture) => (
+          <PhonePreview
+            key={fixture.label}
+            fixture={fixture}
+            elapsedMs={playback.elapsed}
+            mountKey={mountKey}
+          />
+        ))}
+      </Column>
+      <Column title="Phones (no TV)">
+        {noTvPhones.map((fixture) => (
+          <NoTvPreview
+            key={fixture.label}
+            fixture={fixture}
+            stage={selected.fixture.view}
+            elapsedMs={playback.elapsed}
+            mountKey={mountKey}
+          />
+        ))}
+      </Column>
     </div>
   );
 }
@@ -487,7 +627,6 @@ export function MomentPlayer({
   if (selected === null) return <EmptyMoments />;
 
   const mountKey = `${selected.id}-${playback.generation}`;
-  const phones = phoneFixturesFor(selected.kind, ALL_FIXTURES);
 
   return (
     <TvPage>
@@ -508,32 +647,7 @@ export function MomentPlayer({
         onRestart={playback.restart}
         onScrub={playback.scrub}
       />
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
-        <TvPreview
-          fixture={selected.fixture}
-          elapsedMs={playback.elapsed}
-          mountKey={mountKey}
-        />
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignContent: "flex-start",
-            gap: 24,
-            maxHeight: TV_HEIGHT * TV_SCALE,
-            overflowY: "auto",
-          }}
-        >
-          {phones.map((fixture) => (
-            <PhonePreview
-              key={fixture.label}
-              fixture={fixture}
-              elapsedMs={playback.elapsed}
-              mountKey={mountKey}
-            />
-          ))}
-        </div>
-      </div>
+      <MomentColumns selected={selected} playback={playback} mountKey={mountKey} />
     </TvPage>
   );
 }
