@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import { PhoneReveal } from "./PhoneReveal";
 import { mostLikelyToPreviews, REVEAL_PREVIEW_START } from "./preview";
 
@@ -51,15 +52,17 @@ function setup(label: string, elapsedMs: number) {
   };
   const me = room.players.find((player) => player.id === room.you) ?? null;
   const rendered = render(
-    <PhoneReveal
-      view={view}
-      players={room.players}
-      me={me}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-      stage={null}
-    />,
+    <LocaleProvider>
+      <PhoneReveal
+        view={view}
+        players={room.players}
+        me={me}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+        stage={null}
+      />
+    </LocaleProvider>,
   );
   return { advanceTo, rendered };
 }

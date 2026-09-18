@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { MltHostView, MltPlayerView } from "../state";
 import { Host } from "./Host";
 import { mostLikelyToPreviews } from "./preview";
@@ -34,13 +35,15 @@ function renderHost(label: string) {
   const { view, room } = hostSample(label);
   const clock: ServerClock = { now: () => room.serverNow };
   return render(
-    <Host
-      view={view}
-      room={room}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-    />,
+    <LocaleProvider>
+      <Host
+        view={view}
+        room={room}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+      />
+    </LocaleProvider>,
   );
 }
 

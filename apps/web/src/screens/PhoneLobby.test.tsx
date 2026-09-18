@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { makeGame, makePlayer, makePlayerView } from "./fixtures/room";
 import { PhoneLobby } from "./PhoneLobby";
 
@@ -22,15 +23,17 @@ function setup(
   } = {},
 ) {
   render(
-    <PhoneLobby
-      view={makePlayerView({
-        players: [ME, SAM, LEE],
-        you: "p1",
-        vipId: "p1",
-        ...patch,
-      })}
-      {...handlers}
-    />,
+    <LocaleProvider>
+      <PhoneLobby
+        view={makePlayerView({
+          players: [ME, SAM, LEE],
+          you: "p1",
+          vipId: "p1",
+          ...patch,
+        })}
+        {...handlers}
+      />
+    </LocaleProvider>,
   );
   return { user: userEvent.setup() };
 }

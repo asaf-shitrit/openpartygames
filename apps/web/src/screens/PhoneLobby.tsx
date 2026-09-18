@@ -12,6 +12,8 @@ import {
   Tally,
   Tape,
 } from "@opg/ui";
+import { format, joinNamesOr, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { gameIconFor } from "../games";
 
 export interface PhoneLobbyProps {
@@ -20,14 +22,14 @@ export interface PhoneLobbyProps {
   onLeave?: () => void;
 }
 
-function PlayerBadge({ player }: { player: PlayerSummary }) {
+function PlayerBadge({ player, t }: { player: PlayerSummary; t: Dictionary }) {
   if (player.isVip) {
     return (
       <div
         className="opg-marker"
         style={{ fontSize: 17, lineHeight: 1, color: "var(--opg-marker)" }}
       >
-        VIP
+        {t.lobby.vip}
       </div>
     );
   }
@@ -38,9 +40,11 @@ function PlayerBadge({ player }: { player: PlayerSummary }) {
 function PlayerCell({
   player,
   isYou,
+  t,
 }: {
   player: PlayerSummary;
   isYou: boolean;
+  t: Dictionary;
 }) {
   return (
     <div
@@ -64,12 +68,12 @@ function PlayerCell({
         }}
       >
         {player.name}
-        {isYou ? " (you)" : ""}
+        {isYou ? t.lobby.youSuffix : ""}
       </div>
       <div
         style={{ height: 22, display: "flex", alignItems: "center", gap: 3 }}
       >
-        <PlayerBadge player={player} />
+        <PlayerBadge player={player} t={t} />
       </div>
     </div>
   );
@@ -77,8 +81,10 @@ function PlayerCell({
 
 function ChangeDoodleButton({
   onChangeAvatar,
+  t,
 }: {
   onChangeAvatar: () => void;
+  t: Dictionary;
 }) {
   return (
     <button
@@ -99,7 +105,7 @@ function ChangeDoodleButton({
       }}
     >
       <Icon name="pencil" size={20} />
-      <span>Change doodle</span>
+      <span>{t.lobby.changeDoodle}</span>
     </button>
   );
 }
@@ -112,19 +118,19 @@ function findVip(view: PlayerRoomView): PlayerSummary | null {
   return view.players.find((p) => p.id === view.vipId) ?? null;
 }
 
-function vipLabel(vip: PlayerSummary | null): string {
-  return vip?.name ?? "The VIP";
+function vipLabel(vip: PlayerSummary | null, t: Dictionary): string {
+  return vip?.name ?? t.lobby.theVip;
 }
 
 function isVipYou(vip: PlayerSummary | null, you: string): boolean {
   return vip?.id === you;
 }
 
-function YouCardTitle({ me }: { me: PlayerSummary | null }) {
+function YouCardTitle({ me, t }: { me: PlayerSummary | null; t: Dictionary }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
-        {me?.name ?? "You"}
+        {me?.name ?? t.lobby.you}
       </div>
       {me && me.crowns > 0 ? <Tally count={me.crowns} size={28} /> : null}
     </div>
@@ -134,9 +140,11 @@ function YouCardTitle({ me }: { me: PlayerSummary | null }) {
 function YouCard({
   me,
   onChangeAvatar,
+  t,
 }: {
   me: PlayerSummary | null;
   onChangeAvatar?: () => void;
+  t: Dictionary;
 }) {
   return (
     <Card
@@ -160,9 +168,9 @@ function YouCard({
           gap: 8,
         }}
       >
-        <YouCardTitle me={me} />
+        <YouCardTitle me={me} t={t} />
         {onChangeAvatar ? (
-          <ChangeDoodleButton onChangeAvatar={onChangeAvatar} />
+          <ChangeDoodleButton onChangeAvatar={onChangeAvatar} t={t} />
         ) : null}
       </div>
     </Card>
@@ -170,13 +178,14 @@ function YouCard({
 }
 
 function vipNoteLine(
+  t: Dictionary,
   vipName: string,
   isYou: boolean,
   sharedScreen: boolean,
 ): string {
-  if (isYou) return "You're the VIP and pick the game.";
-  const picks = `${vipName} is the VIP and picks the game.`;
-  if (sharedScreen) return `${picks} Watch the TV.`;
+  if (isYou) return t.lobby.vipYouNote;
+  const picks = format(t.lobby.vipPicksNote, { name: vipName });
+  if (sharedScreen) return `${picks} ${t.lobby.watchTv}`;
   return picks;
 }
 
@@ -184,12 +193,14 @@ function VipNote({
   vipName,
   isYou,
   sharedScreen,
+  t,
 }: {
   vipName: string;
   isYou: boolean;
   sharedScreen: boolean;
+  t: Dictionary;
 }) {
-  const line = vipNoteLine(vipName, isYou, sharedScreen);
+  const line = vipNoteLine(t, vipName, isYou, sharedScreen);
   return (
     <StickyNote
       tilt={1}
@@ -212,24 +223,21 @@ function selectedGame(view: PlayerRoomView): GameSummary | null {
   return view.games.find((g) => g.id === view.selectedGameId) ?? null;
 }
 
-/** "Real or Nah", "Imposter or Most Likely To", "A, B or C". */
-function joinWithOr(names: string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
-}
-
 function alternativeNames(view: PlayerRoomView, exceptId: string): string[] {
   return view.games
     .filter((g) => g.noTv && g.id !== exceptId)
     .map((g) => g.name);
 }
 
-function escapeLine(vipName: string, altNames: string[]): string {
-  if (altNames.length === 0) return `${vipName} can add a shared screen.`;
-  return `${vipName} can pick ${joinWithOr(altNames)}, or add a shared screen.`;
+function escapeLine(t: Dictionary, vipName: string, altNames: string[]): string {
+  if (altNames.length === 0) return format(t.lobby.escapeNoAlt, { name: vipName });
+  return format(t.lobby.escapeWithAlt, {
+    name: vipName,
+    names: joinNamesOr(t.common, altNames),
+  });
 }
 
-function BlockedReason() {
+function BlockedReason({ t }: { t: Dictionary }) {
   return (
     <div
       style={{
@@ -251,13 +259,13 @@ function BlockedReason() {
           lineHeight: 1.3,
         }}
       >
-        Plays on a shared screen.
+        {t.lobby.playsOnSharedScreen}
       </div>
     </div>
   );
 }
 
-function GameCard({ game }: { game: GameSummary }) {
+function GameCard({ game, t }: { game: GameSummary; t: Dictionary }) {
   return (
     <Card
       variant="L"
@@ -290,7 +298,11 @@ function GameCard({ game }: { game: GameSummary }) {
           color: "var(--opg-ink-secondary)",
         }}
       >
-        {game.minPlayers}–{game.maxPlayers} players · about {game.minutes} min
+        {format(t.lobby.playersRange, {
+          min: game.minPlayers,
+          max: game.maxPlayers,
+          minutes: game.minutes,
+        })}
       </div>
     </Card>
   );
@@ -299,21 +311,23 @@ function GameCard({ game }: { game: GameSummary }) {
 function SelectedGameSection({
   view,
   vipName,
+  t,
 }: {
   view: PlayerRoomView;
   vipName: string;
+  t: Dictionary;
 }) {
   const game = selectedGame(view);
   if (!game) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <Marker size={22} style={{ lineHeight: 1.15 }}>
-        {vipName} picked
+        {format(t.lobby.picked, { name: vipName })}
       </Marker>
-      <GameCard game={game} />
+      <GameCard game={game} t={t} />
       {game.noTv ? null : (
         <>
-          <BlockedReason />
+          <BlockedReason t={t} />
           <div
             style={{
               fontSize: 16,
@@ -321,7 +335,7 @@ function SelectedGameSection({
               color: "var(--opg-ink-secondary)",
             }}
           >
-            {escapeLine(vipName, alternativeNames(view, game.id))}
+            {escapeLine(t, vipName, alternativeNames(view, game.id))}
           </div>
         </>
       )}
@@ -329,7 +343,7 @@ function SelectedGameSection({
   );
 }
 
-function LeaveButton({ onLeave }: { onLeave: () => void }) {
+function LeaveButton({ onLeave, t }: { onLeave: () => void; t: Dictionary }) {
   return (
     <button
       type="button"
@@ -350,7 +364,7 @@ function LeaveButton({ onLeave }: { onLeave: () => void }) {
     >
       <Icon name="kick" size={22} color="var(--opg-ink-secondary)" />
       <span style={{ textDecoration: "underline", textUnderlineOffset: 4 }}>
-        Leave room
+        {t.lobby.leaveRoom}
       </span>
     </button>
   );
@@ -359,9 +373,11 @@ function LeaveButton({ onLeave }: { onLeave: () => void }) {
 function LobbyBody({
   players,
   you,
+  t,
 }: {
   players: PlayerSummary[];
   you: string;
+  t: Dictionary;
 }) {
   return (
     <div
@@ -372,13 +388,14 @@ function LobbyBody({
       }}
     >
       {players.map((player) => (
-        <PlayerCell key={player.id} player={player} isYou={player.id === you} />
+        <PlayerCell key={player.id} player={player} isYou={player.id === you} t={t} />
       ))}
     </div>
   );
 }
 
 export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
+  const { t } = useLocale();
   const me = findMe(view);
   const vip = findVip(view);
 
@@ -387,7 +404,7 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
           <Marker size={40} style={{ lineHeight: 1.15 }}>
-            You're in!
+            {t.lobby.youreIn}
           </Marker>
         </Highlight>
         <div
@@ -397,29 +414,30 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
             color: "var(--opg-ink-secondary)",
           }}
         >
-          Room {view.code}
+          {format(t.lobby.room, { code: view.code })}
         </div>
       </div>
 
-      <YouCard me={me} onChangeAvatar={onChangeAvatar} />
+      <YouCard me={me} onChangeAvatar={onChangeAvatar} t={t} />
 
       <VipNote
-        vipName={vipLabel(vip)}
+        vipName={vipLabel(vip, t)}
         isYou={isVipYou(vip, view.you)}
         sharedScreen={view.sharedScreen}
+        t={t}
       />
 
       {view.sharedScreen ? null : (
-        <SelectedGameSection view={view} vipName={vipLabel(vip)} />
+        <SelectedGameSection view={view} vipName={vipLabel(vip, t)} t={t} />
       )}
 
       <Marker size={28} style={{ lineHeight: 1.15 }}>
-        Who's here ({view.players.length})
+        {format(t.lobby.whosHere, { count: view.players.length })}
       </Marker>
 
-      <LobbyBody players={view.players} you={view.you} />
+      <LobbyBody players={view.players} you={view.you} t={t} />
 
-      {onLeave ? <LeaveButton onLeave={onLeave} /> : null}
+      {onLeave ? <LeaveButton onLeave={onLeave} t={t} /> : null}
     </PhoneScreen>
   );
 }

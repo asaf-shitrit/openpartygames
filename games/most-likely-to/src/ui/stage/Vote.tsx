@@ -3,6 +3,8 @@
 import type { CSSProperties } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
 import { Avatar, Card, Icon } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltHostView } from "../../state";
 import { avatarOf, nameOf, PromptLine } from "../common";
 
@@ -49,16 +51,20 @@ const PLACEHOLDER: CSSProperties = {
 function VotedAvatar({
   players,
   id,
+  t,
 }: {
   players: PlayerSummary[];
   id: PlayerId;
+  t: Dictionary;
 }) {
   return (
     <div style={{ position: "relative" }}>
       <Avatar
         id={avatarOf(players, id)}
         size={40}
-        alt={`${nameOf(players, id)}'s avatar`}
+        alt={format(t.mostLikelyTo.avatarAlt, {
+          name: nameOf(players, id, t.common.someone),
+        })}
       />
       <div style={BADGE}>
         <Icon name="check" size={12} color="var(--opg-ink)" />
@@ -74,17 +80,21 @@ export interface StageVoteProps {
 
 /** The stage region while the room votes: the prompt, and who has locked in. */
 export function StageVote({ view, players }: StageVoteProps) {
+  const { t } = useLocale();
   const remaining = Math.max(view.playerIds.length - view.votedIds.length, 0);
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
       <PromptLine prompt={view.prompt} size={26} />
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={VOTED_LABEL}>
-          Voted so far ({view.votedIds.length} of {view.playerIds.length})
+          {format(t.mostLikelyTo.votedSoFar, {
+            voted: view.votedIds.length,
+            total: view.playerIds.length,
+          })}
         </div>
         <div style={AVATAR_ROW}>
           {view.votedIds.map((id) => (
-            <VotedAvatar key={id} players={players} id={id} />
+            <VotedAvatar key={id} players={players} id={id} t={t} />
           ))}
           {Array.from({ length: remaining }, (_, index) => (
             <div

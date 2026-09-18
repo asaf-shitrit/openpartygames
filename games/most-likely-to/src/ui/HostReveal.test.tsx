@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
-import { fireCue, HostReveal, joinNames, measureTargets } from "./HostReveal";
+import { LocaleProvider } from "@opg/i18n";
+import { fireCue, HostReveal, measureTargets } from "./HostReveal";
 import { REVEAL_PREVIEW_START, mostLikelyToPreviews } from "./preview";
 
 afterEach(() => {
@@ -61,15 +62,17 @@ function setup(label: string, elapsedMs: number) {
     }
   };
   const rendered = render(
-    <SoundProvider engine={engine}>
-      <HostReveal
-        view={view}
-        players={room.players}
-        deadline={room.game?.deadline ?? null}
-        timerStartedAt={room.game?.timerStartedAt ?? null}
-        clock={clock}
-      />
-    </SoundProvider>,
+    <LocaleProvider>
+      <SoundProvider engine={engine}>
+        <HostReveal
+          view={view}
+          players={room.players}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </SoundProvider>
+    </LocaleProvider>,
   );
   return { engine, advanceTo, rendered };
 }
@@ -175,13 +178,15 @@ describe("HostReveal, next note", () => {
     const finalView = { ...view, roundNumber: view.roundCount };
     const clock: ServerClock = { now: () => REVEAL_PREVIEW_START + 11200 };
     render(
-      <HostReveal
-        view={finalView}
-        players={room.players}
-        deadline={room.game?.deadline ?? null}
-        timerStartedAt={room.game?.timerStartedAt ?? null}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <HostReveal
+          view={finalView}
+          players={room.players}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("Final scores next")).toBeTruthy();
   });
@@ -219,13 +224,15 @@ describe("HostReveal, no reveal yet", () => {
     const { view, room } = hostSample("Host: reveal picked");
     const clock: ServerClock = { now: () => REVEAL_PREVIEW_START + 11200 };
     const { container } = render(
-      <HostReveal
-        view={{ ...view, reveal: null }}
-        players={room.players}
-        deadline={room.game?.deadline ?? null}
-        timerStartedAt={room.game?.timerStartedAt ?? null}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <HostReveal
+          view={{ ...view, reveal: null }}
+          players={room.players}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     const verdict = container.querySelector(
       '[data-testid="reveal-centered-verdict"]',
@@ -253,15 +260,6 @@ describe("fireCue", () => {
     };
     fireCue(play, { id: "silent", atMs: 0 });
     expect(calls).toEqual([]);
-  });
-});
-
-describe("joinNames", () => {
-  it("joins one, two and several names in prose", () => {
-    expect(joinNames(["Maya"])).toBe("Maya");
-    expect(joinNames(["Maya", "Dov"])).toBe("Maya and Dov");
-    expect(joinNames(["Maya", "Dov", "Priya"])).toBe("Maya, Dov and Priya");
-    expect(joinNames([])).toBe("");
   });
 });
 

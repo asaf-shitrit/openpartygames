@@ -16,6 +16,8 @@ import {
   TallyScratch,
   useMoment,
 } from "@opg/ui";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltHostView, MltOutcome, MltReveal } from "../../state";
 import { REVEAL_MS } from "../../state";
 import { avatarOf, nameOf, PromptLine } from "../common";
@@ -91,8 +93,8 @@ function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
   };
 }
 
-function voteLabel(shown: number): string {
-  return `${shown} ${shown === 1 ? "vote" : "votes"}`;
+function voteLabel(t: Dictionary, shown: number): string {
+  return format(pickPluralByCount(shown, t.mostLikelyTo.votes), { count: shown });
 }
 
 const CARD_STYLE: CSSProperties = {
@@ -115,15 +117,17 @@ function VerdictArea({
   verdictReached,
   verdictLive,
   players,
+  t,
 }: {
   outcome: MltOutcome;
   verdictReached: boolean;
   verdictLive: boolean;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   if (!verdictReached) return <div style={{ minHeight: 44 }} />;
-  const stampText = verdictStampText(outcome);
-  const captionText = explainLine(outcome, players);
+  const stampText = verdictStampText(t, outcome);
+  const captionText = explainLine(t, outcome, players);
   return (
     <>
       <div data-testid="stage-verdict-stamp">
@@ -161,24 +165,29 @@ interface TallyRowProps {
   drawn: number;
   highlighted: boolean;
   players: PlayerSummary[];
+  t: Dictionary;
 }
 
-function TallyRow({ id, meId, voters, order, drawn, highlighted, players }: TallyRowProps) {
+function TallyRow({ id, meId, voters, order, drawn, highlighted, players, t }: TallyRowProps) {
   const shown = marksForTarget(order, id, drawn);
-  const name = nameOf(players, id);
-  const label = id === meId ? `${name} (you)` : name;
+  const name = nameOf(players, id, t.common.someone);
+  const label = id === meId ? `${name}${t.mostLikelyTo.youSuffixLower}` : name;
   return (
     <div style={highlighted ? ROW_HIGHLIGHTED : ROW}>
-      <Avatar id={avatarOf(players, id)} size={32} alt={`${name}'s avatar`} />
+      <Avatar
+        id={avatarOf(players, id)}
+        size={32}
+        alt={format(t.mostLikelyTo.avatarAlt, { name })}
+      />
       <div style={{ flexGrow: 1, fontSize: 17, fontWeight: 700 }}>{label}</div>
       {shown > 0 ? (
         <>
           <TallyScratch count={voters.length} drawn={shown} size={26} />
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(shown)}</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </>
       ) : (
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-muted)" }}>
-          0 votes
+          {t.mostLikelyTo.zeroVotes}
         </div>
       )}
     </div>
@@ -189,15 +198,17 @@ function PointsLine({
   pointsReached,
   matchedIds,
   players,
+  t,
 }: {
   pointsReached: boolean;
   matchedIds: readonly PlayerId[];
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   if (!pointsReached) return null;
   return (
     <div style={{ fontSize: 18, fontWeight: 700, textAlign: "center" }}>
-      {pointsLine(matchedIds, players)}
+      {pointsLine(t, matchedIds, players)}
     </div>
   );
 }
@@ -206,15 +217,17 @@ function NextNote({
   nextReached,
   roundNumber,
   roundCount,
+  t,
 }: {
   nextReached: boolean;
+  t: Dictionary;
   roundNumber: number;
   roundCount: number;
 }) {
   if (!nextReached) return null;
   return (
     <StickyNote tilt={-2} style={{ padding: "10px 18px", fontSize: 18, fontWeight: 700 }}>
-      {nextNoteText(roundNumber, roundCount)}
+      {nextNoteText(t, roundNumber, roundCount)}
     </StickyNote>
   );
 }
@@ -223,14 +236,16 @@ function VerdictAnnouncer({
   verdictReached,
   outcome,
   players,
+  t,
 }: {
   verdictReached: boolean;
+  t: Dictionary;
   outcome: MltOutcome;
   players: PlayerSummary[];
 }) {
   return (
     <output aria-live="polite" style={HIDDEN}>
-      {verdictReached ? verdictSentence(outcome, players) : ""}
+      {verdictReached ? verdictSentence(t, outcome, players) : ""}
     </output>
   );
 }
@@ -255,10 +270,12 @@ function SuspenseRing({
   suspenseOn,
   startedAt,
   clock,
+  t,
 }: {
   suspenseOn: boolean;
   startedAt: number | null;
   clock: ServerClock;
+  t: Dictionary;
 }) {
   if (!suspenseOn || startedAt === null) return null;
   return (
@@ -267,7 +284,7 @@ function SuspenseRing({
       durationMs={REVEAL_TIMING.verdictMs - REVEAL_TIMING.suspenseMs}
       clock={clock}
       size={64}
-      label="Verdict incoming"
+      label={t.mostLikelyTo.verdictIncoming}
     />
   );
 }
@@ -286,6 +303,7 @@ function TallyList({
   highlightedIds,
   me,
   players,
+  t,
 }: {
   reveal: MltReveal;
   plan: RevealPlan;
@@ -293,6 +311,7 @@ function TallyList({
   highlightedIds: readonly PlayerId[];
   me: PlayerId | null;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   return (
     <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
@@ -306,6 +325,7 @@ function TallyList({
           drawn={drawn}
           highlighted={highlightedIds.includes(id)}
           players={players}
+          t={t}
         />
       ))}
     </div>
@@ -324,6 +344,7 @@ export interface StageRevealProps {
 /** The stage region during the reveal: the same 12s ceremony as the TV, in one column. */
 export function StageReveal(props: StageRevealProps) {
   const { view, players, me, clock } = props;
+  const { t } = useLocale();
   const reveal = view.reveal ?? FALLBACK_REVEAL;
   const plan = useMemo(() => revealPlan(reveal), [reveal]);
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, REVEAL_MS);
@@ -341,8 +362,9 @@ export function StageReveal(props: StageRevealProps) {
         verdictReached={stage.verdictReached}
         verdictLive={stage.verdictLive}
         players={players}
+        t={t}
       />
-      <SuspenseRing suspenseOn={suspense.on} startedAt={suspense.startedAt} clock={clock} />
+      <SuspenseRing suspenseOn={suspense.on} startedAt={suspense.startedAt} clock={clock} t={t} />
       <TallyList
         reveal={reveal}
         plan={plan}
@@ -350,21 +372,25 @@ export function StageReveal(props: StageRevealProps) {
         highlightedIds={highlightedIds}
         me={me}
         players={players}
+        t={t}
       />
       <PointsLine
         pointsReached={stage.pointsReached}
         matchedIds={reveal.matchedIds}
         players={players}
+        t={t}
       />
       <NextNote
         nextReached={stage.nextReached}
         roundNumber={view.roundNumber}
         roundCount={view.roundCount}
+        t={t}
       />
       <VerdictAnnouncer
         verdictReached={stage.verdictReached}
         outcome={reveal.outcome}
         players={players}
+        t={t}
       />
     </Card>
   );

@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { PhoneJoin } from "./PhoneJoin";
 
 function stubFetch(handler: () => Promise<Response>): void {
@@ -19,7 +20,11 @@ function roomInfo(joinable: boolean, inGame = false): Response {
 }
 
 function renderForm(onJoin = vi.fn<(code: string, name: string) => void>()) {
-  render(<PhoneJoin onJoin={onJoin} />);
+  render(
+    <LocaleProvider>
+      <PhoneJoin onJoin={onJoin} />
+    </LocaleProvider>,
+  );
   return { onJoin, user: userEvent.setup() };
 }
 
@@ -139,17 +144,21 @@ describe("PhoneJoin", () => {
 
   it("shows an error passed by the parent", () => {
     render(
-      <PhoneJoin
-        error="Server said no"
-        onJoin={vi.fn<(code: string, name: string) => void>()}
-      />,
+      <LocaleProvider>
+        <PhoneJoin
+          error="Server said no"
+          onJoin={vi.fn<(code: string, name: string) => void>()}
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("Server said no")).toBeTruthy();
   });
 
   it("disables the button while busy", () => {
     render(
-      <PhoneJoin busy onJoin={vi.fn<(code: string, name: string) => void>()} />,
+      <LocaleProvider>
+        <PhoneJoin busy onJoin={vi.fn<(code: string, name: string) => void>()} />
+      </LocaleProvider>,
     );
     expect(screen.getByRole("button", { name: /joining/i })).toHaveProperty(
       "disabled",

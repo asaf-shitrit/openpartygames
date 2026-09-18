@@ -1,6 +1,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { lastSocket, resetFakeSockets } from "./fixtures/socket";
 import type { FakeWebSocket } from "./fixtures/socket";
 import {
@@ -64,7 +65,11 @@ describe("PlayerApp", () => {
   it("joins from the form, then shows the avatar picker once", async () => {
     stubRoomInfo();
     const user = userEvent.setup();
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = lastSocket();
     act(() => socket.open());
 
@@ -90,7 +95,11 @@ describe("PlayerApp", () => {
 
   it("skips the picker when the avatar was already picked", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -110,7 +119,11 @@ describe("PlayerApp", () => {
 
   it("shows the VIP controls to the VIP", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -123,7 +136,11 @@ describe("PlayerApp", () => {
 
   it("shows the results screen to a non-VIP phone after a game", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -148,7 +165,11 @@ describe("PlayerApp", () => {
 
   it("shows results above the VIP controls for the VIP, who can still pick", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -174,7 +195,11 @@ describe("PlayerApp", () => {
 
   it("shows the waiting screen for a player joining mid-game", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -197,7 +222,11 @@ describe("PlayerApp", () => {
 
   it("renders the active game UI for a playing player", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     const preview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!preview) throw new Error("missing phone preview");
@@ -207,7 +236,11 @@ describe("PlayerApp", () => {
 
   it("keeps rendering the game when a shared stage rides along with the view", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     const phonePreview = realOrNahPreviews.find((p) => p.surface === "phone");
     const hostPreview = realOrNahPreviews.find((p) => p.surface === "host");
@@ -230,7 +263,11 @@ describe("PlayerApp", () => {
 
   it("keeps rendering the game when the shared stage is malformed", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     const phonePreview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!phonePreview) throw new Error("missing phone preview");
@@ -252,7 +289,11 @@ describe("PlayerApp", () => {
 
   it("shows the reconnecting overlay when the socket drops with a seat", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() => socket.receive({ t: "state", view: makePlayerView() }));
     act(() => socket.serverClose());
@@ -261,7 +302,11 @@ describe("PlayerApp", () => {
 
   it("shows the kicked screen after being removed", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() => socket.receive({ t: "state", view: makePlayerView() }));
     act(() => socket.receive({ t: "kicked" }));
@@ -270,7 +315,11 @@ describe("PlayerApp", () => {
 
   it("remembers the picked doodle and closes the picker", async () => {
     const user = userEvent.setup();
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() => socket.receive({ t: "state", view: lobbyWithVipElsewhere() }));
 
@@ -290,7 +339,11 @@ describe("PlayerApp", () => {
   it("reopens the picker from the lobby with a change of doodle", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     const user = userEvent.setup();
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() => socket.receive({ t: "state", view: lobbyWithVipElsewhere() }));
 
@@ -299,7 +352,11 @@ describe("PlayerApp", () => {
   });
 
   it("shows plain copy for a known join error code", () => {
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = lastSocket();
     act(() => socket.open());
     act(() =>
@@ -313,7 +370,11 @@ describe("PlayerApp", () => {
   });
 
   it("falls back to the server message for an unmapped error code", () => {
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = lastSocket();
     act(() => socket.open());
     act(() =>
@@ -323,7 +384,11 @@ describe("PlayerApp", () => {
   });
 
   it("shows generic copy when the server sends no error message", () => {
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = lastSocket();
     act(() => socket.open());
     act(() =>
@@ -335,7 +400,11 @@ describe("PlayerApp", () => {
   it("gives the VIP in-game controls that skip and end the game", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     const user = userEvent.setup();
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     const preview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!preview) throw new Error("missing phone preview");
@@ -364,7 +433,11 @@ describe("PlayerApp", () => {
 
   it("waits when the room's game has no screen here", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -386,7 +459,11 @@ describe("PlayerApp", () => {
 
   it("waits when a game is running without a payload yet", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -408,7 +485,11 @@ describe("PlayerApp", () => {
 
   it("waits when the room has no game at all", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() =>
       socket.receive({
@@ -425,7 +506,11 @@ describe("PlayerApp", () => {
       Promise.resolve(new FakeWakeLockSentinel()),
     );
     stubWakeLock(request);
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = joinPlayer();
     act(() => socket.receive({ t: "state", view: makePlayerView() }));
     expect(request).toHaveBeenCalledWith("screen");
@@ -436,7 +521,11 @@ describe("PlayerApp", () => {
       Promise.resolve(new FakeWakeLockSentinel()),
     );
     stubWakeLock(request);
-    render(<PlayerApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = lastSocket();
     act(() => socket.open());
     expect(request).not.toHaveBeenCalled();

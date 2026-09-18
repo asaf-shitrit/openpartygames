@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { PlayerSummary } from "@opg/protocol";
 import { afterEach } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { avatarOf, findPlayer, nameOf, PromptLine } from "./common";
 
 afterEach(() => {
@@ -46,15 +47,15 @@ describe("findPlayer", () => {
 
 describe("nameOf", () => {
   it("returns the player's name", () => {
-    expect(nameOf(PLAYERS, "dov")).toBe("Dov");
+    expect(nameOf(PLAYERS, "dov", "Someone")).toBe("Dov");
   });
 
-  it("falls back to Someone for an unknown id", () => {
-    expect(nameOf(PLAYERS, "zed")).toBe("Someone");
+  it("falls back to the given someone label for an unknown id", () => {
+    expect(nameOf(PLAYERS, "zed", "Someone")).toBe("Someone");
   });
 
-  it("falls back to Someone for a null id", () => {
-    expect(nameOf(PLAYERS, null)).toBe("Someone");
+  it("falls back to the given someone label for a null id", () => {
+    expect(nameOf(PLAYERS, null, "Someone")).toBe("Someone");
   });
 });
 
@@ -75,7 +76,9 @@ describe("avatarOf", () => {
 describe("PromptLine", () => {
   it("renders the Who's most likely to... text with the prompt", () => {
     const { container } = render(
-      <PromptLine prompt="adopt a dozen cats" size={20} />,
+      <LocaleProvider>
+        <PromptLine prompt="adopt a dozen cats" size={20} />
+      </LocaleProvider>,
     );
     expect(container.querySelector("p")?.textContent).toBe(
       "Who's most likely to adopt a dozen cats?",

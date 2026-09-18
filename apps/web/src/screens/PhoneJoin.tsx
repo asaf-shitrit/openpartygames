@@ -11,6 +11,8 @@ import {
   Tape,
   TextInput,
 } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { ApiError, getRoomInfo } from "../api";
 
 export interface PhoneJoinProps {
@@ -21,7 +23,7 @@ export interface PhoneJoinProps {
   onJoin: (code: string, name: string) => void;
 }
 
-function BrandHeader() {
+function BrandHeader({ t }: { t: Dictionary }) {
   return (
     <div
       style={{
@@ -34,8 +36,7 @@ function BrandHeader() {
         aria-hidden="true"
         style={{
           position: "absolute",
-          left: 0,
-          right: 0,
+          insetInline: 0,
           bottom: 3,
           height: 12,
           background: "var(--opg-highlight)",
@@ -47,7 +48,7 @@ function BrandHeader() {
         className="opg-marker"
         style={{ position: "relative", fontSize: 24, lineHeight: 1.2 }}
       >
-        OpenPartyGames
+        {t.join.brand}
       </div>
     </div>
   );
@@ -92,9 +93,11 @@ function CodeCells({ code }: { code: string }) {
 function CodeField({
   code,
   onChange,
+  t,
 }: {
   code: string;
   onChange: (value: string) => void;
+  t: Dictionary;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -108,7 +111,7 @@ function CodeField({
           color: "var(--opg-ink-secondary)",
         }}
       >
-        Room code
+        {t.join.roomCodeLabel}
       </label>
       <div className="opg-code-field" style={{ position: "relative" }}>
         <CodeCells code={code} />
@@ -120,7 +123,7 @@ function CodeField({
           autoCapitalize="characters"
           inputMode="text"
           maxLength={ROOM_CODE_LENGTH}
-          aria-label="Room code"
+          aria-label={t.join.roomCodeLabel}
           style={{
             position: "absolute",
             inset: 0,
@@ -141,7 +144,7 @@ function CodeField({
         }}
       >
         <Icon name="monitor" size={22} color="var(--opg-ink-secondary)" />
-        <div>Ask someone in the room</div>
+        <div>{t.join.askSomeone}</div>
       </div>
     </div>
   );
@@ -181,6 +184,7 @@ interface JoinFormProps {
   shownError: JoinErrorResult | null;
   pending: boolean;
   onSubmit: () => void;
+  t: Dictionary;
 }
 
 function JoinForm({
@@ -191,7 +195,9 @@ function JoinForm({
   shownError,
   pending,
   onSubmit,
+  t,
 }: JoinFormProps) {
+  const { dir } = useLocale();
   return (
     <Card
       variant="L"
@@ -204,71 +210,72 @@ function JoinForm({
       }}
     >
       <Tape left={110} top={-20} width={150} height={40} rotate={-3} />
-      <Marker size={40}>Join a game</Marker>
-      <CodeField code={code} onChange={onCodeChange} />
+      <Marker size={40}>{t.join.heading}</Marker>
+      <CodeField code={code} onChange={onCodeChange} t={t} />
       <TextInput
-        label="Your name"
+        label={t.join.yourNameLabel}
         value={name}
         onChange={onNameChange}
         maxLength={12}
-        placeholder="Your name"
+        placeholder={t.join.yourNamePlaceholder}
       />
       {shownError ? <ErrorLine error={shownError} /> : null}
       <Button size="lg" fullWidth disabled={pending} onClick={onSubmit}>
-        <span>{pending ? "Joining…" : "Join"}</span>
-        <Icon name="arrow-right" size={24} color="var(--opg-paper)" />
+        <span>{pending ? t.join.joining : t.join.join}</span>
+        <Icon
+          name="arrow-right"
+          size={24}
+          color="var(--opg-paper)"
+          style={dir === "rtl" ? { transform: "scaleX(-1)" } : undefined}
+        />
       </Button>
     </Card>
   );
 }
 
-const JOIN_ERRORS = {
-  code: "Enter the 4-letter room code.",
-  name: "Enter a name.",
-  missing: "That room code doesn't exist.",
-  full: "That room is full or locked.",
-  unreachable: "Could not reach the room. Check your connection.",
-  rateLimited: "Too many tries. Wait a moment and try again.",
-} as const;
-
-const SOUNDS_ALIKE_HINT =
-  "Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again.";
-
 /** The room code wasn't found, with a hint for the most likely reason why. */
-function missingRoomError(): JoinErrorResult {
-  return { message: JOIN_ERRORS.missing, hint: SOUNDS_ALIKE_HINT };
+function missingRoomError(t: Dictionary): JoinErrorResult {
+  return { message: t.join.errorMissing, hint: t.join.soundsAlikeHint };
 }
 
 /** Problems the player can fix in the form itself. */
-function localJoinError(code: string, name: string): JoinErrorResult | null {
-  if (code.length !== ROOM_CODE_LENGTH) return { message: JOIN_ERRORS.code };
-  if (name.length === 0) return { message: JOIN_ERRORS.name };
+function localJoinError(
+  t: Dictionary,
+  code: string,
+  name: string,
+): JoinErrorResult | null {
+  if (code.length !== ROOM_CODE_LENGTH) return { message: t.join.errorCode };
+  if (name.length === 0) return { message: t.join.errorName };
   return null;
 }
 
 /** Maps a room lookup onto the message to show, or null when the join can proceed. */
-function roomJoinError(info: RoomInfoResponse): JoinErrorResult | null {
-  if (!info.exists) return missingRoomError();
-  if (!info.joinable && !info.inGame) return { message: JOIN_ERRORS.full };
+function roomJoinError(
+  t: Dictionary,
+  info: RoomInfoResponse,
+): JoinErrorResult | null {
+  if (!info.exists) return missingRoomError(t);
+  if (!info.joinable && !info.inGame) return { message: t.join.errorFull };
   return null;
 }
 
 async function joinError(
+  t: Dictionary,
   cleanCode: string,
   cleanName: string,
 ): Promise<JoinErrorResult | null> {
-  const local = localJoinError(cleanCode, cleanName);
+  const local = localJoinError(t, cleanCode, cleanName);
   if (local) return local;
   try {
-    return roomJoinError(await getRoomInfo(cleanCode));
+    return roomJoinError(t, await getRoomInfo(cleanCode));
   } catch (err) {
     if (err instanceof ApiError && err.code === "not-found") {
-      return missingRoomError();
+      return missingRoomError(t);
     }
     if (err instanceof ApiError && err.code === "rate-limited") {
-      return { message: JOIN_ERRORS.rateLimited };
+      return { message: t.join.errorRateLimited };
     }
-    return { message: JOIN_ERRORS.unreachable };
+    return { message: t.join.errorUnreachable };
   }
 }
 
@@ -285,6 +292,7 @@ export function PhoneJoin({
   const [name, setName] = useState(initialName);
   const [localError, setLocalError] = useState<JoinErrorResult | null>(null);
   const [checking, setChecking] = useState(false);
+  const { t } = useLocale();
 
   const setCodeInput = (value: string) => {
     const letters = value
@@ -300,7 +308,7 @@ export function PhoneJoin({
     const cleanName = name.trim();
     setChecking(true);
     setLocalError(null);
-    const message = await joinError(cleanCode, cleanName);
+    const message = await joinError(t, cleanCode, cleanName);
     setChecking(false);
     if (message) {
       setLocalError(message);
@@ -317,7 +325,7 @@ export function PhoneJoin({
 
   return (
     <PhoneScreen>
-      <BrandHeader />
+      <BrandHeader t={t} />
       <div
         style={{
           flexGrow: 1,
@@ -338,6 +346,7 @@ export function PhoneJoin({
           shownError={shownError}
           pending={pending}
           onSubmit={handleSubmit}
+          t={t}
         />
         <div
           style={{
@@ -347,7 +356,7 @@ export function PhoneJoin({
             color: "var(--opg-ink-secondary)",
           }}
         >
-          No account needed.
+          {t.join.noAccount}
         </div>
       </div>
     </PhoneScreen>

@@ -13,6 +13,7 @@
     "@opg/game-imposter": "workspace:*",
     "@opg/game-most-likely-to": "workspace:*",
     "@opg/game-real-or-nah": "workspace:*",
+    "@opg/i18n": "workspace:*",
     "@opg/protocol": "workspace:*",
     "@opg/ui": "workspace:*",
     "qrcode": "^1.5.4",

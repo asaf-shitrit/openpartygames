@@ -15,6 +15,8 @@ import {
   Timer,
   useBuzz,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltAction, MltHostView, MltPhase, MltPlayerView } from "../state";
 import { avatarOf, findPlayer, nameOf, PromptLine } from "./common";
 import { PhoneReveal } from "./PhoneReveal";
@@ -32,12 +34,14 @@ interface SectionProps {
   stage: MltHostView | null;
 }
 
-function Strip({ progress }: { progress: string }) {
-  return <PhoneStrip gameName="Most Likely To" progress={progress} />;
+function Strip({ progress, t }: { progress: string; t: Dictionary }) {
+  return <PhoneStrip gameName={t.mostLikelyTo.title} progress={progress} />;
 }
 
-function progressFor(view: MltPlayerView): string {
-  return view.phase === "vote" ? "Vote" : "Here comes the verdict";
+function progressFor(t: Dictionary, view: MltPlayerView): string {
+  return view.phase === "vote"
+    ? t.mostLikelyTo.voteProgress
+    : t.mostLikelyTo.verdictProgress;
 }
 
 function voteRowStyle(index: number, selected: boolean): CSSProperties {
@@ -60,13 +64,13 @@ function voteRowStyle(index: number, selected: boolean): CSSProperties {
   };
 }
 
-function VotePickMark({ selected }: { selected: boolean }) {
+function VotePickMark({ selected, t }: { selected: boolean; t: Dictionary }) {
   if (!selected)
     return <Icon name="pencil" size={30} color="var(--opg-muted)" />;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <Icon name="check" size={28} color="var(--opg-marker)" />
-      <div style={{ fontSize: 17, fontWeight: 700 }}>Your pick</div>
+      <div style={{ fontSize: 17, fontWeight: 700 }}>{t.mostLikelyTo.yourPick}</div>
     </div>
   );
 }
@@ -78,6 +82,7 @@ function VoteRow({
   isMe,
   players,
   onPick,
+  t,
 }: {
   id: PlayerId;
   index: number;
@@ -85,9 +90,10 @@ function VoteRow({
   isMe: boolean;
   players: PlayerSummary[];
   onPick: () => void;
+  t: Dictionary;
 }) {
-  const name = nameOf(players, id);
-  const label = isMe ? `${name} (You)` : name;
+  const name = nameOf(players, id, t.common.someone);
+  const label = isMe ? `${name}${t.mostLikelyTo.youSuffix}` : name;
   return (
     <button
       type="button"
@@ -98,12 +104,12 @@ function VoteRow({
       <Avatar
         id={avatarOf(players, id)}
         size={48}
-        alt={`${name}'s avatar`}
+        alt={format(t.mostLikelyTo.avatarAlt, { name })}
       />
       <div style={{ flexGrow: 1, fontSize: 21, fontWeight: 700 }}>
         {label}
       </div>
-      <VotePickMark selected={selected} />
+      <VotePickMark selected={selected} t={t} />
     </button>
   );
 }
@@ -138,25 +144,30 @@ interface PickLabel {
   label: string;
 }
 
-/** "yourself" for a self-vote, otherwise the pick's name (or "Someone" for a kicked player). */
+/** `yourself` for a self-vote, otherwise the pick's name (or `someone` for a kicked player). */
 function pickLabelFor(
+  t: Dictionary,
   myVote: PlayerId | null,
   meId: PlayerId | undefined,
   votedFor: PlayerSummary | null,
 ): PickLabel {
   const isSelf = myVote !== null && myVote === meId;
-  return { isSelf, label: isSelf ? "yourself" : (votedFor?.name ?? "Someone") };
+  return {
+    isSelf,
+    label: isSelf ? t.mostLikelyTo.yourself : (votedFor?.name ?? t.common.someone),
+  };
 }
 
 function VoteLocked(
   props: SectionProps & { pulseRef?: RefObject<HTMLDivElement | null> },
 ) {
   const { view, players, me, deadline, clock, pulseRef, stage } = props;
+  const { t } = useLocale();
   const votedFor = findPlayer(players, view.myVote);
-  const { isSelf, label: pickLabel } = pickLabelFor(view.myVote, me?.id, votedFor);
+  const { isSelf, label: pickLabel } = pickLabelFor(t, view.myVote, me?.id, votedFor);
   return (
     <>
-      <Strip progress={progressFor(view)} />
+      <Strip progress={progressFor(t, view)} t={t} />
       {stage !== null ? <StageVote view={stage} players={players} /> : null}
       <div ref={pulseRef}>
         <Card
@@ -177,22 +188,25 @@ function VoteLocked(
               className="opg-marker"
               style={{ fontSize: 32, color: "var(--opg-ink)" }}
             >
-              Vote locked in
+              {t.mostLikelyTo.voteLockedIn}
             </div>
             {isSelf ? null : (
               <Avatar
                 id={avatarOf(players, view.myVote)}
                 size={56}
-                alt={`${pickLabel}'s avatar`}
+                alt={format(t.mostLikelyTo.avatarAlt, { name: pickLabel })}
                 style={{ alignSelf: "center" }}
               />
             )}
           </div>
           <div style={{ fontSize: 18, fontWeight: 700 }}>
-            You picked {pickLabel}.
+            {format(t.mostLikelyTo.youPicked, { name: pickLabel })}
           </div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-            {view.votedCount} of {view.playerCount} voted
+            {format(t.mostLikelyTo.votedOfTotalPhone, {
+              voted: view.votedCount,
+              total: view.playerCount,
+            })}
           </div>
         </Card>
       </div>
@@ -212,12 +226,13 @@ function VoteLocked(
  */
 function VoteForm(props: SectionProps) {
   const { view, players, me, deadline, clock, send, stage } = props;
+  const { t } = useLocale();
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
   return (
     <>
-      <Strip progress={progressFor(view)} />
+      <Strip progress={progressFor(t, view)} t={t} />
       {stage !== null ? <StageVote view={stage} players={players} /> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <PromptLine prompt={view.prompt} size={22} />
@@ -243,6 +258,7 @@ function VoteForm(props: SectionProps) {
             isMe={id === me?.id}
             players={players}
             onPick={() => setPick(id)}
+            t={t}
           />
         ))}
       </div>
@@ -250,7 +266,7 @@ function VoteForm(props: SectionProps) {
         size="lg"
         fullWidth
         disabled={pick === null || sent}
-        disabledReason={pick === null ? "Pick someone first" : undefined}
+        disabledReason={pick === null ? t.mostLikelyTo.pickSomeoneFirst : undefined}
         onClick={() => {
           if (pick === null || sent) return;
           setSent(true);
@@ -258,7 +274,7 @@ function VoteForm(props: SectionProps) {
         }}
       >
         <Icon name="lock" size={22} color="var(--opg-paper)" />
-        <span>Lock in vote</span>
+        <span>{t.mostLikelyTo.lockInVote}</span>
       </Button>
     </>
   );

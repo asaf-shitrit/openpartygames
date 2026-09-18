@@ -7,6 +7,7 @@ import {
   createBrowserSoundEngine,
 } from "@opg/ui";
 import type { SoundEngine } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import { matchRoute, routeSurface, type Route, type Surface } from "./routes";
 import { usePathname } from "./router";
 import { HostApp } from "./screens/HostApp";
@@ -97,9 +98,11 @@ export function App({ engine }: AppProps = {}) {
   const surface = routeSurface(route, isNarrowTouch());
   const surfaceEngine = useSurfaceEngine(surface, engine);
   return (
-    // The key remounts the provider when the surface changes, so it swaps engines.
-    <SoundProvider key={surface} engine={surfaceEngine}>
-      <RouteView route={route} />
-    </SoundProvider>
+    <LocaleProvider>
+      {/* The key remounts the provider when the surface changes, so it swaps engines. */}
+      <SoundProvider key={surface} engine={surfaceEngine}>
+        <RouteView route={route} />
+      </SoundProvider>
+    </LocaleProvider>
   );
 }
