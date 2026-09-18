@@ -15,9 +15,10 @@ import {
   Timer,
   useBuzz,
 } from "@opg/ui";
-import type { MltAction, MltPhase, MltPlayerView } from "../state";
+import type { MltAction, MltHostView, MltPhase, MltPlayerView } from "../state";
 import { avatarOf, findPlayer, nameOf, PromptLine } from "./common";
 import { PhoneReveal } from "./PhoneReveal";
+import { StageVote } from "./stage/Vote";
 
 interface SectionProps {
   view: MltPlayerView;
@@ -27,6 +28,8 @@ interface SectionProps {
   timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: MltAction) => void;
+  /** The host view, in a no-TV room only; null in a room with a shared screen. */
+  stage: MltHostView | null;
 }
 
 function Strip({ progress }: { progress: string }) {
@@ -130,16 +133,31 @@ function useVoteLockBuzz(
   }, [myVote, ref]);
 }
 
+interface PickLabel {
+  isSelf: boolean;
+  label: string;
+}
+
+/** "yourself" for a self-vote, otherwise the pick's name (or "Someone" for a kicked player). */
+function pickLabelFor(
+  myVote: PlayerId | null,
+  meId: PlayerId | undefined,
+  votedFor: PlayerSummary | null,
+): PickLabel {
+  const isSelf = myVote !== null && myVote === meId;
+  return { isSelf, label: isSelf ? "yourself" : (votedFor?.name ?? "Someone") };
+}
+
 function VoteLocked(
   props: SectionProps & { pulseRef?: RefObject<HTMLDivElement | null> },
 ) {
-  const { view, players, me, deadline, clock, pulseRef } = props;
+  const { view, players, me, deadline, clock, pulseRef, stage } = props;
   const votedFor = findPlayer(players, view.myVote);
-  const isSelf = view.myVote !== null && view.myVote === me?.id;
-  const pickLabel = isSelf ? "yourself" : (votedFor?.name ?? "Someone");
+  const { isSelf, label: pickLabel } = pickLabelFor(view.myVote, me?.id, votedFor);
   return (
     <>
       <Strip progress={progressFor(view)} />
+      {stage !== null ? <StageVote view={stage} players={players} /> : null}
       <div ref={pulseRef}>
         <Card
           variant="M"
@@ -193,13 +211,14 @@ function VoteLocked(
  * or a fresh round always starts from a clean pick/sent state.
  */
 function VoteForm(props: SectionProps) {
-  const { view, players, me, deadline, clock, send } = props;
+  const { view, players, me, deadline, clock, send, stage } = props;
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
   return (
     <>
       <Strip progress={progressFor(view)} />
+      {stage !== null ? <StageVote view={stage} players={players} /> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <PromptLine prompt={view.prompt} size={22} />
         <Timer deadline={deadline} clock={clock} style={{ marginTop: 4 }} />
@@ -257,7 +276,7 @@ function VoteView(props: SectionProps) {
 }
 
 function revealPhase(props: SectionProps) {
-  const { view, players, me, deadline, timerStartedAt, clock } = props;
+  const { view, players, me, deadline, timerStartedAt, clock, stage } = props;
   return (
     <PhoneReveal
       view={view}
@@ -266,6 +285,7 @@ function revealPhase(props: SectionProps) {
       deadline={deadline}
       timerStartedAt={timerStartedAt}
       clock={clock}
+      stage={stage}
     />
   );
 }
@@ -289,6 +309,8 @@ export interface PhoneProps {
   timerStartedAt: number | null;
   clock: ServerClock;
   send: (action: MltAction) => void;
+  /** The host view, in a no-TV room only; null in a room with a shared screen. */
+  stage: MltHostView | null;
 }
 
 export function Phone({
@@ -298,6 +320,7 @@ export function Phone({
   timerStartedAt,
   clock,
   send,
+  stage,
 }: PhoneProps) {
   return (
     <PhoneScreen>
@@ -310,6 +333,7 @@ export function Phone({
           timerStartedAt,
           clock,
           send,
+          stage,
         })}
       </PhaseEnter>
     </PhoneScreen>

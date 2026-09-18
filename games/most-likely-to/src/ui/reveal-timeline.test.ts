@@ -335,4 +335,23 @@ describe("phoneRevealBeats", () => {
     expect(isSorted(beats)).toBe(true);
     expect(atMsOf(beats, "next")).toBeLessThan(REVEAL_MS);
   });
+
+  it("lands the personal beat on the verdict itself when there is no TV to follow", () => {
+    const beats = phoneRevealBeats("good", 0);
+    expect(atMsOf(beats, "personal")).toBe(REVEAL_TIMING.verdictMs);
+    expect(atMsOf(beats, "personal")).toBe(8000);
+    expect(beats.find((beat) => beat.id === "personal")?.haptic).toBe("good");
+    expect(isSorted(beats)).toBe(true);
+  });
+
+  it("moves only the personal beat, whatever the follow", () => {
+    const withTv = phoneRevealBeats("good");
+    const withoutTv = phoneRevealBeats("good", 0);
+    for (const id of ["intro", "suspense", "next"]) {
+      expect(atMsOf(withoutTv, id)).toBe(atMsOf(withTv, id));
+    }
+    expect(atMsOf(withTv, "personal") - atMsOf(withoutTv, "personal")).toBe(
+      PHONE_FOLLOW_MS,
+    );
+  });
 });

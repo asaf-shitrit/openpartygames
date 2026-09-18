@@ -44,7 +44,11 @@ function playerSample(label: string) {
   return { view, room };
 }
 
-function renderPhone(label: string, send: (action: MltAction) => void) {
+function renderPhone(
+  label: string,
+  send: (action: MltAction) => void,
+  stage: MltHostView | null = null,
+) {
   const { view, room } = playerSample(label);
   const clock: ServerClock = { now: () => room.serverNow };
   return render(
@@ -55,6 +59,7 @@ function renderPhone(label: string, send: (action: MltAction) => void) {
       timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
       send={send}
+      stage={stage}
     />,
   );
 }
@@ -119,6 +124,7 @@ describe("voting", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={mockSend()}
+      stage={null}
       />,
     );
     expect(screen.getByText("You picked yourself.")).toBeTruthy();
@@ -137,6 +143,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={mockSend()}
+      stage={null}
       />,
     );
     expect(lockVibrate).not.toHaveBeenCalled();
@@ -149,6 +156,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={mockSend()}
+      stage={null}
       />,
     );
     expect(lockVibrate).toHaveBeenCalledWith([25, 40, 25]);
@@ -172,6 +180,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+      stage={null}
       />
     );
     const { rerender } = render(phoneFor(selecting.view));
@@ -207,6 +216,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+      stage={null}
       />,
     );
     await userEvent.click(submitButton("Leo's avatar Leo"));
@@ -228,6 +238,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+      stage={null}
       />,
     );
     await userEvent.click(submitButton("Maya's avatar Maya"));
@@ -247,6 +258,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+      stage={null}
       />,
     );
     await userEvent.click(submitButton("Maya's avatar Maya"));
@@ -261,6 +273,7 @@ describe("voting", () => {
         timerStartedAt={null}
         clock={clock}
         send={send}
+      stage={null}
       />,
     );
     expect(screen.queryByText("Your pick")).toBeNull();
@@ -271,5 +284,40 @@ describe("reveal phase", () => {
   it("renders the phone reveal", () => {
     renderPhone("Phone: Maya reveal matched", mockSend());
     expect(screen.getByText("Here comes the verdict")).toBeTruthy();
+  });
+});
+
+function stageOf(label: string): MltHostView {
+  const preview = findPreview(label);
+  const stage = preview.stage;
+  if (stage === undefined) throw new Error(`${label} has no stage fixture`);
+  return stage;
+}
+
+describe("no-TV stage", () => {
+  it("shows who has voted above the ballot during the vote", () => {
+    const label = "Phone (no-TV): Dov vote selecting";
+    renderPhone(label, mockSend(), stageOf(label));
+    expect(screen.getByText("Voted so far (4 of 6)")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lock in vote" })).toBeTruthy();
+  });
+
+  it("shows who has voted above a locked ballot too", () => {
+    const label = "Phone (no-TV): Dov vote locked in";
+    renderPhone(label, mockSend(), stageOf(label));
+    expect(screen.getByText("Voted so far (4 of 6)")).toBeTruthy();
+    expect(screen.getByText("Vote locked in")).toBeTruthy();
+  });
+
+  it("shows the settled reveal ceremony alongside the personal result", () => {
+    const label = "Phone (no-TV): Priya reveal settled";
+    renderPhone(label, mockSend(), stageOf(label));
+    expect(screen.getByText("Most likely!")).toBeTruthy();
+    expect(screen.getByText("You read the room!")).toBeTruthy();
+  });
+
+  it("renders no stage region in a shared-screen room", () => {
+    renderPhone("Phone: Dov vote selecting", mockSend());
+    expect(screen.queryByText(/Voted so far/)).toBeNull();
   });
 });
