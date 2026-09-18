@@ -25,6 +25,7 @@ function state(
     playerIds,
     clueOrder: [],
     clueIndex: 0,
+    turnStartedAt: 0,
     doneSpeakerIds: [],
     votes: {},
     tally: {},

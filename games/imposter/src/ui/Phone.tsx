@@ -94,6 +94,77 @@ function Strip({ progress, right }: { progress: string; right?: ReactNode }) {
   return <PhoneStrip gameName="Imposter" progress={progress} right={right} />;
 }
 
+/** Position of the current speaker in the clue order, 1-based; 0 when nobody is speaking. */
+function speakerTurnNumber(view: ImposterPlayerView): number {
+  const speaker = view.currentSpeakerId;
+  if (speaker === null) return 0;
+  const index = view.clueOrder.indexOf(speaker);
+  return index === -1 ? 0 : index + 1;
+}
+
+/** Replaces the countdown in the clue phase's timer slot: there is no deadline any more, so
+ * this shows whose turn it is in the order instead of time left. */
+function TurnPill({ view }: { view: ImposterPlayerView }) {
+  return (
+    <div
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        padding: "6px 14px",
+        border: "3px solid var(--opg-ink)",
+        borderRadius: 999,
+        background: "var(--opg-card)",
+      }}
+    >
+      {speakerTurnNumber(view)} of {view.clueOrder.length}
+    </div>
+  );
+}
+
+/** The word-card strip's right slot: the clue phase has no deadline, so it shows the turn
+ * position instead of the word-check countdown. */
+function WordCardTimerSlot({
+  view,
+  deadline,
+  clock,
+}: {
+  view: ImposterPlayerView;
+  deadline: number | null;
+  clock: ServerClock;
+}) {
+  if (view.phase === "clues") return <TurnPill view={view} />;
+  return <Timer deadline={deadline} clock={clock} />;
+}
+
+/** The speaking player's own timer slot: same circular shape as the Timer it replaces, but
+ * showing their position in the order instead of a countdown. */
+function YourTurnBadge({ view }: { view: ImposterPlayerView }) {
+  return (
+    <div
+      style={{
+        width: 120,
+        height: 120,
+        marginTop: 8,
+        borderRadius: "50%",
+        border: "4px solid var(--opg-ink)",
+        background: "var(--opg-highlight-soft)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+      }}
+    >
+      <div style={{ fontSize: 44, fontWeight: 700, lineHeight: 1 }}>
+        {speakerTurnNumber(view)}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700 }}>
+        of {view.clueOrder.length}
+      </div>
+    </div>
+  );
+}
+
 const HIDE_LABELS = {
   full: { shown: "Hide word", hidden: "Show word" },
   compact: { shown: "Hide", hidden: "Show" },
@@ -371,7 +442,9 @@ function WordCard(props: SectionProps) {
     <>
       <Strip
         progress={progressFor(view)}
-        right={<Timer deadline={deadline} clock={clock} />}
+        right={
+          <WordCardTimerSlot view={view} deadline={deadline} clock={clock} />
+        }
       />
       <WordCardStage phase={view.phase} stage={stage} players={players} />
       <ClueBanner view={view} players={players} me={me} />
@@ -400,7 +473,8 @@ function WordCard(props: SectionProps) {
   );
 }
 
-function WordRow({
+/** The speaker's own word, held in the centre of the screen and coverable on demand. */
+function WordPeek({
   view,
   hidden,
   onToggle,
@@ -410,32 +484,37 @@ function WordRow({
   onToggle: () => void;
 }) {
   return (
-    <Card
-      variant="M"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        minHeight: 64,
-        padding: "8px 8px 8px 18px",
-      }}
-    >
-      <div
+    <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+      <Card
+        variant="M"
         style={{
           flexGrow: 1,
           display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          fontSize: 19,
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          padding: "20px 18px",
         }}
       >
-        <div style={{ fontWeight: 400 }}>Your word:</div>
-        <div style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
-          {hidden ? "••••" : (view.word ?? "—")}
-        </div>
+        {hidden ? null : <WordPanel view={view} />}
+        {hidden ? (
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "var(--opg-ink-secondary)",
+              textAlign: "center",
+            }}
+          >
+            Covered
+          </div>
+        ) : null}
+      </Card>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <HideButton hidden={hidden} onToggle={onToggle} />
       </div>
-      <HideButton hidden={hidden} onToggle={onToggle} compact />
-    </Card>
+    </div>
   );
 }
 
@@ -453,7 +532,7 @@ function useOnceOnMount(effect: () => void): void {
 }
 
 function YourTurn(props: SectionProps) {
-  const { view, me, deadline, timerStartedAt, clock, send, players, stage } = props;
+  const { view, me, clock, send, players, stage } = props;
   const [hidden, setHidden] = useState(false);
   const toggle = () => setHidden((value) => !value);
   const next = nameOf(players, view.nextSpeakerId);
@@ -464,7 +543,10 @@ function YourTurn(props: SectionProps) {
   const noteRef = useRef<HTMLDivElement>(null);
 
   useOnceOnMount(() => {
-    if (timerStartedAt !== null && clock.now() - timerStartedAt < 1500) {
+    // Keyed on the turn's own timestamp, not the phase deadline: the clue phase has no
+    // deadline any more, so timerStartedAt stops changing after the first speaker and
+    // every later turn would arrive silently.
+    if (clock.now() - view.turnStartedAt < 1500) {
       buzz("turn", noteRef.current);
     }
   });
@@ -477,40 +559,26 @@ function YourTurn(props: SectionProps) {
         <StickyNote
           tilt={-1.5}
           style={{
-            flexGrow: 1,
             margin: "6px 4px 0",
-            padding: "28px 22px",
+            padding: "14px 22px",
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "space-between",
             gap: 16,
           }}
         >
-          <Marker size={48} style={{ textAlign: "center" }}>
-            Your turn!
-          </Marker>
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              lineHeight: 1.3,
-              textAlign: "center",
-            }}
-          >
-            Say one clue out loud.
+          <div>
+            <Marker size={34}>Your turn!</Marker>
+            <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>
+              Say one clue out loud.
+            </div>
           </div>
-          <Timer
-            deadline={deadline}
-            clock={clock}
-            size={150}
-            style={{ marginTop: 8 }}
-            startedAt={timerStartedAt}
-            haptics
-          />
+          <YourTurnBadge view={view} />
         </StickyNote>
       </div>
-      <WordRow view={view} hidden={hidden} onToggle={toggle} />
+      {/* Your own word stays the middle of the screen while you speak: it is the thing
+          you are looking at, and it has to be coverable with a thumb when someone leans in. */}
+      <WordPeek view={view} hidden={hidden} onToggle={toggle} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Button size="xl" fullWidth onClick={() => send({ type: "done" })}>
           <Icon name="check" size={24} color="var(--opg-paper)" />

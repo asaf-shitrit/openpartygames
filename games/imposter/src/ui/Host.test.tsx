@@ -54,11 +54,14 @@ describe("Host phases", () => {
     expect(screen.getByText("Maya")).toBeTruthy();
   });
 
-  it("clues names the current speaker", () => {
+  it("clues names the current speaker and shows their turn position instead of a timer", () => {
     renderHost("Host: clues");
     expect(screen.getByText("Dov's turn")).toBeTruthy();
     expect(screen.getByText("Speaking")).toBeTruthy();
     expect(screen.getByText("Up next")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
+    expect(screen.getByText("of 6")).toBeTruthy();
+    expect(screen.queryByRole("timer")).toBeNull();
   });
 
   it("vote counts how many players voted", () => {

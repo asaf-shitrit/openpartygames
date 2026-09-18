@@ -149,3 +149,26 @@ export const tapGameNoTv: GameDefinition<
   TapPlayerView,
   WordPairContent
 > = { ...tapGame, id: "tap-no-tv", noTv: true };
+
+/**
+ * Same fixture, but implements onPlayersChanged: a disconnected tapper is un-tapped, same
+ * as a kick, so RoomCore's connection-flip wiring has something to exercise. Untapping a
+ * player who never tapped (or who is still connected) is a no-op, same state object back.
+ */
+export const tapGamePlayersChanged: GameDefinition<
+  TapState,
+  TapAction,
+  TapHostView,
+  TapPlayerView,
+  WordPairContent
+> = {
+  ...tapGame,
+  id: "tap-players-changed",
+  onPlayersChanged(state, ctx) {
+    const stillTapped = state.tapped.filter((id) =>
+      ctx.connectedIds.includes(id),
+    );
+    if (stillTapped.length === state.tapped.length) return state;
+    return { ...state, tapped: stillTapped };
+  },
+};

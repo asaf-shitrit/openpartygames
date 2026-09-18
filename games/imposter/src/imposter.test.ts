@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { GameContext, Rng, WordPairContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
-  CLUE_TURN_MS,
   LAST_CHANCE_MS,
   RESULT_CANCELLED_MS,
   RESULT_CAUGHT_MS,
@@ -18,6 +17,7 @@ import {
   onAction,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   imposterActionSchema,
   setup,
   type ImposterAction,
@@ -504,12 +504,14 @@ describe("turn order and actions", () => {
     const t1 = withCtx(c, { now: c.now + WORD_CHECK_MS });
     state = onDeadline(state, t1);
     expect(state.phase).toBe("clues");
-    expect(state.deadline).toBe(t1.now + CLUE_TURN_MS);
+    expect(state.deadline).toBeNull();
 
-    const t2 = withCtx(c, { now: t1.now + CLUE_TURN_MS });
+    // The clue phase has no deadline at all: a VIP skip (onDeadline) still moves the
+    // speaker along, same as before, but nothing here is time-based any more.
+    const t2 = withCtx(c, { now: t1.now + 1 });
     state = onDeadline(state, t2);
     expect(state.phase).toBe("clues");
-    expect(state.deadline).toBe(t2.now + CLUE_TURN_MS);
+    expect(state.deadline).toBeNull();
   });
 
   it("uses the phase deadlines for vote, reveal, last chance and result", () => {
@@ -574,6 +576,78 @@ describe("turn order and actions", () => {
     const guessed = onAction(state, imp, { type: "guess", text: "apple" }, c);
     expect(guessed.phase).toBe("result");
     expect(guessed.guessCorrect).toBe(true);
+  });
+});
+
+describe("onPlayersChanged", () => {
+  it("advances past the current speaker when they disconnect", () => {
+    const c = makeCtx({ n: 4, seed: 40 });
+    const clues = onDeadline(setup(c), c);
+    const speaker = requiredSpeaker(clues);
+    const stillConnected = clues.playerIds.filter((id) => id !== speaker);
+    const dc = withCtx(c, { connectedIds: stillConnected });
+
+    const after = onPlayersChanged(clues, dc);
+    expect(after).not.toBe(clues);
+    expect(after.phase).toBe("clues");
+    expect(after.doneSpeakerIds).toContain(speaker);
+    expect(currentSpeaker(after)).not.toBe(speaker);
+    expect(stillConnected).toContain(currentSpeaker(after));
+  });
+
+  it("ends the clue phase when the last connected speaker disconnects", () => {
+    const c = makeCtx({ n: 4, seed: 41 });
+    const base = setup(c);
+    // Only two of the four players are connected, so clues visits just them.
+    const connectedTwo = base.playerIds.slice(0, 2);
+    const dc = withCtx(c, { connectedIds: connectedTwo });
+    let clues = onDeadline(base, dc);
+    expect(clues.phase).toBe("clues");
+
+    const first = requiredSpeaker(clues);
+    clues = onAction(clues, first, { type: "done" }, dc);
+    expect(clues.phase).toBe("clues");
+    const last = requiredSpeaker(clues);
+    expect(connectedTwo).toContain(last);
+
+    const after = onPlayersChanged(
+      clues,
+      withCtx(c, { connectedIds: connectedTwo.filter((id) => id !== last) }),
+    );
+    expect(after.phase).toBe("vote");
+  });
+
+  it("does nothing when someone other than the current speaker disconnects or reconnects", () => {
+    const c = makeCtx({ n: 4, seed: 42 });
+    const clues = onDeadline(setup(c), c);
+    const speaker = requiredSpeaker(clues);
+    const bystander = otherPlayer(clues.playerIds, speaker);
+    const dc = withCtx(c, {
+      connectedIds: clues.playerIds.filter((id) => id !== bystander),
+    });
+    expect(onPlayersChanged(clues, dc)).toBe(clues);
+  });
+
+  it("does not rewind or double-advance when the skipped speaker reconnects", () => {
+    const c = makeCtx({ n: 4, seed: 43 });
+    const clues = onDeadline(setup(c), c);
+    const speaker = requiredSpeaker(clues);
+    const withoutSpeaker = clues.playerIds.filter((id) => id !== speaker);
+    const advanced = onPlayersChanged(
+      clues,
+      withCtx(c, { connectedIds: withoutSpeaker }),
+    );
+    expect(currentSpeaker(advanced)).not.toBe(speaker);
+
+    const reconnected = onPlayersChanged(advanced, c);
+    expect(reconnected).toBe(advanced);
+  });
+
+  it("is a no-op outside the clues phase", () => {
+    const c = makeCtx({ n: 4, seed: 44 });
+    const wordCheck = setup(c);
+    const dc = withCtx(c, { connectedIds: [] });
+    expect(onPlayersChanged(wordCheck, dc)).toBe(wordCheck);
   });
 });
 

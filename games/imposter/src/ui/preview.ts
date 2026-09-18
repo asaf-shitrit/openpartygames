@@ -274,6 +274,7 @@ const PLAYER_BASE = {
   voteCandidates: [MAYA, PRIYA, SAM, NOA, LEO],
   votedCount: VOTED_IDS.length,
   totals: TOTALS,
+  turnStartedAt: SERVER_NOW,
 };
 
 /** Maya, crew, reading her secret word during word-check. */

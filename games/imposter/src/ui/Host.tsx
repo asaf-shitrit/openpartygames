@@ -207,13 +207,43 @@ function useSpeakerChangeCue(
   }, [speakerId, play, reduced, cardRef]);
 }
 
-function SpeakerCard({
-  view,
-  players,
-  deadline,
-  timerStartedAt,
-  clock,
-}: SectionProps) {
+/** Position of the current speaker in the clue order, 1-based; 0 when nobody is speaking. */
+function speakerTurnNumber(view: ImposterHostView): number {
+  const speaker = view.currentSpeakerId;
+  if (speaker === null) return 0;
+  const index = view.clueOrder.indexOf(speaker);
+  return index === -1 ? 0 : index + 1;
+}
+
+/** Replaces the countdown ring in the clue phase: there is no deadline any more, so this
+ * slot shows whose turn it is in the order instead of time left. */
+function TurnStamp({ view }: { view: ImposterHostView }) {
+  return (
+    <div
+      style={{
+        width: 170,
+        height: 170,
+        borderRadius: "50%",
+        border: "4px solid var(--opg-ink)",
+        background: "var(--opg-highlight-soft)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 4,
+      }}
+    >
+      <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1 }}>
+        {speakerTurnNumber(view)}
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 700 }}>
+        of {view.clueOrder.length}
+      </div>
+    </div>
+  );
+}
+
+function SpeakerCard({ view, players }: SectionProps) {
   const speaker = nameOf(players, view.currentSpeakerId);
   const cardRef = useRef<HTMLDivElement>(null);
   useSpeakerChangeCue(view.currentSpeakerId, cardRef);
@@ -245,14 +275,8 @@ function SpeakerCard({
               gap: 12,
             }}
           >
-            <Timer
-              deadline={deadline}
-              clock={clock}
-              size={170}
-              startedAt={timerStartedAt}
-              ticks
-            />
-            <div style={{ fontSize: 30, ...SECONDARY }}>Time left</div>
+            <TurnStamp view={view} />
+            <div style={{ fontSize: 30, ...SECONDARY }}>Turn</div>
           </div>
         </div>
         <Marker size={104}>{speaker}&apos;s turn</Marker>

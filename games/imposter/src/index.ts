@@ -9,7 +9,6 @@ import type {
 import type { PlayerId } from "@opg/protocol";
 import { isCaught, normalizeAnswer, scoreWord, tallyVotes } from "./rules";
 import {
-  CLUE_TURN_MS,
   IMPOSTER_MAX_PLAYERS,
   IMPOSTER_MIN_PLAYERS,
   IMPOSTER_MINUTES,
@@ -43,7 +42,6 @@ export type {
 } from "./state";
 export { imposterAwards } from "./awards";
 export {
-  CLUE_TURN_MS,
   IMPOSTER_MAX_PLAYERS,
   IMPOSTER_MIN_PLAYERS,
   IMPOSTER_MINUTES,
@@ -128,6 +126,7 @@ export function setup(ctx: Ctx): ImposterState {
     clueOrder:
       first === undefined ? [] : buildClueOrder(playerIds, first.imposterId, 0),
     clueIndex: 0,
+    turnStartedAt: 0,
     doneSpeakerIds: [],
     votes: {},
     tally: {},
@@ -173,7 +172,10 @@ function startClues(state: ImposterState, ctx: Ctx): ImposterState {
     phase: "clues",
     clueIndex: index,
     doneSpeakerIds: [],
-    deadline: ctx.now + CLUE_TURN_MS,
+    turnStartedAt: ctx.now,
+    // The table sets the pace: clues has no deadline. A turn ends on "I'm done", a VIP
+    // skip, or the speaker disconnecting (see onPlayersChanged).
+    deadline: null,
   };
 }
 
@@ -275,6 +277,7 @@ function startNextWord(state: ImposterState, ctx: Ctx): ImposterState {
     wordIndex: nextIndex,
     clueOrder: buildClueOrder(state.playerIds, word.imposterId, nextIndex),
     clueIndex: 0,
+    turnStartedAt: 0,
     doneSpeakerIds: [],
     votes: {},
     tally: {},
@@ -344,7 +347,8 @@ function advanceSpeaker(state: ImposterState, ctx: Ctx): ImposterState {
     ...state,
     clueIndex: next,
     doneSpeakerIds,
-    deadline: ctx.now + CLUE_TURN_MS,
+    turnStartedAt: ctx.now,
+    deadline: null,
   };
 }
 
@@ -537,7 +541,7 @@ function resumeClues(
     .filter((id) => id !== playerId).length;
   const next = findSpeaker(base, ctx, startIndex);
   if (next === -1) return startVote(base, ctx);
-  return { ...base, clueIndex: next, deadline: ctx.now + CLUE_TURN_MS };
+  return { ...base, clueIndex: next, turnStartedAt: ctx.now, deadline: null };
 }
 
 function continueAfterRemoval(
@@ -583,6 +587,19 @@ export function onPlayerRemoved(
   const midWord = state.phase !== "result" && !state.finished;
   if (imposterRemoved && midWord) return cancelWord(base, ctx);
   return continueAfterRemoval(base, state, playerId, ctx);
+}
+
+/**
+ * A locked phone or a backgrounded tab must not hold the room: if the current speaker just
+ * disconnected, their turn passes the same way a timeout used to. Anyone else's connection
+ * flipping, or a reconnect, is a no-op here — findSpeaker already skips disconnected
+ * players once their turn comes up.
+ */
+export function onPlayersChanged(state: ImposterState, ctx: Ctx): ImposterState {
+  if (state.finished || state.phase !== "clues") return state;
+  const speaker = state.clueOrder[state.clueIndex];
+  if (speaker === undefined || ctx.connectedIds.includes(speaker)) return state;
+  return advanceSpeaker(state, ctx);
 }
 
 export function isOver(state: ImposterState): boolean {
@@ -645,6 +662,7 @@ export const imposter: GameDefinition<
   nextDeadline,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   hostView: (state) => buildHostView(state),
   playerView: (state, playerId) => buildPlayerView(state, playerId),
   isOver,

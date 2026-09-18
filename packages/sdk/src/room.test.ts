@@ -7,7 +7,11 @@ import type {
   PlayerId,
   ServerMessage,
 } from "@opg/protocol";
-import { tapGame, tapGameNoTv } from "./fixtures/tap-game";
+import {
+  tapGame,
+  tapGameNoTv,
+  tapGamePlayersChanged,
+} from "./fixtures/tap-game";
 import type {
   Caller,
   ContentKind,
@@ -1388,6 +1392,51 @@ describe("persisted presence", () => {
     expect(stored.emptySince).toBe(0);
     // Nothing moved the second time, so the hub has nothing to write.
     expect(h.room.setConnected(id, false, 0).changed).toBe(false);
+  });
+});
+
+describe("onPlayersChanged", () => {
+  it("gives the running game a chance to react to a connection flip", () => {
+    const h = makeRoom({ game: tapGamePlayersChanged, packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const ids = idsOf(players);
+    startTap(h, ids, tapGamePlayersChanged.id);
+    h.room.handle(vip(h.room, at(ids, 0)), { t: "game-action", action: { type: "tap" } }, 0);
+    expect(h.room.hostView(0).game?.view).toMatchObject({
+      tappedIds: [at(ids, 0)],
+    });
+
+    const res = h.room.setConnected(at(ids, 0), false, 0);
+    expect(res.changed).toBe(true);
+    expect(h.room.hostView(0).game?.view).toMatchObject({ tappedIds: [] });
+  });
+
+  it("is a no-op, with no snapshot write, when the hook returns the same state", () => {
+    const h = makeRoom({ game: tapGamePlayersChanged, packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const ids = idsOf(players);
+    startTap(h, ids, tapGamePlayersChanged.id);
+    const before = h.room.snapshot().data;
+
+    // Nobody tapped yet, so untapping a disconnected player changes nothing.
+    const res = h.room.setConnected(at(ids, 1), false, 0);
+    expect(res.changed).toBe(true); // presence itself is still a change
+    expect(h.room.snapshot().data).not.toBe(before);
+    expect(JSON.parse(h.room.snapshot().data).game.state).toEqual(
+      JSON.parse(before).game.state,
+    );
+  });
+
+  it("leaves a game with no hook completely unaffected", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const ids = idsOf(players);
+    startTap(h, ids);
+    h.room.handle(vip(h.room, at(ids, 0)), { t: "game-action", action: { type: "tap" } }, 0);
+    const before = h.room.hostView(0).game?.view;
+
+    h.room.setConnected(at(ids, 0), false, 0);
+    expect(h.room.hostView(0).game?.view).toEqual(before);
   });
 });
 
