@@ -63,7 +63,14 @@ function ResultCard({
         {personal.celebrate ? (
           <div
             data-testid="reveal-burst"
-            style={{ position: "absolute", inset: 0, zIndex: 0 }}
+            // Decorative only. It covers the whole card, so without this it swallows taps
+            // on anything underneath for as long as the celebration runs.
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
           >
             <StickerBurst live={live} count={14} size={340} />
           </div>
