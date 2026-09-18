@@ -69,6 +69,17 @@ describe("EyesOnTv", () => {
     expect(vibrate).not.toHaveBeenCalled();
   });
 
+  it("defaults to room copy for the room variant, naming the room rather than a missing screen", () => {
+    render(<EyesOnTv variant="room" />);
+    expect(screen.getByText("Eyes on the room")).toBeDefined();
+    expect(screen.queryByText("Eyes on the TV")).toBeNull();
+  });
+
+  it("still lets the room variant take a custom title", () => {
+    render(<EyesOnTv variant="room" title="Deep breaths…" />);
+    expect(screen.getByText("Deep breaths…")).toBeDefined();
+  });
+
   it("only announces the title; a detail change never touches the live region", () => {
     const { rerender } = render(
       <EyesOnTv title="The votes are in…" detail="Watch the big screen" />,

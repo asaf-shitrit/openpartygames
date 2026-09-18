@@ -91,6 +91,8 @@ export type { FlipCardProps } from "./fx/FlipCard";
 export { Confetti } from "./fx/Confetti";
 export type { ConfettiOrigin, ConfettiProps } from "./fx/Confetti";
 export { CONFETTI_CAP } from "./fx/confetti-physics";
+export { Suspense } from "./fx/Suspense";
+export type { SuspenseProps, SuspenseVariant } from "./fx/Suspense";
 
 export { CUE_IDS, MUSIC_IDS, SILENT_ENGINE, SILENT_HANDLE } from "./audio/types";
 export type {

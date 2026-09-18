@@ -243,10 +243,15 @@ export interface PhoneStripProps {
   progress?: string;
   /** Right slot, e.g. a Timer. */
   right?: ReactNode;
+  /**
+   * Shown as a small "Room CODE" line when set — a no-TV room's rejoin path, so anyone can read
+   * the code out to a player whose phone died without pausing the game. Omit on a shared screen.
+   */
+  roomCode?: string;
 }
 
-/** Phone in-game top strip: game name, progress, and the timer. */
-export function PhoneStrip({ gameName, progress, right }: PhoneStripProps) {
+/** Phone in-game top strip: game name, progress, an optional room code, and the timer. */
+export function PhoneStrip({ gameName, progress, right, roomCode }: PhoneStripProps) {
   return (
     <div
       style={{
@@ -270,6 +275,11 @@ export function PhoneStrip({ gameName, progress, right }: PhoneStripProps) {
         {progress ? (
           <div style={{ fontSize: 17, fontWeight: 700, color: "#4A4A4A" }}>
             {progress}
+          </div>
+        ) : null}
+        {roomCode ? (
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#8A8A8A" }}>
+            Room {roomCode}
           </div>
         ) : null}
       </div>

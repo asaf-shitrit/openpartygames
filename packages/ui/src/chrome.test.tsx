@@ -241,6 +241,16 @@ describe("PhoneStrip", () => {
     render(<PhoneStrip gameName="Solo" />);
     expect(screen.getByText("Solo")).toBeTruthy();
   });
+
+  it("shows the room code when given, for the rejoin path in a no-TV room", () => {
+    render(<PhoneStrip gameName="Quip Clash" roomCode="BKTZ" />);
+    expect(screen.getByText("Room BKTZ")).toBeTruthy();
+  });
+
+  it("omits the room code line on a shared screen", () => {
+    render(<PhoneStrip gameName="Quip Clash" />);
+    expect(screen.queryByText(/^Room /)).toBeNull();
+  });
 });
 
 describe("PlayerChip", () => {
