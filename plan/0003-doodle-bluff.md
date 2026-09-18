@@ -313,18 +313,18 @@ A `<canvas>` sized to its CSS box, backing store at `min(devicePixelRatio, 2)` �
 
 **Rendering is one shared shell.** `paintDoodle(ctx, doodle, inks, box, upTo?)` takes a narrow structural context — the exact pattern `confetti-paint.ts` uses so a plain recording object satisfies it without a cast (`packages/ui/src/fx/confetti-paint.ts:9`–`:27`). The pad, the phone's read-only view, the TV and the gallery all call it. Tests assert the recorded call sequence.
 
-**Colour palette.** Six marker inks. `AVATAR_FILLS` (`packages/ui/src/avatar-art.tsx:6`–`:19`) are pastel *fills* for avatar shapes — `#FFE45C` and `#FFF1B8` would be nearly invisible as a line on `#FBF8F1` paper (`packages/ui/src/styles.css:11`) — so the palette needs its own ink-weight constant. Proposed `DOODLE_INKS`, pending the design pass:
+**Colour palette.** Six marker inks. `AVATAR_FILLS` (`packages/ui/src/avatar-art.tsx:6`–`:19`) are pastel *fills* for avatar shapes — `#FFE45C` and `#FFF1B8` would be nearly invisible as a line on `#FBF8F1` paper (`packages/ui/src/styles.css:11`) — so the palette needs its own ink-weight constant. `DOODLE_INKS`, settled by the design pass and contrast-checked against the paper:
 
-| Index | Name | Hex | Source |
-|---|---|---|---|
-| 0 | Ink | `#2B2B2B` | `--opg-ink`, `packages/ui/src/styles.css:8` |
-| 1 | Red | `#D7372B` | `--opg-marker`, `packages/ui/src/styles.css:13` |
-| 2 | Blue | `#2F6FB5` | proposed |
-| 3 | Green | `#2E8B57` | proposed |
-| 4 | Orange | `#E07A1F` | proposed |
-| 5 | Purple | `#7A4FBF` | proposed |
+| Index | Name | Hex | Contrast on `#FBF8F1` | Source |
+|---|---|---|---|---|
+| 0 | Ink | `#2B2B2B` | — | `--opg-ink`, `packages/ui/src/styles.css:8` |
+| 1 | Red | `#D7372B` | — | `--opg-marker`, `packages/ui/src/styles.css:13` |
+| 2 | Blue | `#2F6FB5` | ~7.0:1 | design pass |
+| 3 | Green | `#1E8449` | ~4.5:1 | design pass, **changed** from the draft's `#2E8B57` |
+| 4 | Orange | `#C96A15` | ~3.8:1 | design pass, **changed** from the draft's `#E07A1F` |
+| 5 | Purple | `#7A4FBF` | ~5.4:1 | design pass |
 
-Indices 2–5 are proposals; the design pass confirms they read as marker pens on paper and hold contrast on `#FBF8F1`.
+Two of the draft's four proposals did not survive measurement. A stroke is a non-text graphical object, so the floor is 3:1: the draft's sea green `#2E8B57` came in at ~4.1:1 (passing, but thin for a line on cream) and was darkened, and the draft's orange `#E07A1F` measured **~2.95:1 — below the floor**, which would have shipped a pen that disappeared on the paper for anyone with low vision. Both were darkened until they cleared it while still reading as marker pens. This is the reason the design pass owns the values rather than the plan (D7).
 
 The palette control is a row of six swatches under the canvas, each a ≥44 px tap target (`design/AVATARS.md:24`). The selected swatch is marked by **a thicker ink ring plus a check glyph**, never by colour alone (`CLAUDE.md`, `intent/0001-platform-mvp.md:84`), and each has an accessible name ("Red pen"). Selection persists across strokes and across an undo. Because colour is decoration, a player who cannot distinguish the swatches loses nothing: no prompt, title, vote, score or award ever refers to a colour.
 
