@@ -86,6 +86,8 @@ export function startServer(): ServerHandle {
       "exec",
       "wrangler",
       "dev",
+      "--env",
+      "e2e",
       "--port",
       String(PORT),
       "--ip",

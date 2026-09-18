@@ -118,6 +118,20 @@ describe("PhoneReveal, sticker layering", () => {
     expect(follows).toBe(true);
     expect(Number(burst.style.zIndex)).toBeLessThan(Number(content.style.zIndex));
   });
+
+  // The burst covers the whole card, so if it takes pointer events it swallows taps on
+  // whatever sits under it for as long as the celebration runs.
+  it("lets a tap through to whatever is under the celebration", () => {
+    vi.useFakeTimers();
+    stubVibrate();
+    const { advanceTo, rendered } = setup("Phone: Dov reveal", 0);
+    advanceTo(8400);
+    const burst = rendered.container.querySelector<HTMLElement>(
+      '[data-testid="reveal-burst"]',
+    );
+    if (burst === null) throw new Error("expected the sticker burst");
+    expect(burst.style.pointerEvents).toBe("none");
+  });
 });
 
 describe("PhoneReveal, mounted late", () => {

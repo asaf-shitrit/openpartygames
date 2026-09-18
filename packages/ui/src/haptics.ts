@@ -56,10 +56,19 @@ function pulseKeyframes(reduced: boolean): Keyframe[] {
  * Visual pair for every buzz (iOS ignores vibrate). WAAPI on the `scale` property, 1 -> 1.04 -> 1
  * over 260ms. NEVER animates `transform`: cards use inline transform: rotate().
  * Reduced motion -> a brief outline flash instead. No-op for null or elements without animate.
+ *
+ * The scale keyframe briefly grows the element past its own box, which can lay it over a sibling
+ * below (a sticky note over the button under it, say). It is always decorative, never itself the
+ * click target, so it drops out of hit-testing for the animation's duration rather than stealing
+ * a click meant for whatever it is overlapping.
  */
 export function pulse(el: HTMLElement | null, reduced: boolean): void {
   if (el === null || !("animate" in el)) return;
   el.animate(pulseKeyframes(reduced), { duration: PULSE_MS });
+  el.style.pointerEvents = "none";
+  window.setTimeout(() => {
+    el.style.pointerEvents = "";
+  }, PULSE_MS);
 }
 
 /** buzz + pulse(el) using useReducedMotion(). */
