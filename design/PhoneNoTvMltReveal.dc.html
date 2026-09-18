@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF8F1; }
+    a { color: #2B2B2B; } a:hover { color: #D7372B; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; background-color: #FBF8F1; background-image: linear-gradient(#E4ECF6 2px, transparent 2px), linear-gradient(90deg, #E4ECF6 2px, transparent 2px); background-size: 32px 32px; font-family: 'Atkinson Hyperlegible', Verdana, system-ui, sans-serif; color: #2B2B2B;">
+
+  <div style="display: flex; flex-direction: column; gap: 4px;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <div style="font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 24px; line-height: 1.1; white-space: nowrap;">Most Likely To</div>
+      <div style="font-size: 16px; font-weight: 700; color: #4A4A4A;">Round 3 of 20</div>
+    </div>
+    <div style="align-self: flex-start; height: 36px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; background: #FFE45C; border-radius: 26px 10px 22px 12px / 12px 22px 10px 26px; font-size: 16px; font-weight: 700;">The votes are in</div>
+  </div>
+
+  <!-- STAGE: the room's result -->
+  <div style="position: relative; margin-top: 6px; box-sizing: border-box; padding: 40px 18px 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; background: #FFF6BF; border: 5px solid #2B2B2B; border-radius: 40px 12px 36px 14px / 14px 36px 12px 40px; transform: rotate(-0.8deg);">
+    <div style="position: absolute; left: 0; right: 0; top: -24px; display: flex; justify-content: center;">
+      <div style="padding: 4px 20px; background: #FFFFFF; border: 5px solid #D7372B; border-radius: 26px 10px 22px 12px / 12px 22px 10px 26px; transform: rotate(-6deg); font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 34px; line-height: 1.1; color: #D7372B;">Most likely!</div>
+    </div>
+    <svg width="96" height="96" viewBox="0 0 100 100"><path d="M22 30c0-14 12-20 28-20s28 6 28 20c0 4-3 7-6 8v44c0 5-3 8-8 8H36c-5 0-8-3-8-8V38c-3-1-6-4-6-8z" fill="#FFBE7A" stroke="#2B2B2B" stroke-width="4" stroke-linejoin="round"></path><circle cx="41" cy="55" r="4.5" fill="#2B2B2B"></circle><circle cx="59" cy="55" r="4.5" fill="#2B2B2B"></circle><path d="M33 44l10 4M67 44l-10 4M44 71h12" fill="none" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"></path></svg>
+    <div style="font-size: 30px; font-weight: 700; line-height: 1.1;">Dov</div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="26" height="46" viewBox="0 0 30 56" fill="none" stroke="#2B2B2B" stroke-width="5" stroke-linecap="round"><path d="M6 6l-2 44M14 6l-2 44M22 6l-2 44"></path><path d="M4 22l22-14"></path></svg>
+      <div style="font-size: 26px; font-weight: 700;">4 votes</div>
+    </div>
+    <div style="font-size: 18px; font-weight: 700; text-align: center; line-height: 1.3;">Explain yourself, Dov!</div>
+    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+      <svg width="34" height="34" viewBox="0 0 100 100"><path d="M50 8c24 0 40 18 40 42s-14 42-40 42S10 74 10 50 26 8 50 8z" fill="#FFA8A8" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+      <svg width="34" height="34" viewBox="0 0 100 100"><path d="M50 6c6 10 34 30 34 56 0 18-15 30-34 30S16 80 16 62C16 36 44 16 50 6z" fill="#93E3C9" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+      <svg width="34" height="34" viewBox="0 0 100 100"><path d="M28 84c-12 0-20-8-20-19 0-10 7-17 16-18 1-15 12-27 27-27 12 0 22 8 25 19 10 1 18 9 18 20 0 14-9 25-22 25z" fill="#A3CCFF" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+      <svg width="34" height="34" viewBox="0 0 100 100"><path d="M50 8l12 26 28 3-21 19 6 28-25-14-25 14 6-28-21-19 28-3z" fill="#FFE45C" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+      <div style="font-size: 16px; font-weight: 700; color: #555555; margin-left: 4px;">voted him</div>
+    </div>
+  </div>
+
+  <!-- Standings for everyone else -->
+  <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1; min-height: 0;">
+    <div style="font-size: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #555555;">Everyone else</div>
+
+    <div style="padding: 0 14px; display: flex; flex-direction: column; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 30px 10px 26px 12px / 12px 26px 10px 30px;">
+
+      <div style="height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed #8A8A8A;">
+        <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M20 36L18 10l20 14c4-1 8-2 12-2s8 1 12 2l20-14-2 26c6 7 10 16 10 26 0 20-18 30-40 30S10 82 10 62c0-10 4-19 10-26z" fill="#CDB8FF" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+        <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Leo</div>
+        <svg width="14" height="26" viewBox="0 0 14 26" fill="none" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"><path d="M7 3l-2 20"></path></svg>
+        <div style="font-size: 17px; font-weight: 700;">1 vote</div>
+      </div>
+
+      <div style="height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed #8A8A8A;">
+        <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M50 8c24 0 40 18 40 42s-14 42-40 42S10 74 10 50 26 8 50 8z" fill="#FFA8A8" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+        <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Maya</div>
+        <svg width="14" height="26" viewBox="0 0 14 26" fill="none" stroke="#2B2B2B" stroke-width="4" stroke-linecap="round"><path d="M7 3l-2 20"></path></svg>
+        <div style="font-size: 17px; font-weight: 700;">1 vote</div>
+      </div>
+
+      <div style="height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed #8A8A8A;">
+        <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M50 6c6 10 34 30 34 56 0 18-15 30-34 30S16 80 16 62C16 36 44 16 50 6z" fill="#93E3C9" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+        <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Priya (you)</div>
+        <div style="font-size: 17px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+      </div>
+
+      <div style="height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed #8A8A8A;">
+        <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M28 84c-12 0-20-8-20-19 0-10 7-17 16-18 1-15 12-27 27-27 12 0 22 8 25 19 10 1 18 9 18 20 0 14-9 25-22 25z" fill="#A3CCFF" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+        <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Sam</div>
+        <div style="font-size: 17px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+      </div>
+
+      <div style="height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 10px;">
+        <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M50 8l12 26 28 3-21 19 6 28-25-14-25 14 6-28-21-19 28-3z" fill="#FFE45C" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+        <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Noa</div>
+        <div style="font-size: 17px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONTROLS: your own result, lands with the stage at once -->
+  <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #FFE45C; box-shadow: 0 6px 12px rgba(43, 43, 43, 0.14); transform: rotate(1deg);">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2B2B2B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+    <div style="font-size: 20px; font-weight: 700; line-height: 1.3;">You voted Dov &middot; +500</div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

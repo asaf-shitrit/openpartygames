@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF8F1; }
+    a { color: #2B2B2B; } a:hover { color: #D7372B; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 20px 18px 26px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; background-color: #FBF8F1; background-image: linear-gradient(#E4ECF6 2px, transparent 2px), linear-gradient(90deg, #E4ECF6 2px, transparent 2px); background-size: 32px 32px; font-family: 'Atkinson Hyperlegible', Verdana, system-ui, sans-serif; color: #2B2B2B;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 30px; line-height: 1.1;">Imposter</div>
+      <div style="font-size: 17px; font-weight: 700; color: #4A4A4A;">Last chance</div>
+    </div>
+  </div>
+
+  <!-- STAGE: blank tiles from guessLength only (7, for GIRAFFE -- the imposter's typing action
+       sends length, never letters), a draining timer, and the Suspense element carrying all 15
+       silent seconds of tension. The ring here is concentric with the timer -- same geometry the
+       kit already uses for a countdown, just wearing the tightening treatment on the outer edge. -->
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 22px 20px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 40px 12px 36px 14px / 14px 36px 12px 40px; transform: rotate(-0.6deg);">
+
+    <div style="font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 26px; line-height: 1.15; color: #D7372B; text-align: center;">You got caught!</div>
+
+    <div style="position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center;">
+      <!-- tightening ring, concentric with the timer: closes solid over the full 15s -->
+      <svg width="168" height="168" viewBox="0 0 168 168" style="position: absolute; left: 0; top: 0;">
+        <circle cx="84" cy="84" r="80" fill="none" stroke="#8A8A8A" stroke-width="2.5" stroke-dasharray="4 7" opacity="0.45"></circle>
+        <circle cx="84" cy="84" r="80" fill="none" stroke="#D7372B" stroke-width="4" stroke-linecap="round" stroke-dasharray="335 503" transform="rotate(-90 84 84)"></circle>
+      </svg>
+      <svg width="120" height="120" viewBox="0 0 78 78" style="position: absolute; left: 24px; top: 24px;"><path d="M40 5c19 1 33 15 33 34 0 19-15 34-35 33C19 71 5 57 6 38 7 20 22 5 42 6" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"></path></svg>
+      <div style="position: relative; font-size: 34px; font-weight: 700;">0:07</div>
+    </div>
+
+    <!-- three heartbeat dots -- speed up as the timer runs down. Shown mid-cycle. -->
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 11px; height: 11px; border-radius: 50%; background: #2B2B2B;"></div>
+      <div style="width: 11px; height: 11px; border-radius: 50%; background: transparent; border: 2px solid #2B2B2B;"></div>
+      <div style="width: 11px; height: 11px; border-radius: 50%; background: transparent; border: 2px solid #2B2B2B;"></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B; font-size: 24px; font-weight: 700;">H</div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B; font-size: 24px; font-weight: 700;">O</div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B; font-size: 24px; font-weight: 700;">R</div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B;"></div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B;"></div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B;"></div>
+      <div style="width: 34px; height: 42px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid #2B2B2B;"></div>
+    </div>
+    <div style="font-size: 16px; font-weight: 400; color: #555555; text-align: center;">Guess the crew's word. Get it right and you steal 1,000 points.</div>
+  </div>
+
+  <!-- CONTROLS: the imposter's guess field. The blinking cursor plus the tiles above are the
+       whole guessing surface; the device's own keyboard does the typing -- no custom on-screen
+       keys, so nothing here needs to fight the OS keyboard for space or tap-target size. -->
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <div style="height: 60px; box-sizing: border-box; padding: 0 18px; display: flex; align-items: center; gap: 2px; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 30px 10px 26px 12px / 12px 26px 10px 30px;">
+      <div style="font-size: 24px; font-weight: 700; letter-spacing: 0.03em;">hor</div>
+      <div style="width: 3px; height: 28px; background: #2B2B2B;"></div>
+    </div>
+    <div style="height: 58px; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: center; gap: 10px; background: #2B2B2B; color: #FBF8F1; border-radius: 26px 10px 22px 12px / 12px 22px 10px 26px; font-size: 20px; font-weight: 700;">
+      <div>Submit guess</div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FBF8F1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="42" height="42" viewBox="0 0 100 100"><path d="M50 6c6 10 34 30 34 56 0 18-15 30-34 30S16 80 16 62C16 36 44 16 50 6z" fill="#93E3C9" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path><circle cx="50" cy="58" r="13" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"></circle><circle cx="53" cy="59" r="6" fill="#2B2B2B"></circle></svg>
+      <div style="font-size: 18px; font-weight: 700;">Priya (you)</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

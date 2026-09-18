@@ -1,57 +1,496 @@
 {
   "pages": [
-    { "id": "setup", "name": "Setup" },
-    { "id": "imposter", "name": "Imposter" },
-    { "id": "real-or-nah", "name": "Real or Nah" },
-    { "id": "end-system", "name": "End & system" },
-    { "id": "style-options", "name": "Style options (not picked)" }
+    {
+      "id": "setup",
+      "name": "Setup"
+    },
+    {
+      "id": "imposter",
+      "name": "Imposter"
+    },
+    {
+      "id": "real-or-nah",
+      "name": "Real or Nah"
+    },
+    {
+      "id": "end-system",
+      "name": "End & system"
+    },
+    {
+      "id": "no-tv",
+      "name": "No-TV mode"
+    },
+    {
+      "id": "style-options",
+      "name": "Style options (not picked)"
+    }
   ],
   "artboards": [
-    { "file": "TVLanding.dc.html", "title": "TV · Landing", "page": "setup", "x": 0, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "Main.dc.html", "title": "TV · Lobby", "page": "setup", "x": 2040, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVGamePicker.dc.html", "title": "TV · Game picker", "page": "setup", "x": 4080, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "PhoneJoin.dc.html", "title": "Phone · Join", "page": "setup", "x": 2040, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneAvatarPicker.dc.html", "title": "Phone · Pick a doodle", "page": "setup", "x": 2530, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneLobby.dc.html", "title": "Phone · Lobby", "page": "setup", "x": 3020, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneVIPControls.dc.html", "title": "Phone · VIP controls (scrolls)", "page": "setup", "x": 4080, "y": 1280, "w": 390, "h": 1240 },
-
-    { "file": "TVImposterWordCheck.dc.html", "title": "TV · Imposter · Check your phones", "page": "imposter", "x": 0, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVImposterClues.dc.html", "title": "TV · Imposter · Clue turns", "page": "imposter", "x": 2040, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVImposterVoting.dc.html", "title": "TV · Imposter · Voting", "page": "imposter", "x": 4080, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVImposterReveal.dc.html", "title": "TV · Imposter · Reveal", "page": "imposter", "x": 6120, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVImposterLastChance.dc.html", "title": "TV · Imposter · Last chance", "page": "imposter", "x": 8160, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVImposterResult.dc.html", "title": "TV · Imposter · Round result", "page": "imposter", "x": 10200, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "PhoneImposterCrewCard.dc.html", "title": "Phone · Imposter · Crew word", "page": "imposter", "x": 0, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneImposterCard.dc.html", "title": "Phone · Imposter · Imposter card", "page": "imposter", "x": 490, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneImposterYourTurn.dc.html", "title": "Phone · Imposter · Your turn", "page": "imposter", "x": 2040, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneImposterVote.dc.html", "title": "Phone · Imposter · Vote", "page": "imposter", "x": 4080, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneImposterLastChance.dc.html", "title": "Phone · Imposter · Last-chance guess", "page": "imposter", "x": 8160, "y": 1280, "w": 390, "h": 844 },
-
-    { "file": "TVRealOrNahWrite.dc.html", "title": "TV · Real or Nah · Write lies", "page": "real-or-nah", "x": 0, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVRealOrNahVote.dc.html", "title": "TV · Real or Nah · Vote", "page": "real-or-nah", "x": 2040, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVRealOrNahReveal.dc.html", "title": "TV · Real or Nah · Reveal", "page": "real-or-nah", "x": 4080, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "PhoneRealOrNahWrite.dc.html", "title": "Phone · Real or Nah · Write a lie", "page": "real-or-nah", "x": 0, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneRealOrNahVote.dc.html", "title": "Phone · Real or Nah · Vote", "page": "real-or-nah", "x": 2040, "y": 1280, "w": 390, "h": 844 },
-
-    { "file": "TVFinalScores.dc.html", "title": "TV · Final scores", "page": "end-system", "x": 0, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVFullTonight.dc.html", "title": "TV · We're full tonight", "page": "end-system", "x": 2040, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "TVCredits.dc.html", "title": "TV · Credits", "page": "end-system", "x": 4080, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "PhoneWaitingNextGame.dc.html", "title": "Phone · Waiting for next game", "page": "end-system", "x": 0, "y": 1280, "w": 390, "h": 844 },
-    { "file": "PhoneReconnecting.dc.html", "title": "Phone · Reconnecting", "page": "end-system", "x": 490, "y": 1280, "w": 390, "h": 844 },
-
-    { "file": "DirectionATV.dc.html", "title": "A · Sticker Shop · TV lobby", "page": "style-options", "x": 0, "y": 0, "w": 1920, "h": 1080 },
-    { "file": "DirectionAPhone.dc.html", "title": "A · Sticker Shop · Phone, imposter card", "page": "style-options", "x": 2040, "y": 0, "w": 390, "h": 844 },
-    { "file": "DirectionBTV.dc.html", "title": "B · Saturday Morning · TV lobby", "page": "style-options", "x": 0, "y": 1320, "w": 1920, "h": 1080 },
-    { "file": "DirectionBPhone.dc.html", "title": "B · Saturday Morning · Phone, imposter card", "page": "style-options", "x": 2040, "y": 1320, "w": 390, "h": 844 }
+    {
+      "file": "TVLanding.dc.html",
+      "title": "TV · Landing",
+      "page": "setup",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "TV · Lobby",
+      "page": "setup",
+      "x": 2040,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVGamePicker.dc.html",
+      "title": "TV · Game picker",
+      "page": "setup",
+      "x": 4080,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "PhoneJoin.dc.html",
+      "title": "Phone · Join",
+      "page": "setup",
+      "x": 2040,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneAvatarPicker.dc.html",
+      "title": "Phone · Pick a doodle",
+      "page": "setup",
+      "x": 2530,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneLobby.dc.html",
+      "title": "Phone · Lobby",
+      "page": "setup",
+      "x": 3020,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneVIPControls.dc.html",
+      "title": "Phone · VIP controls (scrolls)",
+      "page": "setup",
+      "x": 4080,
+      "y": 1280,
+      "w": 390,
+      "h": 1240
+    },
+    {
+      "file": "TVImposterWordCheck.dc.html",
+      "title": "TV · Imposter · Check your phones",
+      "page": "imposter",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVImposterClues.dc.html",
+      "title": "TV · Imposter · Clue turns",
+      "page": "imposter",
+      "x": 2040,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVImposterVoting.dc.html",
+      "title": "TV · Imposter · Voting",
+      "page": "imposter",
+      "x": 4080,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVImposterReveal.dc.html",
+      "title": "TV · Imposter · Reveal",
+      "page": "imposter",
+      "x": 6120,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVImposterLastChance.dc.html",
+      "title": "TV · Imposter · Last chance",
+      "page": "imposter",
+      "x": 8160,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVImposterResult.dc.html",
+      "title": "TV · Imposter · Round result",
+      "page": "imposter",
+      "x": 10200,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "PhoneImposterCrewCard.dc.html",
+      "title": "Phone · Imposter · Crew word",
+      "page": "imposter",
+      "x": 0,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneImposterCard.dc.html",
+      "title": "Phone · Imposter · Imposter card",
+      "page": "imposter",
+      "x": 490,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneImposterYourTurn.dc.html",
+      "title": "Phone · Imposter · Your turn",
+      "page": "imposter",
+      "x": 2040,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneImposterVote.dc.html",
+      "title": "Phone · Imposter · Vote",
+      "page": "imposter",
+      "x": 4080,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneImposterLastChance.dc.html",
+      "title": "Phone · Imposter · Last-chance guess",
+      "page": "imposter",
+      "x": 8160,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "TVRealOrNahWrite.dc.html",
+      "title": "TV · Real or Nah · Write lies",
+      "page": "real-or-nah",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVRealOrNahVote.dc.html",
+      "title": "TV · Real or Nah · Vote",
+      "page": "real-or-nah",
+      "x": 2040,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVRealOrNahReveal.dc.html",
+      "title": "TV · Real or Nah · Reveal",
+      "page": "real-or-nah",
+      "x": 4080,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "PhoneRealOrNahWrite.dc.html",
+      "title": "Phone · Real or Nah · Write a lie",
+      "page": "real-or-nah",
+      "x": 0,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneRealOrNahVote.dc.html",
+      "title": "Phone · Real or Nah · Vote",
+      "page": "real-or-nah",
+      "x": 2040,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "TVFinalScores.dc.html",
+      "title": "TV · Final scores",
+      "page": "end-system",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVFullTonight.dc.html",
+      "title": "TV · We're full tonight",
+      "page": "end-system",
+      "x": 2040,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVCredits.dc.html",
+      "title": "TV · Credits",
+      "page": "end-system",
+      "x": 4080,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "PhoneWaitingNextGame.dc.html",
+      "title": "Phone · Waiting for next game",
+      "page": "end-system",
+      "x": 0,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneReconnecting.dc.html",
+      "title": "Phone · Reconnecting",
+      "page": "end-system",
+      "x": 490,
+      "y": 1280,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "DirectionATV.dc.html",
+      "title": "A · Sticker Shop · TV lobby",
+      "page": "style-options",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "DirectionAPhone.dc.html",
+      "title": "A · Sticker Shop · Phone, imposter card",
+      "page": "style-options",
+      "x": 2040,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "DirectionBTV.dc.html",
+      "title": "B · Saturday Morning · TV lobby",
+      "page": "style-options",
+      "x": 0,
+      "y": 1320,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "DirectionBPhone.dc.html",
+      "title": "B · Saturday Morning · Phone, imposter card",
+      "page": "style-options",
+      "x": 2040,
+      "y": 1320,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvLanding.dc.html",
+      "title": "Phone · No-TV · Start or join",
+      "page": "no-tv",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvLobbyStarter.dc.html",
+      "title": "Phone · No-TV · Lobby (starter)",
+      "page": "no-tv",
+      "x": 450,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvLobbyPlayer.dc.html",
+      "title": "Phone · No-TV · Lobby (not the VIP)",
+      "page": "no-tv",
+      "x": 900,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvVipPicker.dc.html",
+      "title": "Phone · No-TV · VIP picker, blocked game",
+      "page": "no-tv",
+      "x": 1350,
+      "y": 0,
+      "w": 390,
+      "h": 1240
+    },
+    {
+      "file": "PhoneNoTvMltVote.dc.html",
+      "title": "Phone · No-TV · Most Likely To · Vote",
+      "page": "no-tv",
+      "x": 1800,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvMltReveal.dc.html",
+      "title": "Phone · No-TV · Most Likely To · Reveal",
+      "page": "no-tv",
+      "x": 2250,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterWordCheck.dc.html",
+      "title": "Phone · No-TV · Imposter · Word check",
+      "page": "no-tv",
+      "x": 0,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterClues.dc.html",
+      "title": "Phone · No-TV · Imposter · Clue turns",
+      "page": "no-tv",
+      "x": 450,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterVote.dc.html",
+      "title": "Phone · No-TV · Imposter · Vote",
+      "page": "no-tv",
+      "x": 900,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterReveal.dc.html",
+      "title": "Phone · No-TV · Imposter · Reveal",
+      "page": "no-tv",
+      "x": 1350,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterLastChance.dc.html",
+      "title": "Phone · No-TV · Imposter · Last chance",
+      "page": "no-tv",
+      "x": 1800,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneNoTvImposterResult.dc.html",
+      "title": "Phone · No-TV · Imposter · Round result",
+      "page": "no-tv",
+      "x": 2250,
+      "y": 1440,
+      "w": 390,
+      "h": 844
+    }
   ],
   "annotations": [
-    { "id": "setup-notes", "page": "setup", "x": 0, "y": 1280, "w": 900, "text": "Setup flow. The TV only needs input to start the room; after that the VIP (first phone to join) runs everything from their phone, and the TV mirrors what they pick.\nAll names, the room code and the QR are sample content." },
-    { "id": "imposter-notes", "page": "imposter", "x": 6120, "y": 1280, "w": 900, "text": "Imposter, one word shown end to end: Priya holds the decoy (ZEBRA), the crew has GIRAFFE.\n\nAssumptions to check:\n- The speaker taps \"I'm done\" to pass the turn, or the timer runs out.\n- You can vote for anyone but yourself.\n- The crew's word stays hidden on the TV until the imposter's last guess is in.\n- Point values are placeholders until the spec sets scoring.\n- Not drawn yet: the round where the imposter escapes the vote." },
-    { "id": "real-or-nah-notes", "page": "real-or-nah", "x": 4080, "y": 1280, "w": 900, "text": "Real or Nah, one fact shown end to end.\n\nAssumptions to check:\n- The reveal puts everything on one screen here; the build can play it lie by lie.\n- Answers appear in the same shuffled order on the TV and every phone.\n- Point values are placeholders until the spec sets scoring." },
-    { "id": "end-notes", "page": "end-system", "x": 1000, "y": 1280, "w": 900, "text": "End of a game and the system states. Bracketed items on the credits and full-tonight screens are real facts still to fill in (repo URL, music, sound effects)." },
-    { "id": "style-intro", "page": "style-options", "x": 0, "y": -260, "w": 1100, "text": "The two style options that weren't picked, kept for reference. Doodle Notebook (option C) is now the main set on the other pages." },
-    { "id": "direction-a", "page": "style-options", "x": 2530, "y": 0, "w": 460, "text": "A · Sticker Shop\nThick ink outlines, hard offset shadows, flat bold colors on warm cream. Lilita One + Nunito." },
-    { "id": "direction-b", "page": "style-options", "x": 2530, "y": 1320, "w": 460, "text": "B · Saturday Morning\nDeep grape stage, candy-colored bubbles, no outlines. Titan One + Baloo 2." }
+    {
+      "id": "setup-notes",
+      "page": "setup",
+      "x": 0,
+      "y": 1280,
+      "w": 900,
+      "text": "Setup flow. The TV only needs input to start the room; after that the VIP (first phone to join) runs everything from their phone, and the TV mirrors what they pick.\nAll names, the room code and the QR are sample content."
+    },
+    {
+      "id": "imposter-notes",
+      "page": "imposter",
+      "x": 6120,
+      "y": 1280,
+      "w": 900,
+      "text": "Imposter, one word shown end to end: Priya holds the decoy (ZEBRA), the crew has GIRAFFE.\n\nAssumptions to check:\n- The speaker taps \"I'm done\" to pass the turn, or the timer runs out.\n- You can vote for anyone but yourself.\n- The crew's word stays hidden on the TV until the imposter's last guess is in.\n- Point values are placeholders until the spec sets scoring.\n- Not drawn yet: the round where the imposter escapes the vote."
+    },
+    {
+      "id": "real-or-nah-notes",
+      "page": "real-or-nah",
+      "x": 4080,
+      "y": 1280,
+      "w": 900,
+      "text": "Real or Nah, one fact shown end to end.\n\nAssumptions to check:\n- The reveal puts everything on one screen here; the build can play it lie by lie.\n- Answers appear in the same shuffled order on the TV and every phone.\n- Point values are placeholders until the spec sets scoring."
+    },
+    {
+      "id": "end-notes",
+      "page": "end-system",
+      "x": 1000,
+      "y": 1280,
+      "w": 900,
+      "text": "End of a game and the system states. Bracketed items on the credits and full-tonight screens are real facts still to fill in (repo URL, music, sound effects)."
+    },
+    {
+      "id": "style-intro",
+      "page": "style-options",
+      "x": 0,
+      "y": -260,
+      "w": 1100,
+      "text": "The two style options that weren't picked, kept for reference. Doodle Notebook (option C) is now the main set on the other pages."
+    },
+    {
+      "id": "direction-a",
+      "page": "style-options",
+      "x": 2530,
+      "y": 0,
+      "w": 460,
+      "text": "A · Sticker Shop\nThick ink outlines, hard offset shadows, flat bold colors on warm cream. Lilita One + Nunito."
+    },
+    {
+      "id": "direction-b",
+      "page": "style-options",
+      "x": 2530,
+      "y": 1320,
+      "w": 460,
+      "text": "B · Saturday Morning\nDeep grape stage, candy-colored bubbles, no outlines. Titan One + Baloo 2."
+    },
+    {
+      "id": "no-tv-notes",
+      "page": "no-tv",
+      "x": 0,
+      "y": 1180,
+      "w": 1100,
+      "text": "No-TV mode: no shared screen anywhere. Every phone carries the shared stage on top and that player's own controls below.\n\nTop row is the platform: starting a room from a phone, the room code read aloud, and a game that needs a TV shown disabled rather than hidden.\nSecond row is Imposter in phase order. Word check deliberately shows an empty stage — a phase shows the stage or your secret, never both.\n\nPhones are silent here, haptics only, so the Suspense ring on Reveal and Last chance is the visual standing in for the drumroll.\nAll names, the room code and the words are sample content."
+    }
   ],
-  "launch": { "view": "canvas", "page": "setup" }
+  "launch": {
+    "view": "canvas",
+    "page": "setup"
+  }
 }
