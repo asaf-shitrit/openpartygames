@@ -58,6 +58,7 @@ function setup(label: string, elapsedMs: number) {
       deadline={room.game?.deadline ?? null}
       timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
+      stage={null}
     />,
   );
   return { advanceTo, rendered };

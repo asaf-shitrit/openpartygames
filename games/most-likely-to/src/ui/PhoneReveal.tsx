@@ -20,6 +20,7 @@ import {
 } from "@opg/ui";
 import {
   REVEAL_MS,
+  type MltHostView,
   type MltOutcome,
   type MltPlayerView,
   type MltReveal,
@@ -27,6 +28,7 @@ import {
 import { nameOf, PromptLine } from "./common";
 import { personalReveal, phoneRevealBeats } from "./reveal-timeline";
 import type { PersonalReveal } from "./reveal-timeline";
+import { StageReveal } from "./stage/Reveal";
 
 function ResultCard({
   personal,
@@ -125,13 +127,69 @@ export interface PhoneRevealProps {
   deadline: number | null;
   timerStartedAt: number | null;
   clock: ServerClock;
+  /** The host view, in a no-TV room only; the stage carries the ceremony this phone stages. */
+  stage: MltHostView | null;
+}
+
+/** Stage region above the controls: the room's ceremony, only in a no-TV room. */
+function StageArea({
+  stage,
+  players,
+  me,
+  deadline,
+  timerStartedAt,
+  clock,
+}: {
+  stage: MltHostView | null;
+  players: PlayerSummary[];
+  me: PlayerId | null;
+  deadline: number | null;
+  timerStartedAt: number | null;
+  clock: ServerClock;
+}) {
+  if (stage === null) return null;
+  return (
+    <StageReveal
+      view={stage}
+      players={players}
+      me={me}
+      deadline={deadline}
+      timerStartedAt={timerStartedAt}
+      clock={clock}
+    />
+  );
+}
+
+/** Controls region before the personal result lands: TV mode waits on the TV; a no-TV room
+ * already shows the ceremony on its own stage above, so there is nothing extra to say here. */
+function Waiting({
+  noTv,
+  prompt,
+  suspense,
+}: {
+  noTv: boolean;
+  prompt: string;
+  suspense: boolean;
+}) {
+  if (noTv) return null;
+  return (
+    <>
+      <PromptLine prompt={prompt} size={20} />
+      <EyesOnTv
+        title="Eyes on the TV"
+        detail={suspense ? "Here it comes…" : "The votes are in…"}
+        tempo={suspense ? "fast" : "slow"}
+      />
+    </>
+  );
 }
 
 export function PhoneReveal(props: PhoneRevealProps) {
-  const { view, players, me } = props;
+  const { view, players, me, stage } = props;
   const meId = me?.id ?? "";
   const personal = buildPersonal(view, players, meId);
-  const beats = phoneRevealBeats(personal.haptic);
+  // No TV to follow in a no-TV room: the stage's verdict and this line land together.
+  const beats = phoneRevealBeats(personal.haptic, stage === null ? undefined : 0);
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, REVEAL_MS);
   const moment = useMoment(beats, startedAt, props.clock);
   const buzz = useBuzz();
@@ -151,6 +209,14 @@ export function PhoneReveal(props: PhoneRevealProps) {
         progress="Here comes the verdict"
         right={<Timer deadline={props.deadline} clock={props.clock} />}
       />
+      <StageArea
+        stage={stage}
+        players={players}
+        me={me?.id ?? null}
+        deadline={props.deadline}
+        timerStartedAt={props.timerStartedAt}
+        clock={props.clock}
+      />
       {personalReached ? (
         <ResultCard
           personal={personal}
@@ -160,14 +226,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
           cardRef={cardRef}
         />
       ) : (
-        <>
-          <PromptLine prompt={view.prompt} size={20} />
-          <EyesOnTv
-            title="Eyes on the TV"
-            detail={suspense ? "Here it comes…" : "The votes are in…"}
-            tempo={suspense ? "fast" : "slow"}
-          />
-        </>
+        <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} />
       )}
     </>
   );

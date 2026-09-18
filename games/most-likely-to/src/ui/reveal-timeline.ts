@@ -178,16 +178,21 @@ export function personalReveal(input: PersonalRevealInput): PersonalReveal {
 }
 
 /**
- * Phone beats: intro(0), suspense(5500), personal (200ms after the TV's verdict,
- * with haptic), next(10500).
+ * Phone beats: intro(0), suspense(5500), personal (haptic), next(10500). The personal beat
+ * follows the TV's verdict by `followMs` (default PHONE_FOLLOW_MS) so a phone never spoils
+ * the TV's beat. In a no-TV room there is no TV to follow, so the caller passes 0: the stage
+ * and the personal line land together.
  */
-export function phoneRevealBeats(haptic: HapticName): Beat[] {
+export function phoneRevealBeats(
+  haptic: HapticName,
+  followMs: number = PHONE_FOLLOW_MS,
+): Beat[] {
   return [
     { id: "intro", atMs: 0 },
     { id: "suspense", atMs: REVEAL_TIMING.suspenseMs },
     {
       id: "personal",
-      atMs: REVEAL_TIMING.verdictMs + PHONE_FOLLOW_MS,
+      atMs: REVEAL_TIMING.verdictMs + followMs,
       haptic,
     },
     { id: "next", atMs: REVEAL_TIMING.nextMs },

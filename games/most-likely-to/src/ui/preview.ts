@@ -198,13 +198,18 @@ function phoneReveal(
   };
 }
 
-function commonRoom(
-  view: MltHostView | MltPlayerView,
-  deadline: number | null,
-  timerStartedAt: number | null = null,
-) {
+interface RoomTiming {
+  deadline: number | null;
+  timerStartedAt?: number | null;
+  /** The host view a no-TV phone stages, or null for a shared-screen room. */
+  stage?: MltHostView | null;
+}
+
+function commonRoom(view: MltHostView | MltPlayerView, timing: RoomTiming) {
+  const { deadline, timerStartedAt = null, stage = null } = timing;
   return {
     code: "BKTZ",
+    sharedScreen: stage === null,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
     players: PLAYERS,
@@ -214,7 +219,7 @@ function commonRoom(
     selectedGameId: "most-likely-to",
     packs: [],
     lastResult: null,
-    game: { id: "most-likely-to", view, deadline, timerStartedAt },
+    game: { id: "most-likely-to", view, deadline, timerStartedAt, stage },
     serverNow: SERVER_NOW,
   };
 }
@@ -224,20 +229,15 @@ function hostRoom(
   deadline: number | null,
   timerStartedAt: number | null = null,
 ): HostRoomView {
-  return { role: "host", ...commonRoom(view, deadline, timerStartedAt) };
+  return { role: "host", ...commonRoom(view, { deadline, timerStartedAt }) };
 }
 
 function playerRoom(
   view: MltPlayerView,
   you: PlayerId,
-  deadline: number | null,
-  timerStartedAt: number | null = null,
+  timing: RoomTiming,
 ): PlayerRoomView {
-  return {
-    role: "player",
-    you,
-    ...commonRoom(view, deadline, timerStartedAt),
-  };
+  return { role: "player", you, ...commonRoom(view, timing) };
 }
 
 export interface MltPreview {
@@ -245,6 +245,8 @@ export interface MltPreview {
   surface: "host" | "phone";
   view: MltHostView | MltPlayerView;
   room: HostRoomView | PlayerRoomView;
+  /** The host view a no-TV phone stages alongside `view`; undefined for a shared-screen preview. */
+  stage?: MltHostView;
 }
 
 function hostRevealPreview(label: string, reveal: MltReveal): MltPreview {
@@ -266,7 +268,10 @@ function phoneRevealPreview(
     label,
     surface: "phone",
     view,
-    room: playerRoom(view, you, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: playerRoom(view, you, {
+      deadline: REVEAL_DEADLINE,
+      timerStartedAt: REVEAL_PREVIEW_START,
+    }),
   };
 }
 
@@ -286,13 +291,13 @@ export const mostLikelyToPreviews: MltPreview[] = [
     label: "Phone: Dov vote selecting",
     surface: "phone",
     view: phoneVoteSelecting,
-    room: playerRoom(phoneVoteSelecting, DOV, VOTE_DEADLINE),
+    room: playerRoom(phoneVoteSelecting, DOV, { deadline: VOTE_DEADLINE }),
   },
   {
     label: "Phone: Dov vote locked in",
     surface: "phone",
     view: phoneVoteLocked,
-    room: playerRoom(phoneVoteLocked, DOV, VOTE_DEADLINE),
+    room: playerRoom(phoneVoteLocked, DOV, { deadline: VOTE_DEADLINE }),
   },
   phoneRevealPreview(
     "Phone: Maya reveal matched",
@@ -324,4 +329,35 @@ export const mostLikelyToPreviews: MltPreview[] = [
     NOA,
     phoneReveal(NO_VOTES_REVEAL, null, 0),
   ),
+  {
+    label: "Phone (no-TV): Dov vote selecting",
+    surface: "phone",
+    view: phoneVoteSelecting,
+    room: playerRoom(phoneVoteSelecting, DOV, {
+      deadline: VOTE_DEADLINE,
+      stage: hostVote,
+    }),
+    stage: hostVote,
+  },
+  {
+    label: "Phone (no-TV): Dov vote locked in",
+    surface: "phone",
+    view: phoneVoteLocked,
+    room: playerRoom(phoneVoteLocked, DOV, {
+      deadline: VOTE_DEADLINE,
+      stage: hostVote,
+    }),
+    stage: hostVote,
+  },
+  {
+    label: "Phone (no-TV): Priya reveal settled",
+    surface: "phone",
+    view: phoneReveal(PICKED_REVEAL, DOV, 500),
+    room: playerRoom(phoneReveal(PICKED_REVEAL, DOV, 500), PRIYA, {
+      deadline: REVEAL_DEADLINE,
+      timerStartedAt: REVEAL_PREVIEW_START,
+      stage: hostReveal(PICKED_REVEAL),
+    }),
+    stage: hostReveal(PICKED_REVEAL),
+  },
 ];

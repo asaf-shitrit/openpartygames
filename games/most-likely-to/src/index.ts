@@ -242,6 +242,7 @@ export const mostLikelyTo: GameDefinition<
   id: "most-likely-to",
   name: "Most Likely To",
   blurb: "Vote on who fits the prompt. Score by reading the room.",
+  noTv: true,
   minPlayers: MLT_MIN_PLAYERS,
   maxPlayers: MLT_MAX_PLAYERS,
   minutes: MLT_MINUTES,
