@@ -51,6 +51,27 @@ function renderAt(path: string) {
   return render(<App />);
 }
 
+const matchMediaDescriptor = Object.getOwnPropertyDescriptor(
+  window,
+  "matchMedia",
+);
+
+/** Narrow touch devices route "/" to the phone landing instead of the TV landing. */
+function stubNarrowTouch(): void {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (media: string) => ({ media, matches: true }),
+  });
+}
+
+function restoreMatchMedia(): void {
+  if (matchMediaDescriptor) {
+    Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
+  } else {
+    Reflect.deleteProperty(window, "matchMedia");
+  }
+}
+
 beforeEach(() => {
   resetFakeSockets();
   localStorage.clear();
@@ -60,6 +81,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  restoreMatchMedia();
 });
 
 describe("App routing", () => {
@@ -78,6 +100,16 @@ describe("App routing", () => {
   it("scales the credits page inside the TV stage", () => {
     const { container } = renderAt("/credits");
     expect(container.querySelector(".opg-grid-tv")).not.toBeNull();
+  });
+
+  it("sends a narrow touch device at the root to the phone landing, not the join form", () => {
+    stubNarrowTouch();
+    renderAt("/");
+    expect(screen.getByText("Party games for")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /start a room/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /join a room/i }),
+    ).toBeTruthy();
   });
 
   it("renders the phone join form at /join", () => {

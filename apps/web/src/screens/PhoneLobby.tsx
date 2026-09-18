@@ -1,5 +1,5 @@
-// design/PhoneLobby.dc.html — non-VIP lobby.
-import type { PlayerSummary, PlayerRoomView } from "@opg/protocol";
+// design/PhoneLobby.dc.html, design/PhoneNoTvLobbyPlayer.dc.html — non-VIP lobby.
+import type { GameSummary, PlayerSummary, PlayerRoomView } from "@opg/protocol";
 import {
   Avatar,
   Card,
@@ -12,6 +12,7 @@ import {
   Tally,
   Tape,
 } from "@opg/ui";
+import { gameIconFor } from "../games";
 
 export interface PhoneLobbyProps {
   view: PlayerRoomView;
@@ -207,6 +208,127 @@ function VipNote({
   );
 }
 
+function selectedGame(view: PlayerRoomView): GameSummary | null {
+  return view.games.find((g) => g.id === view.selectedGameId) ?? null;
+}
+
+/** "Real or Nah", "Imposter or Most Likely To", "A, B or C". */
+function joinWithOr(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+}
+
+function alternativeNames(view: PlayerRoomView, exceptId: string): string[] {
+  return view.games
+    .filter((g) => g.noTv && g.id !== exceptId)
+    .map((g) => g.name);
+}
+
+function escapeLine(vipName: string, altNames: string[]): string {
+  if (altNames.length === 0) return `${vipName} can add a shared screen.`;
+  return `${vipName} can pick ${joinWithOr(altNames)}, or add a shared screen.`;
+}
+
+function BlockedReason() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "12px 14px",
+        background: "var(--opg-paper)",
+        border: "4px solid var(--opg-marker)",
+        borderRadius: "var(--opg-radius-l)",
+      }}
+    >
+      <Icon name="monitor" size={22} color="var(--opg-marker)" />
+      <div
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: "var(--opg-marker)",
+          lineHeight: 1.3,
+        }}
+      >
+        Plays on a shared screen.
+      </div>
+    </div>
+  );
+}
+
+function GameCard({ game }: { game: GameSummary }) {
+  return (
+    <Card
+      variant="L"
+      tilt={-1}
+      style={{
+        padding: "18px 18px 20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 14,
+        }}
+      >
+        <Marker size={26} style={{ lineHeight: 1.1 }}>
+          {game.name}
+        </Marker>
+        <Icon name={gameIconFor(game.id)} size={40} />
+      </div>
+      <div style={{ fontSize: 17, lineHeight: 1.35 }}>{game.blurb}</div>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          color: "var(--opg-ink-secondary)",
+        }}
+      >
+        {game.minPlayers}–{game.maxPlayers} players · about {game.minutes} min
+      </div>
+    </Card>
+  );
+}
+
+function SelectedGameSection({
+  view,
+  vipName,
+}: {
+  view: PlayerRoomView;
+  vipName: string;
+}) {
+  const game = selectedGame(view);
+  if (!game) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <Marker size={22} style={{ lineHeight: 1.15 }}>
+        {vipName} picked
+      </Marker>
+      <GameCard game={game} />
+      {game.noTv ? null : (
+        <>
+          <BlockedReason />
+          <div
+            style={{
+              fontSize: 16,
+              lineHeight: 1.35,
+              color: "var(--opg-ink-secondary)",
+            }}
+          >
+            {escapeLine(vipName, alternativeNames(view, game.id))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function LeaveButton({ onLeave }: { onLeave: () => void }) {
   return (
     <button
@@ -286,6 +408,10 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
         isYou={isVipYou(vip, view.you)}
         sharedScreen={view.sharedScreen}
       />
+
+      {view.sharedScreen ? null : (
+        <SelectedGameSection view={view} vipName={vipLabel(vip)} />
+      )}
 
       <Marker size={28} style={{ lineHeight: 1.15 }}>
         Who's here ({view.players.length})

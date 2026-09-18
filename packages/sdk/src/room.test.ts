@@ -571,6 +571,42 @@ describe("start-game", () => {
 });
 
 describe("no-TV mode", () => {
+  function roomWithBothGames(sharedScreen: boolean) {
+    // tapGame (TV-only) is first, so picking the first game would land on a blocked one.
+    return createRoom({
+      code: "BCDF",
+      hostToken: HOST_TOKEN,
+      games: [tapGame, tapGameNoTv],
+      seed: 1,
+      now: 0,
+      newToken: () => "t1",
+      sharedScreen,
+    });
+  }
+
+  it("opens a room with no shared screen on a game it can actually start", () => {
+    const room = roomWithBothGames(false);
+    expect(room.hostView(0).selectedGameId).toBe(tapGameNoTv.id);
+  });
+
+  it("opens a room with a shared screen on the first game, as before", () => {
+    const room = roomWithBothGames(true);
+    expect(room.hostView(0).selectedGameId).toBe(tapGame.id);
+  });
+
+  it("falls back to the first game when none supports playing without a screen", () => {
+    const room = createRoom({
+      code: "BCDF",
+      hostToken: HOST_TOKEN,
+      games: [tapGame],
+      seed: 1,
+      now: 0,
+      newToken: () => "t1",
+      sharedScreen: false,
+    });
+    expect(room.hostView(0).selectedGameId).toBe(tapGame.id);
+  });
+
   it("refuses a game that has not opted in", () => {
     const h = makeRoom({ packs: [PACK_FAMILY], sharedScreen: false });
     const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);

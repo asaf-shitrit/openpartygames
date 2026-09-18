@@ -1212,24 +1212,41 @@ class RoomImpl implements RoomCore {
     // The host already has the host view in `view`, so the stage would be redundant.
     if (role === "host")
       return { ...base, view: def.hostView(game.state, { now }), stage: null };
+    return { ...base, ...this.playerGameView(game, def, now, playerId) };
+  }
+
+  /** A player's own view, plus the stage they share with the room when there is no TV. */
+  private playerGameView(
+    game: GameRuntime,
+    def: AnyGame,
+    now: number,
+    playerId?: PlayerId,
+  ): Pick<ActiveGameView, "view" | "stage"> {
     if (playerId === undefined || !game.playerIds.includes(playerId)) {
-      return { ...base, view: null, stage: null };
+      return { view: null, stage: null };
     }
     // `stage` is literally the host view in a no-TV room: a game can never put
     // something on it that is not already on the TV.
-    const stage = this.sharedScreen ? null : def.hostView(game.state, { now });
     return {
-      ...base,
       view: def.playerView(game.state, playerId, { now }),
-      stage,
+      stage: this.sharedScreen ? null : def.hostView(game.state, { now }),
     };
   }
 }
 
+/**
+ * The game a new room starts on. A room with no shared screen prefers a game it can
+ * actually start, so the VIP does not open the picker on a game that refuses to run.
+ * Falls back to the first game when none supports the mode; the picker then says why.
+ */
+function defaultGameId(games: readonly AnyGame[], sharedScreen: boolean): string {
+  const playable = sharedScreen ? games[0] : (games.find((g) => g.noTv === true) ?? games[0]);
+  return playable ? playable.id : "";
+}
+
 export function createRoom(options: CreateRoomOptions): RoomCore {
   const games = options.games;
-  const [firstGame] = games;
-  const firstGameId = firstGame ? firstGame.id : "";
+  const firstGameId = defaultGameId(games, options.sharedScreen ?? true);
   const state: InternalState = {
     code: options.code,
     hostToken: options.hostToken,

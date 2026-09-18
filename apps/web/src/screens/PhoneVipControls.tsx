@@ -26,6 +26,7 @@ export interface PhoneVipControlsProps {
   onPickGame: (gameId: string) => void;
   onSetPack: (packId: string, enabled: boolean) => void;
   onSetLocked: (locked: boolean) => void;
+  onSetSharedScreen: (sharedScreen: boolean) => void;
   onKick: (playerId: string) => void;
   onStartGame: () => void;
 }
@@ -36,17 +37,32 @@ function ratingLabel(rating: Rating): string {
   return "Family";
 }
 
+/** A game that has not opted into a room with no shared screen. */
+function isBlocked(game: GameSummary, sharedScreen: boolean): boolean {
+  return !game.noTv && !sharedScreen;
+}
+
 function startDisabledReason(
   selectedGame: GameSummary | null,
+  sharedScreen: boolean,
   playerCount: number,
   packCount: number,
 ): string | undefined {
   if (!selectedGame) return "Pick a game first";
+  if (isBlocked(selectedGame, sharedScreen)) {
+    return `${selectedGame.name} plays on a shared screen. Turn that on to start it.`;
+  }
   if (playerCount < selectedGame.minPlayers) {
     return `Need at least ${selectedGame.minPlayers} players`;
   }
   if (packCount === 0) return "Turn on at least one pack";
   return undefined;
+}
+
+/** "Imposter", "Imposter or Most Likely To", "Imposter, Most Likely To or X". */
+function joinWithOr(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }
 
 function PlayerRow({
@@ -90,13 +106,34 @@ function PlayerRow({
   );
 }
 
+function GameButtonReason({ blocked }: { blocked: boolean }) {
+  if (!blocked) return null;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 16,
+        fontWeight: 700,
+        lineHeight: 1.25,
+      }}
+    >
+      <Icon name="monitor" size={18} />
+      <div>Plays on a shared screen.</div>
+    </div>
+  );
+}
+
 function GameButton({
   game,
   selected,
+  blocked,
   onPick,
 }: {
   game: GameSummary;
   selected: boolean;
+  blocked: boolean;
   onPick: (id: string) => void;
 }) {
   return (
@@ -111,6 +148,7 @@ function GameButton({
         flexDirection: "column",
         gap: 4,
         textAlign: "left",
+        opacity: blocked ? 0.45 : 1,
         background: selected ? "var(--opg-highlight-soft)" : "var(--opg-card)",
         border: selected
           ? "4px solid var(--opg-ink)"
@@ -156,6 +194,7 @@ function GameButton({
       >
         about {game.minutes} min
       </div>
+      <GameButtonReason blocked={blocked} />
     </button>
   );
 }
@@ -163,10 +202,12 @@ function GameButton({
 function GamePicker({
   games,
   selectedGameId,
+  sharedScreen,
   onPickGame,
 }: {
   games: GameSummary[];
   selectedGameId: string;
+  sharedScreen: boolean;
   onPickGame: (id: string) => void;
 }) {
   return (
@@ -186,6 +227,7 @@ function GamePicker({
             key={game.id}
             game={game}
             selected={game.id === selectedGameId}
+            blocked={isBlocked(game, sharedScreen)}
             onPick={onPickGame}
           />
         ))}
@@ -286,6 +328,63 @@ function PackList({
         Adult packs stay off unless the VIP turns them on.
       </div>
     </div>
+  );
+}
+
+function sharedScreenHint(sharedScreen: boolean, blockedNames: string[]): string {
+  if (sharedScreen) return "A shared screen is on for this room.";
+  if (blockedNames.length === 0) return "Play on a TV or laptop.";
+  return `Play on a TV or laptop — adds ${joinWithOr(blockedNames)}`;
+}
+
+function SharedScreenToggle({
+  sharedScreen,
+  blockedNames,
+  onSetSharedScreen,
+}: {
+  sharedScreen: boolean;
+  blockedNames: string[];
+  onSetSharedScreen: (value: boolean) => void;
+}) {
+  return (
+    <Card
+      variant="M"
+      style={{
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <Icon name="monitor" size={26} />
+      <div
+        style={{
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
+          Add a shared screen
+        </div>
+        <div
+          style={{
+            fontSize: 16,
+            lineHeight: 1.25,
+            color: "var(--opg-ink-secondary)",
+          }}
+        >
+          {sharedScreenHint(sharedScreen, blockedNames)}
+        </div>
+      </div>
+      <Switch
+        checked={sharedScreen}
+        size={30}
+        label="Add a shared screen"
+        onChange={onSetSharedScreen}
+      />
+    </Card>
   );
 }
 
@@ -442,6 +541,71 @@ function StartButton({
   );
 }
 
+/** The room code as separated letters ("B · K · T · Z"), read aloud on the starter's phone. */
+function RoomCodeHero({ code }: { code: string }) {
+  return (
+    <Card
+      variant="L"
+      style={{
+        padding: "22px 10px 18px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 15,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "var(--opg-ink-secondary)",
+        }}
+      >
+        Your room code
+      </div>
+      <div
+        className="opg-marker"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          fontSize: 48,
+          lineHeight: 1,
+        }}
+      >
+        {code.split("").map((letter, index) => (
+          <span
+            key={code.slice(0, index + 1)}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {index > 0 ? (
+              <span aria-hidden="true" style={{ color: "var(--opg-marker)", fontSize: 26 }}>
+                ·
+              </span>
+            ) : null}
+            <span>{letter}</span>
+          </span>
+        ))}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 17,
+          fontWeight: 700,
+        }}
+      >
+        <Icon name="sound" size={22} />
+        <div>Say this out loud</div>
+      </div>
+    </Card>
+  );
+}
+
 function gameLimits(game: GameSummary | null) {
   return { min: game?.minPlayers ?? 3, max: game?.maxPlayers ?? 8 };
 }
@@ -457,6 +621,7 @@ export function PhoneVipControls({
   onPickGame,
   onSetPack,
   onSetLocked,
+  onSetSharedScreen,
   onKick,
   onStartGame,
 }: PhoneVipControlsProps) {
@@ -467,9 +632,13 @@ export function PhoneVipControls({
   const limits = gameLimits(selectedGame);
   const disabledReason = startDisabledReason(
     selectedGame,
+    view.sharedScreen,
     activePlayers.length,
     enabledPacks.length,
   );
+  const blockedGameNames = view.games
+    .filter((g) => isBlocked(g, view.sharedScreen))
+    .map((g) => g.name);
 
   return (
     <PhoneScreen>
@@ -490,10 +659,18 @@ export function PhoneVipControls({
         </div>
       </div>
 
+      {view.sharedScreen ? null : <RoomCodeHero code={view.code} />}
+
       <GamePicker
         games={view.games}
         selectedGameId={view.selectedGameId}
+        sharedScreen={view.sharedScreen}
         onPickGame={onPickGame}
+      />
+      <SharedScreenToggle
+        sharedScreen={view.sharedScreen}
+        blockedNames={blockedGameNames}
+        onSetSharedScreen={onSetSharedScreen}
       />
       <PackList packs={view.packs} onSetPack={onSetPack} />
       <LockCard locked={view.locked} onSetLocked={onSetLocked} />

@@ -1,52 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SoundProvider } from "@opg/ui";
-import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
-import { LANDING_GAMES } from "../games";
-import { TvLanding } from "./TvLanding";
-
-class FakeEngine implements SoundEngine {
-  unlockCount = 0;
-
-  status(): SoundStatus {
-    return "running";
-  }
-
-  subscribe(): () => void {
-    return () => {
-      /* status never changes */
-    };
-  }
-
-  unlock(): void {
-    this.unlockCount += 1;
-  }
-
-  setMuted(): void {
-    /* nothing to mute */
-  }
-
-  preload(): void {
-    /* no samples */
-  }
-
-  play(): CueHandle {
-    return {
-      stop() {
-        /* nothing is playing */
-      },
-    };
-  }
-
-  playMusic(): void {
-    /* no music in tests */
-  }
-
-  stopAll(): void {
-    /* nothing is playing */
-  }
-}
+import { PhoneLanding } from "./PhoneLanding";
 
 const CREATED = { code: "BKTZ", hostToken: "host-token" };
 
@@ -74,34 +29,43 @@ afterEach(() => {
   window.history.pushState(null, "", "/");
 });
 
-describe("TvLanding", () => {
-  it("stores the host token and opens the host screen", async () => {
+describe("PhoneLanding", () => {
+  it("requests a no-shared-screen room and joins as the first player", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn<typeof fetch>(async (_input, init) => {
         expect(JSON.parse(await bodyText(init?.body))).toEqual({
-          sharedScreen: true,
+          sharedScreen: false,
         });
         return Response.json(CREATED);
       }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    render(<PhoneLanding />);
     await user.click(startButton());
     await waitFor(() =>
       expect(localStorage.getItem("opg:host:BKTZ")).toBe("host-token"),
     );
-    expect(window.location.pathname).toBe("/host/BKTZ");
+    expect(window.location.pathname).toBe("/BKTZ");
   });
 
-  it("shows the full-tonight screen when the daily cap is hit", async () => {
+  it("sends a join tap to the join form", async () => {
+    const user = userEvent.setup();
+    render(<PhoneLanding />);
+    await user.click(screen.getByRole("button", { name: /join a room/i }));
+    expect(window.location.pathname).toBe("/join");
+  });
+
+  it("shows the full-tonight message when the daily cap is hit", async () => {
     stubFetch(async () =>
       Response.json({ error: "full-tonight" }, { status: 503 }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    render(<PhoneLanding />);
     await user.click(startButton());
-    expect(await screen.findByText("We're full tonight")).toBeTruthy();
+    expect(
+      await screen.findByText("We're full tonight. Come back tomorrow."),
+    ).toBeTruthy();
   });
 
   it("reports any other room error", async () => {
@@ -109,7 +73,7 @@ describe("TvLanding", () => {
       Response.json({ error: "internal" }, { status: 500 }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    render(<PhoneLanding />);
     await user.click(startButton());
     expect(
       await screen.findByText("Could not start a room. Try again in a moment."),
@@ -124,7 +88,7 @@ describe("TvLanding", () => {
       },
     });
     const user = userEvent.setup();
-    render(<TvLanding />);
+    render(<PhoneLanding />);
     await user.click(startButton());
     expect(
       await screen.findByText(
@@ -134,33 +98,12 @@ describe("TvLanding", () => {
     expect(window.location.pathname).toBe("/");
   });
 
-  it("shows the Show on TV chip in the header and opens the guide", async () => {
-    const user = userEvent.setup();
-    render(<TvLanding />);
-    await user.click(screen.getByRole("button", { name: "Show on TV" }));
+  it("offers the TV as an option without naming a mode by what is missing", () => {
+    render(<PhoneLanding />);
     expect(
-      screen.getByRole("dialog", { name: "Show this on your TV" }),
+      screen.getByText(
+        "Playing with a TV or laptop? Open this page there for the big screen.",
+      ),
     ).toBeTruthy();
-  });
-
-  it("shows every landing game's name, including a third game", () => {
-    render(<TvLanding />);
-    expect(LANDING_GAMES.length).toBeGreaterThanOrEqual(3);
-    for (const game of LANDING_GAMES) {
-      expect(screen.getByText(game.name)).toBeTruthy();
-    }
-  });
-
-  it("unlocks sound inside the Start click", async () => {
-    stubFetch(async () => Response.json(CREATED));
-    const engine = new FakeEngine();
-    const user = userEvent.setup();
-    render(
-      <SoundProvider engine={engine}>
-        <TvLanding />
-      </SoundProvider>,
-    );
-    await user.click(startButton());
-    expect(engine.unlockCount).toBe(1);
   });
 });
