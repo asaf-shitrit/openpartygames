@@ -159,3 +159,36 @@ export { useFullscreen, useScreenWakeLock } from "./screen";
 export type { FullscreenControl } from "./screen";
 
 export type { ServerClock, GameUi } from "./game-ui";
+
+export {
+  GAP_MS_CAP,
+  GRID,
+  MAX_POINTS_PER_DOODLE,
+  MAX_POINTS_PER_STROKE,
+  MAX_STROKES_PER_DOODLE,
+  MIN_STEP,
+  RDP_EPSILON,
+  REPLAY_MS,
+  STROKE_MS_CAP,
+  TICK_MS,
+  emptyDoodle,
+} from "./doodle/types";
+export type { Doodle, GridPoint, InkIndex, Stroke } from "./doodle/types";
+export { DOODLE_INK_NAMES, DOODLE_INKS } from "./doodle/inks";
+export {
+  deltaDecode,
+  deltaEncode,
+  doodleBounds,
+  gridPointOf,
+  simplifyStroke,
+} from "./doodle/geometry";
+export type { ClientRectLike, DoodleBounds } from "./doodle/geometry";
+export { captureDuration, captureGap, finalizeStroke } from "./doodle/capture";
+export { paintDoodle } from "./doodle/paint";
+export type { DoodleBox, DoodleCanvasContext, DoodleUpTo } from "./doodle/paint";
+export { replaySchedule, replayStateAt } from "./doodle/replay";
+export type { ReplayState, StrokeWindow } from "./doodle/replay";
+export { DoodlePad } from "./doodle/DoodlePad";
+export type { DoodlePadProps } from "./doodle/DoodlePad";
+export { DoodleView } from "./doodle/DoodleView";
+export type { DoodleReplay, DoodleViewProps } from "./doodle/DoodleView";

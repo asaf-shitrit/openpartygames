@@ -202,10 +202,12 @@ Per-point JSON cost is two numbers and two commas: **6 bytes** typical (`"12,-7,
 
 Per-stroke framing with colour and timing, `{"c":0,"d":150,"g":50,"p":[]},` = **30 bytes** at full digit width (it was 15 bytes with colour alone, 3 bytes for a bare array).
 
-| | Strokes | Points | Points cost | Framing | Total |
-|---|---|---|---|---|---|
-| **Typical drawing** | 15 | 375 | 375 × 6 = 2,250 B | 15 × 30 = 450 B | **~2.7 KB** |
-| **At the caps** | 64 | 1,200 | 1,200 × 12 = 14,400 B | 64 × 30 = 1,920 B | **~16.3 KB** |
+| | Strokes | Points | Points cost | Framing | Estimated | **Measured** |
+|---|---|---|---|---|---|---|
+| **Typical drawing** | 15 | 375 | 375 × 6 = 2,250 B | 15 × 30 = 450 B | ~2.7 KB | **2,768 B** |
+| **At the caps** | 64 | 1,152 | 1,200 × 12 = 14,400 B | 64 × 30 = 1,920 B | ~16.3 KB | **9,212 B** |
+
+Slice 1 measured both (`packages/ui/src/doodle/size.test.ts`, asserted as ranges so the test does not pin a flaky byte count). The typical case landed within 3% of the estimate. **The cap case came in at 9.2 KB against a 16.3 KB estimate**, because the estimate assumed every delta was worst-case ±1023 and four digits wide; after `simplifyStroke` real deltas are one or two digits. The caps also do not divide evenly — `MAX_POINTS_PER_DOODLE = 1200` over `MAX_STROKES_PER_DOODLE = 64` is 18 points a stroke, so 1,152 points is the real ceiling, not 1,200. Every budget below that leans on the cap case is therefore conservative by roughly 40%.
 
 What the two settled features cost against a bare stroke array:
 
