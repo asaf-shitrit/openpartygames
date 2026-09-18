@@ -308,13 +308,13 @@ With two of three games opting in, this is a real screen people will hit on thei
 
 **Show it, disabled, with a reason. Do not hide it.** A hidden game reads as a bug ("where did Real or Nah go? I played it last week"), and a hidden game cannot say why. The kit already has the pattern — a disabled control carries a text label saying why (`design/AVATARS.md:43`) — and the VIP picker already computes a `disabledReason` for the too-few-players case (`apps/web/src/screens/PhoneVipControls.tsx:45-46,383-391,468`).
 
-**What the VIP sees.** The game tile stays in the list, in its usual position, dimmed at the standard 0.45 (`AVATARS.md:43`), with a line under the player count reading "Needs a TV screen." Tapping it still selects it — `pick-game` only checks that the game exists (`room.ts:765-783`) — so the VIP can look at it and read the reason rather than tapping a dead tile. With it selected, the start button is disabled and the existing `startDisabledReason` slot (`PhoneVipControls.tsx:45-46,468`) reads "Real or Nah needs a TV screen. Tap *Use a TV* to add one." Under it, the mode toggle from §5.
+**What the VIP sees.** The game tile stays in the list, in its usual position, dimmed at the standard 0.45 (`AVATARS.md:43`), with a line under the player count reading "Plays on a shared screen." Tapping it still selects it — `pick-game` only checks that the game exists (`room.ts:765-783`) — so the VIP can look at it and read the reason rather than tapping a dead tile. With it selected, the start button is disabled and the existing `startDisabledReason` slot (`PhoneVipControls.tsx:45-46,468`) reads "Real or Nah plays on a shared screen. Turn that on to start it." Under it, the mode toggle from §5.
 
 **What the other phones see.** This is the gap. Today a non-VIP lobby shows a sticky note saying "*Name* is the VIP and picks the game. **Watch the TV.**" (`apps/web/src/screens/PhoneLobby.tsx:171-175`) and nothing else — the game list is not on a non-VIP phone at all, because the TV was carrying it. With no TV there is nothing to watch, so a non-VIP player staring at a stalled lobby has no idea what is happening.
 
-**Proposed:** in a no-TV room the non-VIP lobby shows the selected game — name, blurb, player range — and, when it cannot be started, the same reason in the same words: "Needs a TV screen." Everyone reads the same sentence at the same time, so the conversation is "we need a laptop", not "why isn't it starting". This is a small screen but it is the one that decides whether the mode feels finished.
+**Proposed:** in a no-TV room the non-VIP lobby shows the selected game — name, blurb, player range — and, when it cannot be started, the same reason in the same words: "Plays on a shared screen." Everyone reads the same sentence at the same time, so the conversation is "we need a laptop", not "why isn't it starting". This is a small screen but it is the one that decides whether the mode feels finished.
 
-**If the VIP starts it anyway**, `start-game` refuses. **Proposed: reuse `invalid-action` with a clear message, do not add an `ErrorCode`.** `useRoomSocket` parses server frames with a closed zod enum of error codes and returns `null` for anything else (`apps/web/src/useRoomSocket.ts:52-67,101-103`), so a client running older code would silently *drop* an error frame carrying a new code and show nothing at all. `invalid-action` already falls back to the server's own message (`apps/web/src/screens/PlayerApp.tsx:64-77`), so "This game needs a TV screen." renders everywhere. The refusal should never be the first time anyone hears it; the picker said it already.
+**If the VIP starts it anyway**, `start-game` refuses. **Proposed: reuse `invalid-action` with a clear message, do not add an `ErrorCode`.** `useRoomSocket` parses server frames with a closed zod enum of error codes and returns `null` for anything else (`apps/web/src/useRoomSocket.ts:52-67,101-103`), so a client running older code would silently *drop* an error frame carrying a new code and show nothing at all. `invalid-action` already falls back to the server's own message (`apps/web/src/screens/PlayerApp.tsx:64-77`), so "This game plays on a shared screen." renders everywhere. The refusal should never be the first time anyone hears it; the picker said it already.
 
 **The escape hatch**, and it belongs in the copy rather than in a help page: the VIP flips the room to shared-screen mode in the lobby, and the starter's phone still holds the host token in `localStorage`, so `/host/<CODE>` opens on any laptop that turns up. "We want Real or Nah and we have no TV" is one tap plus one laptop, not a dead end.
 
@@ -344,7 +344,7 @@ Games are code, and a deploy restarts every Durable Object (`CLAUDE.md:50`). So 
 | `apps/web/src/screens/TvLanding.tsx` | unchanged behaviour; the create call grows the mode argument |
 | new `apps/web/src/screens/PhoneLanding.tsx` | start-or-join |
 | `apps/web/src/screens/PhoneLobby.tsx` | hero room code for the starter, readable code chip for everyone; the non-VIP lobby shows the selected game and its blocked reason (`:171-175` currently says "Watch the TV") |
-| `apps/web/src/screens/PhoneVipControls.tsx` | "Needs a TV screen." on the tile and on the start button; the mode toggle |
+| `apps/web/src/screens/PhoneVipControls.tsx` | "Plays on a shared screen." on the tile and on the start button; the mode toggle |
 | `apps/web/src/screens/PhoneJoin.tsx` | `rate-limited` copy; the sounds-alike hint |
 | `apps/web/src/screens/PlayerApp.tsx` | passes `stage` through to `Ui.Phone` |
 | `apps/web/src/screens/PhoneWaiting.tsx:28`, `PhoneLobby.tsx:174`, `PhoneJoin.tsx:144`, `PhoneResults.tsx:315` | four copy strings that name the TV |
@@ -436,7 +436,7 @@ Settled with the maintainer on 2026-09-18. Every recommendation in the draft was
 **Decided:** Reuse `invalid-action`. An added code is *invisible* to an older client, which drops the whole frame (`useRoomSocket.ts:52-67,101-103`).
 
 **5. Hidden versus disabled in the picker.**
-**Decided:** Disabled with "Needs a TV screen." A hidden game looks broken and cannot explain itself.
+**Decided:** Disabled with "Plays on a shared screen." A hidden game looks broken and cannot explain itself. See §10.17 for why the copy names what the game needs rather than what the room lacks.
 
 **6. The grace window for a late phone.**
 **Decided:** Leave `CUE_GRACE_MS` at 600. A late buzz is worse than none. Make settled states complete instead.
@@ -470,3 +470,10 @@ Settled with the maintainer on 2026-09-18. Every recommendation in the draft was
 
 **16. The silent-feedback pass is in scope, not a follow-up.**
 **Decided:** Slice 5 ships with the mode. The cue-to-visual table `plan/0002-game-feel.md:306` still owes is written for real, and the shared `Suspense` element lands in `packages/ui/src/fx/` as part of slice 3 rather than slice 5, because Most Likely To's reveal and Imposter's last-chance both need it before slice 5 would arrive. The reasoning is §3: with no TV the visuals are the whole feedback channel, so a drumroll with no visual substitute is not a polish item, it is a phase that reads as a frozen screen. The real-iPhone pass — no Vibration API, so no sound and no buzz — stays a manual step for the maintainer.
+
+**17. Never name this mode by what is missing.**
+**Decided:** No player-visible copy says "no TV", "TV-only", "needs a TV" or any other phrasing that defines a room by the screen it does not have. Both ways of playing are first class and the product supports both, so copy that frames one as an absence reads as a limitation being apologised for — and it is the phones-only room, the one with the least reassurance already, that pays for it.
+
+The rule: **name what a thing is or needs, never what the room lacks.** So a game that cannot run without a shared screen reads "Plays on a shared screen." rather than "Needs a TV screen."; the lobby control is "Add a shared screen" rather than "Use a TV"; and the room chrome carries no mode badge at all, because the presence of the control already says which mode the room is in. Where a TV genuinely is an option worth offering, it is offered as one — "Playing with a TV or laptop? Open this page there for the big screen." — rather than as a thing the room is missing.
+
+`sharedScreen` and `noTv` stay as they are in code. This decision is about player-visible copy, not identifiers.

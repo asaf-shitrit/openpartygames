@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&amp;family=Atkinson+Hyperlegible:wght@400;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #FBF8F1; }
+    a { color: #2B2B2B; } a:hover { color: #D7372B; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; padding: 18px 16px 22px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; background-color: #FBF8F1; background-image: linear-gradient(#E4ECF6 2px, transparent 2px), linear-gradient(90deg, #E4ECF6 2px, transparent 2px); background-size: 32px 32px; font-family: 'Atkinson Hyperlegible', Verdana, system-ui, sans-serif; color: #2B2B2B;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <div style="font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 28px; line-height: 1.1;">Imposter</div>
+      <div style="font-size: 16px; font-weight: 700; color: #4A4A4A;">Word 3 of 6</div>
+    </div>
+    <div style="font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 24px; line-height: 1.1;">The votes are in</div>
+  </div>
+
+  <!-- STAGE: the tally board, re-laid as a vertical list -- one row per player, marks scratched
+       round-robin. Priya's row is where the beat lands, so it carries the Suspense element:
+       a dim scrim over just that row, a tightening ring around her avatar, and three heartbeat
+       dots beneath. At 5.5s-8.0s the ring is mid-close and the verdict stamp is still forming --
+       both the tally underneath and the stamp read through the dim, which is deliberately light
+       (12% ink) so nothing here is ever hidden, only slowed down. -->
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 4px solid #2B2B2B; border-radius: 34px 10px 30px 12px / 12px 30px 10px 34px;">
+
+    <div style="display: flex; align-items: center; gap: 10px; height: 46px; box-sizing: border-box; padding: 0 6px;">
+      <svg width="32" height="32" viewBox="0 0 100 100" style="flex-shrink: 0; opacity: 0.5;"><path d="M50 8c24 0 40 18 40 42s-14 42-40 42S10 74 10 50 26 8 50 8z" fill="#FFA8A8" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path><circle cx="38" cy="46" r="5" fill="#2B2B2B"></circle><circle cx="62" cy="46" r="5" fill="#2B2B2B"></circle></svg>
+      <div style="flex-grow: 1; font-size: 17px; font-weight: 700; opacity: 0.6;">Maya</div>
+      <div style="font-size: 16px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; height: 46px; box-sizing: border-box; padding: 0 6px;">
+      <svg width="32" height="32" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M22 30c0-14 12-20 28-20s28 6 28 20c0 4-3 7-6 8v44c0 5-3 8-8 8H36c-5 0-8-3-8-8V38c-3-1-6-4-6-8z" fill="#FFBE7A" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path><circle cx="41" cy="55" r="5" fill="#2B2B2B"></circle><circle cx="59" cy="55" r="5" fill="#2B2B2B"></circle></svg>
+      <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Dov</div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="10" height="20" viewBox="0 0 10 20" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"><path d="M5 2l-1 16"></path></svg>
+        <div style="font-size: 16px; font-weight: 700;">1 vote</div>
+      </div>
+    </div>
+
+    <!-- Priya's row -- verdict landing here. Suspense element wraps it. -->
+    <div style="position: relative; margin: 4px 0; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; background: #FFF6BF; border: 4px solid #2B2B2B; border-radius: 26px 8px 24px 10px / 10px 24px 8px 26px; transform: rotate(-0.6deg);">
+
+      <!-- dim scrim, 12% ink -- never hides, only softens -->
+      <div style="position: absolute; inset: 0; background: rgba(43, 43, 43, 0.1); border-radius: inherit; pointer-events: none;"></div>
+
+      <!-- tightening ring: dashed at rest, closing solid as the beat approaches 8.0s. Shown ~60% closed. -->
+      <svg width="98" height="98" viewBox="0 0 98 98" style="position: absolute; left: 12px; top: 8px; pointer-events: none;">
+        <circle cx="49" cy="49" r="43" fill="none" stroke="#8A8A8A" stroke-width="2.5" stroke-dasharray="4 6" opacity="0.5"></circle>
+        <circle cx="49" cy="49" r="43" fill="none" stroke="#D7372B" stroke-width="4" stroke-linecap="round" stroke-dasharray="162 270" transform="rotate(-90 49 49)"></circle>
+      </svg>
+
+      <div style="position: relative; display: flex; align-items: center; gap: 12px;">
+        <svg width="66" height="66" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M50 6c6 10 34 30 34 56 0 18-15 30-34 30S16 80 16 62C16 36 44 16 50 6z" fill="#93E3C9" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path><circle cx="50" cy="58" r="13" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"></circle><circle cx="53" cy="59" r="6" fill="#2B2B2B"></circle></svg>
+        <div style="flex-grow: 1; font-size: 22px; font-weight: 700;">Priya</div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <svg width="34" height="24" viewBox="0 0 34 24" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"><path d="M4 2l-1 20M12 1l-1 21M20 2l-1 20M28 1l-1 21"></path></svg>
+          <div style="font-size: 20px; font-weight: 700;">4 votes</div>
+        </div>
+      </div>
+
+      <div style="position: relative; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <svg width="26" height="26" viewBox="0 0 100 100"><path d="M50 8c24 0 40 18 40 42s-14 42-40 42S10 74 10 50 26 8 50 8z" fill="#FFA8A8" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+          <svg width="26" height="26" viewBox="0 0 100 100"><path d="M22 30c0-14 12-20 28-20s28 6 28 20c0 4-3 7-6 8v44c0 5-3 8-8 8H36c-5 0-8-3-8-8V38c-3-1-6-4-6-8z" fill="#FFBE7A" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+          <svg width="26" height="26" viewBox="0 0 100 100"><path d="M28 84c-12 0-20-8-20-19 0-10 7-17 16-18 1-15 12-27 27-27 12 0 22 8 25 19 10 1 18 9 18 20 0 14-9 25-22 25z" fill="#A3CCFF" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+          <svg width="26" height="26" viewBox="0 0 100 100"><path d="M20 36L18 10l20 14c4-1 8-2 12-2s8 1 12 2l20-14-2 26c6 7 10 16 10 26 0 20-18 30-40 30S10 82 10 62c0-10 4-19 10-26z" fill="#CDB8FF" stroke="#2B2B2B" stroke-width="6" stroke-linejoin="round"></path></svg>
+        </div>
+
+        <!-- verdict stamp: forming, not yet fully landed -- legible but not final -->
+        <div style="padding: 2px 12px; background: #FFFFFF; border: 4px solid #D7372B; border-radius: 22px 8px 18px 10px / 10px 18px 8px 22px; transform: rotate(-6deg) scale(0.82); opacity: 0.75; font-family: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive; font-size: 22px; line-height: 1.1; color: #D7372B;">Imposter!</div>
+      </div>
+
+      <!-- three heartbeat dots -- filling in sequence, synced to the haptic pulse. Shown mid-cycle. -->
+      <div style="position: relative; display: flex; align-items: center; gap: 8px; align-self: center; margin-top: 2px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: #2B2B2B;"></div>
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: #2B2B2B;"></div>
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: transparent; border: 2px solid #2B2B2B;"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; height: 46px; box-sizing: border-box; padding: 0 6px;">
+      <svg width="32" height="32" viewBox="0 0 100 100" style="flex-shrink: 0; opacity: 0.5;"><path d="M28 84c-12 0-20-8-20-19 0-10 7-17 16-18 1-15 12-27 27-27 12 0 22 8 25 19 10 1 18 9 18 20 0 14-9 25-22 25z" fill="#A3CCFF" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+      <div style="flex-grow: 1; font-size: 17px; font-weight: 700; opacity: 0.6;">Sam</div>
+      <div style="font-size: 16px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; height: 46px; box-sizing: border-box; padding: 0 6px;">
+      <svg width="32" height="32" viewBox="0 0 100 100" style="flex-shrink: 0; opacity: 0.5;"><path d="M50 8l12 26 28 3-21 19 6 28-25-14-25 14 6-28-21-19 28-3z" fill="#FFE45C" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+      <div style="flex-grow: 1; font-size: 17px; font-weight: 700; opacity: 0.6;">Noa</div>
+      <div style="font-size: 16px; font-weight: 700; color: #8A8A8A;">0 votes</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; height: 46px; box-sizing: border-box; padding: 0 6px;">
+      <svg width="32" height="32" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M20 36L18 10l20 14c4-1 8-2 12-2s8 1 12 2l20-14-2 26c6 7 10 16 10 26 0 20-18 30-40 30S10 82 10 62c0-10 4-19 10-26z" fill="#CDB8FF" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path></svg>
+      <div style="flex-grow: 1; font-size: 17px; font-weight: 700;">Leo</div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="10" height="20" viewBox="0 0 10 20" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"><path d="M5 2l-1 16"></path></svg>
+        <div style="font-size: 16px; font-weight: 700;">1 vote</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <svg width="46" height="46" viewBox="0 0 100 100" style="flex-shrink: 0;"><path d="M50 6c6 10 34 30 34 56 0 18-15 30-34 30S16 80 16 62C16 36 44 16 50 6z" fill="#93E3C9" stroke="#2B2B2B" stroke-width="5" stroke-linejoin="round"></path><circle cx="50" cy="58" r="13" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="4"></circle><circle cx="53" cy="59" r="6" fill="#2B2B2B"></circle></svg>
+    <div style="display: flex; flex-direction: column;">
+      <div style="font-size: 19px; font-weight: 700;">Priya (you)</div>
+      <div style="font-size: 16px; font-weight: 400; color: #555555;">Deep breath. They're onto you.</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
