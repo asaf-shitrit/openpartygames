@@ -150,6 +150,8 @@ export interface GameDefinition<State, Action, HostView, PlayerView, C extends G
   bot(view: PlayerView, rng: Rng): Action | null;
   /** End-of-game awards, best first. Called only when the game completes normally. */
   awards?(state: State): Award[];
+  /** True when the game plays with no shared screen. Default false: no-TV support is opt-in. */
+  noTv?: boolean;
 }
 
 /**
@@ -218,6 +220,8 @@ export interface CreateRoomOptions {
   now: number;
   /** Unguessable id/token generator. The Worker passes crypto.randomUUID; tests pass a counter. */
   newToken: () => string;
+  /** False for a no-TV room, where every player's own phone carries the shared stage. Defaults to true. */
+  sharedScreen?: boolean;
 }
 
 // ---------- Testing ----------
@@ -230,6 +234,8 @@ export interface PlaythroughOptions {
   /** Disconnect one bot mid-game and rejoin it with its token; asserts the seat and score survive. */
   disconnectRejoin?: boolean;
   maxSteps?: number;
+  /** False for a no-TV room. Defaults to true, same as CreateRoomOptions. */
+  sharedScreen?: boolean;
 }
 
 export interface PlaythroughResult {

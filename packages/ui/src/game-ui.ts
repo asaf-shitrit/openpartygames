@@ -28,6 +28,8 @@ export interface GameUi<
     timerStartedAt: number | null;
     clock: ServerClock;
     send: (action: Action) => void;
+    /** The host view in a no-TV room, or null in a room with a shared screen. */
+    stage: HostView | null;
   }>;
   /** Turns a game-defined award id into words. Returns null for an id the game does not know. */
   awardCopy?: (award: Award) => { title: string; detail: string } | null;

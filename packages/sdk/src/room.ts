@@ -145,6 +145,8 @@ interface InternalState {
   pending: PendingStart | null;
   hostConnected: boolean;
   emptySince: number | null;
+  /** False in a no-TV room. Snapshots saved before this field existed lack it; blankState() defaults it to true on restore. */
+  sharedScreen: boolean;
 }
 
 interface Out {
@@ -160,7 +162,15 @@ type GameMessage = Extract<
 >;
 type VipMessage = Extract<
   ClientMessage,
-  { t: "pick-game" | "set-pack" | "set-locked" | "kick" | "start-game" }
+  {
+    t:
+      | "pick-game"
+      | "set-pack"
+      | "set-locked"
+      | "set-shared-screen"
+      | "kick"
+      | "start-game";
+  }
 >;
 type RoomMessage = Exclude<ClientMessage, GameMessage | VipMessage>;
 
@@ -177,6 +187,7 @@ function isVipMessage(message: ClientMessage): message is VipMessage {
     message.t === "pick-game" ||
     message.t === "set-pack" ||
     message.t === "set-locked" ||
+    message.t === "set-shared-screen" ||
     message.t === "kick" ||
     message.t === "start-game"
   );
@@ -212,6 +223,7 @@ class RoomImpl implements RoomCore {
   private pending: PendingStart | null;
   private hostConnected: boolean;
   private emptySince: number | null;
+  private sharedScreen: boolean;
 
   constructor(state: InternalState, games: AnyGame[], newToken: () => string) {
     this.code = state.code;
@@ -251,6 +263,7 @@ class RoomImpl implements RoomCore {
       : null;
     this.hostConnected = state.hostConnected;
     this.emptySince = state.emptySince;
+    this.sharedScreen = state.sharedScreen;
   }
 
   // ---------- lookups ----------
@@ -425,6 +438,9 @@ class RoomImpl implements RoomCore {
         break;
       case "set-locked":
         this.onSetLocked(caller, message.locked, now, out);
+        break;
+      case "set-shared-screen":
+        this.onSetSharedScreen(caller, message.sharedScreen, out);
         break;
       case "kick":
         this.onKick(caller, message.playerId, now, out);
@@ -629,6 +645,7 @@ class RoomImpl implements RoomCore {
       pending: this.pending,
       hostConnected: this.hostConnected,
       emptySince: this.emptySince,
+      sharedScreen: this.sharedScreen,
     };
     return { version: 1, data: JSON.stringify(state) };
   }
@@ -831,6 +848,22 @@ class RoomImpl implements RoomCore {
     }
   }
 
+  private onSetSharedScreen(
+    caller: Caller,
+    sharedScreen: boolean,
+    out: Out,
+  ): void {
+    if (!this.requireVip(caller, out)) return;
+    if (this.phase !== "lobby") {
+      this.fail(out, "invalid-action", "That is not available right now.");
+      return;
+    }
+    if (this.sharedScreen !== sharedScreen) {
+      this.sharedScreen = sharedScreen;
+      out.changed = true;
+    }
+  }
+
   private onKick(
     caller: Caller,
     targetId: PlayerId,
@@ -887,6 +920,13 @@ class RoomImpl implements RoomCore {
     }
   }
 
+  /** False when the selected game cannot run in the room's current mode. */
+  private requireStartableMode(def: AnyGame, out: Out): boolean {
+    if (this.sharedScreen || def.noTv === true) return true;
+    this.fail(out, "invalid-action", "This game plays on a shared screen.");
+    return false;
+  }
+
   private onStartGame(caller: Caller, _now: number, out: Out): void {
     if (!this.requireVip(caller, out)) return;
     if (this.phase !== "lobby") {
@@ -898,6 +938,7 @@ class RoomImpl implements RoomCore {
       this.fail(out, "invalid-action", "Pick a game first.");
       return;
     }
+    if (!this.requireStartableMode(def, out)) return;
     const ready = this.players.filter(
       (p) => p.connected && !p.waitingForNextGame,
     );
@@ -1113,11 +1154,13 @@ class RoomImpl implements RoomCore {
         minPlayers: g.minPlayers,
         maxPlayers: g.maxPlayers,
         minutes: g.minutes,
+        noTv: g.noTv === true,
       })),
       selectedGameId: this.selectedGameId,
       packs: this.packSummaries(),
       lastResult: this.lastResult ? resultSummary(this.lastResult) : null,
       serverNow: now,
+      sharedScreen: this.sharedScreen,
     };
   }
 
@@ -1166,12 +1209,20 @@ class RoomImpl implements RoomCore {
     const def = this.gameDef(game.gameId);
     if (!def) return null;
     const base = this.gameViewBase(game);
+    // The host already has the host view in `view`, so the stage would be redundant.
     if (role === "host")
-      return { ...base, view: def.hostView(game.state, { now }) };
+      return { ...base, view: def.hostView(game.state, { now }), stage: null };
     if (playerId === undefined || !game.playerIds.includes(playerId)) {
-      return { ...base, view: null };
+      return { ...base, view: null, stage: null };
     }
-    return { ...base, view: def.playerView(game.state, playerId, { now }) };
+    // `stage` is literally the host view in a no-TV room: a game can never put
+    // something on it that is not already on the TV.
+    const stage = this.sharedScreen ? null : def.hostView(game.state, { now });
+    return {
+      ...base,
+      view: def.playerView(game.state, playerId, { now }),
+      stage,
+    };
   }
 }
 
@@ -1197,6 +1248,7 @@ export function createRoom(options: CreateRoomOptions): RoomCore {
     pending: null,
     hostConnected: false,
     emptySince: options.now,
+    sharedScreen: options.sharedScreen ?? true,
   };
   return new RoomImpl(state, games, options.newToken);
 }
@@ -1220,6 +1272,7 @@ function blankState(): InternalState {
     pending: null,
     hostConnected: false,
     emptySince: null,
+    sharedScreen: true,
   };
 }
 

@@ -36,7 +36,62 @@ describe("POST /api/rooms", () => {
     });
     expect(routes.budgetDays).toEqual(["2023-11-14"]);
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1" },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+    ]);
+  });
+
+  it("defaults to a shared-screen room when the body is missing", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request("POST", "/api/rooms", IP);
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+    ]);
+  });
+
+  it("defaults to a shared-screen room for an empty body", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request("POST", "/api/rooms", IP, "");
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+    ]);
+  });
+
+  it("defaults to a shared-screen room for a body that is not valid JSON", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request("POST", "/api/rooms", IP, "not json");
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+    ]);
+  });
+
+  it("creates a no-TV room when the body says so", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request(
+      "POST",
+      "/api/rooms",
+      IP,
+      JSON.stringify({ sharedScreen: false }),
+    );
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: false },
+    ]);
+  });
+
+  it("defaults to shared-screen when the field has the wrong type", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request(
+      "POST",
+      "/api/rooms",
+      IP,
+      JSON.stringify({ sharedScreen: "nope" }),
+    );
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
     ]);
   });
 

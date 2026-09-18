@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tapGame, TAP_POINTS, TAP_ROUNDS } from "./fixtures/tap-game";
+import { tapGame, tapGameNoTv, TAP_POINTS, TAP_ROUNDS } from "./fixtures/tap-game";
 import { createMemoryContentSource, runBotPlaythrough } from "./testing";
 import type { AnyGame, FactContent, WordPairContent } from "./types";
 
@@ -125,6 +125,38 @@ describe("runBotPlaythrough", () => {
       }),
     ).toThrow(/did not request content/);
   });
+
+  it("throws when a TV-only game is asked to start in a no-TV room", () => {
+    expect(() =>
+      runBotPlaythrough({
+        game: tapGame,
+        content: wordPairs,
+        players: 3,
+        seed: 8,
+        sharedScreen: false,
+      }),
+    ).toThrow(/plays on a shared screen/);
+  });
+
+  // stage is additive on ActiveGameView; bots only ever read `view`, so a no-TV
+  // room should play out exactly like a shared-screen one.
+  for (const players of [3, 8]) {
+    for (const sharedScreen of [true, false]) {
+      it(`finishes a ${players}-player game with a disconnect and rejoin (sharedScreen=${sharedScreen})`, () => {
+        const result = runBotPlaythrough({
+          game: sharedScreen ? tapGame : tapGameNoTv,
+          content: wordPairs,
+          players,
+          seed: 100 + players,
+          disconnectRejoin: true,
+          sharedScreen,
+        });
+        expect(result.finished).toBe(true);
+        expect(Object.keys(result.scores)).toHaveLength(players);
+        expect(result.rejoinedPlayerId).not.toBeNull();
+      });
+    }
+  }
 });
 
 describe("createMemoryContentSource", () => {

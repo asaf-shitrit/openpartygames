@@ -7,7 +7,7 @@ import type {
   PlayerId,
   ServerMessage,
 } from "@opg/protocol";
-import { tapGame } from "./fixtures/tap-game";
+import { tapGame, tapGameNoTv } from "./fixtures/tap-game";
 import type {
   Caller,
   ContentKind,
@@ -82,6 +82,7 @@ interface RoomOptions {
   packs?: PackMeta[];
   seed?: number;
   game?: typeof tapGame;
+  sharedScreen?: boolean;
 }
 
 interface Harness {
@@ -113,6 +114,7 @@ function makeRoom(options?: RoomOptions): Harness {
     seed: options?.seed ?? 1,
     now: clock,
     newToken,
+    sharedScreen: options?.sharedScreen,
   });
   if (options?.packs) room.setPackCatalog(options.packs, clock);
   return {
@@ -194,6 +196,8 @@ describe("createRoom", () => {
     expect(view.vipId).toBeNull();
     expect(view.lastResult).toBeNull();
     expect(view.game).toBeNull();
+    expect(view.sharedScreen).toBe(true);
+    expect(view.games[0]?.noTv).toBe(false);
   });
 });
 
@@ -563,6 +567,153 @@ describe("start-game", () => {
       kind: "word-pairs" satisfies ContentKind,
       packIds: [PACK_FAMILY.id],
     });
+  });
+});
+
+describe("no-TV mode", () => {
+  it("refuses a game that has not opted in", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], sharedScreen: false });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
+    expect(errorCode(res.reply)).toBe("invalid-action");
+    expect(res.reply).toContainEqual({
+      t: "error",
+      code: "invalid-action",
+      message: "This game plays on a shared screen.",
+    });
+    expect(hasLoadContent(res.effects)).toBe(false);
+    expect(h.room.hostView(0).phase).toBe("lobby");
+  });
+
+  it("starts a game that opted in", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY],
+      sharedScreen: false,
+      game: tapGameNoTv,
+    });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
+    expect(hasLoadContent(res.effects)).toBe(true);
+    expect(h.room.hostView(0).phase).toBe("starting");
+  });
+
+  it("allows a TV-only game in a shared-screen room", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
+    expect(hasLoadContent(res.effects)).toBe(true);
+  });
+});
+
+describe("sharedScreen", () => {
+  it("defaults to a shared screen", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    expect(h.room.hostView(0).sharedScreen).toBe(true);
+  });
+
+  it("lets the VIP flip it in the lobby", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "set-shared-screen", sharedScreen: false },
+      0,
+    );
+    expect(res.changed).toBe(true);
+    expect(h.room.hostView(0).sharedScreen).toBe(false);
+  });
+
+  it("refuses a non-VIP", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 1).playerId),
+      { t: "set-shared-screen", sharedScreen: false },
+      0,
+    );
+    expect(errorCode(res.reply)).toBe("not-vip");
+    expect(h.room.hostView(0).sharedScreen).toBe(true);
+  });
+
+  it("refuses to flip it once a game is running", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players));
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "set-shared-screen", sharedScreen: false },
+      0,
+    );
+    expect(errorCode(res.reply)).toBe("invalid-action");
+    expect(h.room.hostView(0).sharedScreen).toBe(true);
+  });
+
+  it("round-trips through a snapshot", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], sharedScreen: false });
+    const restored = restoreRoom(h.room.snapshot(), [tapGame], () => "r1");
+    expect(restored.hostView(0).sharedScreen).toBe(false);
+  });
+
+  it("restores true from a snapshot written before the field existed", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const data = JSON.parse(h.room.snapshot().data);
+    delete data.sharedScreen;
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+    expect(restored.hostView(0).sharedScreen).toBe(true);
+  });
+});
+
+describe("stage", () => {
+  it("is null for the host role, in either room mode", () => {
+    for (const sharedScreen of [true, false]) {
+      const h = makeRoom({
+        packs: [PACK_FAMILY],
+        sharedScreen,
+        game: tapGameNoTv,
+      });
+      const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+      startTap(h, idsOf(players), tapGameNoTv.id);
+      expect(h.room.hostView(0).game?.stage).toBeNull();
+    }
+  });
+
+  it("is null for a player in a shared-screen room", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], game: tapGameNoTv });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players), tapGameNoTv.id);
+    for (const id of idsOf(players)) {
+      expect(h.room.playerView(id, 0).game?.stage).toBeNull();
+    }
+  });
+
+  it("deep-equals the host view for a player in a no-TV room", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY],
+      sharedScreen: false,
+      game: tapGameNoTv,
+    });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    startTap(h, idsOf(players), tapGameNoTv.id);
+    const hostView = h.room.hostView(0).game?.view;
+    for (const id of idsOf(players)) {
+      expect(h.room.playerView(id, 0).game?.stage).toEqual(hostView);
+    }
   });
 });
 

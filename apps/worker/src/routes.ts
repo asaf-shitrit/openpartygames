@@ -1,5 +1,6 @@
 import {
   normalizeRoomCode,
+  parseCreateRoomRequest,
   ROOM_CODE_RE,
   type ApiErrorCode,
   type ApiErrorResponse,
@@ -13,7 +14,8 @@ const MAX_CODE_ATTEMPTS = 10;
 
 /** One room Durable Object, as the router needs it. */
 export interface RoomStub {
-  init(code: string, hostToken: string): Promise<boolean>;
+  /** `sharedScreen` defaults to true (a TV room) when omitted, matching today's behaviour. */
+  init(code: string, hostToken: string, sharedScreen?: boolean): Promise<boolean>;
   info(): Promise<RoomInfoResponse | null>;
   fetch(request: Request): Promise<Response>;
 }
@@ -112,6 +114,12 @@ async function handleApi(
     : upgrade(deps, route.code, request);
 }
 
+/** True (a TV room) when the body is missing, empty, malformed or omits the field: today's behaviour. */
+async function parseSharedScreen(request: Request): Promise<boolean> {
+  const text = await request.text();
+  return parseCreateRoomRequest(text).sharedScreen ?? true;
+}
+
 async function createRoom(
   request: Request,
   deps: RouteDeps,
@@ -121,10 +129,11 @@ async function createRoom(
     return apiError("rate-limited", 429);
   }
 
+  const sharedScreen = await parseSharedScreen(request);
   const withinCap = await tryConsumeRoom(deps);
   if (withinCap === null) return apiError("internal", 500);
   if (!withinCap) return apiError("full-tonight", 429);
-  return startRoom(deps, deps.newHostToken(), 0);
+  return startRoom(deps, deps.newHostToken(), 0, sharedScreen);
 }
 
 async function tryConsumeRoom(deps: RouteDeps): Promise<boolean | null> {
@@ -141,11 +150,12 @@ async function startRoom(
   deps: RouteDeps,
   hostToken: string,
   attempt: number,
+  sharedScreen: boolean,
 ): Promise<Response> {
   if (attempt >= MAX_CODE_ATTEMPTS) return apiError("internal", 500);
   const code = deps.newRoomCode();
-  if (!(await initRoom(deps, code, hostToken)))
-    return startRoom(deps, hostToken, attempt + 1);
+  if (!(await initRoom(deps, code, hostToken, sharedScreen)))
+    return startRoom(deps, hostToken, attempt + 1, sharedScreen);
   return json({ code, hostToken });
 }
 
@@ -153,9 +163,10 @@ async function initRoom(
   deps: RouteDeps,
   code: string,
   hostToken: string,
+  sharedScreen: boolean,
 ): Promise<boolean> {
   try {
-    return await deps.rooms.getByName(code).init(code, hostToken);
+    return await deps.rooms.getByName(code).init(code, hostToken, sharedScreen);
   } catch (error) {
     console.error("failed to initialize room", code, error);
     return false;

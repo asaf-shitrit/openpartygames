@@ -140,3 +140,12 @@ export const tapGame: GameDefinition<
     return view.over || view.tapped ? null : { type: "tap" };
   },
 };
+
+/** Same fixture, opted into no-TV mode, for tests that need a startable game there. */
+export const tapGameNoTv: GameDefinition<
+  TapState,
+  TapAction,
+  TapHostView,
+  TapPlayerView,
+  WordPairContent
+> = { ...tapGame, id: "tap-no-tv", noTv: true };

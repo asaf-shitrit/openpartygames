@@ -43,8 +43,12 @@ export class Room extends DurableObject<Env> {
   }
 
   /** Creates the room. Returns false when another active room already owns this code. */
-  async init(code: string, hostToken: string): Promise<boolean> {
-    return (await this.hub).init(code, hostToken);
+  async init(
+    code: string,
+    hostToken: string,
+    sharedScreen = true,
+  ): Promise<boolean> {
+    return (await this.hub).init(code, hostToken, sharedScreen);
   }
 
   /** Room metadata for GET /api/rooms/:code. Null when the room was never initialized. */
