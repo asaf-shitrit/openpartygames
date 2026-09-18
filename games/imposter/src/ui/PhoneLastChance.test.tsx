@@ -101,6 +101,7 @@ describe("GuessView typing", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     const input = screen.getByLabelText("Your guess");
@@ -145,6 +146,7 @@ describe("GuessView typing", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     fireEvent.change(screen.getByLabelText("Your guess"), {
@@ -173,6 +175,7 @@ describe("GuessView typing", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     const input = screen.getByLabelText("Your guess");
@@ -203,6 +206,7 @@ describe("GuessView typing", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={send}
+        stage={null}
       />,
     );
     fireEvent.change(screen.getByLabelText("Your guess"), {
@@ -233,6 +237,7 @@ describe("GuessWaiting", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
         send={vi.fn<(action: ImposterAction) => void>()}
+        stage={null}
       />,
     );
     expect(screen.getByText("Priya is guessing…")).toBeTruthy();
@@ -254,6 +259,7 @@ describe("GuessWaiting", () => {
         timerStartedAt={0}
         clock={clock}
         send={vi.fn<(action: ImposterAction) => void>()}
+        stage={null}
       />,
     );
 

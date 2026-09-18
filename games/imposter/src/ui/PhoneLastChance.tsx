@@ -17,8 +17,9 @@ import {
   Timer,
 } from "@opg/ui";
 import { MAX_GUESS_LENGTH, POINTS_PER_WORD } from "../state";
-import type { ImposterAction, ImposterPlayerView } from "../state";
+import type { ImposterAction, ImposterHostView, ImposterPlayerView } from "../state";
 import type { SectionProps } from "./Phone";
+import { StageLastChance } from "./stage/LastChance";
 
 /** Last chance's own tempo switch: slow until the final 5 seconds, then fast. */
 const LAST_CHANCE_FAST_MS = 5000;
@@ -217,9 +218,81 @@ function GuessForm({
   );
 }
 
+/** TV mode's own caught banner and decoy reminder, shown above the guess form. No-TV rooms
+ * carry the same beats (caught banner, tiles, timer) on the stage above instead. */
+function CaughtBanner({ view }: { view: ImposterPlayerView }) {
+  return (
+    <LinedCard
+      tilt={1}
+      style={{
+        flexGrow: 1,
+        marginTop: 8,
+        padding: "24px 20px 24px 56px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        gap: 18,
+      }}
+    >
+      <Marker
+        size={40}
+        color="var(--opg-marker)"
+        style={{ transform: "rotate(-3deg)" }}
+      >
+        You got caught!
+      </Marker>
+      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.4 }}>
+        Guess the crew&apos;s word. Get it right and you steal{" "}
+        {money(POINTS_PER_WORD)} points.
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          gap: 8,
+          fontSize: 19,
+        }}
+      >
+        <div style={{ fontWeight: 400 }}>Your decoy was</div>
+        <Highlight style={{ padding: "0 6px" }}>
+          <strong style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
+            {view.decoyWord ?? "—"}
+          </strong>
+        </Highlight>
+      </div>
+    </LinedCard>
+  );
+}
+
+/** Stage region: the drain everyone watches, only in a no-TV room. */
+function StageArea({
+  stage,
+  players,
+  deadline,
+  timerStartedAt,
+  clock,
+}: {
+  stage: ImposterHostView | null;
+  players: PlayerSummary[];
+  deadline: number | null;
+  timerStartedAt: number | null;
+  clock: ServerClock;
+}) {
+  if (stage === null) return null;
+  return (
+    <StageLastChance
+      view={stage}
+      players={players}
+      deadline={deadline}
+      timerStartedAt={timerStartedAt}
+      clock={clock}
+    />
+  );
+}
+
 /** The imposter's own last-chance screen: guess the crew's word before time runs out. */
 export function GuessView(props: SectionProps) {
-  const { view, me, deadline, timerStartedAt, clock, send } = props;
+  const { view, players, me, deadline, timerStartedAt, clock, send, stage } = props;
   return (
     <>
       <PhoneStrip
@@ -234,45 +307,14 @@ export function GuessView(props: SectionProps) {
           />
         }
       />
-      <LinedCard
-        tilt={1}
-        style={{
-          flexGrow: 1,
-          marginTop: 8,
-          padding: "24px 20px 24px 56px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          gap: 18,
-        }}
-      >
-        <Marker
-          size={40}
-          color="var(--opg-marker)"
-          style={{ transform: "rotate(-3deg)" }}
-        >
-          You got caught!
-        </Marker>
-        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.4 }}>
-          Guess the crew&apos;s word. Get it right and you steal{" "}
-          {money(POINTS_PER_WORD)} points.
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            fontSize: 19,
-          }}
-        >
-          <div style={{ fontWeight: 400 }}>Your decoy was</div>
-          <Highlight style={{ padding: "0 6px" }}>
-            <strong style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
-              {view.decoyWord ?? "—"}
-            </strong>
-          </Highlight>
-        </div>
-      </LinedCard>
+      <StageArea
+        stage={stage}
+        players={players}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
+      />
+      {stage === null ? <CaughtBanner view={view} /> : null}
       <GuessForm view={view} send={send} clock={clock} />
       <MeRow me={me} />
     </>
@@ -302,9 +344,10 @@ function useLastChanceTempo(
   return fast ? "fast" : "slow";
 }
 
-/** The crew's screen while the imposter guesses: eyes on the TV, tempo rising near the end. */
+/** The crew's screen while the imposter guesses: eyes on the TV, tempo rising near the end.
+ * A no-TV room already shows the same drain on its own stage, so there is nothing to wait on. */
 export function GuessWaiting(props: SectionProps) {
-  const { view, players, deadline, clock } = props;
+  const { view, players, deadline, timerStartedAt, clock, stage } = props;
   const imposter = nameOf(players, view.imposterId);
   const tempo = useLastChanceTempo(deadline, clock);
   return (
@@ -314,11 +357,20 @@ export function GuessWaiting(props: SectionProps) {
         progress="Last chance"
         right={<Timer deadline={deadline} clock={clock} />}
       />
-      <EyesOnTv
-        title={`${imposter} is guessing…`}
-        detail="Eyes on the TV"
-        tempo={tempo}
+      <StageArea
+        stage={stage}
+        players={players}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
       />
+      {stage === null ? (
+        <EyesOnTv
+          title={`${imposter} is guessing…`}
+          detail="Eyes on the TV"
+          tempo={tempo}
+        />
+      ) : null}
     </>
   );
 }

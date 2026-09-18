@@ -523,10 +523,11 @@ function commonRoom(
   view: ImposterHostView | ImposterPlayerView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  stage: ImposterHostView | null = null,
 ) {
   return {
     code: "BKTZ",
-    sharedScreen: true,
+    sharedScreen: stage === null,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
     players: PLAYERS,
@@ -536,7 +537,7 @@ function commonRoom(
     selectedGameId: "imposter",
     packs: [],
     lastResult: null,
-    game: { id: "imposter", view, stage: null, deadline, timerStartedAt },
+    game: { id: "imposter", view, stage, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
   };
 }
@@ -552,16 +553,23 @@ function hostRoom(
   };
 }
 
+interface PlayerRoomTiming {
+  timerStartedAt?: number | null;
+  /** The host view a no-TV phone stages alongside `view`; null for a shared-screen preview. */
+  stage?: ImposterHostView | null;
+}
+
 function playerRoom(
   view: ImposterPlayerView,
   you: PlayerId,
   deadline: number | null,
-  timerStartedAt: number | null = null,
+  timing: PlayerRoomTiming = {},
 ): PlayerRoomView {
+  const { timerStartedAt = null, stage = null } = timing;
   return {
     role: "player",
     you,
-    ...commonRoom(view, deadline, timerStartedAt),
+    ...commonRoom(view, deadline, timerStartedAt, stage),
   };
 }
 
@@ -699,18 +707,15 @@ export const imposterPreviews: Array<{
     label: "Phone: Dov reveal",
     surface: "phone",
     view: phoneReveal,
-    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, { timerStartedAt: REVEAL_PREVIEW_START }),
   },
   {
     label: "Phone: Leo reveal",
     surface: "phone",
     view: phoneLeoReveal,
-    room: playerRoom(
-      phoneLeoReveal,
-      LEO,
-      REVEAL_DEADLINE,
-      REVEAL_PREVIEW_START,
-    ),
+    room: playerRoom(phoneLeoReveal, LEO, REVEAL_DEADLINE, {
+      timerStartedAt: REVEAL_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Priya last chance",
@@ -740,23 +745,17 @@ export const imposterPreviews: Array<{
     label: "Phone: Priya reveal caught",
     surface: "phone",
     view: phoneImposterReveal,
-    room: playerRoom(
-      phoneImposterReveal,
-      PRIYA,
-      REVEAL_DEADLINE,
-      REVEAL_PREVIEW_START,
-    ),
+    room: playerRoom(phoneImposterReveal, PRIYA, REVEAL_DEADLINE, {
+      timerStartedAt: REVEAL_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Priya reveal free",
     surface: "phone",
     view: phoneImposterRevealFree,
-    room: playerRoom(
-      phoneImposterRevealFree,
-      PRIYA,
-      REVEAL_DEADLINE,
-      REVEAL_PREVIEW_START,
-    ),
+    room: playerRoom(phoneImposterRevealFree, PRIYA, REVEAL_DEADLINE, {
+      timerStartedAt: REVEAL_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Priya result",
@@ -774,66 +773,116 @@ export const imposterPreviews: Array<{
     label: "Phone: Priya result stole",
     surface: "phone",
     view: phoneResultStole,
-    room: playerRoom(
-      phoneResultStole,
-      PRIYA,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultStole, PRIYA, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Priya result nope",
     surface: "phone",
     view: phoneResultNope,
-    room: playerRoom(
-      phoneResultNope,
-      PRIYA,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultNope, PRIYA, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Dov result spotted",
     surface: "phone",
     view: phoneResultSpotted,
-    room: playerRoom(
-      phoneResultSpotted,
-      DOV,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultSpotted, DOV, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Leo result missed",
     surface: "phone",
     view: phoneResultMissed,
-    room: playerRoom(
-      phoneResultMissed,
-      LEO,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultMissed, LEO, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Priya result escaped",
     surface: "phone",
     view: phoneResultEscapedImposter,
-    room: playerRoom(
-      phoneResultEscapedImposter,
-      PRIYA,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultEscapedImposter, PRIYA, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
   },
   {
     label: "Phone: Dov result escaped",
     surface: "phone",
     view: phoneResultEscapedCrew,
-    room: playerRoom(
-      phoneResultEscapedCrew,
-      DOV,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: playerRoom(phoneResultEscapedCrew, DOV, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Maya crew card",
+    surface: "phone",
+    view: phoneCrewCard,
+    room: playerRoom(phoneCrewCard, MAYA, WORD_CHECK_DEADLINE, {
+      stage: hostWordCheck,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Dov your turn",
+    surface: "phone",
+    view: phoneYourTurn,
+    room: playerRoom(phoneYourTurn, DOV, CLUES_DEADLINE, { stage: hostClues }),
+  },
+  {
+    label: "Phone (no-TV): Priya watching Dov's clue",
+    surface: "phone",
+    view: phoneWatchingClue,
+    room: playerRoom(phoneWatchingClue, PRIYA, CLUES_DEADLINE, {
+      stage: hostClues,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Dov vote selecting",
+    surface: "phone",
+    view: phoneVoteSelecting,
+    room: playerRoom(phoneVoteSelecting, DOV, VOTE_DEADLINE, { stage: hostVote }),
+  },
+  {
+    label: "Phone (no-TV): Dov vote locked in",
+    surface: "phone",
+    view: phoneVoteLocked,
+    room: playerRoom(phoneVoteLocked, DOV, VOTE_DEADLINE, { stage: hostVote }),
+  },
+  {
+    label: "Phone (no-TV): Dov reveal settled",
+    surface: "phone",
+    view: phoneReveal,
+    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, {
+      timerStartedAt: REVEAL_PREVIEW_START,
+      stage: hostReveal,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Priya last chance",
+    surface: "phone",
+    view: phoneLastChance,
+    room: playerRoom(phoneLastChance, PRIYA, LAST_CHANCE_DEADLINE, {
+      stage: hostLastChance,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Dov waiting for guess",
+    surface: "phone",
+    view: phoneWaitingForGuess,
+    room: playerRoom(phoneWaitingForGuess, DOV, LAST_CHANCE_DEADLINE, {
+      stage: hostLastChance,
+    }),
+  },
+  {
+    label: "Phone (no-TV): Dov result settled",
+    surface: "phone",
+    view: phoneResult,
+    room: playerRoom(phoneResult, DOV, RESULT_PREVIEW_DEADLINE, {
+      timerStartedAt: RESULT_PREVIEW_START,
+      stage: hostResultCaughtNope,
+    }),
   },
 ];

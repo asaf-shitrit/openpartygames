@@ -1,9 +1,11 @@
 // Phone's personal result after a word: the guess, the crew word, and the running total.
-// Held back until 200ms after the TV's own big beat, same as the reveal.
+// Held back until 200ms after the TV's own big beat, same as the reveal. In a no-TV room the
+// stage above already carries the ceremony, so there is no TV to follow: the personal line
+// lands with the stage's own verdict instead.
 import { useRef } from "react";
 import type { RefObject } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
-import type { Beat, Moment } from "@opg/ui";
+import type { Beat, Moment, ServerClock } from "@opg/ui";
 import {
   anchorAt,
   Card,
@@ -20,7 +22,7 @@ import {
   useMoment,
 } from "@opg/ui";
 import { resultDurationMs } from "../state";
-import type { ImposterPlayerView } from "../state";
+import type { ImposterHostView, ImposterPlayerView } from "../state";
 import {
   personalResult,
   phoneResultBeats,
@@ -28,6 +30,7 @@ import {
 } from "./result-timeline";
 import type { PersonalResult, ResultPath } from "./result-timeline";
 import type { SectionProps } from "./Phone";
+import { StageResult } from "./stage/Result";
 
 function findPlayer(
   players: PlayerSummary[],
@@ -193,12 +196,41 @@ function useResultBuzz(
   });
 }
 
+/** Stage region above the controls: the word's outcome and standings, only in a no-TV room. */
+function StageArea({
+  stage,
+  players,
+  me,
+  deadline,
+  timerStartedAt,
+  clock,
+}: {
+  stage: ImposterHostView | null;
+  players: PlayerSummary[];
+  me: PlayerId | null;
+  deadline: number | null;
+  timerStartedAt: number | null;
+  clock: ServerClock;
+}) {
+  if (stage === null) return null;
+  return (
+    <StageResult
+      view={stage}
+      players={players}
+      me={me}
+      deadline={deadline}
+      timerStartedAt={timerStartedAt}
+      clock={clock}
+    />
+  );
+}
+
 export interface PhoneResultProps extends SectionProps {
   progress: string;
 }
 
 export function PhoneResult(props: PhoneResultProps) {
-  const { view, players, me, deadline, timerStartedAt, clock, progress } =
+  const { view, players, me, deadline, timerStartedAt, clock, progress, stage } =
     props;
   const path = resultPath(view.caught);
   const isImposter = view.role === "imposter";
@@ -211,7 +243,8 @@ export function PhoneResult(props: PhoneResultProps) {
     myPoints,
     crewWord: view.crewWord,
   });
-  const beats = phoneResultBeats(path, personal.haptic);
+  // No TV to follow in a no-TV room: the stage's verdict and this line land together.
+  const beats = phoneResultBeats(path, personal.haptic, stage === null ? undefined : 0);
   const startedAt = anchorAt(
     timerStartedAt,
     deadline,
@@ -230,6 +263,14 @@ export function PhoneResult(props: PhoneResultProps) {
         gameName="Imposter"
         progress={progress}
         right={<Timer deadline={deadline} clock={clock} />}
+      />
+      <StageArea
+        stage={stage}
+        players={players}
+        me={me?.id ?? null}
+        deadline={deadline}
+        timerStartedAt={timerStartedAt}
+        clock={clock}
       />
       {personalReached ? (
         <ResultCard

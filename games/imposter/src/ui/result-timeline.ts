@@ -27,7 +27,7 @@ export const RESULT_TIMING = {
 } as const;
 
 /** Phones land their personal result this long after the TV's big beat. */
-const PHONE_FOLLOW_MS = 200;
+export const PHONE_FOLLOW_MS = 200;
 
 export type ResultPath = "caught" | "escaped" | "cancelled";
 
@@ -206,33 +206,40 @@ function cancelledPhoneBeats(haptic: HapticName): Beat[] {
   return [{ id: "personal", atMs: 0, haptic }];
 }
 
-function caughtPhoneBeats(haptic: HapticName): Beat[] {
+function caughtPhoneBeats(haptic: HapticName, followMs: number): Beat[] {
   const t = RESULT_TIMING.caught;
   return [
     { id: "drum", atMs: 0 },
-    { id: "personal", atMs: t.verdictMs + PHONE_FOLLOW_MS, haptic },
+    { id: "personal", atMs: t.verdictMs + followMs, haptic },
     { id: "count", atMs: t.countMs },
     { id: "settle", atMs: t.settleMs },
   ];
 }
 
-function escapedPhoneBeats(haptic: HapticName): Beat[] {
+function escapedPhoneBeats(haptic: HapticName, followMs: number): Beat[] {
   const t = RESULT_TIMING.escaped;
   return [
-    { id: "personal", atMs: t.pointsMs + PHONE_FOLLOW_MS, haptic },
+    { id: "personal", atMs: t.pointsMs + followMs, haptic },
     { id: "count", atMs: t.countMs },
     { id: "settle", atMs: t.settleMs },
   ];
 }
 
 /**
- * Phone beats: caught -> drum(0), personal(verdictMs + 200, haptic), count(countMs), settle(settleMs);
- * escaped -> personal(pointsMs + 200, haptic), count(countMs), settle(settleMs); cancelled -> personal(0, haptic).
+ * Phone beats: caught -> drum(0), personal(verdictMs + followMs, haptic), count(countMs),
+ * settle(settleMs); escaped -> personal(pointsMs + followMs, haptic), count(countMs),
+ * settle(settleMs); cancelled -> personal(0, haptic). `followMs` defaults to PHONE_FOLLOW_MS
+ * so a phone never spoils the TV's beat; a no-TV caller passes 0, so the stage and the
+ * personal line land together.
  */
-export function phoneResultBeats(path: ResultPath, haptic: HapticName): Beat[] {
+export function phoneResultBeats(
+  path: ResultPath,
+  haptic: HapticName,
+  followMs: number = PHONE_FOLLOW_MS,
+): Beat[] {
   if (path === "cancelled") return cancelledPhoneBeats(haptic);
-  if (path === "escaped") return escapedPhoneBeats(haptic);
-  return caughtPhoneBeats(haptic);
+  if (path === "escaped") return escapedPhoneBeats(haptic, followMs);
+  return caughtPhoneBeats(haptic, followMs);
 }
 
 /** Standings ids sorted by score desc, ties broken by playerIds order (a stable insertion). */

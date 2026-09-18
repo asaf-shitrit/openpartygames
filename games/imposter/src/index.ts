@@ -634,6 +634,7 @@ export const imposter: GameDefinition<
   id: "imposter",
   name: "Imposter",
   blurb: "One of you has a decoy word. Talk it out, vote them out.",
+  noTv: true,
   minPlayers: IMPOSTER_MIN_PLAYERS,
   maxPlayers: IMPOSTER_MAX_PLAYERS,
   minutes: IMPOSTER_MINUTES,
