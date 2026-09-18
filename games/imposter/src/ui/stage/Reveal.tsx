@@ -13,6 +13,7 @@ import {
   Card,
   reached,
   SlamStamp,
+  StickyNote,
   Suspense,
   TallyScratch,
   useMoment,
@@ -20,7 +21,7 @@ import {
 import { REVEAL_MS, type ImposterHostView } from "../../state";
 import { revealOutcome } from "../../rules";
 import type { RevealOutcome } from "../../rules";
-import { verdictSentence } from "../HostReveal";
+import { nextNoteText, verdictSentence } from "../HostReveal";
 import {
   hostRevealBeats,
   marksDrawn,
@@ -66,6 +67,7 @@ interface Stage {
   verdictLive: boolean;
   unmaskReached: boolean;
   unmaskLive: boolean;
+  nextReached: boolean;
 }
 
 function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
@@ -76,6 +78,7 @@ function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
     verdictLive: isLive("verdict"),
     unmaskReached: reached(moment, beats, "unmask"),
     unmaskLive: isLive("unmask"),
+    nextReached: reached(moment, beats, "next"),
   };
 }
 
@@ -263,6 +266,23 @@ const CAPTION: CSSProperties = {
   marginTop: 4,
 };
 
+function NextNote({
+  nextReached,
+  view,
+  players,
+}: {
+  nextReached: boolean;
+  view: ImposterHostView;
+  players: PlayerSummary[];
+}) {
+  if (!nextReached) return null;
+  return (
+    <StickyNote tilt={-2} style={{ padding: "10px 18px", fontSize: 18, fontWeight: 700 }}>
+      {nextNoteText(view, players)}
+    </StickyNote>
+  );
+}
+
 function VerdictAnnouncer({
   verdictReached,
   outcome,
@@ -319,6 +339,7 @@ export function StageReveal(props: StageRevealProps) {
         />
       ))}
       {caption === null ? null : <div style={CAPTION}>{caption}</div>}
+      <NextNote nextReached={stage.nextReached} view={view} players={players} />
       <VerdictAnnouncer
         verdictReached={stage.verdictReached}
         outcome={plan.outcome}

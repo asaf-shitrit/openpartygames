@@ -6,10 +6,14 @@ import type { ImposterHostView, ImposterPlayerView } from "../../state";
 import { imposterPreviews, REVEAL_PREVIEW_START } from "../preview";
 import { StageReveal } from "./Reveal";
 
+const matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, "vibrate");
+  if (matchMediaDescriptor === undefined) Reflect.deleteProperty(window, "matchMedia");
+  else Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
 });
 
 function stubVibrate() {
@@ -19,6 +23,18 @@ function stubVibrate() {
     value: vibrate,
   });
   return vibrate;
+}
+
+function stubReducedMotion(matches: boolean): void {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: (media: string) => ({
+      media,
+      matches,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }),
+  });
 }
 
 function isHostView(
@@ -129,5 +145,45 @@ describe("StageReveal, tie and no votes", () => {
     vi.useFakeTimers();
     setup("Host: reveal no votes", 11200);
     expect(screen.getByText("No votes?!")).toBeTruthy();
+  });
+});
+
+describe("StageReveal, next note", () => {
+  it("shows nothing new at the next beat before it is reached", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal", 8100);
+    expect(screen.queryByText(/One last chance/)).toBeNull();
+  });
+
+  it("shows the sticky note once the next beat lands, same words as the TV", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal", 10600);
+    expect(screen.getByText("One last chance, Priya…")).toBeTruthy();
+  });
+
+  it("shows the slipped-away note on a wrong accusation", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal wrong", 10600);
+    expect(screen.getByText(/slipped away: \+1,000/)).toBeTruthy();
+  });
+});
+
+describe("StageReveal, reduced motion", () => {
+  it("still buzzes the heartbeat during suspense, ring fixed rather than animating", () => {
+    stubReducedMotion(true);
+    const vibrate = stubVibrate();
+    vi.useFakeTimers();
+    const { advanceTo } = setup("Host: reveal", 5500);
+    advanceTo(6000);
+    expect(vibrate).toHaveBeenCalled();
+    expect(screen.getByText("Verdict incoming")).toBeTruthy();
+  });
+
+  it("lands on the complete, readable settled state with every text equivalent present", () => {
+    stubReducedMotion(true);
+    vi.useFakeTimers();
+    setup("Host: reveal", 11200);
+    expect(badgeTexts()).toEqual(["Imposter!"]);
+    expect(screen.getByText("One last chance, Priya…")).toBeTruthy();
   });
 });

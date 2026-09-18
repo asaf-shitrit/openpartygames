@@ -95,6 +95,33 @@ describe("SlamStamp", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("under reduced motion fades in instead of shaking, and the text is still there", () => {
+    const matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: (media: string) => ({
+        media,
+        matches: true,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+      }),
+    });
+    const spy = vi.spyOn(Element.prototype, "animate");
+    render(
+      <SlamStamp live shakeRef={shakeTarget()}>
+        Imposter!
+      </SlamStamp>,
+    );
+    act(() => {
+      vi.advanceTimersByTime(SLAM_LAND_MS * 2);
+    });
+    // Slam itself fades in once; the shake preset is a no-op under reduced motion.
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Imposter!")).toBeTruthy();
+    if (matchMediaDescriptor === undefined) Reflect.deleteProperty(window, "matchMedia");
+    else Object.defineProperty(window, "matchMedia", matchMediaDescriptor);
+  });
+
   it("clears the shake timer on unmount", () => {
     const spy = vi.spyOn(Element.prototype, "animate");
     const { unmount } = render(

@@ -225,6 +225,59 @@ An `aria-live` region states the verdict in words at 8.0s.
 
 When the VIP picks a game, `lobbyScreen` changes and the ceremony unmounts, which stops its audio.
 
+## Cue-to-visual table (slice 5, no-TV mode)
+
+The debt this section pays off: with a TV, sound is a second channel alongside a big shared
+screen. With no TV, `SILENT_ENGINE` (`packages/ui/src/audio/types.ts:68-87`) makes every phone
+silent (`apps/web/src/routes.ts:14-22`, `apps/web/src/App.tsx:87-92`), and `canVibrate()` —
+`"vibrate" in navigator` (`packages/ui/src/haptics.ts:29-31`) — is false on every iPhone. So for a
+no-TV phone the **visual is the only channel that can exist at all**, and a beat with no visual of
+its own is not degraded, it is gone. This table walks every `useCue`/`useMusic` call site
+(`grep -rn "useCue(" games/*/src apps/web/src`) and records, per cue, where it actually fires and
+what a no-TV phone shows for it. Built by reading the code, not by re-deriving the storyboards.
+
+`packages/ui/src/audio/types.ts` exports four kinds of id, and only the first is a sound cue that
+`play()` accepts; the table below is honest about which is which.
+
+### Sound cues (`CueId`, `play()`)
+
+| Cue | Where it fires | Visual on a no-TV phone | Verdict |
+|---|---|---|---|
+| `whoosh` | Reveal intro beat, both games (`games/imposter/src/ui/reveal-timeline.ts:63`, `games/most-likely-to/src/ui/reveal-timeline.ts:69`); standings reorder beat, Imposter result (`games/imposter/src/ui/result-timeline.ts:56,77`) | The Vote card unmounts and the Reveal `Card` mounts in its place (`games/imposter/src/ui/stage/Reveal.tsx:308`, `games/most-likely-to/src/ui/stage/Reveal.tsx:337`) — a full-screen swap, not a beat-matched flourish | Sufficient. No dedicated intro flourish exists on the stage (the TV's `FxIn preset="slideIn"` title has no stage equivalent), but the phase change itself is a large, unmistakable visual event. Thin, not a hole. |
+| `scratch` | One per tally mark landing, both games' reveal (`reveal-timeline.ts` `scratchOrder`/`spacedBeats`) | `TallyScratch` draws each mark in with an `opg-draw` stroke (`packages/ui/src/fx/TallyScratch.tsx:57-64`, used at `games/imposter/src/ui/stage/Reveal.tsx:167,210` and `games/most-likely-to/src/ui/stage/Reveal.tsx:176`) | Fine — the cue and the mark are the same event. |
+| `drumroll` | Reveal "suspense" beat, both games (`reveal-timeline.ts:72` / `:78`); Imposter result "drum" beat, caught path only (`result-timeline.ts:64`) | Reveal: `Suspense` ring + heartbeat dots (`games/imposter/src/ui/stage/Reveal.tsx:221-230`, `games/most-likely-to/src/ui/stage/Reveal.tsx:264-272`). Result "drum" beat: **had none** — fixed in this pass, see below. | Reveal: fine (built in an earlier slice). Result: was a hole; closed. |
+| `slam` | Reveal verdict, caught outcome (`reveal-timeline.ts` `verdictCue`); MLT verdict, "picked" outcome; Imposter result verdict, correct guess (`result-timeline.ts` `verdictCue`) | Reveal: `SlamStamp` (`stage/Reveal.tsx:216`, `stage/Reveal.tsx:130` in MLT). Result: a static `VerdictChip` shown from mount, **not gated to the verdict beat at all** — fixed in this pass. | Reveal: fine. Result: was a hole (the outcome was spoiled at t=0, before the guess even finished flipping in); closed. |
+| `buzzer` | Reveal verdict, wrong accusation; Imposter result verdict, incorrect guess | Same `SlamStamp`/`VerdictChip` paths as `slam` — the stamp text differs ("Not the imposter" / "Nope"), never colour alone | Same verdict as `slam`. |
+| `boing` | Reveal verdict, tie/no-votes outcomes, both games | `centerCaption` text ("It's a tie!" / "No votes?!", `stage/Reveal.tsx:98-103`) | Fine — text-only, already the pattern for an outcome with no target row to stamp. |
+| `marker` | Reveal unmask beat, caught outcome (`reveal-timeline.ts:78`); Imposter result "word" beat, caught path (`result-timeline.ts:74`) | Unmask: second `SlamStamp` on the imposter's row (`stage/Reveal.tsx:128`). Word: the crew word in a `Highlight`/`Marker` (`stage/Result.tsx:83-95`), gated on `stage.wordReached` | Fine. |
+| `sneak` | Reveal unmask beat, not-caught outcomes; Imposter result "word" beat, escaped path | Unmask: same `SlamStamp` path. Escaped word: the same `WordLine`, gated on `wordReached` | Fine. |
+| `tape` | Reveal "next" beat, both games (`reveal-timeline.ts:79` / `:81`); `TvGamePicker` game-start transition (`apps/web/src/screens/TvGamePicker.tsx:114`, no no-TV equivalent needed — it is the VIP's own tap) | MLT: `StickyNote` with `nextNoteText` (`stage/Reveal.tsx:216-220`, `HostReveal.tsx:233-237`). Imposter: **had none** — fixed in this pass. | MLT: fine (built correctly the first time). Imposter: was a hole; closed. |
+| `pop` | Vote arrival, TV only (`Host.tsx:521` both games — never fires on a phone at all, TV-exclusive flourish); Reveal/Result "points" beat, both games | Vote arrival: the no-TV `StageVote`/`StageVote` (MLT) shows a check badge the instant `votedIds` includes the voter (`stage/Vote.tsx:64-79` Imposter, `stage/Vote.tsx` MLT) — no animated pop, but the badge appearing is itself the signal, never colour alone (a checkmark icon, not a colour swap). Points: `PointsLine`/`GuessLine` text, gated on the beat | Fine both ways. |
+| `tick` | Imposter result, one per letter flipping in (`result-timeline.ts:70`) | `LetterTiles` flips each tile (`stage/Result.tsx:97-114`, `revealed` from `lettersRevealed`) | Fine — the cue and the flip are the same event. |
+| `tick-final` | `Timer.tsx:144`, last 3s of any timer, both games' Vote/LastChance/WordCheck phases | The ring itself is CSS-drained from `startedAt` regardless of sound (`Timer.tsx`), and Last Chance additionally has the `Suspense` "drain" ring (`stage/LastChance.tsx:66-73`) | Fine — the timer's own motion carries this; the cue was always a bonus tick, never the only signal. |
+| `jingle-start` | Room-level, `HostApp.tsx:160`, phase enters "starting" | TV-only ceremony (the picker/lobby, not a per-game `stage`); out of scope for this task's file ownership. No no-TV phone shows anything different here today. | Open question, not closed here — see "Left open" below. |
+| `fanfare` | Finale crown beat, `finale-timeline.ts:29-31` (falls back to `slam` until the kit ships `fanfare`) | `PhoneResults.tsx` already renders its own crown ceremony regardless of room mode, including an `EyesOnTv` teaser with a heartbeat tempo before the crown (`apps/web/src/screens/PhoneResults.tsx:311-318`, `packages/ui/src/moment/EyesOnTv.tsx`) | Fine, and already built — `apps/web/src/screens/` is outside this task's file ownership so it was read, not touched. |
+
+### Not sound cues — audited anyway, since the brief named them
+
+| Name | What it actually is | Where it fires | Visual | Verdict |
+|---|---|---|---|---|
+| `locked` | `HapticName` (`packages/ui/src/haptics.ts:9`), not a `CueId` | A vote/lie/pick locking in, both games' Phone components (`games/imposter/src/ui/Phone.tsx:597-618`, `games/most-likely-to/src/ui/Phone.tsx:111-132`) | `useBuzz()` always pairs the vibrate with a WAAPI `pulse()` scale flash on the same element, or a reduced-motion outline flash (`packages/ui/src/haptics.ts:44-75`) | Fine by construction — no call site can buzz without a paired visual. |
+| `lobby` | `MusicId` (`packages/ui/src/audio/types.ts:25`), a loop, not a one-shot cue | `screen-music.ts:14`, while `phase === "lobby"` | The lobby screen itself (silent regardless of TV mode) | N/A — a loop has no "moment" to lose; nothing plays on a phone at any point either way. |
+| `tension` | `MusicId` | `useMusic("tension")` during Vote/LastChance, all three games' `Host.tsx`/`HostLastChance.tsx` | The Suspense "drain" ring during Last Chance (`stage/LastChance.tsx`); no dedicated visual during Vote, but Vote has no drumroll-like beat to fill — it is open-ended until everyone votes | Fine for Last Chance. Vote's tension bed was always ambience, not a load-bearing beat. |
+| `running` / `unsupported` | `SoundStatus` values (`packages/ui/src/audio/types.ts:30`), not cues | `SoundEngine.status()`; `SILENT_ENGINE.status` is always `"unsupported"` | The kit's sound chip (`chrome.tsx:99-121`) is TV-only, mounted only by `TvHeader` (`chrome.tsx:143-158`) | Correct as designed (plan §3): "there is nothing to unmute" on a phone that never had sound. |
+
+### Holes found and closed in this pass
+
+1. **Imposter result "drum" beat had no visual.** `games/imposter/src/ui/stage/Result.tsx` played no cue (phones are silent) and showed no ring during the 0–3.5s the TV spends on `drumroll` before the guess even starts flipping in. Fixed by adding a small `Suspense` ring (`variant="reveal"`, `size={40}`) next to the "Priya guessed" line, gated to the same window as the TV's blank tiles, and removed once the verdict beat lands.
+2. **Imposter result's verdict chip was never gated to the verdict beat at all.** `VerdictChip` rendered "Stolen!"/"Nope" unconditionally from the moment the phase mounted — the outcome was visible before the drumroll, before the letters, before anything else, which is the opposite of the TV's beat-by-beat build (`HostResult.tsx:207` gates the same text on `stage.verdict`). Fixed by gating the chip on the verdict beat (the word beat, for the escaped path, which has no suspense beat of its own) and wrapping it in `FxIn preset="pop"` so it lands rather than always having been there.
+3. **Imposter's Reveal "next" beat (the `tape` cue) had no sticky note.** `games/most-likely-to/src/ui/stage/Reveal.tsx` already showed one (`NextNote`/`StickyNote`); Imposter's `stage/Reveal.tsx` did not. Fixed by exporting `nextNoteText` from `HostReveal.tsx` (previously inlined in its own `NextNote`) and rendering the same `StickyNote` on the stage.
+
+### Left open
+
+- **`jingle-start`** (the game-starting jingle) has no no-TV visual counterpart today. It fires from `apps/web/src/screens/HostApp.tsx`, a room-level screen outside a per-game `stage` and outside this task's file ownership (`apps/web/src/screens/` was not on the owned-files list for this pass). The "starting" phase is brief and VIP-initiated (the VIP just tapped Start), so the risk is low, but it was not verified against a no-TV fixture and should get its own pass.
+- **Reduced-motion and screen-reader passes on `apps/web/src/screens/` (finale, lobby, game picker)** are likewise out of this task's ownership; only the two opted-in games' `src/ui/` and the kit's `fx/` were walked exhaustively.
+
 ## Milestones
 
 ### Slice 0: record the plan
@@ -302,7 +355,10 @@ Save this plan as `plan/0002-game-feel.md`, following the repo's intent/plan con
   - The VIP can leave the ceremony at any time.
 
 ### Slice 6: polish and audits
-- A table mapping each cue to its visual equivalent, and reduced-motion tests per moment.
+- ~~A table mapping each cue to its visual equivalent, and reduced-motion tests per moment.~~ Done
+  in `plan/0004-no-tv-mode.md` slice 5, scoped to the two no-TV games and the kit's `fx/`; see
+  "Cue-to-visual table (slice 5, no-TV mode)" above. `apps/web/src/screens/` (lobby, game picker,
+  finale) was not re-audited here.
 - Low-end TV stick and Android Go pass (confetti caps, DPR).
 - Six games in a row with no leaks of AudioNodes, timers or listeners.
 - Shake ≤12px, no flashes above 3Hz.
