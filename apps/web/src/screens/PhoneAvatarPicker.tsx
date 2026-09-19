@@ -10,6 +10,8 @@ import {
   PRESSABLE_CLASS,
   Stamp,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 
 export interface PhoneAvatarPickerProps {
   view: PlayerRoomView;
@@ -23,10 +25,12 @@ function TakenTile({
   id,
   owner,
   radius,
+  t,
 }: {
   id: AvatarId;
   owner: string;
   radius: TileRadius;
+  t: Dictionary;
 }) {
   return (
     <div
@@ -42,9 +46,14 @@ function TakenTile({
         color: "var(--opg-ink-secondary)",
       }}
     >
-      <Avatar id={id} size={52} faded alt={`${id} avatar, taken by ${owner}`} />
+      <Avatar
+        id={id}
+        size={52}
+        faded
+        alt={format(t.avatarPicker.takenAlt, { id, owner })}
+      />
       <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>
-        Taken
+        {t.avatarPicker.taken}
       </div>
       <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>
         {owner}
@@ -62,20 +71,20 @@ function pickTileLook(picked: boolean): { background: string; border: string } {
     : { background: "var(--opg-card)", border: "3px solid var(--opg-ink)" };
 }
 
-function IdleArt({ id }: { id: AvatarId }) {
-  return <Avatar id={id} size={72} alt={`Choose the ${id} avatar`} />;
+function IdleArt({ id, t }: { id: AvatarId; t: Dictionary }) {
+  return <Avatar id={id} size={72} alt={format(t.avatarPicker.chooseAlt, { id })} />;
 }
 
-function PickedArt({ id }: { id: AvatarId }) {
+function PickedArt({ id, t }: { id: AvatarId; t: Dictionary }) {
   return (
     <>
       <Icon
         name="check"
         size={26}
         color="var(--opg-marker)"
-        style={{ position: "absolute", right: 6, top: 6 }}
+        style={{ position: "absolute", insetInlineEnd: 6, top: 6 }}
       />
-      <Avatar id={id} size={66} alt={`Choose the ${id} avatar`} />
+      <Avatar id={id} size={66} alt={format(t.avatarPicker.chooseAlt, { id })} />
       <div
         style={{
           fontSize: 16,
@@ -83,7 +92,7 @@ function PickedArt({ id }: { id: AvatarId }) {
           color: "var(--opg-marker)",
         }}
       >
-        Picked
+        {t.avatarPicker.picked}
       </div>
     </>
   );
@@ -94,11 +103,13 @@ function PickTile({
   picked,
   radius,
   onPick,
+  t,
 }: {
   id: AvatarId;
   picked: boolean;
   radius: TileRadius;
   onPick: (avatar: AvatarId) => void;
+  t: Dictionary;
 }) {
   const look = pickTileLook(picked);
   return (
@@ -119,7 +130,7 @@ function PickTile({
         borderRadius: radius,
       }}
     >
-      {picked ? <PickedArt id={id} /> : <IdleArt id={id} />}
+      {picked ? <PickedArt id={id} t={t} /> : <IdleArt id={id} t={t} />}
     </button>
   );
 }
@@ -128,10 +139,12 @@ function AvatarGrid({
   taken,
   picked,
   onPick,
+  t,
 }: {
   taken: Map<AvatarId, string>;
   picked: AvatarId | null;
   onPick: (avatar: AvatarId) => void;
+  t: Dictionary;
 }) {
   return (
     <div
@@ -147,7 +160,7 @@ function AvatarGrid({
           index % 2 === 0 ? "var(--opg-radius-m)" : "var(--opg-radius-m-alt)";
 
         if (owner) {
-          return <TakenTile key={id} id={id} owner={owner} radius={radius} />;
+          return <TakenTile key={id} id={id} owner={owner} radius={radius} t={t} />;
         }
         return (
           <PickTile
@@ -156,6 +169,7 @@ function AvatarGrid({
             picked={picked === id}
             radius={radius}
             onPick={onPick}
+            t={t}
           />
         );
       })}
@@ -172,7 +186,7 @@ function buildTaken(view: PlayerRoomView): Map<AvatarId, string> {
   return taken;
 }
 
-function ScrollHint() {
+function ScrollHint({ t }: { t: Dictionary }) {
   return (
     <div
       style={{
@@ -198,7 +212,7 @@ function ScrollHint() {
       >
         <path d="M12 5v13M6 12l6 6 6-6" />
       </svg>
-      <div>Scroll for more doodles</div>
+      <div>{t.avatarPicker.scrollHint}</div>
     </div>
   );
 }
@@ -211,13 +225,15 @@ function playerAvatar(player: PlayerSummary | null): AvatarId | null {
   return player?.avatar ?? null;
 }
 
-function PickerHeading({ name }: { name: string }) {
+function PickerHeading({ name, t }: { name: string; t: Dictionary }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <Marker size={34} style={{ lineHeight: 1.15 }}>
-        Pick your doodle
+        {t.avatarPicker.heading}
       </Marker>
-      <div style={{ fontSize: 20, fontWeight: 700 }}>Hi, {name}!</div>
+      <div style={{ fontSize: 20, fontWeight: 700 }}>
+        {format(t.avatarPicker.greeting, { name })}
+      </div>
     </div>
   );
 }
@@ -227,22 +243,23 @@ export function PhoneAvatarPicker({
   onPick,
   onDone,
 }: PhoneAvatarPickerProps) {
+  const { t } = useLocale();
   const me = view.players.find((p) => p.id === view.you) ?? null;
   const taken = buildTaken(view);
-  const greeting = playerName(me, "player");
-  const stamp = playerName(me, "You");
+  const greeting = playerName(me, t.avatarPicker.fallbackPlayer);
+  const stamp = playerName(me, t.avatarPicker.fallbackYou);
 
   return (
     <PhoneScreen>
-      <PickerHeading name={greeting} />
+      <PickerHeading name={greeting} t={t} />
 
-      <AvatarGrid taken={taken} picked={playerAvatar(me)} onPick={onPick} />
+      <AvatarGrid taken={taken} picked={playerAvatar(me)} onPick={onPick} t={t} />
 
-      <ScrollHint />
+      <ScrollHint t={t} />
 
       <div style={{ marginTop: "auto" }}>
         <Button size="lg" fullWidth onClick={onDone}>
-          <span>That's me</span>
+          <span>{t.avatarPicker.done}</span>
           <Icon name="check" size={24} color="var(--opg-paper)" />
         </Button>
       </div>

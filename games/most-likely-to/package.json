@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@opg/i18n": "workspace:*",
     "@opg/protocol": "workspace:*",
     "@opg/sdk": "workspace:*",
     "@opg/ui": "workspace:*",
@@ -21,6 +22,7 @@
     "react": "*"
   },
   "devDependencies": {
+    "@types/node": "^26.5.1",
     "@types/react": "^19.3.0",
     "react": "^19.3.0"
   }

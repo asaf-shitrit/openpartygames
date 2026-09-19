@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import type { MltHostView, MltPlayerView } from "../../state";
 import { mostLikelyToPreviews, REVEAL_PREVIEW_START } from "../preview";
@@ -69,14 +70,16 @@ function setup(label: string, elapsedMs: number) {
     }
   };
   const rendered = render(
-    <StageReveal
-      view={view}
-      players={room.players}
-      me="dov"
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-    />,
+    <LocaleProvider>
+      <StageReveal
+        view={view}
+        players={room.players}
+        me="dov"
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+      />
+    </LocaleProvider>,
   );
   return { advanceTo, rendered };
 }
@@ -143,14 +146,16 @@ describe("StageReveal, later beats", () => {
     const { view, room } = hostSample("Host: reveal picked");
     const clock: ServerClock = { now: () => room.serverNow };
     render(
-      <StageReveal
-        view={view}
-        players={room.players}
-        me="dov"
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <StageReveal
+          view={view}
+          players={room.players}
+          me="dov"
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     expect(screen.queryByTestId("stage-verdict-stamp")).toBeNull();
   });

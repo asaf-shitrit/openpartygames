@@ -2,6 +2,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import type { RoomView } from "@opg/protocol";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { CueHandle, CueId, MusicId, SoundEngine, SoundStatus } from "@opg/ui";
 import { FakeWebSocket, lastSocket, resetFakeSockets } from "./fixtures/socket";
 import {
@@ -64,9 +65,11 @@ class FakeEngine implements SoundEngine {
 
 function renderHost(engine: SoundEngine, code = "BKTZ") {
   return render(
-    <SoundProvider engine={engine}>
-      <HostApp code={code} />
-    </SoundProvider>,
+    <LocaleProvider>
+      <SoundProvider engine={engine}>
+        <HostApp code={code} />
+      </SoundProvider>
+    </LocaleProvider>,
   );
 }
 
@@ -102,7 +105,11 @@ async function flushMusicClaims(): Promise<void> {
 
 describe("HostApp", () => {
   it("explains that the room is hosted elsewhere when there is no host token", () => {
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     expect(
       screen.getByText("This room is hosted on another screen"),
     ).toBeTruthy();
@@ -111,7 +118,11 @@ describe("HostApp", () => {
 
   it("explains the same when the host token is rejected", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     act(() =>
       socket.receive({
@@ -127,7 +138,11 @@ describe("HostApp", () => {
 
   it("shows the connecting copy until the first view arrives", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     connectHost();
     expect(screen.getByText("Connecting…")).toBeTruthy();
     expect(screen.getByText("Finding the room.")).toBeTruthy();
@@ -135,7 +150,11 @@ describe("HostApp", () => {
 
   it("shows the lobby for the join lobby screen", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    const { container } = render(<HostApp code="BKTZ" />);
+    const { container } = render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView());
     expect(screen.getByText("Who's here")).toBeTruthy();
@@ -145,7 +164,11 @@ describe("HostApp", () => {
 
   it("shows the game picker for the pick lobby screen", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView({ lobbyScreen: "pick" }));
     expect(screen.getByText("is picking a game")).toBeTruthy();
@@ -157,7 +180,11 @@ describe("HostApp", () => {
       makePlayer({ id: "p1", name: "Priya", isVip: true, crowns: 1 }),
       makePlayer({ id: "p2", name: "Sam", avatar: "star" }),
     ];
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(
       socket,
@@ -175,7 +202,11 @@ describe("HostApp", () => {
 
   it("shows the starting copy while the room starts a game", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView({ phase: "starting" }));
     expect(screen.getByText("Starting Imposter…")).toBeTruthy();
@@ -183,7 +214,11 @@ describe("HostApp", () => {
 
   it("shows the game stage when a game is running", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     const preview = realOrNahPreviews.find((p) => p.surface === "host");
     if (!preview) throw new Error("missing host preview");
@@ -205,7 +240,11 @@ describe("HostApp", () => {
 
   it("explains when the room picked a game this screen cannot show", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(
       socket,
@@ -225,7 +264,11 @@ describe("HostApp", () => {
 
   it("reports a reconnect when the socket drops mid-game", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     act(() => socket.serverClose());
     expect(screen.getByText("Connecting…")).toBeTruthy();
@@ -234,7 +277,11 @@ describe("HostApp", () => {
 
   it("keeps the board and overlays a reconnect when the socket drops mid-game", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    const { container } = render(<HostApp code="BKTZ" />);
+    const { container } = render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView());
     act(() => socket.serverClose());
@@ -247,7 +294,11 @@ describe("HostApp", () => {
 
   it("drops the reconnect overlay once a fresh state arrives on an open socket", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView());
     act(() => socket.serverClose());
@@ -259,7 +310,11 @@ describe("HostApp", () => {
 
   it("shows no reconnect overlay while the socket stays open", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    const { container } = render(<HostApp code="BKTZ" />);
+    const { container } = render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView());
     expect(screen.queryByText("Reconnecting…")).toBeNull();
@@ -268,7 +323,11 @@ describe("HostApp", () => {
 
   it("keeps connecting when a frame that is not a host view arrives", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makePlayerView());
     expect(screen.getByText("Finding the room.")).toBeTruthy();
@@ -280,7 +339,11 @@ describe("HostApp", () => {
       Promise.resolve(new FakeWakeLockSentinel()),
     );
     stubWakeLock(request);
-    render(<HostApp code="BKTZ" />);
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
     const socket = connectHost();
     showState(socket, makeHostView());
     expect(request).toHaveBeenCalledWith("screen");

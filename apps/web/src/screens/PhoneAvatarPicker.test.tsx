@@ -2,6 +2,7 @@ import type { AvatarId } from "@opg/protocol";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { makePlayer, makePlayerView } from "./fixtures/room";
 import { PhoneAvatarPicker } from "./PhoneAvatarPicker";
 
@@ -12,11 +13,13 @@ function setup(patch: Parameters<typeof makePlayerView>[0] = {}) {
   const onPick = vi.fn<(avatar: AvatarId) => void>();
   const onDone = vi.fn<() => void>();
   render(
-    <PhoneAvatarPicker
-      view={makePlayerView({ players: [ME, SAM], you: "p1", ...patch })}
-      onPick={onPick}
-      onDone={onDone}
-    />,
+    <LocaleProvider>
+      <PhoneAvatarPicker
+        view={makePlayerView({ players: [ME, SAM], you: "p1", ...patch })}
+        onPick={onPick}
+        onDone={onDone}
+      />
+    </LocaleProvider>,
   );
   return { onPick, onDone, user: userEvent.setup() };
 }

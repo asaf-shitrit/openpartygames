@@ -18,6 +18,8 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import {
   REVEAL_MS,
   type MltHostView,
@@ -112,18 +114,19 @@ function pickedIdOf(outcome: MltOutcome): PlayerId | null {
 
 /** This phone's personal reveal card, built from the frozen reveal. */
 function buildPersonal(
+  t: Dictionary,
   view: MltPlayerView,
   players: PlayerSummary[],
   meId: PlayerId,
 ): PersonalReveal {
   const reveal = view.reveal ?? NO_REVEAL;
   const pickedId = pickedIdOf(reveal.outcome);
-  return personalReveal({
+  return personalReveal(t, {
     outcome: reveal.outcome,
     me: meId,
     myVote: view.myVote,
     matched: reveal.matchedIds.includes(meId),
-    pickedName: pickedId === null ? null : nameOf(players, pickedId),
+    pickedName: pickedId === null ? null : nameOf(players, pickedId, t.common.someone),
   });
 }
 
@@ -173,18 +176,20 @@ function Waiting({
   noTv,
   prompt,
   suspense,
+  t,
 }: {
   noTv: boolean;
   prompt: string;
   suspense: boolean;
+  t: Dictionary;
 }) {
   if (noTv) return null;
   return (
     <>
       <PromptLine prompt={prompt} size={20} />
       <EyesOnTv
-        title="Eyes on the TV"
-        detail={suspense ? "Here it comes…" : "The votes are in…"}
+        title={t.mostLikelyTo.eyesOnTv}
+        detail={suspense ? t.mostLikelyTo.hereItComes : t.mostLikelyTo.votesAreIn}
         tempo={suspense ? "fast" : "slow"}
       />
     </>
@@ -193,8 +198,9 @@ function Waiting({
 
 export function PhoneReveal(props: PhoneRevealProps) {
   const { view, players, me, stage } = props;
+  const { t } = useLocale();
   const meId = me?.id ?? "";
-  const personal = buildPersonal(view, players, meId);
+  const personal = buildPersonal(t, view, players, meId);
   // No TV to follow in a no-TV room: the stage's verdict and this line land together.
   const beats = phoneRevealBeats(personal.haptic, stage === null ? undefined : 0);
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, REVEAL_MS);
@@ -212,8 +218,8 @@ export function PhoneReveal(props: PhoneRevealProps) {
   return (
     <>
       <PhoneStrip
-        gameName="Most Likely To"
-        progress="Here comes the verdict"
+        gameName={t.mostLikelyTo.title}
+        progress={t.mostLikelyTo.verdictProgress}
         right={<Timer deadline={props.deadline} clock={props.clock} />}
       />
       <StageArea
@@ -233,7 +239,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
           cardRef={cardRef}
         />
       ) : (
-        <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} />
+        <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} t={t} />
       )}
     </>
   );

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { MltAction, MltHostView, MltPlayerView } from "../state";
 import { Phone } from "./Phone";
 import { mostLikelyToPreviews } from "./preview";
@@ -52,15 +53,17 @@ function renderPhone(
   const { view, room } = playerSample(label);
   const clock: ServerClock = { now: () => room.serverNow };
   return render(
-    <Phone
-      view={view}
-      room={room}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-      send={send}
-      stage={stage}
-    />,
+    <LocaleProvider>
+      <Phone
+        view={view}
+        room={room}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+        send={send}
+        stage={stage}
+      />
+    </LocaleProvider>,
   );
 }
 
@@ -117,15 +120,17 @@ describe("voting", () => {
     const selfView = { ...view, myVote: room.you };
     const clock: ServerClock = { now: () => room.serverNow };
     render(
-      <Phone
-        view={selfView}
-        room={room}
-        deadline={room.game?.deadline ?? null}
-        timerStartedAt={room.game?.timerStartedAt ?? null}
-        clock={clock}
-        send={mockSend()}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={selfView}
+          room={room}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+          send={mockSend()}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("You picked yourself.")).toBeTruthy();
   });
@@ -136,28 +141,32 @@ describe("voting", () => {
     const clock: ServerClock = { now: () => selecting.room.serverNow };
     const lockVibrate = stubVibrate();
     const { rerender } = render(
-      <Phone
-        view={selecting.view}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={mockSend()}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={selecting.view}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={mockSend()}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     expect(lockVibrate).not.toHaveBeenCalled();
 
     rerender(
-      <Phone
-        view={locked.view}
-        room={locked.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={mockSend()}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={locked.view}
+          room={locked.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={mockSend()}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     expect(lockVibrate).toHaveBeenCalledWith([25, 40, 25]);
     cleanup();
@@ -173,15 +182,17 @@ describe("voting", () => {
     const clock: ServerClock = { now: () => selecting.room.serverNow };
     const send = mockSend();
     const phoneFor = (view: MltPlayerView) => (
-      <Phone
-        view={view}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={send}
-      stage={null}
-      />
+      <LocaleProvider>
+        <Phone
+          view={view}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={send}
+        stage={null}
+        />
+      </LocaleProvider>
     );
     const { rerender } = render(phoneFor(selecting.view));
     await userEvent.click(submitButton("Priya's avatar Priya"));
@@ -209,15 +220,17 @@ describe("voting", () => {
     const clock: ServerClock = { now: () => selecting.room.serverNow };
     const send = mockSend();
     const { rerender } = render(
-      <Phone
-        view={selecting.view}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={send}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={selecting.view}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={send}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     await userEvent.click(submitButton("Leo's avatar Leo"));
     await userEvent.click(submitButton("Lock in vote"));
@@ -231,15 +244,17 @@ describe("voting", () => {
       playerCount: selecting.view.playerCount - 1,
     };
     rerender(
-      <Phone
-        view={withoutLeo}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={send}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={withoutLeo}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={send}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     await userEvent.click(submitButton("Maya's avatar Maya"));
     await userEvent.click(submitButton("Lock in vote"));
@@ -251,30 +266,34 @@ describe("voting", () => {
     const clock: ServerClock = { now: () => selecting.room.serverNow };
     const send = mockSend();
     const { rerender } = render(
-      <Phone
-        view={selecting.view}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={send}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={selecting.view}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={send}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     await userEvent.click(submitButton("Maya's avatar Maya"));
     expect(screen.getByText("Your pick")).toBeTruthy();
 
     const nextRound = { ...selecting.view, roundNumber: selecting.view.roundNumber + 1 };
     rerender(
-      <Phone
-        view={nextRound}
-        room={selecting.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={send}
-      stage={null}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={nextRound}
+          room={selecting.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={send}
+        stage={null}
+        />
+      </LocaleProvider>,
     );
     expect(screen.queryByText("Your pick")).toBeNull();
   });

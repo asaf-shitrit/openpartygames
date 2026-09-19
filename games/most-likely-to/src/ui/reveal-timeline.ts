@@ -3,6 +3,8 @@
 import type { PlayerId } from "@opg/protocol";
 import type { Beat, CueId, HapticName, Moment } from "@opg/ui";
 import { spacedBeats } from "@opg/ui";
+import { format } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltOutcome } from "../state";
 
 export const REVEAL_TIMING = {
@@ -134,47 +136,54 @@ function card(
   return { headline, sub, haptic, celebrate };
 }
 
-const SAT_OUT = card("You sat this one out", "Vote next round to score.", "soft");
-const SPLIT_CARD = card(
-  "No clear pick",
-  "Nobody got 2 votes. No points this time.",
-  "soft",
-);
+function satOutCard(t: Dictionary): PersonalReveal {
+  const p = t.mostLikelyTo.personal;
+  return card(p.satOutHeadline, p.satOutSub, "soft");
+}
+
+function splitCard(t: Dictionary): PersonalReveal {
+  const p = t.mostLikelyTo.personal;
+  return card(p.splitHeadline, p.splitSub, "soft");
+}
 
 function pickedCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   pickedId: PlayerId,
 ): PersonalReveal {
+  const p = t.mostLikelyTo.personal;
   if (pickedId === input.me) {
     return input.matched
-      ? card("You called it on yourself!", "+500. Own it.", "good", true)
-      : card("The room picked you!", "Time to explain yourself.", "caught");
+      ? card(p.selfCalledHeadline, p.selfCalledSub, "good", true)
+      : card(p.selfCaughtHeadline, p.selfCaughtSub, "caught");
   }
-  const name = input.pickedName ?? "Someone";
+  const name = input.pickedName ?? t.common.someone;
   return input.matched
-    ? card("You read the room!", `+500. It's ${name}.`, "good", true)
-    : card(`The room picked ${name}`, "Your vote went another way.", "soft");
+    ? card(p.matchedHeadline, format(p.matchedSub, { name }), "good", true)
+    : card(format(p.missedHeadline, { name }), p.missedSub, "soft");
 }
 
 function tieCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   tiedIds: readonly PlayerId[],
 ): PersonalReveal {
+  const p = t.mostLikelyTo.personal;
   if (input.matched) {
-    return card("You backed a winner!", "+500. It's a tie.", "good", true);
+    return card(p.tieMatchedHeadline, p.tieMatchedSub, "good", true);
   }
   return tiedIds.includes(input.me)
-    ? card("You're in the tie!", "Explain yourself.", "caught")
-    : card("It's a tie", "Your vote went another way.", "soft");
+    ? card(p.tieCaughtHeadline, p.tieCaughtSub, "caught")
+    : card(p.tieMissedHeadline, p.tieMissedSub, "soft");
 }
 
 /** This phone's result copy, one row of the reveal storyboard's phone column. */
-export function personalReveal(input: PersonalRevealInput): PersonalReveal {
-  if (input.myVote === null) return SAT_OUT;
+export function personalReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal {
+  if (input.myVote === null) return satOutCard(t);
   const { outcome } = input;
-  if (outcome.kind === "picked") return pickedCard(input, outcome.pickedId);
-  if (outcome.kind === "tie") return tieCard(input, outcome.tiedIds);
-  return SPLIT_CARD;
+  if (outcome.kind === "picked") return pickedCard(t, input, outcome.pickedId);
+  if (outcome.kind === "tie") return tieCard(t, input, outcome.tiedIds);
+  return splitCard(t);
 }
 
 /**

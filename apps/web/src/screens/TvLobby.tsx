@@ -16,10 +16,12 @@ import {
   useCue,
   useReducedMotion,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { PointArrow, QrCode, ScanArrow, TvPage } from "./shared";
 import { ShowOnTvChip } from "./ShowOnTv";
 
-function SeatBadge({ player }: { player: PlayerSummary }) {
+function SeatBadge({ player, t }: { player: PlayerSummary; t: Dictionary }) {
   if (player.isVip) {
     return (
       <div
@@ -37,7 +39,7 @@ function SeatBadge({ player }: { player: PlayerSummary }) {
           color: "var(--opg-marker)",
         }}
       >
-        VIP
+        {t.lobby.vip}
       </div>
     );
   }
@@ -51,10 +53,12 @@ function Seat({
   player,
   index,
   arrived,
+  t,
 }: {
   player: PlayerSummary;
   index: number;
   arrived: boolean;
+  t: Dictionary;
 }) {
   const reduced = useReducedMotion();
   const cue = useCue();
@@ -82,14 +86,22 @@ function Seat({
           {player.name}
         </div>
         <div style={{ height: 46, display: "flex", alignItems: "center" }}>
-          <SeatBadge player={player} />
+          <SeatBadge player={player} t={t} />
         </div>
       </Card>
     </div>
   );
 }
 
-function OpenSeat({ variant, tilt }: { variant: "M" | "Malt"; tilt: number }) {
+function OpenSeat({
+  variant,
+  tilt,
+  t,
+}: {
+  variant: "M" | "Malt";
+  tilt: number;
+  t: Dictionary;
+}) {
   return (
     <div
       style={{
@@ -107,12 +119,74 @@ function OpenSeat({ variant, tilt }: { variant: "M" | "Malt"; tilt: number }) {
       }}
     >
       <Icon name="plus" size={56} color="var(--opg-ink-secondary)" />
-      <div style={{ fontSize: 32, fontWeight: 700 }}>Open seat</div>
+      <div style={{ fontSize: 32, fontWeight: 700 }}>{t.lobby.openSeat}</div>
     </div>
   );
 }
 
-function JoinPanel({ code, joinUrl }: { code: string; joinUrl: string }) {
+function QrBlock({ joinUrl, t }: { joinUrl: string; t: Dictionary }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+      <div
+        style={{
+          width: 200,
+          height: 200,
+          padding: 18,
+          background: "var(--opg-card)",
+          border: "4px solid var(--opg-ink)",
+          borderRadius: "22px 8px 20px 10px / 10px 20px 8px 22px",
+        }}
+      >
+        <QrCode value={joinUrl} size={156} />
+      </div>
+      <ScanArrow />
+      <div
+        className="opg-marker"
+        style={{
+          fontSize: 46,
+          lineHeight: 1.1,
+          color: "var(--opg-marker)",
+          transform: "rotate(-4deg)",
+        }}
+      >
+        {t.lobby.scanMe}
+      </div>
+    </div>
+  );
+}
+
+function RoomCodeBlock({ code, t }: { code: string; t: Dictionary }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--opg-ink-secondary)",
+        }}
+      >
+        {t.join.roomCodeLabel}
+      </div>
+      <Highlight style={{ alignSelf: "flex-start", padding: "0 18px" }}>
+        <Marker size={176} style={{ lineHeight: 1.05, letterSpacing: "0.06em" }}>
+          {code}
+        </Marker>
+      </Highlight>
+    </div>
+  );
+}
+
+function JoinPanel({
+  code,
+  joinUrl,
+  t,
+}: {
+  code: string;
+  joinUrl: string;
+  t: Dictionary;
+}) {
   return (
     <Card
       variant="L"
@@ -127,61 +201,16 @@ function JoinPanel({ code, joinUrl }: { code: string; joinUrl: string }) {
     >
       <Tape left={280} top={-26} width={200} height={50} rotate={-3} />
       <Marker size={56} style={{ lineHeight: 1.15 }}>
-        Grab your phone!
+        {t.lobby.grabYourPhone}
       </Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div style={{ fontSize: 36, lineHeight: 1.2 }}>Go to</div>
+        <div style={{ fontSize: 36, lineHeight: 1.2 }}>{t.lobby.goTo}</div>
         <div style={{ fontSize: 50, fontWeight: 700, lineHeight: 1.1 }}>
           {window.location.host}
         </div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <div
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            color: "var(--opg-ink-secondary)",
-          }}
-        >
-          Room code
-        </div>
-        <Highlight style={{ alignSelf: "flex-start", padding: "0 18px" }}>
-          <Marker
-            size={176}
-            style={{ lineHeight: 1.05, letterSpacing: "0.06em" }}
-          >
-            {code}
-          </Marker>
-        </Highlight>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-        <div
-          style={{
-            width: 200,
-            height: 200,
-            padding: 18,
-            background: "var(--opg-card)",
-            border: "4px solid var(--opg-ink)",
-            borderRadius: "22px 8px 20px 10px / 10px 20px 8px 22px",
-          }}
-        >
-          <QrCode value={joinUrl} size={156} />
-        </div>
-        <ScanArrow />
-        <div
-          className="opg-marker"
-          style={{
-            fontSize: 46,
-            lineHeight: 1.1,
-            color: "var(--opg-marker)",
-            transform: "rotate(-4deg)",
-          }}
-        >
-          scan me!
-        </div>
-      </div>
+      <RoomCodeBlock code={code} t={t} />
+      <QrBlock joinUrl={joinUrl} t={t} />
     </Card>
   );
 }
@@ -189,9 +218,11 @@ function JoinPanel({ code, joinUrl }: { code: string; joinUrl: string }) {
 function SeatGrid({
   players,
   emptySeats,
+  t,
 }: {
   players: PlayerSummary[];
   emptySeats: number;
+  t: Dictionary;
 }) {
   const playerIds = useMemo(() => players.map((player) => player.id), [
     players,
@@ -206,9 +237,9 @@ function SeatGrid({
           justifyContent: "space-between",
         }}
       >
-        <Marker size={76}>Who's here</Marker>
+        <Marker size={76}>{t.lobby.whosHereTv}</Marker>
         <div style={{ fontSize: 38, fontWeight: 700 }}>
-          {players.length} of {MAX_PLAYERS} players
+          {format(t.lobby.playersOfMax, { count: players.length, max: MAX_PLAYERS })}
         </div>
       </div>
       <div
@@ -224,6 +255,7 @@ function SeatGrid({
             player={player}
             index={index}
             arrived={arrivals.includes(player.id)}
+            t={t}
           />
         ))}
         {Array.from({ length: emptySeats }, (_, i) => (
@@ -231,6 +263,7 @@ function SeatGrid({
             key={`open-${i}`}
             variant={i % 2 === 0 ? "M" : "Malt"}
             tilt={i % 2 === 0 ? -1 : 1.5}
+            t={t}
           />
         ))}
       </div>
@@ -238,7 +271,7 @@ function SeatGrid({
   );
 }
 
-function LobbyFooter({ vip }: { vip: PlayerSummary | null }) {
+function LobbyFooter({ vip, t }: { vip: PlayerSummary | null; t: Dictionary }) {
   return (
     <div
       style={{
@@ -255,16 +288,17 @@ function LobbyFooter({ vip }: { vip: PlayerSummary | null }) {
           <Highlight style={{ padding: "0 6px" }}>
             <span>{vip.name}</span>
           </Highlight>
-          <div>is the VIP and picks the game from their phone</div>
+          <div>{t.lobby.vipPicksFromPhone}</div>
         </>
       ) : (
-        <div>Waiting for the first player to join</div>
+        <div>{t.lobby.waitingForFirst}</div>
       )}
     </div>
   );
 }
 
 export function TvLobby({ view }: { view: HostRoomView }) {
+  const { t } = useLocale();
   const joinUrl = `${window.location.origin}/${view.code}`;
   const emptySeats = Math.max(0, MAX_PLAYERS - view.players.length);
   const vip = view.players.find((p) => p.id === view.vipId) ?? null;
@@ -282,12 +316,12 @@ export function TvLobby({ view }: { view: HostRoomView }) {
           alignItems: "start",
         }}
       >
-        <JoinPanel code={view.code} joinUrl={joinUrl} />
+        <JoinPanel code={view.code} joinUrl={joinUrl} t={t} />
 
-        <SeatGrid players={view.players} emptySeats={emptySeats} />
+        <SeatGrid players={view.players} emptySeats={emptySeats} t={t} />
       </div>
 
-      <LobbyFooter vip={vip} />
+      <LobbyFooter vip={vip} t={t} />
     </TvPage>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Beat, Moment } from "@opg/ui";
+import { en } from "@opg/i18n";
 import { REVEAL_MS } from "../state";
 import type { MltOutcome } from "../state";
 import {
@@ -166,7 +167,7 @@ describe("spotlightIds", () => {
 describe("personalReveal", () => {
   it("sits out a player who did not vote", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: PICKED,
         me: "leo",
         myVote: null,
@@ -183,7 +184,7 @@ describe("personalReveal", () => {
 
   it("celebrates picking yourself and being picked, matched", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "picked", pickedId: "dov" },
         me: "dov",
         myVote: "dov",
@@ -200,7 +201,7 @@ describe("personalReveal", () => {
 
   it("puts you on the hook when the room picked you and you missed", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "picked", pickedId: "dov" },
         me: "dov",
         myVote: "leo",
@@ -217,7 +218,7 @@ describe("personalReveal", () => {
 
   it("celebrates matching someone else's pick", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "picked", pickedId: "dov" },
         me: "leo",
         myVote: "dov",
@@ -234,7 +235,7 @@ describe("personalReveal", () => {
 
   it("falls back to Someone for a picked player who left", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "picked", pickedId: "dov" },
         me: "leo",
         myVote: "priya",
@@ -251,7 +252,7 @@ describe("personalReveal", () => {
 
   it("celebrates a matched tie", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "tie", tiedIds: ["dov", "priya"] },
         me: "leo",
         myVote: "dov",
@@ -268,7 +269,7 @@ describe("personalReveal", () => {
 
   it("puts a tied player on the hook", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "tie", tiedIds: ["dov", "priya"] },
         me: "dov",
         myVote: "leo",
@@ -285,7 +286,7 @@ describe("personalReveal", () => {
 
   it("is a plain miss for a bystander to a tie", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: { kind: "tie", tiedIds: ["dov", "priya"] },
         me: "leo",
         myVote: "sam",
@@ -302,7 +303,7 @@ describe("personalReveal", () => {
 
   it("scores nobody on a split round", () => {
     expect(
-      personalReveal({
+      personalReveal(en, {
         outcome: SPLIT,
         me: "leo",
         myVote: "sam",

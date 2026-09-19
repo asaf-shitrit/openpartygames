@@ -16,6 +16,8 @@ import {
   useMusic,
   useReducedMotion,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltHostView, MltPhase } from "../state";
 import { avatarOf, nameOf, PromptLine } from "./common";
 import { HostReveal } from "./HostReveal";
@@ -40,13 +42,14 @@ interface SectionProps {
   clock: ServerClock;
 }
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId): string {
+  return format(t.mostLikelyTo.avatarAlt, { name: nameOf(players, id, t.common.someone) });
 }
 
 // ---------- vote ----------
 
 function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -73,14 +76,17 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
           ticks
         />
         <div style={{ fontSize: 36, fontWeight: 700 }}>
-          {view.votedIds.length} of {view.playerIds.length} voted
+          {format(t.mostLikelyTo.votedOfTotalTv, {
+            voted: view.votedIds.length,
+            total: view.playerIds.length,
+          })}
         </div>
       </div>
     </div>
   );
 }
 
-function VoteStatus({ hasVoted }: { hasVoted: boolean }) {
+function VoteStatus({ hasVoted, t }: { hasVoted: boolean; t: Dictionary }) {
   return (
     <div
       style={{
@@ -98,7 +104,7 @@ function VoteStatus({ hasVoted }: { hasVoted: boolean }) {
         size={hasVoted ? 36 : 34}
         color={hasVoted ? "var(--opg-marker)" : "var(--opg-muted)"}
       />
-      <div>{hasVoted ? "Voted" : "Thinking…"}</div>
+      <div>{hasVoted ? t.mostLikelyTo.voted : t.mostLikelyTo.thinking}</div>
     </div>
   );
 }
@@ -109,12 +115,14 @@ function VoteTile({
   hasVoted,
   justArrived,
   players,
+  t,
 }: {
   id: PlayerId;
   index: number;
   hasVoted: boolean;
   justArrived: boolean;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const play = useCue();
@@ -143,12 +151,12 @@ function VoteTile({
         <Avatar
           id={avatarOf(players, id)}
           size={150}
-          alt={avatarLabel(players, id)}
+          alt={avatarLabel(t, players, id)}
         />
         <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1 }}>
-          {nameOf(players, id)}
+          {nameOf(players, id, t.common.someone)}
         </div>
-        <VoteStatus hasVoted={hasVoted} />
+        <VoteStatus hasVoted={hasVoted} t={t} />
       </Card>
     </div>
   );
@@ -156,6 +164,7 @@ function VoteTile({
 
 function Vote(props: SectionProps) {
   const { view, players } = props;
+  const { t } = useLocale();
   const arrivals = useArrivals(view.votedIds);
   useMusic("tension");
   return (
@@ -176,11 +185,12 @@ function Vote(props: SectionProps) {
             hasVoted={view.votedIds.includes(id)}
             justArrived={arrivals.includes(id)}
             players={players}
+            t={t}
           />
         ))}
       </div>
       <div style={{ textAlign: "center", fontSize: 32, ...SECONDARY }}>
-        Vote for anyone, even yourself
+        {t.mostLikelyTo.voteForAnyone}
       </div>
     </div>
   );
@@ -221,6 +231,7 @@ export interface HostProps {
 }
 
 export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -234,8 +245,11 @@ export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps)
     >
       <TvHeader
         variant="game"
-        gameName="Most Likely To"
-        progress={`Prompt ${view.roundNumber} of ${view.roundCount}`}
+        gameName={t.mostLikelyTo.title}
+        progress={format(t.mostLikelyTo.promptOf, {
+          round: view.roundNumber,
+          count: view.roundCount,
+        })}
         roomCode={room.code}
       />
       <PhaseEnter phaseKey={`${view.roundNumber}:${view.phase}`}>

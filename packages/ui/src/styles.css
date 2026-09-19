@@ -2,6 +2,10 @@
 @import "@fontsource/permanent-marker/index.css";
 @import "@fontsource/atkinson-hyperlegible/400.css";
 @import "@fontsource/atkinson-hyperlegible/700.css";
+/* The Hebrew faces are NOT imported here. Neither Latin face has Hebrew glyphs, so
+   Hebrew needs its own pair — but importing them here would make every English player
+   download both for glyphs they never render. They are fetched once Hebrew is actually
+   chosen; see apps/web/src/HebrewFonts.tsx. */
 @import "./fx.css";
 
 :root {
@@ -31,6 +35,14 @@
   --opg-radius-m: 30px 10px 26px 12px / 12px 26px 10px 30px;
   --opg-radius-m-alt: 12px 30px 10px 26px / 26px 10px 30px 12px;
   --opg-radius-button: 26px 10px 22px 12px / 12px 22px 10px 26px;
+}
+
+/* Hebrew has no Permanent Marker / Atkinson Hyperlegible glyphs, so the
+   `:root[lang="he"]` scope (set on <html> alongside dir="rtl") swaps both
+   font roles for faces that ship Hebrew and keep a hand-drawn/legible split. */
+:root[lang="he"] {
+  --opg-font-body: "Heebo", "Arial Hebrew", system-ui, sans-serif;
+  --opg-font-marker: "Secular One", "Arial Hebrew", system-ui, sans-serif;
 }
 
 .opg-root,

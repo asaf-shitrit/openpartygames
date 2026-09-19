@@ -26,6 +26,8 @@ import {
   useCue,
   useMoment,
 } from "@opg/ui";
+import { format, joinNamesAnd, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { MltHostView, MltOutcome, MltReveal } from "../state";
 import { REVEAL_MS } from "../state";
 import { avatarOf, nameOf, PromptLine } from "./common";
@@ -84,8 +86,10 @@ const FALLBACK_REVEAL: MltReveal = {
   matchedIds: [],
 };
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId): string {
+  return format(t.mostLikelyTo.avatarAlt, {
+    name: nameOf(players, id, t.common.someone),
+  });
 }
 
 interface RevealPlan {
@@ -177,63 +181,68 @@ function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
   };
 }
 
-/** Joins names in prose: "A", "A and B", "A, B and C". */
-export function joinNames(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  const last = names[names.length - 1];
-  return `${names.slice(0, -1).join(", ")} and ${last}`;
-}
-
 /** The stamp word for each outcome. */
-export function verdictStampText(outcome: MltOutcome): string {
-  if (outcome.kind === "picked") return "Most likely!";
-  if (outcome.kind === "tie") return "It's a tie!";
-  if (outcome.kind === "split") return "No clear pick";
-  return "No votes?!";
+export function verdictStampText(t: Dictionary, outcome: MltOutcome): string {
+  if (outcome.kind === "picked") return t.mostLikelyTo.mostLikely;
+  if (outcome.kind === "tie") return t.mostLikelyTo.itsATie;
+  if (outcome.kind === "split") return t.mostLikelyTo.noClearPick;
+  return t.mostLikelyTo.noVotesBang;
 }
 
 /** Who must explain themselves, or the stamp text itself when nobody is on the hook. */
 export function explainLine(
+  t: Dictionary,
   outcome: MltOutcome,
   players: PlayerSummary[],
 ): string {
   if (outcome.kind === "picked") {
-    return `Explain yourself, ${nameOf(players, outcome.pickedId)}!`;
+    return format(t.mostLikelyTo.explainYourself, {
+      name: nameOf(players, outcome.pickedId, t.common.someone),
+    });
   }
   if (outcome.kind === "tie") {
-    const names = outcome.tiedIds.map((id) => nameOf(players, id));
-    return `Explain yourselves, ${joinNames(names)}!`;
+    const names = outcome.tiedIds.map((id) => nameOf(players, id, t.common.someone));
+    return format(t.mostLikelyTo.explainYourselves, {
+      names: joinNamesAnd(t.common, names),
+    });
   }
-  return verdictStampText(outcome);
+  return verdictStampText(t, outcome);
 }
 
 /** The polite aria-live sentence read out at the verdict beat. */
 export function verdictSentence(
+  t: Dictionary,
   outcome: MltOutcome,
   players: PlayerSummary[],
 ): string {
-  const stamp = verdictStampText(outcome);
-  const caption = explainLine(outcome, players);
+  const stamp = verdictStampText(t, outcome);
+  const caption = explainLine(t, outcome, players);
   return stamp === caption ? stamp : `${stamp} ${caption}`;
 }
 
 /** The 9.0s points line: who read the room, or a miss line when nobody matched. */
 export function pointsLine(
+  t: Dictionary,
   matchedIds: readonly PlayerId[],
   players: PlayerSummary[],
 ): string {
-  if (matchedIds.length === 0) return "Nobody read the room this time";
-  const names = matchedIds.map((id) => nameOf(players, id));
-  if (names.length === 1) return `${names[0]} read the room: +500`;
-  return `${joinNames(names)} read the room: +500 each`;
+  if (matchedIds.length === 0) return t.mostLikelyTo.nobodyReadRoom;
+  const names = matchedIds.map((id) => nameOf(players, id, t.common.someone));
+  if (names.length === 1) {
+    return format(t.mostLikelyTo.readRoomOne, { name: names[0] ?? "" });
+  }
+  return format(t.mostLikelyTo.readRoomMany, { names: joinNamesAnd(t.common, names) });
 }
 
 /** The 10.5s sticky note: the final round points ahead to scores instead of the next prompt. */
-export function nextNoteText(roundNumber: number, roundCount: number): string {
+export function nextNoteText(
+  t: Dictionary,
+  roundNumber: number,
+  roundCount: number,
+): string {
   return roundNumber === roundCount
-    ? "Final scores next"
-    : "Next prompt coming up";
+    ? t.mostLikelyTo.finalScoresNext
+    : t.mostLikelyTo.nextPromptComing;
 }
 
 interface TileStamp {
@@ -253,23 +262,24 @@ interface VerdictArgs {
   verdictReached: boolean;
   verdictLive: boolean;
   players: PlayerSummary[];
+  t: Dictionary;
 }
 
 function pickedVerdictView(args: VerdictArgs, pickedId: PlayerId): VerdictView {
   return {
     tileStamp: {
       id: pickedId,
-      text: verdictStampText(args.outcome),
+      text: verdictStampText(args.t, args.outcome),
       live: args.verdictLive,
     },
     centeredStamp: null,
-    caption: explainLine(args.outcome, args.players),
+    caption: explainLine(args.t, args.outcome, args.players),
   };
 }
 
 function otherVerdictView(args: VerdictArgs): VerdictView {
-  const stamp = verdictStampText(args.outcome);
-  const caption = explainLine(args.outcome, args.players);
+  const stamp = verdictStampText(args.t, args.outcome);
+  const caption = explainLine(args.t, args.outcome, args.players);
   return {
     tileStamp: null,
     centeredStamp: stamp,
@@ -291,28 +301,30 @@ function VoterAvatar({
   players,
   id,
   live,
+  t,
 }: {
   players: PlayerSummary[];
   id: PlayerId;
   live: boolean;
+  t: Dictionary;
 }) {
   return (
     <FxIn live={live} preset="pop" style={{ display: "inline-flex" }}>
-      <Avatar id={avatarOf(players, id)} size={40} alt={avatarLabel(players, id)} />
+      <Avatar id={avatarOf(players, id)} size={40} alt={avatarLabel(t, players, id)} />
     </FxIn>
   );
 }
 
-function voteLabel(shown: number): string {
-  return `${shown} ${shown === 1 ? "vote" : "votes"}`;
+function voteLabel(t: Dictionary, shown: number): string {
+  return format(pickPluralByCount(shown, t.mostLikelyTo.votes), { count: shown });
 }
 
-function TallyRow({ count, shown }: { count: number; shown: number }) {
+function TallyRow({ count, shown, t }: { count: number; shown: number; t: Dictionary }) {
   return (
     <div style={{ height: 60, display: "flex", alignItems: "center", gap: 12 }}>
       <TallyScratch count={count} drawn={shown} size={50} />
       <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
-        {voteLabel(shown)}
+        {voteLabel(t, shown)}
       </div>
     </div>
   );
@@ -323,16 +335,18 @@ function VoterRow({
   shown,
   live,
   players,
+  t,
 }: {
   voters: PlayerId[];
   shown: number;
   live: boolean;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   return (
     <div style={{ height: 44, display: "flex", alignItems: "center", gap: 6 }}>
       {voters.slice(0, Math.min(shown, 4)).map((voterId) => (
-        <VoterAvatar key={voterId} players={players} id={voterId} live={live} />
+        <VoterAvatar key={voterId} players={players} id={voterId} live={live} t={t} />
       ))}
       {shown > 4 ? (
         <div style={{ fontSize: 28, fontWeight: 700 }}>+{shown - 4}</div>
@@ -397,10 +411,11 @@ interface RevealTileProps {
   live: boolean;
   players: PlayerSummary[];
   shakeRef: RefObject<HTMLElement | null>;
+  t: Dictionary;
 }
 
 function RevealTile(props: RevealTileProps) {
-  const { id, index, voters, order, drawn, compact, live, players } = props;
+  const { id, index, voters, order, drawn, compact, live, players, t } = props;
   const shown = marksForTarget(order, id, drawn);
   return (
     <div data-tile-id={id} style={TILE_SLOT}>
@@ -413,13 +428,13 @@ function RevealTile(props: RevealTileProps) {
         <Avatar
           id={avatarOf(players, id)}
           size={compact ? 88 : 110}
-          alt={avatarLabel(players, id)}
+          alt={avatarLabel(t, players, id)}
         />
         <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
-          {nameOf(players, id)}
+          {nameOf(players, id, t.common.someone)}
         </div>
-        <TallyRow count={voters.length} shown={shown} />
-        <VoterRow voters={voters} shown={shown} live={live} players={players} />
+        <TallyRow count={voters.length} shown={shown} t={t} />
+        <VoterRow voters={voters} shown={shown} live={live} players={players} t={t} />
         {props.stamp === null ? null : (
           <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} />
         )}
@@ -437,10 +452,11 @@ interface RevealTileRowProps {
   highlightedIds: readonly PlayerId[];
   verdict: VerdictView;
   shakeRef: RefObject<HTMLElement | null>;
+  t: Dictionary;
 }
 
 function RevealTileRow(props: RevealTileRowProps) {
-  const { reveal, plan, players, verdict, shakeRef } = props;
+  const { reveal, plan, players, verdict, shakeRef, t } = props;
   const compact = reveal.playerIds.length > 6;
   return (
     <div
@@ -465,6 +481,7 @@ function RevealTileRow(props: RevealTileRowProps) {
           live={props.live}
           players={players}
           shakeRef={shakeRef}
+          t={t}
         />
       ))}
     </div>
@@ -584,12 +601,14 @@ function VerdictAnnouncer({
   outcome,
   players,
   verdictReached,
+  t,
 }: {
   outcome: MltOutcome;
   players: PlayerSummary[];
   verdictReached: boolean;
+  t: Dictionary;
 }) {
-  const text = verdictReached ? verdictSentence(outcome, players) : "";
+  const text = verdictReached ? verdictSentence(t, outcome, players) : "";
   return (
     <output aria-live="polite" style={HIDDEN}>
       {text}
@@ -606,6 +625,7 @@ export interface HostRevealProps {
 }
 
 export function HostReveal(props: HostRevealProps) {
+  const { t } = useLocale();
   const reveal = props.view.reveal ?? FALLBACK_REVEAL;
   const plan = useMemo(() => revealPlan(reveal), [reveal]);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -627,6 +647,7 @@ export function HostReveal(props: HostRevealProps) {
     verdictReached: stage.verdictReached,
     verdictLive: stage.verdictLive,
     players: props.players,
+    t,
   });
   const highlightedIds = stage.verdictReached ? plan.spotlightTargetIds : [];
 
@@ -651,25 +672,27 @@ export function HostReveal(props: HostRevealProps) {
         highlightedIds={highlightedIds}
         verdict={verdict}
         shakeRef={rootRef}
+        t={t}
       />
       <Spotlight on={spotlightOn} targets={targets} />
       <VerdictCaption text={stage.verdictReached ? verdict.caption : null} />
       <PointsLine
         text={
           stage.pointsReached
-            ? pointsLine(reveal.matchedIds, props.players)
+            ? pointsLine(t, reveal.matchedIds, props.players)
             : null
         }
         live={isLive(moment, "points")}
       />
       <NextNote
-        text={nextNoteText(props.view.roundNumber, props.view.roundCount)}
+        text={nextNoteText(t, props.view.roundNumber, props.view.roundCount)}
         stage={stage}
       />
       <VerdictAnnouncer
         outcome={reveal.outcome}
         players={props.players}
         verdictReached={stage.verdictReached}
+        t={t}
       />
     </div>
   );

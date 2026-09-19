@@ -9,6 +9,8 @@ import type {
 } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { useScreenWakeLock } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
@@ -61,19 +63,23 @@ function readSavedName(): string {
   }
 }
 
-const ERROR_COPY = new Map<ErrorCode, string>([
-  ["room-full", "That room is full."],
-  ["room-locked", "That room is locked."],
-  ["name-taken", "That name is taken. Try another."],
-  ["name-invalid", "Names are 1–12 characters."],
-  ["not-enough-players", "Not enough players yet."],
-  ["invalid-action", "That didn't work. Check the game and packs."],
-]);
+/**
+ * Every code the server can send has a client-owned, localized message here; `message`
+ * (server prose, always English) is only a fallback for a code this map doesn't cover.
+ */
+function errorCopy(t: Dictionary): Map<ErrorCode, string> {
+  return new Map([
+    ["room-full", t.common.errorRoomFull],
+    ["room-locked", t.common.errorRoomLocked],
+    ["name-taken", t.common.errorNameTaken],
+    ["name-invalid", t.common.errorNameInvalid],
+    ["not-enough-players", t.common.errorNotEnoughPlayers],
+    ["invalid-action", t.common.errorInvalidAction],
+  ]);
+}
 
-function errorText(code: ErrorCode, message: string): string {
-  return (
-    ERROR_COPY.get(code) ?? (message || "Something went wrong. Try again.")
-  );
+function errorText(t: Dictionary, code: ErrorCode, message: string): string {
+  return errorCopy(t).get(code) ?? (message || t.common.errorGeneric);
 }
 
 function playerViewFrom(socket: RoomSocket): PlayerRoomView | null {
@@ -117,9 +123,9 @@ function busyFor(
   return joinRequested && !error;
 }
 
-function errorFor(error: RoomSocketError | null): string | null {
+function errorFor(t: Dictionary, error: RoomSocketError | null): string | null {
   if (!error) return null;
-  return errorText(error.code, error.message);
+  return errorText(t, error.code, error.message);
 }
 
 function showReconnect(
@@ -330,6 +336,7 @@ function GameStage({ view, socket, clock }: GameStageProps) {
 }
 
 export function PlayerApp({ code }: { code: string }) {
+  const { t } = useLocale();
   const socket = useRoomSocket({ code, role: "player" });
   const view = playerViewFrom(socket);
   const clock = socket.clock;
@@ -347,7 +354,7 @@ export function PlayerApp({ code }: { code: string }) {
   useScreenWakeLock(me !== null);
   const myAvatar = avatarFor(me);
   const myName = nameFor(me, joinedName);
-  const error = errorFor(socket.lastError);
+  const error = errorFor(t, socket.lastError);
 
   const donePicker = () => {
     markAvatarPicked(code, playerId);
@@ -365,7 +372,7 @@ export function PlayerApp({ code }: { code: string }) {
   };
 
   const kickedName = myName === "" ? undefined : myName;
-  const reconnectName = myName === "" ? "You" : myName;
+  const reconnectName = myName === "" ? t.lobby.you : myName;
 
   if (socket.kicked) {
     return <PhoneKicked name={kickedName} avatar={myAvatar} />;

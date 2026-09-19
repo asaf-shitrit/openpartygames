@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import { afterEach } from "vitest";
 import type { MltHostView } from "../../state";
 import { mostLikelyToPreviews } from "../preview";
@@ -21,7 +22,11 @@ function hostVoteView(): MltHostView {
 describe("StageVote", () => {
   it("shows the prompt and the voted count", () => {
     const view = hostVoteView();
-    render(<StageVote view={view} players={[]} />);
+    render(
+      <LocaleProvider>
+        <StageVote view={view} players={[]} />
+      </LocaleProvider>,
+    );
     expect(
       screen.getByText(`Voted so far (${view.votedIds.length} of ${view.playerIds.length})`),
     ).toBeTruthy();
@@ -29,7 +34,11 @@ describe("StageVote", () => {
 
   it("renders one placeholder per player who has not voted yet", () => {
     const view = hostVoteView();
-    render(<StageVote view={view} players={[]} />);
+    render(
+      <LocaleProvider>
+        <StageVote view={view} players={[]} />
+      </LocaleProvider>,
+    );
     const placeholders = screen.getAllByTestId("stage-vote-pending");
     expect(placeholders.length).toBe(
       view.playerIds.length - view.votedIds.length,
@@ -38,7 +47,11 @@ describe("StageVote", () => {
 
   it("shows nobody voted yet when votedIds is empty", () => {
     const view = { ...hostVoteView(), votedIds: [] };
-    render(<StageVote view={view} players={[]} />);
+    render(
+      <LocaleProvider>
+        <StageVote view={view} players={[]} />
+      </LocaleProvider>,
+    );
     expect(
       screen.getByText(`Voted so far (0 of ${view.playerIds.length})`),
     ).toBeTruthy();
