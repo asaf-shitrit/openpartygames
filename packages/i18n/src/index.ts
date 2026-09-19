@@ -1,6 +1,7 @@
 export {
   LOCALES,
   LOCALE_DIRECTION,
+  LOCALE_NAMES,
   directionFor,
   pluralCategory,
   pickPlural,

@@ -38,11 +38,18 @@
 }
 
 /* Hebrew has no Permanent Marker / Atkinson Hyperlegible glyphs, so the
-   `:root[lang="he"]` scope (set on <html> alongside dir="rtl") swaps both
-   font roles for faces that ship Hebrew and keep a hand-drawn/legible split. */
+   `:root[lang="he"]` scope (set on <html> alongside dir="rtl") adds faces that
+   ship Hebrew and keep the same hand-drawn/legible split.
+
+   The Latin faces stay first in each stack. Fallback is per glyph, so Hebrew
+   text still lands on Heebo and Secular One, while the Latin that survives a
+   Hebrew screen — the wordmark, room codes, a player who typed their name in
+   English — keeps the typeface it was designed in. */
 :root[lang="he"] {
-  --opg-font-body: "Heebo", "Arial Hebrew", system-ui, sans-serif;
-  --opg-font-marker: "Secular One", "Arial Hebrew", system-ui, sans-serif;
+  --opg-font-body:
+    "Atkinson Hyperlegible", "Heebo", "Arial Hebrew", system-ui, sans-serif;
+  --opg-font-marker:
+    "Permanent Marker", "Secular One", "Arial Hebrew", system-ui, sans-serif;
 }
 
 .opg-root,
