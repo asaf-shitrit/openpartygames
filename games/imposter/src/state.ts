@@ -5,6 +5,18 @@ import type { PlayerId } from "@opg/protocol";
 // Timing constants (the UI imports these).
 export const WORDS_PER_GAME = 6;
 export const WORD_CHECK_MS = 8000;
+/**
+ * Not a clue timer — the table sets the pace and no countdown is ever shown. This is the
+ * backstop for a turn that can no longer end on its own: "I'm done" is one tap on one phone,
+ * and if it does not land (a dropped frame, a phone that slept, a player who walked off) the
+ * turn waits forever and only the VIP can rescue it.
+ *
+ * Two minutes, not thirty seconds. A clue is one short phrase, so this is far past any real
+ * turn — including a player who is thinking hard, who must never be skipped by it. It exists
+ * to bound a stall, not to hurry anyone, and a shorter value starts cutting people off.
+ */
+export const CLUE_STALL_MS = 120000;
+
 export const VOTE_MS = 45000;
 export const REVEAL_MS = 12000;
 export const LAST_CHANCE_MS = 15000;
