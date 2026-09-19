@@ -244,6 +244,49 @@ describe("createContentSource.loadContent", () => {
     });
   });
 
+  it("dedupes drawing prompts shared by two enabled packs, keeping the first row", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf(
+        {
+          id: "cat-riding-a-skateboard",
+          prompt: "a cat riding a skateboard",
+          houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+        },
+        {
+          id: "cat-on-a-skateboard-again",
+          prompt: "  A cat riding a skateboard!  ",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
+        {
+          id: "a-bear-in-a-bathtub",
+          prompt: "a bear in a bathtub",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
+      ),
+    );
+
+    const content = await createContentSource(source).loadContent(
+      "drawing-prompts",
+      ["a", "b"],
+    );
+
+    expect(content).toEqual({
+      kind: "drawing-prompts",
+      items: [
+        {
+          id: "cat-riding-a-skateboard",
+          prompt: "a cat riding a skateboard",
+          houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+        },
+        {
+          id: "a-bear-in-a-bathtub",
+          prompt: "a bear in a bathtub",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
+      ],
+    });
+  });
+
   it("skips the query when no pack is enabled", async () => {
     const { reader: source, itemCalls } = reader(() => rowsOf());
 

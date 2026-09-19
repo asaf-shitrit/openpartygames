@@ -790,6 +790,72 @@ describe("crossPackErrors", () => {
     expect(errors[0]).toContain("packs/most-likely-to/pack-b.json");
   });
 
+  it("flags two drawing-prompt packs sharing a prompt, up to normalization", () => {
+    const entries = [
+      {
+        folder: "doodle-bluff",
+        filename: "pack-a.json",
+        pack: {
+          ...validDrawingPromptPack([drawingPrompt()]),
+          id: "pack-a",
+        },
+      },
+      {
+        folder: "doodle-bluff",
+        filename: "pack-b.json",
+        pack: {
+          ...validDrawingPromptPack([
+            drawingPrompt({
+              id: "cat-on-a-skateboard",
+              prompt: "  A cat riding a skateboard!  ",
+              houseTitles: [
+                "a moose in a hammock",
+                "a goat on a trampoline",
+                "a llama on a jet ski",
+                "a fox on a surfboard",
+              ],
+            }),
+          ]),
+          id: "pack-b",
+        },
+      },
+    ];
+
+    const errors = crossPackErrors(entries);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("packs/doodle-bluff/pack-b.json");
+    expect(errors[0]).toContain("pack-a");
+  });
+
+  it("does not flag two drawing-prompt packs that only share a house title", () => {
+    const entries = [
+      {
+        folder: "doodle-bluff",
+        filename: "pack-a.json",
+        pack: {
+          ...validDrawingPromptPack([drawingPrompt()]),
+          id: "pack-a",
+        },
+      },
+      {
+        folder: "doodle-bluff",
+        filename: "pack-b.json",
+        pack: {
+          ...validDrawingPromptPack([
+            drawingPrompt({
+              id: "bear-in-a-bathtub",
+              prompt: "a bear in a bathtub",
+              houseTitles: HOUSE_TITLES,
+            }),
+          ]),
+          id: "pack-b",
+        },
+      },
+    ];
+
+    expect(crossPackErrors(entries)).toEqual([]);
+  });
+
   it("does not flag packs of different kinds sharing a value, or packs with no overlap", () => {
     const entries = [
       {

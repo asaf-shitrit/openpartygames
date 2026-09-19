@@ -1,16 +1,24 @@
 // Per-kind content merging, shared by in-memory sources and tests. A new content kind adds one
 // entry here; the mapped type makes a missing entry a type error.
 import { normalizeAnswer } from "./text";
-import type { ContentKind, ContentOf, Fact, GameContent, Superlative, WordPair } from "./types";
+import type {
+  ContentKind,
+  ContentOf,
+  DrawingPrompt,
+  Fact,
+  GameContent,
+  Superlative,
+  WordPair,
+} from "./types";
 
 type Merger<K extends ContentKind> = (contents: readonly GameContent[]) => ContentOf<K>;
 
 /**
  * What makes two items "the same" across packs, per kind. `word-pairs` reuses the exact
  * `crew` string the per-pack validator already treats as the unique key (packs already require
- * it lowercase). Facts and superlatives don't have a cross-pack-unique `id` (validated unique
- * only within one pack), so their identity is the visible prompt a player would recognize as a
- * repeat, normalized the same way answers are compared elsewhere.
+ * it lowercase). Facts, superlatives and drawing prompts don't have a cross-pack-unique `id`
+ * (validated unique only within one pack), so their identity is the visible prompt a player
+ * would recognize as a repeat, normalized the same way answers are compared elsewhere.
  */
 function wordPairIdentity(item: WordPair): string {
   return item.crew;
@@ -19,6 +27,9 @@ function factIdentity(item: Fact): string {
   return normalizeAnswer(item.prompt);
 }
 function superlativeIdentity(item: Superlative): string {
+  return normalizeAnswer(item.prompt);
+}
+function drawingPromptIdentity(item: DrawingPrompt): string {
   return normalizeAnswer(item.prompt);
 }
 
@@ -59,7 +70,10 @@ const CONTENT_MERGERS = {
   }),
   "drawing-prompts": (contents) => ({
     kind: "drawing-prompts",
-    items: contents.flatMap((c) => (c.kind === "drawing-prompts" ? c.items : [])),
+    items: dedupeItems(
+      contents.flatMap((c) => (c.kind === "drawing-prompts" ? c.items : [])),
+      drawingPromptIdentity,
+    ),
   }),
 } satisfies { [K in ContentKind]: Merger<K> };
 

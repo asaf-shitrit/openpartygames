@@ -409,8 +409,8 @@ function promptDuplicateErrors(prompt, at, seenPrompts) {
 // Enabled packs merge into one pool at runtime (packages/sdk/src/content.ts), so the same item
 // showing up in two packs of the same kind becomes a repeat round even though each pack, checked
 // alone, has no duplicates. `crossPackErrors` mirrors that runtime identity: the exact `crew`
-// word for word-pairs, the normalized prompt for facts and superlatives (their `id` is only
-// unique within one pack, so it can't be the identity here).
+// word for word-pairs, the normalized prompt for facts, superlatives and drawing prompts (their
+// `id` is only unique within one pack, so it can't be the identity here).
 
 const CROSS_PACK_IDENTITY = Object.freeze({
   "word-pairs": (item) =>
@@ -422,6 +422,10 @@ const CROSS_PACK_IDENTITY = Object.freeze({
       ? { key: normalizeAnswer(item.prompt), value: item.prompt, field: "prompt" }
       : null,
   superlatives: (item) =>
+    isText(item.prompt)
+      ? { key: normalizeAnswer(item.prompt), value: item.prompt, field: "prompt" }
+      : null,
+  "drawing-prompts": (item) =>
     isText(item.prompt)
       ? { key: normalizeAnswer(item.prompt), value: item.prompt, field: "prompt" }
       : null,

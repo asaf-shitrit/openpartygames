@@ -165,6 +165,55 @@ describe("mergeContent", () => {
     });
   });
 
+  it("dedupes drawing prompts sharing a prompt, up to normalization", () => {
+    const catSkateboard = {
+      id: "cat-riding-a-skateboard",
+      prompt: "a cat riding a skateboard",
+      houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+    };
+    const duplicate = {
+      ...catSkateboard,
+      id: "cat-on-a-skateboard-again",
+      prompt: "  A cat riding a skateboard!  ",
+      houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+    };
+    const bearBathtub = {
+      id: "a-bear-in-a-bathtub",
+      prompt: "a bear in a bathtub",
+      houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+    };
+    const packA: GameContent = { kind: "drawing-prompts", items: [catSkateboard] };
+    const packB: GameContent = {
+      kind: "drawing-prompts",
+      items: [duplicate, bearBathtub],
+    };
+
+    expect(mergeContent("drawing-prompts", [packA, packB])).toEqual({
+      kind: "drawing-prompts",
+      items: [catSkateboard, bearBathtub],
+    });
+  });
+
+  it("does not dedupe drawing prompts that only share a house title", () => {
+    const catSkateboard = {
+      id: "cat-riding-a-skateboard",
+      prompt: "a cat riding a skateboard",
+      houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+    };
+    const bearBathtub = {
+      id: "a-bear-in-a-bathtub",
+      prompt: "a bear in a bathtub",
+      houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+    };
+    const packA: GameContent = { kind: "drawing-prompts", items: [catSkateboard] };
+    const packB: GameContent = { kind: "drawing-prompts", items: [bearBathtub] };
+
+    expect(mergeContent("drawing-prompts", [packA, packB])).toEqual({
+      kind: "drawing-prompts",
+      items: [catSkateboard, bearBathtub],
+    });
+  });
+
   it("merging a pack with itself yields itself", () => {
     const pack: GameContent = {
       kind: "word-pairs",
