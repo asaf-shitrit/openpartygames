@@ -73,7 +73,7 @@ export const LANDING_GAMES: LandingGame[] = [
     maxPlayers: 8,
     minutes: 15,
     icon: "pencil",
-    avatar: "cat",
+    avatar: "star",
   },
 ];
 
