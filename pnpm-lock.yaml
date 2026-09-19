@@ -68,6 +68,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/heebo':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/secular-one':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@opg/game-imposter':
         specifier: workspace:*
         version: link:../../games/imposter
@@ -239,13 +245,7 @@ importers:
       '@fontsource/atkinson-hyperlegible':
         specifier: ^5.3.0
         version: 5.3.0
-      '@fontsource/heebo':
-        specifier: ^5.3.0
-        version: 5.3.0
       '@fontsource/permanent-marker':
-        specifier: ^5.3.0
-        version: 5.3.0
-      '@fontsource/secular-one':
         specifier: ^5.3.0
         version: 5.3.0
       '@opg/protocol':

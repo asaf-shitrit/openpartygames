@@ -8,6 +8,7 @@ import {
 } from "@opg/ui";
 import type { SoundEngine } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
+import { HebrewFonts } from "./HebrewFonts";
 import { matchRoute, routeSurface, type Route, type Surface } from "./routes";
 import { usePathname } from "./router";
 import { HostApp } from "./screens/HostApp";
@@ -99,6 +100,7 @@ export function App({ engine }: AppProps = {}) {
   const surfaceEngine = useSurfaceEngine(surface, engine);
   return (
     <LocaleProvider>
+      <HebrewFonts />
       {/* The key remounts the provider when the surface changes, so it swaps engines. */}
       <SoundProvider key={surface} engine={surfaceEngine}>
         <RouteView route={route} />

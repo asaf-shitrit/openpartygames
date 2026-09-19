@@ -2,12 +2,10 @@
 @import "@fontsource/permanent-marker/index.css";
 @import "@fontsource/atkinson-hyperlegible/400.css";
 @import "@fontsource/atkinson-hyperlegible/700.css";
-/* Hebrew substitutes: neither Latin face has Hebrew glyphs. Secular One is a
-   rounded, playful display face that keeps a hand-drawn character for
-   headings/stamps; Heebo is a highly legible UI sans for body copy. */
-@import "@fontsource/secular-one/400.css";
-@import "@fontsource/heebo/400.css";
-@import "@fontsource/heebo/700.css";
+/* The Hebrew faces are NOT imported here. Neither Latin face has Hebrew glyphs, so
+   Hebrew needs its own pair — but importing them here would make every English player
+   download both for glyphs they never render. They are fetched once Hebrew is actually
+   chosen; see apps/web/src/HebrewFonts.tsx. */
 @import "./fx.css";
 
 :root {
