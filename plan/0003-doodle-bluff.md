@@ -45,7 +45,7 @@ Treat every row as settled. The plan is built around them.
 | Artist scoring | **The artist is paid per player who found the real title.** A clear drawing wins; nothing rewards a deliberately obscure drawing |
 | No-TV mode | A phones-only mode is planned and lands **before** this game is built. This plan does not design it, only states how Doodle Bluff behaves there |
 | No-TV audio | Phones are silent in no-TV mode (haptics only), so every reveal beat leaning on a sound cue needs a visual equivalent |
-| No-TV joining | Joining a no-TV room is by **reading the code aloud**. This plan assumes no invite link and no QR code exists there |
+| No-TV joining | Settled by no-TV mode, which shipped: the VIP's phone carries a QR code that is itself the share control. Either way Doodle Bluff adds no dependency on it |
 
 ## Game rules
 
@@ -482,7 +482,7 @@ The gallery is an in-game `gallery` phase before `isOver`, not part of the platf
 
 ## No-TV mode
 
-A phones-only mode is planned and lands before this game is built; this plan does not design it. **This section assumes no invite link and no QR code exists there — joining is by reading the room code aloud — and Doodle Bluff adds no dependency on either.** Nothing in this game surfaces a link, a QR code or a persistently displayed room code; the code lives in the platform's room chrome, which is the other plan's concern.
+No-TV mode shipped before this game was built. It landed with **more** than this plan assumed: the VIP's phone shows a QR code that doubles as the share control, so joining is not limited to reading the code aloud. That changes nothing here — **Doodle Bluff still surfaces no link, QR code or room code of its own**; the code lives in the platform's room chrome, which is the other plan's concern. The assumption this section was originally written under ("no invite link and no QR code exists there") is recorded as wrong rather than quietly deleted, because the conclusion it supported survives for a different reason than the one given.
 
 **Doodle Bluff opts in.** Its whole point is showing a drawing to the room, and a drawing is data every phone can already render — the pad, the phone's read-only view and the TV all call the same `paintDoodle`. There is no artifact that only a big screen can carry. Phones are never passed around, and nothing here needs them to be: each phone renders the drawing from the view it already receives.
 
@@ -545,6 +545,13 @@ The four per-kind tables, the pack rules including the four-house-title minimum,
 `src/ui/`: Host, Phone, `reveal-timeline.ts`, the gallery, `preview.ts`, award copy. The pad wired to the chunk action with client-side batching and the `sessionStorage` mirror.
 
 **Done when:** component tests pass in happy-dom with an injected clock and painter; the replay lands the right frame when mounted mid-phase and fires no replayed cues (`plan/0002-game-feel.md:43`); reduced motion shows the finished drawing; previews render in `/dev/moments` (`plan/0002-game-feel.md:252`).
+
+**What slice 4 settled that this plan did not anticipate:**
+
+- **The host view needed `drawnCounts`.** The draw phase is 130 seconds during which per-player progress is the TV's only content, and `drawnIds` only names who finished *both* drawings, so the TV could not show the "Drawing 1 of 2" state the artboard specifies. It is filled during `draw` and empty in every other phase, so nothing else pays for it.
+- **`DoodleView` takes a required `label`.** It shipped `aria-hidden` with no alternative, which means the titling screen — where the entire task is to look at the drawing — offered a screen reader nothing at all. A freehand drawing cannot be described from its strokes, so the caller has to name it; making the prop required is what forces every caller to. The words sit in a visually-hidden span beside the canvas rather than a `role` on it, because a canvas is not an image element and `jsx-a11y(prefer-tag-over-role)` is right to say so.
+- **The TV overflowed the 1080 stage, and no test could have caught it.** At 8 players the reveal ran 233px past the bottom and clipped the card carrying the real title. The cause was flex-basis: `flexGrow: 1` leaves the basis at `auto`, which sizes a column from its content, so the phase bodies grew with the player count. happy-dom reports every rect as zero (this plan's own risk list says so), so this was found by playing a full 8-player game and measuring, and that is the only way it could have been found. **Every future TV screen in this game should be measured the same way before it ships.**
+- **`/dev/moments` does not host these previews.** `MomentPlayer` is built around `ImposterHostView` and Imposter's own phase constants; the previews are exported and used by tests, as Most Likely To's and Real or Nah's are. Generalizing the moments player is its own piece of work, not a slice-4 detail.
 
 ### Slice 5 — registration and e2e
 Every row of the registration table, plus `e2e/browser/doodle-bluff.{ts,spec.ts}` and the API e2e loop.
