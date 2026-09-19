@@ -243,6 +243,8 @@ export const doodleHostViewSchema = z.object({
   playerIds: z.array(z.string()),
   /** Players who have finished both drawings, during `draw`. */
   drawnIds: z.array(z.string()),
+  /** Finished drawings per player, 0-2, during `draw`. Empty in every other phase. */
+  drawnCounts: z.record(z.string(), z.number()),
   roundNumber: z.number(),
   roundCount: z.number(),
   artistId: z.string().nullable(),

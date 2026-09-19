@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { DoodleView } from "./DoodleView";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaEncode } from "./geometry";
@@ -66,11 +66,26 @@ function twoStrokeDoodle(): Doodle {
 }
 
 describe("DoodleView", () => {
+  it("names the drawing, so the one element the screen is about is announced", () => {
+    const { getContext } = recordingContext();
+    render(
+      <DoodleView
+        doodle={twoStrokeDoodle()}
+        label="Ana's drawing"
+        clock={{ now: () => 0 }}
+        rectOf={() => RECT}
+        getContext={getContext}
+      />,
+    );
+    expect(screen.getByText("Ana's drawing")).toBeTruthy();
+  });
+
   it("paints the whole doodle immediately without a replay prop", () => {
     const { getContext, calls } = recordingContext();
     render(
       <DoodleView
         doodle={twoStrokeDoodle()}
+        label="Ana's drawing"
         clock={{ now: () => 0 }}
         rectOf={() => RECT}
         getContext={getContext}
@@ -85,6 +100,7 @@ describe("DoodleView", () => {
     render(
       <DoodleView
         doodle={twoStrokeDoodle()}
+        label="Ana's drawing"
         clock={{ now: () => 10_000 }}
         replay={{ startedAt: 0 }}
         rectOf={() => RECT}
@@ -102,6 +118,7 @@ describe("DoodleView", () => {
     render(
       <DoodleView
         doodle={twoStrokeDoodle()}
+        label="Ana's drawing"
         clock={{ now: () => 0 }}
         replay={{ startedAt: 0 }}
         rectOf={() => RECT}
@@ -124,6 +141,7 @@ describe("DoodleView", () => {
     render(
       <DoodleView
         doodle={twoStrokeDoodle()}
+        label="Ana's drawing"
         clock={clock}
         replay={{ startedAt: 0, replayMs: 2000 }}
         rectOf={() => RECT}

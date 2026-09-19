@@ -36,12 +36,18 @@ function steppingClock(startAt: number, stepMs: number) {
   return { now: () => (current += stepMs) };
 }
 
-// happy-dom's accessibility tree doesn't compute the canvas element's implicit img role
-// (real browsers do, per HTML-AAM), so tests find it by tag rather than screen.getByRole("img").
 function canvasEl(): HTMLCanvasElement {
   const el = document.body.querySelector("canvas");
   if (!el) throw new Error("expected a canvas");
   return el;
+}
+
+// The canvas is aria-hidden and the words sit in the span beside it, so that is what a
+// screen reader reads and what these assert on.
+function spokenLabel(): string {
+  const el = canvasEl().nextElementSibling;
+  if (!el) throw new Error("expected a label beside the canvas");
+  return el.textContent ?? "";
 }
 
 function drag(
@@ -57,7 +63,7 @@ function drag(
 }
 
 describe("DoodlePad", () => {
-  it("renders a role=img canvas with the prompt and stroke count in its aria-label", () => {
+  it("speaks the prompt and stroke count beside the canvas", () => {
     render(
       <DoodlePad
         prompt="a cat riding a skateboard"
@@ -66,12 +72,10 @@ describe("DoodlePad", () => {
         getContext={recordingContext()}
       />,
     );
-    expect(canvasEl().getAttribute("aria-label")).toBe(
-      "Your drawing for a cat riding a skateboard: 0 strokes so far",
-    );
+    expect(spokenLabel()).toBe("Your drawing for a cat riding a skateboard: 0 strokes so far");
   });
 
-  it("records a dragged stroke with its ink, quantized duration and gap, then updates the aria-label", () => {
+  it("records a dragged stroke with its ink, quantized duration and gap, then updates what is spoken", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
     const clock = steppingClock(0, 50); // each event call advances the clock by 50ms
     render(
@@ -97,7 +101,7 @@ describe("DoodlePad", () => {
     expect(stroke?.g).toBe(0); // first stroke has no prior stroke to gap from
     expect(stroke?.d).toBeGreaterThan(0);
     expect(deltaDecode(stroke?.p ?? [])[0]).toEqual([0, 0]);
-    expect(canvasEl().getAttribute("aria-label")).toBe("Your drawing for a cat: 1 stroke so far");
+    expect(spokenLabel()).toBe("Your drawing for a cat: 1 stroke so far");
   });
 
   it("only the first active pointer draws; a second pointer down is ignored", () => {
@@ -178,7 +182,7 @@ describe("DoodlePad", () => {
     expect(onChange.mock.calls.at(-1)?.[0]?.s).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(onChange.mock.calls.at(-1)?.[0]?.s).toHaveLength(1);
-    expect(canvasEl().getAttribute("aria-label")).toBe("Your drawing for a cat: 1 stroke so far");
+    expect(spokenLabel()).toBe("Your drawing for a cat: 1 stroke so far");
   });
 
   it("undo is disabled with nothing drawn", () => {

@@ -2,6 +2,7 @@
 // Pointer handling and timing live in ./useDoodlePad; this is the thin render (plan/0003-doodle-bluff.md).
 import type { CSSProperties } from "react";
 import type { ServerClock } from "../game-ui";
+import { SR_ONLY } from "../sr-only";
 import type { ClientRectLike } from "./geometry";
 import { DOODLE_INK_NAMES, DOODLE_INKS } from "./inks";
 import type { DoodleCanvasContext } from "./paint";
@@ -71,7 +72,9 @@ export function DoodlePad({
     <div style={{ display: "flex", flexDirection: "column", gap: 16, ...style }}>
       <canvas
         ref={canvasRef}
-        aria-label={ariaLabelFor(prompt, strokeCount)}
+        // The words live in the sibling <span> below: a canvas is not an image element, so it
+        // carries the drawing and the span carries what a screen reader says about it.
+        aria-hidden="true"
         {...handlers}
         style={{
           width: size,
@@ -82,6 +85,7 @@ export function DoodlePad({
           borderRadius: "30px 10px 26px 12px / 12px 26px 10px 30px",
         }}
       />
+      <span style={SR_ONLY}>{ariaLabelFor(prompt, strokeCount)}</span>
       <DoodlePalette
         inks={inks}
         inkNames={inkNames}

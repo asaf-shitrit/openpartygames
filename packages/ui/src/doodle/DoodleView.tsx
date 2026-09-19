@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { ServerClock } from "../game-ui";
 import { useReducedMotion } from "../reduced-motion";
+import { SR_ONLY } from "../sr-only";
 import type { ClientRectLike } from "./geometry";
 import { DOODLE_INKS } from "./inks";
 import { paintDoodle } from "./paint";
@@ -25,6 +26,13 @@ export interface DoodleReplay {
 
 export interface DoodleViewProps {
   doodle: Doodle;
+  /**
+   * What a screen reader says where the drawing is. Required, not optional: a freehand
+   * drawing can't be described from its strokes, so if the caller doesn't name it nothing
+   * can, and the one element the whole screen is about goes unannounced. Say who drew it
+   * ("Ana's drawing"), not what it shows — nobody knows what it shows.
+   */
+  label: string;
   inks?: readonly string[];
   clock: ServerClock;
   /** Animates the doodle in from `startedAt`. Omit for an immediate, static render. */
@@ -88,6 +96,7 @@ function paint(canvas: HTMLCanvasElement, view: PaintView, upTo: DoodleUpTo | un
 
 export function DoodleView({
   doodle,
+  label,
   inks = DOODLE_INKS,
   clock,
   replay,
@@ -149,11 +158,14 @@ export function DoodleView({
   }, [doodle, getContext, inks, lineWidth, rectOf, replay, size]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      className={className}
-      style={{ width: size, height: size, ...style }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className={className}
+        style={{ width: size, height: size, ...style }}
+      />
+      <span style={SR_ONLY}>{label}</span>
+    </>
   );
 }

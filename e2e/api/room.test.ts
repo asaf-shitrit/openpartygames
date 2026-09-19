@@ -28,6 +28,14 @@ import {
   type MltPlayerView,
 } from "../../games/most-likely-to/src/state";
 import {
+  doodleHostViewSchema,
+  doodlePlayerViewSchema,
+  drawingIdOf,
+  type DoodleHostView,
+  type DoodlePlayerView,
+  type Stroke,
+} from "../../games/doodle-bluff/src/state";
+import {
   BASE_URL,
   createRoom,
   health,
@@ -105,6 +113,33 @@ function isRonPhase(client: SocketClient, phase: "write" | "vote"): boolean {
   return parsed.success && parsed.data.phase === phase;
 }
 
+/** The doodle-bluff host view for the room's active game. */
+function doodleHostView(client: SocketClient): DoodleHostView {
+  const game = hostViewOf(client).game;
+  if (game === null) throw new Error("no active game");
+  return doodleHostViewSchema.parse(game.view);
+}
+
+/** The doodle-bluff player view for the room's active game. */
+function doodlePlayerView(client: SocketClient): DoodlePlayerView {
+  const game = playerViewOf(client).game;
+  if (game === null) throw new Error("player has no active game");
+  return doodlePlayerViewSchema.parse(game.view);
+}
+
+/** True when this client's own view has reached the given doodle-bluff phase. */
+function isDoodlePhase(
+  client: SocketClient,
+  phase: "draw" | "title" | "vote",
+): boolean {
+  const view: RoomView | null = client.latest;
+  if (view === null || view.role !== "player" || view.game === null) {
+    return false;
+  }
+  const parsed = doodlePlayerViewSchema.safeParse(view.game.view);
+  return parsed.success && parsed.data.phase === phase;
+}
+
 function vipOf(lobby: Lobby): SocketClient {
   const vipId = hostViewOf(lobby.host).vipId;
   const vip = lobby.players.find((player) => player.playerId === vipId);
@@ -147,6 +182,22 @@ function ronSignatureOf(client: SocketClient): string {
   if (view === null || view.role !== "host") return "no-view";
   if (view.game === null) return `lobby:${view.lobbyScreen}`;
   return ronSignature(ronHostView(client));
+}
+
+function doodleSignature(view: DoodleHostView): string {
+  return JSON.stringify({
+    phase: view.phase,
+    round: view.roundNumber,
+    written: view.writtenIds,
+    voted: view.votedIds,
+  });
+}
+
+function doodleSignatureOf(client: SocketClient): string {
+  const view: RoomView | null = client.latest;
+  if (view === null || view.role !== "host") return "no-view";
+  if (view.game === null) return `lobby:${view.lobbyScreen}`;
+  return doodleSignature(doodleHostView(client));
 }
 
 async function newRoom(): Promise<{ code: string; hostToken: string }> {
@@ -350,6 +401,181 @@ async function playRealOrNah(lobby: Lobby, step = 0): Promise<void> {
     `real-or-nah phase ${gameView.phase}`,
   );
   await playRealOrNah(lobby, step + 1);
+}
+
+// ---------- Doodle Bluff ----------
+
+/** A stroke with `pointCount` points, well inside every per-stroke and per-chunk cap. */
+function makeStroke(pointCount: number, ink = 0): Stroke {
+  const p: number[] = [500, 500];
+  for (let i = 1; i < pointCount; i += 1) p.push(3, -2);
+  return { c: ink, d: 100, g: 0, p };
+}
+
+function sendStrokes(
+  player: SocketClient,
+  drawingId: string,
+  from: number,
+  strokes: Stroke[],
+): void {
+  player.send({
+    t: "game-action",
+    action: { type: "strokes", drawingId, from, strokes },
+  });
+}
+
+function sendDoodleDone(player: SocketClient, drawingId: string): void {
+  player.send({ t: "game-action", action: { type: "doodle-done", drawingId } });
+}
+
+/** Draws one drawing in a single chunk and marks it done. */
+async function drawSimple(player: SocketClient, drawingId: string): Promise<void> {
+  await player.waitFor(
+    safe((client) => isDoodlePhase(client, "draw")),
+    WAIT_MS,
+    "drawer ready",
+  );
+  sendStrokes(player, drawingId, 0, [makeStroke(3)]);
+  await player.waitFor(
+    safe((client) => doodlePlayerView(client).myStrokeCounts[drawingId] === 1),
+    WAIT_MS,
+    `strokes applied ${drawingId}`,
+  );
+  sendDoodleDone(player, drawingId);
+  await player.waitFor(
+    safe((client) => doodlePlayerView(client).myDone[drawingId] ?? false),
+    WAIT_MS,
+    `drawing done ${drawingId}`,
+  );
+}
+
+/**
+ * Draws one drawing across two chunks using the `from` cursor from `myStrokeCounts`, the
+ * chunked-upload path that exists nowhere else in the product. Then replays the first,
+ * already-applied chunk with its stale `from` — the idempotency guarantee a reconnecting
+ * phone depends on — and asserts the replay added nothing.
+ */
+async function drawChunkedWithReplay(
+  player: SocketClient,
+  drawingId: string,
+): Promise<void> {
+  await player.waitFor(
+    safe((client) => isDoodlePhase(client, "draw")),
+    WAIT_MS,
+    "drawer ready",
+  );
+  const chunk1 = [makeStroke(4), makeStroke(3)];
+  sendStrokes(player, drawingId, 0, chunk1);
+  await player.waitFor(
+    safe(
+      (client) =>
+        doodlePlayerView(client).myStrokeCounts[drawingId] === chunk1.length,
+    ),
+    WAIT_MS,
+    "first chunk applied",
+  );
+
+  const chunk2 = [makeStroke(5)];
+  sendStrokes(player, drawingId, chunk1.length, chunk2);
+  const total = chunk1.length + chunk2.length;
+  await player.waitFor(
+    safe((client) => doodlePlayerView(client).myStrokeCounts[drawingId] === total),
+    WAIT_MS,
+    "second chunk applied",
+  );
+
+  // Stale replay: `from` no longer matches the drawing's current stroke count, so the
+  // rules reject it as a no-op rather than appending the strokes a second time.
+  sendStrokes(player, drawingId, 0, chunk1);
+  sendDoodleDone(player, drawingId);
+  await player.waitFor(
+    safe((client) => doodlePlayerView(client).myDone[drawingId] ?? false),
+    WAIT_MS,
+    "chunked drawing done",
+  );
+  expect(doodlePlayerView(player).myStrokeCounts[drawingId]).toBe(total);
+}
+
+/** One title submission for the current drawing, or a skip when nobody can title it. */
+async function actDoodleTitle(view: DoodleHostView, lobby: Lobby): Promise<void> {
+  const writerId = view.playerIds.find(
+    (id) => id !== view.artistId && !view.writtenIds.includes(id),
+  );
+  const writer = lobby.players.find((player) => player.playerId === writerId);
+  if (!writer) {
+    vipOf(lobby).send({ t: "skip-phase" });
+    return;
+  }
+  await writer.waitFor(
+    safe((client) => isDoodlePhase(client, "title")),
+    WAIT_MS,
+    "titler ready",
+  );
+  const text = `title p${String(playerIndex(lobby, writer))} r${String(view.roundNumber)}`;
+  writer.send({ t: "game-action", action: { type: "title", text } });
+}
+
+/** One vote for the current ballot, or a skip when nobody can vote on it. */
+async function actDoodleVote(view: DoodleHostView, lobby: Lobby): Promise<void> {
+  const voterId = view.playerIds.find(
+    (id) => id !== view.artistId && !view.votedIds.includes(id),
+  );
+  const voter = lobby.players.find((player) => player.playerId === voterId);
+  if (!voter) {
+    vipOf(lobby).send({ t: "skip-phase" });
+    return;
+  }
+  await voter.waitFor(
+    safe((client) => isDoodlePhase(client, "vote")),
+    WAIT_MS,
+    "voter ready",
+  );
+  const options = doodlePlayerView(voter).options ?? [];
+  const pick = options.find((option) => !option.mine) ?? options[0];
+  voter.send({
+    t: "game-action",
+    action: { type: "vote", optionId: pick?.id ?? "" },
+  });
+}
+
+/** One doodle-bluff action for the current phase, driven by the host's view. */
+async function actDoodle(view: DoodleHostView, lobby: Lobby): Promise<void> {
+  switch (view.phase) {
+    case "draw":
+      return;
+    case "reveal":
+    case "gallery":
+      vipOf(lobby).send({ t: "skip-phase" });
+      return;
+    case "title":
+      await actDoodleTitle(view, lobby);
+      return;
+    case "vote":
+      await actDoodleVote(view, lobby);
+      return;
+  }
+}
+
+/** Drives a started doodle-bluff game (past `draw`) to its results screen. */
+async function playDoodleBluff(lobby: Lobby, step = 0): Promise<void> {
+  if (step > MAX_STEPS) {
+    throw new Error("doodle-bluff game exceeded its step budget");
+  }
+  const view = hostViewOf(lobby.host);
+  if (view.lobbyScreen === "results" && view.game === null) return;
+  if (view.game === null) {
+    await sleep(20);
+    await playDoodleBluff(lobby, step + 1);
+    return;
+  }
+  const gameView = doodleHostView(lobby.host);
+  await actDoodle(gameView, lobby);
+  await lobby.host.waitFor(
+    (client) => doodleSignatureOf(client) !== doodleSignature(gameView),
+    WAIT_MS,
+    `doodle-bluff phase ${gameView.phase}`,
+  );
+  await playDoodleBluff(lobby, step + 1);
 }
 
 async function closeAll(
@@ -639,6 +865,53 @@ describe("api e2e", () => {
     const view = hostViewOf(lobby.host);
     expect(view.lobbyScreen).toBe("results");
     expect(view.lastResult?.gameId).toBe("real-or-nah");
+    expect((view.lastResult?.winnerIds ?? []).length).toBeGreaterThan(0);
+
+    await closeAll(lobby);
+  });
+
+  it("drives Doodle Bluff's chunked upload with an idempotent replay, then plays a full game to awards", async () => {
+    const lobby = await makeLobby(3);
+    await startGame(lobby, "doodle-bluff");
+    await lobby.host.waitFor(
+      safe((client) => doodleHostView(client).phase === "draw"),
+      WAIT_MS,
+      "doodle-bluff draw phase",
+    );
+
+    const [artist] = lobby.players;
+    if (!artist || artist.playerId === null) {
+      throw new Error("expected an artist");
+    }
+    const chunkedDrawingId = drawingIdOf(artist.playerId, 0);
+    await drawChunkedWithReplay(artist, chunkedDrawingId);
+
+    const remainingDrawings = lobby.players.flatMap((player) => {
+      if (player.playerId === null) throw new Error("player has no id");
+      const playerId = player.playerId;
+      return ([0, 1] as const)
+        .map((slot) => drawingIdOf(playerId, slot))
+        .filter((drawingId) => drawingId !== chunkedDrawingId)
+        .map((drawingId) => ({ player, drawingId }));
+    });
+    await Promise.all(
+      remainingDrawings.map(({ player, drawingId }) =>
+        drawSimple(player, drawingId),
+      ),
+    );
+
+    await lobby.host.waitFor(
+      safe((client) => doodleHostView(client).phase !== "draw"),
+      WAIT_MS,
+      "draw phase ended",
+    );
+
+    await playDoodleBluff(lobby);
+
+    const view = hostViewOf(lobby.host);
+    expect(view.lobbyScreen).toBe("results");
+    expect(view.game).toBeNull();
+    expect(view.lastResult?.gameId).toBe("doodle-bluff");
     expect((view.lastResult?.winnerIds ?? []).length).toBeGreaterThan(0);
 
     await closeAll(lobby);

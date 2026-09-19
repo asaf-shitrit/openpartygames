@@ -87,6 +87,11 @@ export function doneDrawingIds(state: DoodleState): PlayerId[] {
   return state.playerIds.filter((id) => isDoneDrawing(state, id));
 }
 
+/** How many of a player's two drawings are finished. The TV shows this for the whole draw phase. */
+export function doneDrawingCount(state: DoodleState, playerId: PlayerId): number {
+  return ([0, 1] as const).filter((slot) => isSlotDone(state, drawingIdOf(playerId, slot))).length;
+}
+
 export function totalPoints(strokes: readonly Stroke[]): number {
   return strokes.reduce((sum, s) => sum + s.p.length / 2, 0);
 }

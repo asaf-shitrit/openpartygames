@@ -39,6 +39,9 @@ function expectViewsParse(state: DoodleState, ctx: GameContext<DrawingPromptCont
   seen.add(state.phase);
   const host = buildHostView(state);
   expect(doodleHostViewSchema.parse(host)).toStrictEqual(host);
+  // Progress is only ever on the TV during `draw`; every other phase keeps it off the wire.
+  const countedIds = state.phase === "draw" ? state.playerIds : [];
+  expect(Object.keys(host.drawnCounts)).toStrictEqual(countedIds);
   for (const player of ctx.players) {
     const view = buildPlayerView(state, player.id);
     expect(doodlePlayerViewSchema.parse(view)).toStrictEqual(view);

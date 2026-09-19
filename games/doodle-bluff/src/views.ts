@@ -2,7 +2,7 @@
 // view never carries another player's prompt, title or vote. Each field is its own small helper
 // so buildHostView/buildPlayerView stay a flat object literal with no branching of their own.
 import type { PlayerId } from "@opg/protocol";
-import { doneDrawingIds, galleryEntries } from "./rules";
+import { doneDrawingCount, doneDrawingIds, galleryEntries } from "./rules";
 import {
   drawingIdOf,
   type DoodleHostOption,
@@ -26,6 +26,12 @@ function optionsVisible(state: DoodleState): boolean {
 function hostOptions(state: DoodleState): DoodleHostOption[] | null {
   if (!optionsVisible(state)) return null;
   return (state.options ?? []).map((o) => ({ id: o.id, text: o.text }));
+}
+
+/** Only the draw phase shows progress, so every other phase keeps it off the wire. */
+function drawnCountsFor(state: DoodleState): Record<PlayerId, number> {
+  if (state.phase !== "draw") return {};
+  return Object.fromEntries(state.playerIds.map((id) => [id, doneDrawingCount(state, id)]));
 }
 
 function writtenIdsFor(state: DoodleState): PlayerId[] {
@@ -54,6 +60,7 @@ export function buildHostView(state: DoodleState): DoodleHostView {
     phase: state.phase,
     playerIds: [...state.playerIds],
     drawnIds: doneDrawingIds(state),
+    drawnCounts: drawnCountsFor(state),
     roundNumber: state.shownCount,
     roundCount: state.plannedRounds,
     artistId: drawing === null ? null : drawing.artistId,

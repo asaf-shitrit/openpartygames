@@ -1,5 +1,6 @@
 // @opg/ui — the Doodle Notebook UI kit.
 export { Stage, PhoneScreen } from "./layout";
+export { SR_ONLY } from "./sr-only";
 export type { StageProps, PhoneScreenProps } from "./layout";
 
 export {

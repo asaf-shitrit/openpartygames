@@ -479,4 +479,9 @@ export const doodleBluff: GameDefinition<
   scores,
   bot,
   awards: doodleBluffAwards,
+  // A drawing is data every phone already renders — the pad, the read-only view and the TV all
+  // call the same paintDoodle — so nothing here needs a big screen to carry it. The reveal is a
+  // weaker moment on eight separate screens than on one; that is a presentation cost, not a
+  // blocker. See "## No-TV mode" in plan/0003-doodle-bluff.md.
+  noTv: true,
 };

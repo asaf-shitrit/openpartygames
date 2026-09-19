@@ -1,5 +1,10 @@
 // Game registry: maps a game id to its TV and phone screens.
 import {
+  doodleHostViewSchema,
+  doodlePlayerViewSchema,
+} from "@opg/game-doodle-bluff";
+import { doodleBluffUi } from "@opg/game-doodle-bluff/ui";
+import {
   imposterHostViewSchema,
   imposterPlayerViewSchema,
 } from "@opg/game-imposter";
@@ -58,6 +63,16 @@ export const LANDING_GAMES: LandingGame[] = [
     maxPlayers: 8,
     minutes: 12,
     icon: "point",
+    avatar: "cat",
+  },
+  {
+    id: "doodle-bluff",
+    name: "Doodle Bluff",
+    blurb: "Draw the prompt, write a title. Bluff or find the real one.",
+    minPlayers: 3,
+    maxPlayers: 8,
+    minutes: 15,
+    icon: "pencil",
     avatar: "cat",
   },
 ];
@@ -160,6 +175,14 @@ const GAME_UIS = new Map<string, AnyGameUi>([
       ui: mostLikelyToUi,
       hostViewSchema: mltHostViewSchema,
       playerViewSchema: mltPlayerViewSchema,
+    }),
+  ],
+  [
+    "doodle-bluff",
+    registerGame({
+      ui: doodleBluffUi,
+      hostViewSchema: doodleHostViewSchema,
+      playerViewSchema: doodlePlayerViewSchema,
     }),
   ],
 ]);
