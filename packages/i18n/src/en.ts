@@ -3,6 +3,7 @@
 // is a compile error, same trick as the content-kind `satisfies Record<...>` maps.
 export const en = {
   common: {
+    languageLabel: "Language",
     someone: "Someone",
     errorRoomFull: "That room is full.",
     errorRoomLocked: "That room is locked.",

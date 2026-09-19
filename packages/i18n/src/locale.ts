@@ -4,6 +4,16 @@
 export const LOCALES = ["en", "he"] as const;
 export type Locale = (typeof LOCALES)[number];
 
+/**
+ * Each locale's name written in that locale. A picker labelled "Hebrew" in English is
+ * no use to someone who only reads Hebrew, so a language never names itself in another
+ * language. Not in the dictionaries: these read the same whatever the current locale is.
+ */
+export const LOCALE_NAMES = {
+  en: "English",
+  he: "עברית",
+} satisfies Record<Locale, string>;
+
 export type Direction = "ltr" | "rtl";
 
 export const LOCALE_DIRECTION = {

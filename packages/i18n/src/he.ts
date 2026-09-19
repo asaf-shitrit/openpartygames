@@ -6,6 +6,7 @@ import type { Dictionary } from "./dictionary";
 
 export const he: Dictionary = {
   common: {
+    languageLabel: "שפה",
     someone: "מישהו",
     errorRoomFull: "החדר מלא.",
     errorRoomLocked: "החדר נעול.",

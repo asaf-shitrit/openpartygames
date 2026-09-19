@@ -14,6 +14,7 @@ import {
 import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { ApiError, getRoomInfo } from "../api";
+import { LanguagePicker } from "../LanguagePicker";
 
 export interface PhoneJoinProps {
   initialCode?: string;
@@ -50,6 +51,23 @@ function BrandHeader({ t }: { t: Dictionary }) {
       >
         {t.join.brand}
       </div>
+    </div>
+  );
+}
+
+/** The brand mark and the language choice share the top line. */
+function ScreenHeader({ t }: { t: Dictionary }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <BrandHeader t={t} />
+      <LanguagePicker t={t} />
     </div>
   );
 }
@@ -325,7 +343,7 @@ export function PhoneJoin({
 
   return (
     <PhoneScreen>
-      <BrandHeader t={t} />
+      <ScreenHeader t={t} />
       <div
         style={{
           flexGrow: 1,
