@@ -12,6 +12,7 @@
   "dependencies": {
     "@fontsource/heebo": "^5.3.0",
     "@fontsource/secular-one": "^5.3.0",
+    "@opg/game-doodle-bluff": "workspace:*",
     "@opg/game-imposter": "workspace:*",
     "@opg/game-most-likely-to": "workspace:*",
     "@opg/game-real-or-nah": "workspace:*",

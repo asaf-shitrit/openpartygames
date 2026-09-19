@@ -140,6 +140,59 @@ describe("createContentSource.loadContent", () => {
     expect(itemCalls).toEqual([]);
   });
 
+  it("merges drawing prompts", async () => {
+    const { reader: source, itemCalls } = reader(() =>
+      rowsOf({
+        id: "cat-riding-a-skateboard",
+        prompt: "a cat riding a skateboard",
+        houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+      }),
+    );
+
+    const content = await createContentSource(source).loadContent(
+      "drawing-prompts",
+      ["everyday"],
+    );
+
+    expect(content).toEqual({
+      kind: "drawing-prompts",
+      items: [
+        {
+          id: "cat-riding-a-skateboard",
+          prompt: "a cat riding a skateboard",
+          houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+        },
+      ],
+    });
+    expect(itemCalls).toEqual([
+      { packIds: ["everyday"], kind: "drawing-prompts" },
+    ]);
+  });
+
+  it("does not load a superlative as a drawing prompt", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf({ id: "cats", prompt: "adopt a dozen cats" }),
+    );
+
+    await expect(
+      createContentSource(source).loadContent("drawing-prompts", ["a"]),
+    ).rejects.toThrow("pack item is not a drawing prompt");
+  });
+
+  it("does not load a drawing prompt as a superlative", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf({
+        id: "cat-riding-a-skateboard",
+        prompt: "a cat riding a skateboard",
+        houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+      }),
+    );
+
+    await expect(
+      createContentSource(source).loadContent("superlatives", ["a"]),
+    ).rejects.toThrow("pack item is not a superlative");
+  });
+
   it("does not load a superlative as a fact", async () => {
     const { reader: source } = reader(() =>
       rowsOf({ id: "cats", prompt: "adopt a dozen cats" }),
@@ -187,6 +240,49 @@ describe("createContentSource.loadContent", () => {
       items: [
         { crew: "giraffe", decoy: "zebra" },
         { crew: "otter", decoy: "seal" },
+      ],
+    });
+  });
+
+  it("dedupes drawing prompts shared by two enabled packs, keeping the first row", async () => {
+    const { reader: source } = reader(() =>
+      rowsOf(
+        {
+          id: "cat-riding-a-skateboard",
+          prompt: "a cat riding a skateboard",
+          houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+        },
+        {
+          id: "cat-on-a-skateboard-again",
+          prompt: "  A cat riding a skateboard!  ",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
+        {
+          id: "a-bear-in-a-bathtub",
+          prompt: "a bear in a bathtub",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
+      ),
+    );
+
+    const content = await createContentSource(source).loadContent(
+      "drawing-prompts",
+      ["a", "b"],
+    );
+
+    expect(content).toEqual({
+      kind: "drawing-prompts",
+      items: [
+        {
+          id: "cat-riding-a-skateboard",
+          prompt: "a cat riding a skateboard",
+          houseTitles: ["a dog on a scooter", "a squirrel driving a bus"],
+        },
+        {
+          id: "a-bear-in-a-bathtub",
+          prompt: "a bear in a bathtub",
+          houseTitles: ["a moose in a hammock", "a goat on a trampoline"],
+        },
       ],
     });
   });

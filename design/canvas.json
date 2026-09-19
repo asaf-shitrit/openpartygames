@@ -21,6 +21,10 @@
       "name": "No-TV mode"
     },
     {
+      "id": "doodle-bluff",
+      "name": "Doodle Bluff"
+    },
+    {
       "id": "style-options",
       "name": "Style options (not picked)"
     }
@@ -28,7 +32,7 @@
   "artboards": [
     {
       "file": "TVLanding.dc.html",
-      "title": "TV · Landing",
+      "title": "TV \u00b7 Landing",
       "page": "setup",
       "x": 0,
       "y": 0,
@@ -37,7 +41,7 @@
     },
     {
       "file": "Main.dc.html",
-      "title": "TV · Lobby",
+      "title": "TV \u00b7 Lobby",
       "page": "setup",
       "x": 2040,
       "y": 0,
@@ -46,7 +50,7 @@
     },
     {
       "file": "TVGamePicker.dc.html",
-      "title": "TV · Game picker",
+      "title": "TV \u00b7 Game picker",
       "page": "setup",
       "x": 4080,
       "y": 0,
@@ -55,7 +59,7 @@
     },
     {
       "file": "PhoneJoin.dc.html",
-      "title": "Phone · Join",
+      "title": "Phone \u00b7 Join",
       "page": "setup",
       "x": 2040,
       "y": 1280,
@@ -64,7 +68,7 @@
     },
     {
       "file": "PhoneAvatarPicker.dc.html",
-      "title": "Phone · Pick a doodle",
+      "title": "Phone \u00b7 Pick a doodle",
       "page": "setup",
       "x": 2530,
       "y": 1280,
@@ -73,7 +77,7 @@
     },
     {
       "file": "PhoneLobby.dc.html",
-      "title": "Phone · Lobby",
+      "title": "Phone \u00b7 Lobby",
       "page": "setup",
       "x": 3020,
       "y": 1280,
@@ -82,7 +86,7 @@
     },
     {
       "file": "PhoneVIPControls.dc.html",
-      "title": "Phone · VIP controls (scrolls)",
+      "title": "Phone \u00b7 VIP controls (scrolls)",
       "page": "setup",
       "x": 4080,
       "y": 1280,
@@ -91,7 +95,7 @@
     },
     {
       "file": "TVImposterWordCheck.dc.html",
-      "title": "TV · Imposter · Check your phones",
+      "title": "TV \u00b7 Imposter \u00b7 Check your phones",
       "page": "imposter",
       "x": 0,
       "y": 0,
@@ -100,7 +104,7 @@
     },
     {
       "file": "TVImposterClues.dc.html",
-      "title": "TV · Imposter · Clue turns",
+      "title": "TV \u00b7 Imposter \u00b7 Clue turns",
       "page": "imposter",
       "x": 2040,
       "y": 0,
@@ -109,7 +113,7 @@
     },
     {
       "file": "TVImposterVoting.dc.html",
-      "title": "TV · Imposter · Voting",
+      "title": "TV \u00b7 Imposter \u00b7 Voting",
       "page": "imposter",
       "x": 4080,
       "y": 0,
@@ -118,7 +122,7 @@
     },
     {
       "file": "TVImposterReveal.dc.html",
-      "title": "TV · Imposter · Reveal",
+      "title": "TV \u00b7 Imposter \u00b7 Reveal",
       "page": "imposter",
       "x": 6120,
       "y": 0,
@@ -127,7 +131,7 @@
     },
     {
       "file": "TVImposterLastChance.dc.html",
-      "title": "TV · Imposter · Last chance",
+      "title": "TV \u00b7 Imposter \u00b7 Last chance",
       "page": "imposter",
       "x": 8160,
       "y": 0,
@@ -136,7 +140,7 @@
     },
     {
       "file": "TVImposterResult.dc.html",
-      "title": "TV · Imposter · Round result",
+      "title": "TV \u00b7 Imposter \u00b7 Round result",
       "page": "imposter",
       "x": 10200,
       "y": 0,
@@ -145,7 +149,7 @@
     },
     {
       "file": "PhoneImposterCrewCard.dc.html",
-      "title": "Phone · Imposter · Crew word",
+      "title": "Phone \u00b7 Imposter \u00b7 Crew word",
       "page": "imposter",
       "x": 0,
       "y": 1280,
@@ -154,7 +158,7 @@
     },
     {
       "file": "PhoneImposterCard.dc.html",
-      "title": "Phone · Imposter · Imposter card",
+      "title": "Phone \u00b7 Imposter \u00b7 Imposter card",
       "page": "imposter",
       "x": 490,
       "y": 1280,
@@ -163,7 +167,7 @@
     },
     {
       "file": "PhoneImposterYourTurn.dc.html",
-      "title": "Phone · Imposter · Your turn",
+      "title": "Phone \u00b7 Imposter \u00b7 Your turn",
       "page": "imposter",
       "x": 2040,
       "y": 1280,
@@ -172,7 +176,7 @@
     },
     {
       "file": "PhoneImposterVote.dc.html",
-      "title": "Phone · Imposter · Vote",
+      "title": "Phone \u00b7 Imposter \u00b7 Vote",
       "page": "imposter",
       "x": 4080,
       "y": 1280,
@@ -181,7 +185,7 @@
     },
     {
       "file": "PhoneImposterLastChance.dc.html",
-      "title": "Phone · Imposter · Last-chance guess",
+      "title": "Phone \u00b7 Imposter \u00b7 Last-chance guess",
       "page": "imposter",
       "x": 8160,
       "y": 1280,
@@ -190,7 +194,7 @@
     },
     {
       "file": "TVRealOrNahWrite.dc.html",
-      "title": "TV · Real or Nah · Write lies",
+      "title": "TV \u00b7 Real or Nah \u00b7 Write lies",
       "page": "real-or-nah",
       "x": 0,
       "y": 0,
@@ -199,7 +203,7 @@
     },
     {
       "file": "TVRealOrNahVote.dc.html",
-      "title": "TV · Real or Nah · Vote",
+      "title": "TV \u00b7 Real or Nah \u00b7 Vote",
       "page": "real-or-nah",
       "x": 2040,
       "y": 0,
@@ -208,7 +212,7 @@
     },
     {
       "file": "TVRealOrNahReveal.dc.html",
-      "title": "TV · Real or Nah · Reveal",
+      "title": "TV \u00b7 Real or Nah \u00b7 Reveal",
       "page": "real-or-nah",
       "x": 4080,
       "y": 0,
@@ -217,7 +221,7 @@
     },
     {
       "file": "PhoneRealOrNahWrite.dc.html",
-      "title": "Phone · Real or Nah · Write a lie",
+      "title": "Phone \u00b7 Real or Nah \u00b7 Write a lie",
       "page": "real-or-nah",
       "x": 0,
       "y": 1280,
@@ -226,7 +230,7 @@
     },
     {
       "file": "PhoneRealOrNahVote.dc.html",
-      "title": "Phone · Real or Nah · Vote",
+      "title": "Phone \u00b7 Real or Nah \u00b7 Vote",
       "page": "real-or-nah",
       "x": 2040,
       "y": 1280,
@@ -235,7 +239,7 @@
     },
     {
       "file": "TVFinalScores.dc.html",
-      "title": "TV · Final scores",
+      "title": "TV \u00b7 Final scores",
       "page": "end-system",
       "x": 0,
       "y": 0,
@@ -244,7 +248,7 @@
     },
     {
       "file": "TVFullTonight.dc.html",
-      "title": "TV · We're full tonight",
+      "title": "TV \u00b7 We're full tonight",
       "page": "end-system",
       "x": 2040,
       "y": 0,
@@ -253,7 +257,7 @@
     },
     {
       "file": "TVCredits.dc.html",
-      "title": "TV · Credits",
+      "title": "TV \u00b7 Credits",
       "page": "end-system",
       "x": 4080,
       "y": 0,
@@ -262,7 +266,7 @@
     },
     {
       "file": "PhoneWaitingNextGame.dc.html",
-      "title": "Phone · Waiting for next game",
+      "title": "Phone \u00b7 Waiting for next game",
       "page": "end-system",
       "x": 0,
       "y": 1280,
@@ -271,7 +275,7 @@
     },
     {
       "file": "PhoneReconnecting.dc.html",
-      "title": "Phone · Reconnecting",
+      "title": "Phone \u00b7 Reconnecting",
       "page": "end-system",
       "x": 490,
       "y": 1280,
@@ -280,7 +284,7 @@
     },
     {
       "file": "DirectionATV.dc.html",
-      "title": "A · Sticker Shop · TV lobby",
+      "title": "A \u00b7 Sticker Shop \u00b7 TV lobby",
       "page": "style-options",
       "x": 0,
       "y": 0,
@@ -289,7 +293,7 @@
     },
     {
       "file": "DirectionAPhone.dc.html",
-      "title": "A · Sticker Shop · Phone, imposter card",
+      "title": "A \u00b7 Sticker Shop \u00b7 Phone, imposter card",
       "page": "style-options",
       "x": 2040,
       "y": 0,
@@ -298,7 +302,7 @@
     },
     {
       "file": "DirectionBTV.dc.html",
-      "title": "B · Saturday Morning · TV lobby",
+      "title": "B \u00b7 Saturday Morning \u00b7 TV lobby",
       "page": "style-options",
       "x": 0,
       "y": 1320,
@@ -307,7 +311,7 @@
     },
     {
       "file": "DirectionBPhone.dc.html",
-      "title": "B · Saturday Morning · Phone, imposter card",
+      "title": "B \u00b7 Saturday Morning \u00b7 Phone, imposter card",
       "page": "style-options",
       "x": 2040,
       "y": 1320,
@@ -316,7 +320,7 @@
     },
     {
       "file": "PhoneNoTvLanding.dc.html",
-      "title": "Phone · No-TV · Start or join",
+      "title": "Phone \u00b7 No-TV \u00b7 Start or join",
       "page": "no-tv",
       "x": 0,
       "y": 0,
@@ -325,7 +329,7 @@
     },
     {
       "file": "PhoneNoTvLobbyStarter.dc.html",
-      "title": "Phone · No-TV · Lobby (starter)",
+      "title": "Phone \u00b7 No-TV \u00b7 Lobby (starter)",
       "page": "no-tv",
       "x": 450,
       "y": 0,
@@ -334,7 +338,7 @@
     },
     {
       "file": "PhoneNoTvLobbyPlayer.dc.html",
-      "title": "Phone · No-TV · Lobby (not the VIP)",
+      "title": "Phone \u00b7 No-TV \u00b7 Lobby (not the VIP)",
       "page": "no-tv",
       "x": 900,
       "y": 0,
@@ -343,7 +347,7 @@
     },
     {
       "file": "PhoneNoTvVipPicker.dc.html",
-      "title": "Phone · No-TV · VIP picker, blocked game",
+      "title": "Phone \u00b7 No-TV \u00b7 VIP picker, blocked game",
       "page": "no-tv",
       "x": 1350,
       "y": 0,
@@ -352,7 +356,7 @@
     },
     {
       "file": "PhoneNoTvMltVote.dc.html",
-      "title": "Phone · No-TV · Most Likely To · Vote",
+      "title": "Phone \u00b7 No-TV \u00b7 Most Likely To \u00b7 Vote",
       "page": "no-tv",
       "x": 1800,
       "y": 0,
@@ -361,7 +365,7 @@
     },
     {
       "file": "PhoneNoTvMltReveal.dc.html",
-      "title": "Phone · No-TV · Most Likely To · Reveal",
+      "title": "Phone \u00b7 No-TV \u00b7 Most Likely To \u00b7 Reveal",
       "page": "no-tv",
       "x": 2250,
       "y": 0,
@@ -370,7 +374,7 @@
     },
     {
       "file": "PhoneNoTvImposterWordCheck.dc.html",
-      "title": "Phone · No-TV · Imposter · Word check",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Word check",
       "page": "no-tv",
       "x": 0,
       "y": 1440,
@@ -379,7 +383,7 @@
     },
     {
       "file": "PhoneNoTvImposterClues.dc.html",
-      "title": "Phone · No-TV · Imposter · Clue turns",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Clue turns",
       "page": "no-tv",
       "x": 450,
       "y": 1440,
@@ -388,7 +392,7 @@
     },
     {
       "file": "PhoneNoTvImposterVote.dc.html",
-      "title": "Phone · No-TV · Imposter · Vote",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Vote",
       "page": "no-tv",
       "x": 900,
       "y": 1440,
@@ -397,7 +401,7 @@
     },
     {
       "file": "PhoneNoTvImposterReveal.dc.html",
-      "title": "Phone · No-TV · Imposter · Reveal",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Reveal",
       "page": "no-tv",
       "x": 1350,
       "y": 1440,
@@ -406,7 +410,7 @@
     },
     {
       "file": "PhoneNoTvImposterLastChance.dc.html",
-      "title": "Phone · No-TV · Imposter · Last chance",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Last chance",
       "page": "no-tv",
       "x": 1800,
       "y": 1440,
@@ -415,12 +419,84 @@
     },
     {
       "file": "PhoneNoTvImposterResult.dc.html",
-      "title": "Phone · No-TV · Imposter · Round result",
+      "title": "Phone \u00b7 No-TV \u00b7 Imposter \u00b7 Round result",
       "page": "no-tv",
       "x": 2250,
       "y": 1440,
       "w": 390,
       "h": 844
+    },
+    {
+      "file": "PhoneDoodleBluffDraw.dc.html",
+      "title": "Phone \u00b7 Doodle Bluff \u00b7 Draw",
+      "page": "doodle-bluff",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PhoneDoodleBluffTitle.dc.html",
+      "title": "Phone \u00b7 Doodle Bluff \u00b7 Write a title",
+      "page": "doodle-bluff",
+      "x": 490,
+      "y": 0,
+      "w": 390,
+      "h": 1340
+    },
+    {
+      "file": "PhoneDoodleBluffVote.dc.html",
+      "title": "Phone \u00b7 Doodle Bluff \u00b7 Vote",
+      "page": "doodle-bluff",
+      "x": 980,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "TVDoodleBluffDraw.dc.html",
+      "title": "TV \u00b7 Doodle Bluff \u00b7 Everyone is drawing",
+      "page": "doodle-bluff",
+      "x": 0,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVDoodleBluffTitle.dc.html",
+      "title": "TV \u00b7 Doodle Bluff \u00b7 Titling",
+      "page": "doodle-bluff",
+      "x": 2040,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVDoodleBluffVote.dc.html",
+      "title": "TV \u00b7 Doodle Bluff \u00b7 Vote",
+      "page": "doodle-bluff",
+      "x": 4080,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVDoodleBluffReveal.dc.html",
+      "title": "TV \u00b7 Doodle Bluff \u00b7 Reveal",
+      "page": "doodle-bluff",
+      "x": 6120,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080
+    },
+    {
+      "file": "TVDoodleBluffGallery.dc.html",
+      "title": "TV \u00b7 Doodle Bluff \u00b7 Gallery",
+      "page": "doodle-bluff",
+      "x": 8160,
+      "y": 1500,
+      "w": 1920,
+      "h": 1080
     }
   ],
   "annotations": [
@@ -470,7 +546,7 @@
       "x": 2530,
       "y": 0,
       "w": 460,
-      "text": "A · Sticker Shop\nThick ink outlines, hard offset shadows, flat bold colors on warm cream. Lilita One + Nunito."
+      "text": "A \u00b7 Sticker Shop\nThick ink outlines, hard offset shadows, flat bold colors on warm cream. Lilita One + Nunito."
     },
     {
       "id": "direction-b",
@@ -478,7 +554,7 @@
       "x": 2530,
       "y": 1320,
       "w": 460,
-      "text": "B · Saturday Morning\nDeep grape stage, candy-colored bubbles, no outlines. Titan One + Baloo 2."
+      "text": "B \u00b7 Saturday Morning\nDeep grape stage, candy-colored bubbles, no outlines. Titan One + Baloo 2."
     },
     {
       "id": "no-tv-notes",
@@ -486,7 +562,15 @@
       "x": 0,
       "y": 1180,
       "w": 1100,
-      "text": "No-TV mode: no shared screen anywhere. Every phone carries the shared stage on top and that player's own controls below.\n\nTop row is the platform: starting a room from a phone, the room code read aloud, and a game that needs a TV shown disabled rather than hidden.\nSecond row is Imposter in phase order. Word check deliberately shows an empty stage — a phase shows the stage or your secret, never both.\n\nPhones are silent here, haptics only, so the Suspense ring on Reveal and Last chance is the visual standing in for the drumroll.\nAll names, the room code and the words are sample content."
+      "text": "No-TV mode: no shared screen anywhere. Every phone carries the shared stage on top and that player's own controls below.\n\nTop row is the platform: starting a room from a phone, the room code read aloud, and a game that needs a TV shown disabled rather than hidden.\nSecond row is Imposter in phase order. Word check deliberately shows an empty stage \u2014 a phase shows the stage or your secret, never both.\n\nPhones are silent here, haptics only, so the Suspense ring on Reveal and Last chance is the visual standing in for the drumroll.\nAll names, the room code and the words are sample content."
+    },
+    {
+      "id": "doodle-bluff-notes",
+      "page": "doodle-bluff",
+      "x": 0,
+      "y": 1240,
+      "w": 1100,
+      "text": "Doodle Bluff. Everyone draws two secret prompts up front, then drawings are shown one at a time: everyone but the artist writes a fake title, then the room votes for the real one.\n\nThe six marker inks are settled here, contrast-checked against the paper. Colour is decoration only \u2014 no rule, score, title or vote ever reads a stroke's colour.\n\nThe gallery is the finale: every drawing made in the game, including the ones never titled, and then they die with the room.\nAll names, prompts and titles are sample content."
     }
   ],
   "launch": {

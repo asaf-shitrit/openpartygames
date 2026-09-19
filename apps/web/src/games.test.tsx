@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { imposter } from "@opg/game-imposter";
 import { mostLikelyTo } from "@opg/game-most-likely-to";
+import { doodleBluff } from "@opg/game-doodle-bluff";
 import { realOrNah } from "@opg/game-real-or-nah";
 import type { GameUi } from "@opg/ui";
 import {
@@ -39,10 +40,15 @@ describe("LANDING_GAMES", () => {
     const ids = LANDING_GAMES.map((game) => game.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it("gives every game its own avatar, so no two cards look alike", () => {
+    const avatars = LANDING_GAMES.map((game) => game.avatar);
+    expect(new Set(avatars).size).toBe(avatars.length);
+  });
 });
 
 describe("registry", () => {
-  const definitions = [imposter, realOrNah, mostLikelyTo];
+  const definitions = [imposter, realOrNah, mostLikelyTo, doodleBluff];
 
   it.each(definitions)("registers screens for $id", (game) => {
     expect(gameUiFor(game.id)).not.toBeNull();

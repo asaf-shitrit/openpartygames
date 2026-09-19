@@ -1,0 +1,431 @@
+{
+  "id": "doodle-absurd",
+  "name": "Absurd",
+  "kind": "drawing-prompts",
+  "rating": "teen",
+  "language": "en",
+  "license": "CC0-1.0",
+  "attribution": "Original prompts written for OpenPartyGames, released into the public domain under CC0-1.0.",
+  "items": [
+    {
+      "id": "shark-riding-a-bicycle",
+      "prompt": "a shark riding a bicycle",
+      "houseTitles": [
+        "an alligator riding a skateboard",
+        "an octopus riding a unicycle",
+        "a dolphin riding a scooter",
+        "a walrus riding a tricycle"
+      ]
+    },
+    {
+      "id": "robot-doing-yoga",
+      "prompt": "a robot doing yoga",
+      "houseTitles": [
+        "an alien folding laundry",
+        "a ghost vacuuming a rug",
+        "a dinosaur doing push-ups",
+        "a robot walking a dog"
+      ]
+    },
+    {
+      "id": "dinosaur-ordering-coffee",
+      "prompt": "a dinosaur ordering coffee",
+      "houseTitles": [
+        "a dragon waiting at a bus stop",
+        "a robot reading a newspaper",
+        "a yeti browsing a bookstore",
+        "an alien standing in a checkout line"
+      ]
+    },
+    {
+      "id": "ufo-abducting-a-cow",
+      "prompt": "a UFO abducting a cow",
+      "houseTitles": [
+        "an alien watering houseplants",
+        "a spaceship parked in a driveway",
+        "a robot mowing a lawn",
+        "a flying saucer stuck in a tree"
+      ]
+    },
+    {
+      "id": "ghost-doing-laundry",
+      "prompt": "a ghost doing laundry",
+      "houseTitles": [
+        "a skeleton riding a bike",
+        "a mummy jogging in the park",
+        "a zombie reading a newspaper",
+        "a vampire walking a dog at dawn"
+      ]
+    },
+    {
+      "id": "wizard-cooking-spaghetti",
+      "prompt": "a wizard cooking spaghetti",
+      "houseTitles": [
+        "a knight vacuuming a castle",
+        "a dragon baking cookies",
+        "a unicorn mowing a meadow",
+        "a troll folding towels"
+      ]
+    },
+    {
+      "id": "mermaid-riding-a-scooter",
+      "prompt": "a mermaid riding a scooter",
+      "houseTitles": [
+        "a merman flying a kite",
+        "a sea monster juggling fish",
+        "a pirate skateboarding on a dock",
+        "an octopus playing a guitar"
+      ]
+    },
+    {
+      "id": "superhero-stuck-in-traffic",
+      "prompt": "a superhero stuck in traffic",
+      "houseTitles": [
+        "a ninja waiting at a bus stop",
+        "a pirate parallel parking a car",
+        "a knight pumping gas",
+        "a robot standing in line at a bank"
+      ]
+    },
+    {
+      "id": "snowman-on-a-tropical-beach",
+      "prompt": "a snowman on a tropical beach",
+      "houseTitles": [
+        "a penguin lounging in a hammock",
+        "a polar bear surfing",
+        "an igloo melting in the sun",
+        "a walrus sunbathing"
+      ]
+    },
+    {
+      "id": "giant-octopus-playing-chess",
+      "prompt": "a giant octopus playing chess",
+      "houseTitles": [
+        "a squid painting a picture",
+        "a crab hosting a tea party",
+        "a lobster reading a book",
+        "a jellyfish knitting a scarf"
+      ]
+    },
+    {
+      "id": "dragon-flying-a-kite",
+      "prompt": "a dragon flying a kite",
+      "houseTitles": [
+        "a unicorn riding a rollercoaster",
+        "a phoenix skateboarding downhill",
+        "a griffin surfing a big wave",
+        "a centaur jogging on a treadmill"
+      ]
+    },
+    {
+      "id": "yeti-riding-a-rollercoaster",
+      "prompt": "a yeti riding a rollercoaster",
+      "houseTitles": [
+        "a bigfoot riding a Ferris wheel",
+        "a sasquatch on a merry-go-round",
+        "an abominable snowman on a bumper car",
+        "a troll on a carousel horse"
+      ]
+    },
+    {
+      "id": "rubber-duck-the-size-of-a-house",
+      "prompt": "a rubber duck the size of a house",
+      "houseTitles": [
+        "a beach ball rolling through town",
+        "a teddy bear towering over a parade",
+        "a balloon animal filling a park",
+        "a snow globe sitting on a hill"
+      ]
+    },
+    {
+      "id": "robot-walking-a-dinosaur-on-a-leash",
+      "prompt": "a robot walking a dinosaur on a leash",
+      "houseTitles": [
+        "an alien walking a cat on a leash",
+        "an astronaut walking a turtle",
+        "a ghost walking a skeleton dog",
+        "a wizard walking a dragon on a chain"
+      ]
+    },
+    {
+      "id": "pirate-parachuting-into-a-pool",
+      "prompt": "a pirate parachuting into a swimming pool",
+      "houseTitles": [
+        "a ninja skydiving into a haystack",
+        "an astronaut splashing into a lake",
+        "a knight bungee jumping off a bridge",
+        "a cowboy diving off a cliff into water"
+      ]
+    },
+    {
+      "id": "alien-skateboarding-down-a-hill",
+      "prompt": "an alien skateboarding down a hill",
+      "houseTitles": [
+        "a robot sledding down a slope",
+        "a ghost tobogganing through a park",
+        "a dinosaur scootering downhill",
+        "a yeti snowboarding off a jump"
+      ]
+    },
+    {
+      "id": "vampire-ordering-a-smoothie",
+      "prompt": "a vampire ordering a smoothie",
+      "houseTitles": [
+        "a zombie browsing a farmers market",
+        "a werewolf jogging at sunrise",
+        "a witch grabbing a coffee",
+        "a mummy shopping for shoes"
+      ]
+    },
+    {
+      "id": "giant-snail-towing-its-house",
+      "prompt": "a giant snail towing its house like a trailer",
+      "houseTitles": [
+        "a turtle towing a tiny caravan",
+        "a hermit crab dragging its shell home",
+        "an ant carrying a tiny cottage",
+        "a beetle pulling a loaded wagon"
+      ]
+    },
+    {
+      "id": "cloud-shaped-like-a-dragon",
+      "prompt": "a cloud shaped like a dragon",
+      "houseTitles": [
+        "a mountain shaped like a sleeping giant",
+        "a sandcastle shaped like a spaceship",
+        "a tree shaped like a hand",
+        "a rock formation shaped like a face"
+      ]
+    },
+    {
+      "id": "fish-riding-in-a-hot-air-balloon",
+      "prompt": "a fish riding in a hot air balloon",
+      "houseTitles": [
+        "an octopus floating in a submarine",
+        "a bird piloting an airplane",
+        "a turtle riding in a rocket",
+        "a frog flying a tiny biplane"
+      ]
+    },
+    {
+      "id": "robot-chef-flipping-pizza-dough",
+      "prompt": "a robot chef flipping pizza dough",
+      "houseTitles": [
+        "an alien baking a birthday cake",
+        "a ghost stirring a bubbling cauldron",
+        "a dinosaur grilling burgers",
+        "a wizard brewing tea in a giant pot"
+      ]
+    },
+    {
+      "id": "knight-jousting-with-a-broomstick",
+      "prompt": "a knight jousting with a broomstick",
+      "houseTitles": [
+        "a pirate sword-fighting with a mop",
+        "a cowboy roping a cactus",
+        "a ninja practicing with a pool noodle",
+        "a wizard dueling with a wand"
+      ]
+    },
+    {
+      "id": "dragon-getting-a-haircut",
+      "prompt": "a dragon getting a haircut",
+      "houseTitles": [
+        "a unicorn getting its hooves painted",
+        "a troll getting a manicure",
+        "a yeti getting a trim at a barbershop",
+        "a griffin getting its feathers brushed"
+      ]
+    },
+    {
+      "id": "giant-spider-knitting-a-sweater",
+      "prompt": "a giant spider knitting a sweater",
+      "houseTitles": [
+        "an octopus crocheting a blanket",
+        "an ant weaving a tiny rug",
+        "a bee stitching a quilt",
+        "a caterpillar sewing a scarf"
+      ]
+    },
+    {
+      "id": "astronaut-planting-a-flag-on-a-cupcake",
+      "prompt": "an astronaut planting a flag on a giant cupcake",
+      "houseTitles": [
+        "an alien surfing on a pizza slice",
+        "a robot skiing down a mountain of ice cream",
+        "a dinosaur climbing a stack of pancakes",
+        "a mermaid swimming through a sea of jelly"
+      ]
+    },
+    {
+      "id": "werewolf-howling-at-a-disco-ball",
+      "prompt": "a werewolf howling at a disco ball",
+      "houseTitles": [
+        "a vampire dancing at a party",
+        "a zombie doing karaoke",
+        "a mummy break dancing",
+        "a ghost DJing a dance floor"
+      ]
+    },
+    {
+      "id": "troll-guarding-a-bridge-made-of-candy",
+      "prompt": "a troll guarding a bridge made of candy",
+      "houseTitles": [
+        "a dragon guarding a mountain of gold coins",
+        "a giant guarding a castle of blocks",
+        "an ogre guarding a pile of pillows",
+        "a sphinx guarding a pyramid of books"
+      ]
+    },
+    {
+      "id": "genie-granting-a-wish-for-more-pizza",
+      "prompt": "a genie granting a wish for more pizza",
+      "houseTitles": [
+        "a fairy sprinkling glitter on a cake",
+        "a leprechaun counting a pot of gold coins",
+        "a wizard conjuring a rainbow",
+        "a witch brewing a potion of lemonade"
+      ]
+    },
+    {
+      "id": "spaceship-parked-at-a-drive-through",
+      "prompt": "a spaceship parked at a drive-through",
+      "houseTitles": [
+        "a flying saucer stuck at a car wash",
+        "a rocket ship waiting at a red light",
+        "an alien pod parallel parking",
+        "a hovercraft stuck in a traffic jam"
+      ]
+    },
+    {
+      "id": "centaur-running-in-a-marathon",
+      "prompt": "a centaur running in a marathon",
+      "houseTitles": [
+        "a unicorn racing on a track",
+        "a pegasus flying an obstacle course",
+        "a griffin competing in a relay",
+        "a minotaur lifting weights at a gym"
+      ]
+    },
+    {
+      "id": "giant-robot-watering-tiny-flowers",
+      "prompt": "a giant robot watering tiny flowers",
+      "houseTitles": [
+        "a dinosaur gently cupping a butterfly",
+        "a dragon carefully blowing out a candle",
+        "a troll delicately balancing a teacup",
+        "a yeti tiptoeing past sleeping bunnies"
+      ]
+    },
+    {
+      "id": "mad-scientist-juggling-test-tubes",
+      "prompt": "a mad scientist juggling test tubes",
+      "houseTitles": [
+        "a wizard juggling potion bottles",
+        "an alien juggling tiny planets",
+        "a robot juggling loose gears",
+        "a clown juggling flaming torches"
+      ]
+    },
+    {
+      "id": "sasquatch-taking-a-selfie",
+      "prompt": "a sasquatch taking a selfie",
+      "houseTitles": [
+        "a yeti posing for a photo",
+        "a ghost photobombing a picture",
+        "an alien snapping a picture of Earth",
+        "a dragon posing with a group of knights"
+      ]
+    },
+    {
+      "id": "pirate-ship-sailing-through-a-desert",
+      "prompt": "a pirate ship sailing through a desert",
+      "houseTitles": [
+        "a submarine cruising through clouds",
+        "a hot air balloon floating underwater",
+        "a tractor driving across the moon",
+        "a sailboat gliding across a snowy field"
+      ]
+    },
+    {
+      "id": "dinosaur-riding-an-elevator",
+      "prompt": "a dinosaur riding an elevator",
+      "houseTitles": [
+        "a giraffe squeezing into a phone booth",
+        "an elephant riding a tiny bicycle",
+        "a whale swimming in a bathtub",
+        "a hippo squeezing into a car"
+      ]
+    },
+    {
+      "id": "octopus-playing-eight-instruments-at-once",
+      "prompt": "an octopus playing eight instruments at once",
+      "houseTitles": [
+        "a spider juggling eight balls",
+        "a centipede wearing eight tiny shoes",
+        "a squid painting with eight brushes",
+        "a starfish holding eight balloons"
+      ]
+    },
+    {
+      "id": "ghost-trying-to-open-a-jar",
+      "prompt": "a ghost trying to open a jar",
+      "houseTitles": [
+        "a skeleton struggling with an umbrella",
+        "a mummy tangled in its own bandages",
+        "a zombie stuck in a revolving door",
+        "a vampire fumbling with sunglasses"
+      ]
+    },
+    {
+      "id": "dragon-hatchling-breathing-tiny-sparks",
+      "prompt": "a dragon hatchling breathing tiny sparks",
+      "houseTitles": [
+        "a unicorn foal practicing a jump",
+        "a giant's pet mouse lifting a boulder",
+        "a witch's kitten chasing a firefly",
+        "a wizard's owl reading by candlelight"
+      ]
+    },
+    {
+      "id": "robot-falling-in-love-with-a-toaster",
+      "prompt": "a robot falling in love with a toaster",
+      "houseTitles": [
+        "an alien pen-palling with a mailbox",
+        "a ghost befriending a vacuum cleaner",
+        "a dinosaur hugging a traffic cone",
+        "a dragon cuddling a campfire"
+      ]
+    },
+    {
+      "id": "knight-riding-a-giant-chicken-into-battle",
+      "prompt": "a knight riding a giant chicken into battle",
+      "houseTitles": [
+        "a cowboy riding a giant turkey",
+        "a wizard riding a giant frog",
+        "a ninja riding a giant cat",
+        "a pirate riding a giant seagull"
+      ]
+    },
+    {
+      "id": "snow-globe-with-a-dragon-trapped-inside",
+      "prompt": "a snow globe with a dragon trapped inside",
+      "houseTitles": [
+        "an aquarium with a tiny mermaid swimming",
+        "a terrarium with a miniature dinosaur",
+        "a jar with a bottled genie",
+        "a bubble with a floating unicorn"
+      ]
+    },
+    {
+      "id": "mice-mining-a-moon-made-of-cheese",
+      "prompt": "mice mining a moon made of cheese",
+      "houseTitles": [
+        "aliens harvesting a planet made of candy",
+        "birds nibbling a cloud made of cotton candy",
+        "yetis scooping a mountain made of ice cream",
+        "pirates digging an island made of gingerbread"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import type { PlayerSummary } from "@opg/protocol";
+import type { ServerClock } from "@opg/ui";
+import type { DoodleGalleryEntry } from "../state";
+import { cascadeDelayMs, HostGallery } from "./HostGallery";
+
+afterEach(() => {
+  cleanup();
+});
+
+const CLOCK: ServerClock = { now: () => 1000 };
+
+const PLAYERS: PlayerSummary[] = [
+  { id: "priya", name: "Priya", avatar: "drop", connected: true, isVip: false, crowns: 0, waitingForNextGame: false },
+];
+
+function entry(overrides: Partial<DoodleGalleryEntry> = {}): DoodleGalleryEntry {
+  return {
+    drawingId: "priya:0",
+    artistId: "priya",
+    doodle: { v: 1, s: [] },
+    title: "a dog on a scooter",
+    shown: true,
+    foundByCount: 2,
+    ...overrides,
+  };
+}
+
+describe("cascadeDelayMs", () => {
+  it("grows with the index, capped at the max", () => {
+    expect(cascadeDelayMs(0)).toBe(0);
+    expect(cascadeDelayMs(1)).toBe(70);
+    expect(cascadeDelayMs(100)).toBe(900);
+  });
+});
+
+describe("HostGallery", () => {
+  it("renders the heading and every entry's title and artist", () => {
+    render(<HostGallery entries={[entry()]} players={PLAYERS} clock={CLOCK} />);
+    expect(screen.getByText("The gallery — gone after tonight")).toBeTruthy();
+    expect(screen.getByText("a dog on a scooter")).toBeTruthy();
+    expect(screen.getByText("Priya")).toBeTruthy();
+    expect(screen.getByText("Found by 2 players")).toBeTruthy();
+  });
+
+  it("marks a drawing that was never shown", () => {
+    render(<HostGallery entries={[entry({ shown: false, foundByCount: null })]} players={PLAYERS} clock={CLOCK} />);
+    expect(screen.getByText("never shown")).toBeTruthy();
+  });
+
+  it("singular found-by copy for one finder", () => {
+    render(<HostGallery entries={[entry({ foundByCount: 1 })]} players={PLAYERS} clock={CLOCK} />);
+    expect(screen.getByText("Found by 1 player")).toBeTruthy();
+  });
+});
