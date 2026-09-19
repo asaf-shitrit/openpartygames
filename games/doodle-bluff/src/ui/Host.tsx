@@ -9,7 +9,22 @@ import { HostGallery } from "./HostGallery";
 import { HostReveal } from "./HostReveal";
 
 const TILTS = [-1.5, 1, -1, 1.5, -1, 2];
-const BODY: CSSProperties = { flexGrow: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 40 };
+// minHeight lets the wrapping rows below shrink instead of growing the column past the
+// 1080 stage, which is how the reveal's truth card once ended up off the bottom edge.
+const BODY: CSSProperties = {
+  // basis 0, not auto: an `auto` basis sizes the column from its content, so it never shrinks
+  // and the tall phases grow straight past the bottom of the 1080 stage.
+  flex: "1 1 0",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  gap: 40,
+  minHeight: 0,
+  overflow: "hidden",
+};
+
+/** A row that takes the height left over and clips, rather than pushing the column taller. */
+const FILL_ROW: CSSProperties = { flex: "1 1 auto", minHeight: 0, overflow: "hidden" };
 
 interface SectionProps {
   view: DoodleHostView;
@@ -49,7 +64,11 @@ function drawingProgressLabel(done: number): string {
 }
 
 function TileGrid({ children, count }: { children: ReactNode; count: number }) {
-  return <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(count, 1)}, minmax(0, 1fr))`, gap: 24 }}>{children}</div>;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.max(count, 1)}, minmax(0, 1fr))`, gap: 24, ...FILL_ROW }}>
+      {children}
+    </div>
+  );
 }
 
 // ---------- draw ----------
@@ -88,7 +107,7 @@ function Title({ view, players, deadline, timerStartedAt, clock }: SectionProps)
   return (
     <div style={BODY}>
       {view.doodle !== null ? (
-        <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(players, view.artistId))} clock={clock} replay={replayStart === null ? undefined : { startedAt: replayStart }} size={320} style={{ alignSelf: "center" }} />
+        <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(players, view.artistId))} clock={clock} replay={replayStart === null ? undefined : { startedAt: replayStart }} size={320} style={{ alignSelf: "center", flexShrink: 0 }} />
       ) : null}
       <TitleHeading view={view} players={players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
       <TileGrid count={view.playerIds.length}>
@@ -148,9 +167,9 @@ function Vote(props: SectionProps) {
   useMusic("tension");
   return (
     <div style={BODY}>
-      {view.doodle !== null ? <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(props.players, view.artistId))} clock={clock} size={260} style={{ alignSelf: "center" }} /> : null}
+      {view.doodle !== null ? <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(props.players, view.artistId))} clock={clock} size={260} style={{ alignSelf: "center", flexShrink: 0 }} /> : null}
       <VoteHeading {...props} />
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 24 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 24, alignContent: "flex-start", ...FILL_ROW }}>
         {(view.options ?? []).map((option, index) => (
           <VoteOption key={option.id} text={option.text} index={index} />
         ))}

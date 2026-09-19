@@ -22,11 +22,15 @@ import { avatarOf, drawingLabel, nameOf } from "./common";
 import { hostRevealBeats, titlesShown } from "./reveal-timeline";
 
 const STAGE: CSSProperties = {
-  flexGrow: 1,
+  // See BODY in Host.tsx: an `auto` basis sizes from content and never shrinks.
+  flex: "1 1 0",
   display: "flex",
   flexDirection: "column",
   gap: 24,
   overflow: "hidden",
+  // A flex column's children refuse to shrink past their content without this, which is how
+  // the truth card ended up pushed off the bottom of a 1080 stage.
+  minHeight: 0,
 };
 
 function authorName(players: PlayerSummary[], authorId: PlayerId | null): string {
@@ -72,7 +76,20 @@ function TitlesRow({ titles, shown, players }: { titles: DoodleFooledTitle[]; sh
   const visible = titles.slice(0, shown);
   if (visible.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        alignContent: "flex-start",
+        gap: 20,
+        // At eight players this row carries seven cards. It takes the space left over and
+        // clips, rather than growing and shoving the truth card past the bottom edge.
+        flex: "1 1 auto",
+        minHeight: 0,
+        overflow: "hidden",
+      }}
+    >
       {visible.map((title) => (
         <TitleCard key={title.optionId} title={title} players={players} />
       ))}
@@ -105,7 +122,7 @@ function TruthSection({ view, players, shown }: { view: DoodleHostView; players:
   const reveal = view.reveal;
   if (!shown || reveal === null) return null;
   return (
-    <Card variant="L" tilt={-1} style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 16, alignSelf: "center" }}>
+    <Card variant="L" tilt={-1} style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 16, alignSelf: "center", flexShrink: 0 }}>
       <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--opg-ink-secondary)" }}>
         The real title
       </div>
@@ -154,8 +171,8 @@ export function HostReveal({ view, players, deadline, timerStartedAt, clock }: H
   return (
     <div ref={rootRef} style={STAGE}>
       <Marker size={44}>Let&apos;s see who fooled who</Marker>
-      <Card style={{ padding: 12, alignSelf: "center" }}>
-        <DoodleView doodle={reveal.doodle} label={drawingLabel(nameOf(players, reveal.artistId))} clock={clock} replay={{ startedAt: startedAt ?? clock.now() }} size={340} />
+      <Card style={{ padding: 12, alignSelf: "center", flexShrink: 0 }}>
+        <DoodleView doodle={reveal.doodle} label={drawingLabel(nameOf(players, reveal.artistId))} clock={clock} replay={{ startedAt: startedAt ?? clock.now() }} size={300} />
       </Card>
       <TitlesRow titles={reveal.titles} shown={shownTitles} players={players} />
       <TruthSection view={view} players={players} shown={truthShown} />
