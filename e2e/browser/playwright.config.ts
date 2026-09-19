@@ -32,5 +32,23 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Two projects, not one. Everything short runs in parallel; the Imposter spec then runs
+  // on its own. It plays six words of real ceremonies and is four minutes of the suite by
+  // itself, so it gains nothing from sharing a machine — and it loses something real:
+  // a clue turn has no deadline any more, so a tap that gets dropped under contention
+  // hangs the game instead of costing thirty seconds. Isolating it keeps the wall-clock
+  // win without betting the suite on every click landing.
+  projects: [
+    {
+      name: "fast",
+      testIgnore: /imposter\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "imposter",
+      testMatch: /imposter\.spec\.ts/,
+      dependencies: ["fast"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
 });
