@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GameContext, Rng, WordPairContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
+  CLUE_STALL_MS,
   LAST_CHANCE_MS,
   RESULT_CANCELLED_MS,
   RESULT_CAUGHT_MS,
@@ -504,14 +505,30 @@ describe("turn order and actions", () => {
     const t1 = withCtx(c, { now: c.now + WORD_CHECK_MS });
     state = onDeadline(state, t1);
     expect(state.phase).toBe("clues");
-    expect(state.deadline).toBeNull();
+    // Not a clue timer — no countdown is shown. It is the backstop for a turn whose
+    // "I'm done" never lands, and it re-arms on every turn.
+    expect(state.deadline).toBe(t1.now + CLUE_STALL_MS);
 
-    // The clue phase has no deadline at all: a VIP skip (onDeadline) still moves the
-    // speaker along, same as before, but nothing here is time-based any more.
     const t2 = withCtx(c, { now: t1.now + 1 });
+    const firstSpeaker = state.clueIndex;
     state = onDeadline(state, t2);
     expect(state.phase).toBe("clues");
-    expect(state.deadline).toBeNull();
+    expect(state.clueIndex).not.toBe(firstSpeaker);
+    expect(state.deadline).toBe(t2.now + CLUE_STALL_MS);
+  });
+
+  it("a stalled clue turn recovers on its own instead of waiting for the VIP", () => {
+    const c = makeCtx({ n: 4, seed: 27 });
+    let state = onDeadline(setup(c), withCtx(c, { now: c.now + WORD_CHECK_MS }));
+    expect(state.phase).toBe("clues");
+    const stuckOn = state.clueIndex;
+
+    // Nobody taps "I'm done" — the tap was dropped, or the phone slept.
+    const later = withCtx(c, { now: state.deadline ?? 0 });
+    state = onDeadline(state, later);
+
+    expect(state.phase).toBe("clues");
+    expect(state.clueIndex).not.toBe(stuckOn);
   });
 
   it("uses the phase deadlines for vote, reveal, last chance and result", () => {

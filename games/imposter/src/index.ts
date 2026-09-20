@@ -16,6 +16,7 @@ import {
   MAX_GUESS_LENGTH,
   REVEAL_MS,
   TYPING_MIN_INTERVAL_MS,
+  CLUE_STALL_MS,
   VOTE_MS,
   WORD_CHECK_MS,
   WORDS_PER_GAME,
@@ -42,6 +43,7 @@ export type {
 } from "./state";
 export { imposterAwards } from "./awards";
 export {
+  CLUE_STALL_MS,
   IMPOSTER_MAX_PLAYERS,
   IMPOSTER_MIN_PLAYERS,
   IMPOSTER_MINUTES,
@@ -173,9 +175,10 @@ function startClues(state: ImposterState, ctx: Ctx): ImposterState {
     clueIndex: index,
     doneSpeakerIds: [],
     turnStartedAt: ctx.now,
-    // The table sets the pace: clues has no deadline. A turn ends on "I'm done", a VIP
-    // skip, or the speaker disconnecting (see onPlayersChanged).
-    deadline: null,
+    // The table sets the pace: no countdown is shown, and a turn normally ends on "I'm done",
+    // a VIP skip, or the speaker disconnecting (see onPlayersChanged). The deadline is only a
+    // backstop for a tap that never lands — see CLUE_STALL_MS.
+    deadline: ctx.now + CLUE_STALL_MS,
   };
 }
 
@@ -348,7 +351,7 @@ function advanceSpeaker(state: ImposterState, ctx: Ctx): ImposterState {
     clueIndex: next,
     doneSpeakerIds,
     turnStartedAt: ctx.now,
-    deadline: null,
+    deadline: ctx.now + CLUE_STALL_MS,
   };
 }
 
@@ -541,7 +544,7 @@ function resumeClues(
     .filter((id) => id !== playerId).length;
   const next = findSpeaker(base, ctx, startIndex);
   if (next === -1) return startVote(base, ctx);
-  return { ...base, clueIndex: next, turnStartedAt: ctx.now, deadline: null };
+  return { ...base, clueIndex: next, turnStartedAt: ctx.now, deadline: ctx.now + CLUE_STALL_MS };
 }
 
 function continueAfterRemoval(
