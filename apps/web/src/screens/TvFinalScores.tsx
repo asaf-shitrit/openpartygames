@@ -34,6 +34,7 @@ import type {
   MusicId,
   ServerClock,
 } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
 import { PointArrow, TvPage } from "./shared";
 import {
@@ -361,10 +362,11 @@ function AwardStrip({
   gameId: string;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   const cards = awards
     .slice(0, awardsShown)
     .map((award, index) => {
-      const copy = awardCopyFor(gameId, award);
+      const copy = awardCopyFor(gameId, award, t);
       if (copy === null) return null;
       return (
         <AwardCard
@@ -422,9 +424,10 @@ function SlimAwardStrip({
   gameId: string;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   const chips = awards
     .map((award) => {
-      const copy = awardCopyFor(gameId, award);
+      const copy = awardCopyFor(gameId, award, t);
       if (copy === null) return null;
       return (
         <AwardChip key={award.id} award={award} copy={copy} players={players} />
@@ -812,6 +815,7 @@ export function TvFinalScores({
   view,
   clock = FALLBACK_CLOCK,
 }: TvFinalScoresProps) {
+  const { t } = useLocale();
   const result = view.lastResult;
   const ranked = rankPlayers(
     scoresOf(result),
@@ -820,7 +824,7 @@ export function TvFinalScores({
   const awards = awardsOf(result);
   const beats = finaleBeats({
     // Only awards the game can put into words get a beat, so no empty card is stamped.
-    awardCount: describableAwards(gameIdOf(result), awards).length,
+    awardCount: describableAwards(gameIdOf(result), awards, t).length,
     // The highest rank on screen decides the third and second beats; a tie for first has neither.
     rankedCount: topRank(ranked),
     crownCue: crownCueId(),

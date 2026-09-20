@@ -151,6 +151,9 @@ importers:
 
   games/doodle-bluff:
     dependencies:
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@opg/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -173,6 +176,9 @@ importers:
 
   games/imposter:
     dependencies:
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@opg/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -223,6 +229,9 @@ importers:
 
   games/real-or-nah:
     dependencies:
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@opg/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -276,6 +285,9 @@ importers:
       '@fontsource/permanent-marker':
         specifier: ^5.3.0
         version: 5.3.0
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@opg/protocol':
         specifier: workspace:*
         version: link:../protocol

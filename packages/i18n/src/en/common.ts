@@ -1,0 +1,15 @@
+export const common = {
+  languageLabel: "Language",
+  someone: "Someone",
+  errorRoomFull: "That room is full.",
+  errorRoomLocked: "That room is locked.",
+  errorNameTaken: "That name is taken. Try another.",
+  errorNameInvalid: "Names are 1–12 characters.",
+  errorNotEnoughPlayers: "Not enough players yet.",
+  errorInvalidAction: "That didn't work. Check the game and packs.",
+  errorGeneric: "Something went wrong. Try again.",
+  listAndTwo: "{a} and {b}",
+  listAndLast: "{list} and {last}",
+  listOrTwo: "{a} or {b}",
+  listOrLast: "{list} or {last}",
+};

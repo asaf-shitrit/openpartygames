@@ -21,6 +21,7 @@ import {
 import type { Beat, HapticName, Moment, ServerClock } from "@opg/ui";
 import type { ReactNode } from "react";
 import { useRef } from "react";
+import { useLocale } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
 import {
   crownCopy,
@@ -118,7 +119,8 @@ function AwardCallout({
   live: boolean;
   gameId: string;
 }) {
-  const copy = awardCopyFor(gameId, award);
+  const { t } = useLocale();
+  const copy = awardCopyFor(gameId, award, t);
   return (
     <Card
       variant="L"
@@ -221,11 +223,12 @@ function StickerRow({
   awards: readonly Award[];
   gameId: string;
 }) {
+  const { t } = useLocale();
   if (awards.length === 0) return null;
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       {awards.map((award) => {
-        const copy = awardCopyFor(gameId, award);
+        const copy = awardCopyFor(gameId, award, t);
         if (copy === null) return null;
         return (
           <div
@@ -454,6 +457,7 @@ export interface PhoneResultsProps {
 }
 
 export function PhoneResults({ view, clock }: PhoneResultsProps) {
+  const { t } = useLocale();
   const result = view.lastResult;
   const me = view.you;
   const ranked = rankPlayers(
@@ -463,7 +467,7 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
   const awards = resultAwards(result);
   const beats = finaleBeats({
     // Matches the TV's count, so both devices stage the same ceremony.
-    awardCount: describableAwards(result?.gameId ?? "", awards).length,
+    awardCount: describableAwards(result?.gameId ?? "", awards, t).length,
     rankedCount: topRank(ranked),
     crownCue: crownCueId(),
   });

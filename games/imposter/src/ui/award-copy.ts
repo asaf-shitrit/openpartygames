@@ -1,33 +1,41 @@
 // Turns an Imposter award id into warm, short copy for the finale ceremony.
+import { format, pickPluralByCount, type Dictionary } from "@opg/i18n";
 import type { Award } from "@opg/protocol";
 
-function timesPhrase(value: number): string {
-  return value === 1 ? "1 time" : `${value} times`;
-}
+type AwardCopy = { title: string; detail: string };
 
 export function imposterAwardCopy(
   award: Award,
-): { title: string; detail: string } | null {
+  t: Dictionary,
+): AwardCopy | null {
+  const copy = t.imposter.awards;
+  const times = format(pickPluralByCount(award.value, copy.times), {
+    count: award.value,
+  });
   switch (award.id) {
     case "word-thief":
       return {
-        title: "Word thief",
-        detail: `Stole the word ${timesPhrase(award.value)}`,
+        title: copy.wordThief,
+        detail: format(copy.wordThiefDetail, { times }),
       };
     case "master-of-disguise":
       return {
-        title: "Master of disguise",
-        detail: `Slipped away ${timesPhrase(award.value)}`,
+        title: copy.masterOfDisguise,
+        detail: format(copy.masterOfDisguiseDetail, { times }),
       };
     case "sharpest-eye":
       return {
-        title: "Sharpest eye",
-        detail: `Spotted the imposter ${award.value} times`,
+        title: copy.sharpestEye,
+        detail: format(copy.sharpestEyeDetail, { times }),
       };
     case "trusted-crew":
       return {
-        title: "Trusted crew",
-        detail: `Nobody suspected them in ${award.value} words`,
+        title: copy.trustedCrew,
+        detail: format(copy.trustedCrewDetail, {
+          words: format(pickPluralByCount(award.value, copy.words), {
+            count: award.value,
+          }),
+        }),
       };
     default:
       return null;

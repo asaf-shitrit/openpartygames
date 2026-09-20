@@ -1,4 +1,5 @@
 // Game registry: maps a game id to its TV and phone screens.
+import type { Dictionary } from "@opg/i18n";
 import {
   doodleHostViewSchema,
   doodlePlayerViewSchema,
@@ -195,16 +196,18 @@ export function gameUiFor(id: string): AnyGameUi | null {
 export function awardCopyFor(
   gameId: string,
   award: Award,
+  t: Dictionary,
 ): { title: string; detail: string } | null {
   const ui = gameUiFor(gameId);
   if (!ui?.awardCopy) return null;
-  return ui.awardCopy(award);
+  return ui.awardCopy(award, t);
 }
 
 /** The awards the platform can describe: the finale stages one beat per award in here. */
 export function describableAwards(
   gameId: string,
   awards: readonly Award[],
+  t: Dictionary,
 ): Award[] {
-  return awards.filter((award) => awardCopyFor(gameId, award) !== null);
+  return awards.filter((award) => awardCopyFor(gameId, award, t) !== null);
 }

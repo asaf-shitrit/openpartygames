@@ -1,6 +1,7 @@
 // Game SDK clock contract and the GameUi type used by the web app registry.
 import type { ComponentType } from "react";
 import type { Award, HostRoomView, PlayerRoomView } from "@opg/protocol";
+import type { Dictionary } from "@opg/i18n";
 
 export interface ServerClock {
   /** Current server-style epoch ms, corrected for client clock skew. */
@@ -31,6 +32,13 @@ export interface GameUi<
     /** The host view in a no-TV room, or null in a room with a shared screen. */
     stage: HostView | null;
   }>;
-  /** Turns a game-defined award id into words. Returns null for an id the game does not know. */
-  awardCopy?: (award: Award) => { title: string; detail: string } | null;
+  /**
+   * Turns a game-defined award id into words, in the reader's language. Returns null for an
+   * id the game does not know. Takes the dictionary rather than reading context itself: the
+   * finale calls this while building a list, not from inside a component of its own.
+   */
+  awardCopy?: (
+    award: Award,
+    t: Dictionary,
+  ) => { title: string; detail: string } | null;
 }

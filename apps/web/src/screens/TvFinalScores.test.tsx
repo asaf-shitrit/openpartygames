@@ -1,10 +1,17 @@
 // @vitest-environment happy-dom
+import type { ReactNode } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import { makeHostView, makePlayer, makeResult } from "./fixtures/room";
 import { TvFinalScores, finaleMusic } from "./TvFinalScores";
+
+/** These screens read their copy from the dictionary, so every render needs a provider. */
+function renderLocalized(ui: ReactNode) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 const PRIYA = makePlayer({ id: "p1", name: "Priya", avatar: "drop" });
 const SAM = makePlayer({ id: "p2", name: "Sam", avatar: "star", crowns: 1 });
@@ -58,7 +65,7 @@ function setup(
       });
     }
   };
-  const rendered = render(
+  const rendered = renderLocalized(
     <SoundProvider engine={engine}>
       <TvFinalScores
         view={makeHostView({
@@ -76,7 +83,7 @@ function setup(
 describe("TvFinalScores, settled (finishedAt 0)", () => {
   it("shows the scoreboard with zero cues", () => {
     const engine = recordingEngine();
-    render(
+    renderLocalized(
       <SoundProvider engine={engine}>
         <TvFinalScores
           view={makeHostView({
@@ -215,7 +222,7 @@ describe("TvFinalScores, mounted late", () => {
 
 describe("TvFinalScores, not completed", () => {
   it("shows Game over with no crown copy", () => {
-    render(
+    renderLocalized(
       <TvFinalScores
         view={makeHostView({
           players: [PRIYA, SAM],
@@ -254,7 +261,7 @@ describe("TvFinalScores, not completed", () => {
 
 describe("TvFinalScores, footer", () => {
   it("names the VIP", () => {
-    render(
+    renderLocalized(
       <TvFinalScores
         view={makeHostView({
           players: [PRIYA, SAM],
@@ -276,7 +283,7 @@ describe("TvFinalScores, footer", () => {
 
 describe("TvFinalScores, ties", () => {
   it("names every winner when the game ends in a tie", () => {
-    render(
+    renderLocalized(
       <TvFinalScores
         view={makeHostView({
           players: [PRIYA, SAM, LEE],
@@ -296,7 +303,7 @@ describe("TvFinalScores, ties", () => {
 
 describe("TvFinalScores, waiting", () => {
   it("waits when there is no result yet", () => {
-    render(<TvFinalScores view={makeHostView({ lastResult: null })} />);
+    renderLocalized(<TvFinalScores view={makeHostView({ lastResult: null })} />);
     expect(screen.getByText("Waiting for final scores")).toBeTruthy();
   });
 });
