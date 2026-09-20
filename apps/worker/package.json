@@ -12,6 +12,7 @@
     "db:seed:local": "node ../../scripts/build-pack-seed.mjs && wrangler d1 execute openpartygames --local --file=.wrangler/pack-seed.sql"
   },
   "dependencies": {
+    "@opg/game-doodle-bluff": "workspace:*",
     "@opg/game-imposter": "workspace:*",
     "@opg/game-most-likely-to": "workspace:*",
     "@opg/game-real-or-nah": "workspace:*",

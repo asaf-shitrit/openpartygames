@@ -13,11 +13,12 @@ Either way:
 - The first player to join is the VIP and drives the game from their phone, so a shared screen can sit across the room.
 - Rooms hold 3 to 8 players either way. Everyone plays; nobody sits out.
 
-Three games so far:
+Four games so far:
 
 - **Imposter** — everyone gets a secret word on their phone except the imposter, who knows their role and sees a decoy word. Give clues out loud, then vote.
 - **Real or Nah** — an obscure fact with a blank. Everyone writes a believable fake answer, then the room votes for the one that's true.
 - **Most Likely To** — "Who's most likely to…?" Everyone votes for a friend (or themselves), the room sees who picked whom, and you score by voting with the room.
+- **Doodle Bluff** — draw a secret prompt on your phone. Everyone else writes a fake title, then the room votes for the real one.
 
 Game content lives in versioned, licensed, rated packs in this repo. Code is AGPL-3.0, packs are CC BY-SA 4.0 by default. See [LICENSE](LICENSE).
 
@@ -150,9 +151,11 @@ packages/ui/          Doodle Notebook UI kit: tokens, fonts, components, avatars
 games/imposter/       Imposter rules and Host/Phone UI
 games/real-or-nah/    Real or Nah rules and Host/Phone UI
 games/most-likely-to/ Most Likely To rules and Host/Phone UI
+games/doodle-bluff/   Doodle Bluff rules and Host/Phone UI
 packs/imposter/       word-pair packs (JSON)
 packs/real-or-nah/    fact packs (JSON)
 packs/most-likely-to/ superlative prompt packs (JSON)
+packs/doodle-bluff/   drawing-prompt packs (JSON)
 scripts/              pack validation, pack seed, pack submission, icons and share card
 ```
 

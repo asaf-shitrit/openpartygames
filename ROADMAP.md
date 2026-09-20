@@ -44,14 +44,14 @@ What the SDK provides, or will provide. Each game below lists the capabilities i
 | Game | How it plays | Inspired by | Needs |
 |---|---|---|---|
 | **Most Likely To** | Vote on which friend best fits the prompt, yourself included. Score by voting with the room; the TV shows who picked whom. The template to copy for your first game. | Party staple | `vote` `packs` |
+| **Doodle Bluff** | Draw a secret prompt. Everyone else writes a fake title, then the room votes for the real one. | Drawful | `canvas` `text` `vote` |
 
 ## Phase 2: Drawing games
 
-In build order. Doodle Bluff reuses Real or Nah's flow, while Quick Sketch needs live drawing sync.
+In build order. Sketch Phone reuses the `canvas` capability Doodle Bluff introduced; Quick Sketch needs live drawing sync on top of it.
 
 | Game | How it plays | Inspired by | Needs |
 |---|---|---|---|
-| **Doodle Bluff** | Draw a secret prompt. Everyone else writes a fake title, then the room votes for the real one. | Drawful | `canvas` `text` `vote` |
 | **Sketch Phone** | Write a phrase, the next player draws it, the next describes the drawing, and so on. The full chain replays on the host screen. | Telestrations, Gartic Phone | `canvas` `chain` `text` |
 | **Quick Sketch** | One player draws on their phone, mirrored live to the host screen, while everyone races to type the answer. | Pictionary, skribbl.io | `canvas` (live) `text` |
 

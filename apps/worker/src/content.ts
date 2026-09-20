@@ -4,6 +4,7 @@ import type {
   ContentKind,
   ContentOf,
   ContentSource,
+  DrawingPrompt,
   Fact,
   GameContent,
   PackMeta,
@@ -90,6 +91,10 @@ const CONTENT_FROM_ROWS = {
     kind: "superlatives",
     items: rows.map(superlativeFromRow),
   }),
+  "drawing-prompts": (rows) => ({
+    kind: "drawing-prompts",
+    items: rows.map(drawingPromptFromRow),
+  }),
 } satisfies { [K in ContentKind]: (rows: ItemRow[]) => ContentOf<K> };
 
 function contentFromRows(kind: ContentKind, rows: ItemRow[]): GameContent {
@@ -110,14 +115,20 @@ function factFromRow(row: ItemRow): Fact {
 
 function superlativeFromRow(row: ItemRow): Superlative {
   const item = parseItem(row.data);
-  if ("prompt" in item && !("answer" in item)) return item;
+  if ("prompt" in item && !("answer" in item) && !("houseTitles" in item)) return item;
   throw new Error("pack item is not a superlative");
 }
 
+function drawingPromptFromRow(row: ItemRow): DrawingPrompt {
+  const item = parseItem(row.data);
+  if ("prompt" in item && "houseTitles" in item) return item;
+  throw new Error("pack item is not a drawing prompt");
+}
+
 /** Parses one pack item; malformed JSON aborts the game start (fail loudly). */
-function parseItem(data: string): WordPair | Fact | Superlative {
+function parseItem(data: string): WordPair | Fact | Superlative | DrawingPrompt {
   try {
-    const item: WordPair | Fact | Superlative = JSON.parse(data);
+    const item: WordPair | Fact | Superlative | DrawingPrompt = JSON.parse(data);
     return item;
   } catch {
     throw new Error("pack item is not valid JSON");

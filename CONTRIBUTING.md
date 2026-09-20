@@ -42,12 +42,13 @@ Packs are JSON files under `packs/`. The rules live in `scripts/pack-rules.mjs`;
 - `packs/imposter/*.json` holds word-pair packs (`kind: "word-pairs"`).
 - `packs/real-or-nah/*.json` holds fact packs (`kind: "facts"`).
 - `packs/most-likely-to/*.json` holds superlative prompt packs (`kind: "superlatives"`). There is no issue form for these yet, so send new prompts as a pull request.
+- `packs/doodle-bluff/*.json` holds drawing-prompt packs (`kind: "drawing-prompts"`). There is no issue form for these yet, so send new prompts as a pull request.
 
 Every pack declares:
 
 - `id` — kebab-case, and it must match the filename.
 - `name`, `attribution`.
-- `kind` — `word-pairs` in `packs/imposter/`, `facts` in `packs/real-or-nah/`, `superlatives` in `packs/most-likely-to/`.
+- `kind` — `word-pairs` in `packs/imposter/`, `facts` in `packs/real-or-nah/`, `superlatives` in `packs/most-likely-to/`, `drawing-prompts` in `packs/doodle-bluff/`.
 - `rating` — `family`, `teen` or `adult`.
 - `language` — `en` for now.
 - `license` — `CC0-1.0`, `CC-BY-4.0` or `CC-BY-SA-4.0`.
@@ -74,6 +75,13 @@ Superlatives are `{ id, prompt }`, where `prompt` finishes "Who's most likely to
 - `prompt` — at most 80 characters, starts lowercase, no ending `?`, `.` or `!` (the game adds the question mark)
 - no prompt may start with "most likely", "who" or "to", or repeat another prompt in the pack
 - keep it playful: habits, quirks, harmless hypotheticals. Nothing about looks, bodies, intelligence, money, dating, alcohol or drugs, crime, health or protected traits. Family and teen packs are on by default, so every prompt has to be fine in a classroom.
+
+Drawing prompts are `{ id, prompt, houseTitles }`:
+
+- `id` — non-empty and unique within the pack
+- `prompt` — something drawable, at most 60 characters, starts lowercase, no ending `?`, `.` or `!`, no giveaway words like "the word", "spell" or "written" (it has to be drawn, not written)
+- no prompt may repeat another prompt in the pack, and the same prompt must not appear in two different packs
+- `houseTitles` — at least 4 believable fake titles for the drawing, none matching the prompt or each other once normalized, each at most 60 characters
 
 ## Licensing
 
