@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { RonHostView } from "../types";
 import { HostReveal } from "./HostReveal";
 import { RON_REVEAL_PREVIEW_START, realOrNahPreviews } from "./preview";
@@ -61,15 +62,17 @@ function setup(label: string, elapsedMs: number) {
     }
   };
   const rendered = render(
-    <SoundProvider engine={engine}>
-      <HostReveal
-        view={view}
-        players={room.players}
-        deadline={room.game?.deadline ?? null}
-        timerStartedAt={room.game?.timerStartedAt ?? null}
-        clock={clock}
-      />
-    </SoundProvider>,
+    <LocaleProvider>
+      <SoundProvider engine={engine}>
+        <HostReveal
+          view={view}
+          players={room.players}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </SoundProvider>
+    </LocaleProvider>,
   );
   return { engine, advanceTo, rendered };
 }
@@ -138,6 +141,20 @@ describe("HostReveal, a lie's author was kicked mid-reveal", () => {
   });
 });
 
+describe("HostReveal, Hebrew locale", () => {
+  it("renders the settled reveal in Hebrew", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    setup("Host: reveal, 3 foolers", 21999);
+    expect(screen.getByText("בואו נראה מי רימה את מי")).toBeTruthy();
+    expect(screen.getByText("אלה לא רימו אף אחד")).toBeTruthy();
+    expect(screen.getByText("האמת")).toBeTruthy();
+    expect(screen.getByText("אמת")).toBeTruthy();
+    expect(screen.getByText("הדירוג")).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
+  });
+});
+
 describe("HostReveal, other lie counts", () => {
   it("skips the duds row when nobody wrote a dud lie", () => {
     vi.useFakeTimers();
@@ -161,13 +178,15 @@ describe("HostReveal, other lie counts", () => {
     };
     const clock: ServerClock = { now: () => RON_REVEAL_PREVIEW_START + 21999 };
     render(
-      <HostReveal
-        view={emptyFound}
-        players={room.players}
-        deadline={null}
-        timerStartedAt={RON_REVEAL_PREVIEW_START}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <HostReveal
+          view={emptyFound}
+          players={room.players}
+          deadline={null}
+          timerStartedAt={RON_REVEAL_PREVIEW_START}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("Nobody found it! Tricky one.")).toBeTruthy();
   });

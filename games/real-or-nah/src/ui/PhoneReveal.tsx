@@ -13,6 +13,7 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
 import { revealDurationMs, revealPlan } from "../reveal-plan";
 import { planLiesOf, type RonPlayerView } from "../types";
 import {
@@ -123,6 +124,7 @@ export interface PhoneRevealProps {
 
 export function PhoneReveal(props: PhoneRevealProps) {
   const { view, players, myId } = props;
+  const { t } = useLocale();
   const reveal = view.reveal;
   const buzz = useBuzz();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -141,7 +143,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
   const names = useMemo(() => nameMap(players), [players]);
   const cards = useMemo(() => {
     if (!reveal) return [];
-    return personalRevealCards({
+    return personalRevealCards(t, {
       segments,
       reveal,
       me: myId,
@@ -149,7 +151,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
       standingsOrdinal: ordinalOf(view.totals, myId),
       myPointsThisFact: view.myPoints ?? 0,
     });
-  }, [segments, reveal, myId, names, view.totals, view.myPoints]);
+  }, [t, segments, reveal, myId, names, view.totals, view.myPoints]);
   const cardBeats = useMemo(() => personalCardBeats(cards), [cards]);
   const cardMoment = useMoment(cardBeats, startedAt, props.clock);
 
@@ -168,8 +170,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
     <div ref={rootRef} style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
       {shownCards.length === 0 ? (
         <EyesOnTv
-          title="Eyes on the TV"
-          detail={inTruth ? "Here it comes…" : "The votes are being read…"}
+          detail={inTruth ? t.realOrNah.hereItComes : t.realOrNah.votesBeingRead}
           tempo={inTruth ? "fast" : "slow"}
         />
       ) : (

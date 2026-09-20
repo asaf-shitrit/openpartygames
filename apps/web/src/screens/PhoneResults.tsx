@@ -21,21 +21,25 @@ import {
 import type { Beat, HapticName, Moment, ServerClock } from "@opg/ui";
 import type { ReactNode } from "react";
 import { useRef } from "react";
-import { useLocale } from "@opg/i18n";
+import { format, placeFor, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
 import {
   crownCopy,
   crownCueId,
   finaleBeats,
-  ordinal,
   rankPlayers,
   topRank,
 } from "./finale-timeline";
 import type { RankedPlayer } from "./finale-timeline";
 
-function findPlayerName(view: PlayerRoomView, id: PlayerId | null): string {
-  if (!id) return "Someone";
-  return view.players.find((player) => player.id === id)?.name ?? "Someone";
+function findPlayerName(
+  view: PlayerRoomView,
+  id: PlayerId | null,
+  someone: string,
+): string {
+  if (!id) return someone;
+  return view.players.find((player) => player.id === id)?.name ?? someone;
 }
 
 function myRankIn(ranked: RankedPlayer[], me: PlayerId): number | null {
@@ -137,7 +141,7 @@ function AwardCallout({
       }}
     >
       {live ? <StickerBurst live count={8} size={220} /> : null}
-      <Marker size={26}>{copy?.title ?? "You got an award!"}</Marker>
+      <Marker size={26}>{copy?.title ?? t.results.gotAward}</Marker>
       {copy ? (
         <div style={{ fontSize: 18, fontWeight: 700 }}>{copy.detail}</div>
       ) : null}
@@ -163,17 +167,22 @@ function RankCallout({ label }: { label: string }) {
   );
 }
 
-function crownHeadline(amWinner: boolean, crownLine: string | null): string {
-  if (amWinner) return "You win the crown!";
-  return crownLine ?? "The crown is decided";
+function crownHeadline(
+  t: Dictionary,
+  amWinner: boolean,
+  crownLine: string | null,
+): string {
+  if (amWinner) return t.results.youWinCrown;
+  return crownLine ?? t.results.crownDecided;
 }
 
 function finishedRankText(
+  t: Dictionary,
   amWinner: boolean,
   rank: number | null,
 ): string | null {
   if (amWinner || rank === null) return null;
-  return `You finished ${ordinal(rank)}`;
+  return format(t.results.finishedPlace, { place: placeFor(t, rank) });
 }
 
 function CrownCallout({
@@ -187,7 +196,8 @@ function CrownCallout({
   crownLine: string | null;
   rank: number | null;
 }) {
-  const finishedText = finishedRankText(amWinner, rank);
+  const { t } = useLocale();
+  const finishedText = finishedRankText(t, amWinner, rank);
   return (
     <Card
       variant="L"
@@ -207,7 +217,7 @@ function CrownCallout({
       {amWinner ? <Confetti live={live} surface="phone" /> : null}
       <Crown size={amWinner ? 130 : 60} />
       <Marker size={amWinner ? 34 : 26}>
-        {crownHeadline(amWinner, crownLine)}
+        {crownHeadline(t, amWinner, crownLine)}
       </Marker>
       {finishedText === null ? null : (
         <div style={{ fontSize: 18, fontWeight: 700 }}>{finishedText}</div>
@@ -261,6 +271,7 @@ function SettledCard({
   awards: Award[];
   gameId: string;
 }) {
+  const { t } = useLocale();
   return (
     <Card
       variant="L"
@@ -278,8 +289,11 @@ function SettledCard({
     >
       <Marker size={28}>
         {rank === null
-          ? "Final scores"
-          : `You finished ${ordinal(rank)} with ${score.toLocaleString("en-US")}`}
+          ? t.results.finalScores
+          : format(t.results.finishedPlaceWithScore, {
+              place: placeFor(t, rank),
+              score: score.toLocaleString("en-US"),
+            })}
       </Marker>
       <StickerRow awards={awards} gameId={gameId} />
     </Card>
@@ -287,11 +301,15 @@ function SettledCard({
 }
 
 /** "3rd place!" or "2nd place!" when this beat has reached my own rank. */
-function rankPlaceCallout(stage: Stage, myRank: number | null): ReactNode {
+function rankPlaceCallout(
+  t: Dictionary,
+  stage: Stage,
+  myRank: number | null,
+): ReactNode {
   if (stage.secondReached && myRank === 2)
-    return <RankCallout label="2nd place!" />;
+    return <RankCallout label={t.results.secondPlaceBang} />;
   if (stage.thirdReached && myRank === 3)
-    return <RankCallout label="3rd place!" />;
+    return <RankCallout label={t.results.thirdPlaceBang} />;
   return null;
 }
 
@@ -312,17 +330,20 @@ function myAwardCallout(
   );
 }
 
-function teaserCallout(stage: Stage, sharedScreen: boolean): ReactNode {
+function teaserCallout(t: Dictionary, stage: Stage, sharedScreen: boolean): ReactNode {
   return (
     <EyesOnTv
-      title={sharedScreen ? "Eyes on the TV" : "Almost time"}
-      detail="Awards are coming…"
+      // A shared screen gets the kit's own "Eyes on the TV"; without one there is no
+      // screen to look at, so the teaser says what is coming instead.
+      title={sharedScreen ? undefined : t.results.almostTime}
+      detail={t.results.awardsComing}
       tempo={stage.crownIntroReached ? "fast" : "slow"}
     />
   );
 }
 
 function bodyFor(args: {
+  t: Dictionary;
   view: PlayerRoomView;
   me: PlayerId;
   stage: Stage;
@@ -331,7 +352,7 @@ function bodyFor(args: {
   crownLine: string | null;
   gameId: string;
 }): ReactNode {
-  const { view, me, stage, ranked, awards, crownLine, gameId } = args;
+  const { t, view, me, stage, ranked, awards, crownLine, gameId } = args;
   const myRank = myRankIn(ranked, me);
 
   if (stage.settleReached) {
@@ -355,13 +376,13 @@ function bodyFor(args: {
     );
   }
   return (
-    rankPlaceCallout(stage, myRank) ??
+    rankPlaceCallout(t, stage, myRank) ??
     myAwardCallout(stage, awards, gameId) ??
-    teaserCallout(stage, view.sharedScreen)
+    teaserCallout(t, stage, view.sharedScreen)
   );
 }
 
-function GameOverCard({ score }: { score: number }) {
+function GameOverCard({ t, score }: { t: Dictionary; score: number }) {
   return (
     <Card
       variant="L"
@@ -377,9 +398,9 @@ function GameOverCard({ score }: { score: number }) {
         textAlign: "center",
       }}
     >
-      <Marker size={30}>Game over</Marker>
+      <Marker size={30}>{t.results.gameOver}</Marker>
       <div style={{ fontSize: 20, fontWeight: 700 }}>
-        {score.toLocaleString("en-US")} points
+        {format(t.results.points, { score: score.toLocaleString("en-US") })}
       </div>
     </Card>
   );
@@ -487,17 +508,21 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
     );
   });
 
-  if (result === null) return <GameOverCard score={0} />;
+  if (result === null) return <GameOverCard t={t} score={0} />;
   if (!completedOf(result))
-    return <GameOverCard score={myScoreIn(ranked, me)} />;
+    return <GameOverCard t={t} score={myScoreIn(ranked, me)} />;
 
   const crownLine = crownCopy(
-    (result.winnerIds ?? []).map((id) => findPlayerName(view, id)),
+    t,
+    (result.winnerIds ?? []).map((id) =>
+      findPlayerName(view, id, t.common.someone),
+    ),
   );
 
   return (
     <div ref={cardRef} style={{ display: "flex", flexGrow: 1 }}>
       {bodyFor({
+        t,
         view,
         me,
         stage,

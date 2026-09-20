@@ -5,14 +5,16 @@ import { useRef } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { anchorAt, Card, EyesOnTv, formatPoints, Marker, reached, StickerBurst, useBeatEntries, useBuzz, useMoment } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { REVEAL_MS, type DoodleHostView, type DoodlePlayerView } from "../state";
 import { HostReveal } from "./HostReveal";
 import type { PersonalReveal } from "./reveal-timeline";
 import { personalReveal, phoneRevealBeats } from "./reveal-timeline";
 
-function buildPersonal(view: DoodlePlayerView): PersonalReveal {
+function buildPersonal(t: Dictionary, view: DoodlePlayerView): PersonalReveal {
   const reveal = view.reveal;
-  return personalReveal({
+  return personalReveal(t, {
     isArtist: view.isArtist,
     myVote: view.myVote,
     truthOptionId: reveal?.truthOptionId ?? "",
@@ -21,7 +23,7 @@ function buildPersonal(view: DoodlePlayerView): PersonalReveal {
   });
 }
 
-function ResultCard({ personal, live, total }: { personal: PersonalReveal; live: boolean; total: number }) {
+function ResultCard({ personal, live, total, t }: { personal: PersonalReveal; live: boolean; total: number; t: Dictionary }) {
   return (
     <div style={{ flexGrow: 1, display: "flex" }}>
       <Card
@@ -47,15 +49,20 @@ function ResultCard({ personal, live, total }: { personal: PersonalReveal; live:
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <Marker size={30}>{personal.headline}</Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
-          <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>{formatPoints(total)} total</div>
+          <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>{format(t.doodleBluff.totalPoints, { points: formatPoints(total) })}</div>
         </div>
       </Card>
     </div>
   );
 }
 
-function Waiting({ suspense }: { suspense: boolean }) {
-  return <EyesOnTv title="Eyes on the TV" detail={suspense ? "Here it comes…" : "The votes are in…"} tempo={suspense ? "fast" : "slow"} />;
+function Waiting({ suspense, t }: { suspense: boolean; t: Dictionary }) {
+  return (
+    <EyesOnTv
+      detail={suspense ? t.doodleBluff.hereItComes : t.doodleBluff.votesAreIn}
+      tempo={suspense ? "fast" : "slow"}
+    />
+  );
 }
 
 export interface PhoneRevealProps {
@@ -89,7 +96,8 @@ function TvFollowingReveal({
   timerStartedAt: number | null;
   clock: ServerClock;
 }) {
-  const personal = buildPersonal(view);
+  const { t } = useLocale();
+  const personal = buildPersonal(t, view);
   const beats = phoneRevealBeats(personal.haptic);
   const startedAt = anchorAt(timerStartedAt, deadline, REVEAL_MS);
   const moment = useMoment(beats, startedAt, clock);
@@ -106,9 +114,9 @@ function TvFollowingReveal({
   return (
     <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
       {personalReached ? (
-        <ResultCard personal={personal} live={moment.live} total={view.totals[me] ?? 0} />
+        <ResultCard personal={personal} live={moment.live} total={view.totals[me] ?? 0} t={t} />
       ) : (
-        <Waiting suspense={suspense} />
+        <Waiting suspense={suspense} t={t} />
       )}
     </div>
   );

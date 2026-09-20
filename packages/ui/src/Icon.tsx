@@ -200,6 +200,9 @@ export function Icon({
   const spec = ICONS[name];
   return (
     <svg
+      // Lets styles.css mirror reading-order arrows under [dir="rtl"] without a useLocale()
+      // call here — an icon must render fine outside a LocaleProvider.
+      data-icon={name}
       width={size}
       height={size}
       viewBox={spec.viewBox}

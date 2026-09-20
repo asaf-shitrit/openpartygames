@@ -1,6 +1,8 @@
 // "Show this on your TV" guide dialog for the host screen.
 import type { CSSProperties, JSX } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { Card, HeaderChip, Marker, StickyNote } from "@opg/ui";
 
 export type HostDevice = "mac" | "ios" | "chrome" | "other";
@@ -32,54 +34,39 @@ export interface GuideSection {
 
 const GUIDE_ORDER: GuideId[] = ["mac", "ios", "chrome", "tv-browser", "hdmi"];
 
-function guideTitle(id: GuideId): string {
-  if (id === "mac") return "Mac to Apple TV or AirPlay TV";
-  if (id === "ios") return "iPad or iPhone to Apple TV or AirPlay TV";
-  if (id === "chrome") return "Chrome to Chromecast or Google TV";
-  if (id === "tv-browser") return "Your TV's web browser";
-  return "HDMI cable";
+function guideTitle(id: GuideId, t: Dictionary["landing"]): string {
+  if (id === "mac") return t.guideMacTitle;
+  if (id === "ios") return t.guideIosTitle;
+  if (id === "chrome") return t.guideChromeTitle;
+  if (id === "tv-browser") return t.guideTvBrowserTitle;
+  return t.guideHdmiTitle;
 }
 
-function guideSteps(id: GuideId, host: string): string[] {
+function guideSteps(id: GuideId, host: string, t: Dictionary["landing"]): string[] {
   if (id === "mac") {
-    return [
-      "Open Control Center in the menu bar.",
-      "Click Screen Mirroring and pick your TV.",
-      "Click Full screen at the top right.",
-    ];
+    return [t.guideMacStep1, t.guideMacStep2, t.guideMacStep3];
   }
   if (id === "ios") {
-    return [
-      "Open Control Center.",
-      "Tap Screen Mirroring and pick your TV.",
-      "Turn it sideways so the game fills the TV.",
-    ];
+    return [t.guideIosStep1, t.guideIosStep2, t.guideIosStep3];
   }
   if (id === "chrome") {
-    return [
-      "Open the ⋮ menu at the top right of Chrome.",
-      "Choose Cast… and pick your TV.",
-      "Click Full screen at the top right.",
-    ];
+    return [t.guideChromeStep1, t.guideChromeStep2, t.guideChromeStep3];
   }
   if (id === "tv-browser") {
     return [
-      "Open the web browser app on your TV.",
-      `Go to ${host}.`,
-      "Start the room there. Phones join the same way.",
+      t.guideTvBrowserStep1,
+      format(t.guideTvBrowserStep2, { host }),
+      t.guideTvBrowserStep3,
     ];
   }
-  return [
-    "Plug this computer into the TV.",
-    "Switch the TV to that input.",
-    "Click Full screen at the top right.",
-  ];
+  return [t.guideHdmiStep1, t.guideHdmiStep2, t.guideHdmiStep3];
 }
 
 /** The ways to get this screen onto a TV, with the current device's way first. */
 export function guideSections(
   device: HostDevice,
   host: string,
+  t: Dictionary["landing"],
 ): GuideSection[] {
   const order =
     device === "other"
@@ -87,8 +74,8 @@ export function guideSections(
       : [device, ...GUIDE_ORDER.filter((id) => id !== device)];
   return order.map((id) => ({
     id,
-    title: guideTitle(id),
-    steps: guideSteps(id, host),
+    title: guideTitle(id, t),
+    steps: guideSteps(id, host, t),
     onThisDevice: id === device,
   }));
 }
@@ -154,7 +141,7 @@ const BADGE_STYLE: CSSProperties = {
 const STEPS_STYLE: CSSProperties = {
   fontSize: 28,
   lineHeight: 1.3,
-  paddingLeft: 36,
+  paddingInlineStart: 36,
   margin: 0,
   display: "flex",
   flexDirection: "column",
@@ -179,14 +166,16 @@ function GuideEntryBody({ section }: { section: GuideSection }) {
 function GuideEntry({
   section,
   index,
+  onThisDeviceLabel,
 }: {
   section: GuideSection;
   index: number;
+  onThisDeviceLabel: string;
 }) {
   if (section.onThisDevice) {
     return (
       <StickyNote tilt={-1} style={ENTRY_STYLE}>
-        <div style={BADGE_STYLE}>On this device</div>
+        <div style={BADGE_STYLE}>{onThisDeviceLabel}</div>
         <GuideEntryBody section={section} />
       </StickyNote>
     );
@@ -203,13 +192,21 @@ function GuideEntry({
   );
 }
 
-function GuideHeader({ onClose }: { onClose: () => void }) {
+function GuideHeader({
+  onClose,
+  title,
+  doneLabel,
+}: {
+  onClose: () => void;
+  title: string;
+  doneLabel: string;
+}) {
   return (
     <div style={HEADER_STYLE}>
       <h2 id="show-on-tv-title" style={{ margin: 0 }}>
-        <Marker size={64}>Show this on your TV</Marker>
+        <Marker size={64}>{title}</Marker>
       </h2>
-      <HeaderChip icon="check" label="Done" onClick={onClose} />
+      <HeaderChip icon="check" label={doneLabel} onClick={onClose} />
     </div>
   );
 }
@@ -220,6 +217,7 @@ function focusChipButton(span: HTMLSpanElement | null): void {
 
 /** Header chip that opens the ways to put this screen on a TV. */
 export function ShowOnTvChip(): JSX.Element {
+  const { t } = useLocale();
   const chipRef = useRef<HTMLSpanElement>(null);
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -233,7 +231,11 @@ export function ShowOnTvChip(): JSX.Element {
   return (
     <>
       <span ref={chipRef} style={{ display: "contents" }}>
-        <HeaderChip icon="monitor" label="Show on TV" onClick={openGuide} />
+        <HeaderChip
+          icon="monitor"
+          label={t.landing.showOnTv}
+          onClick={openGuide}
+        />
       </span>
       {guideOpen ? (
         <ShowOnTvGuide
@@ -254,8 +256,9 @@ export function ShowOnTvGuide({
   host,
   onClose,
 }: ShowOnTvGuideProps): JSX.Element {
+  const { t } = useLocale();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const sections = guideSections(device, host);
+  const sections = guideSections(device, host, t.landing);
 
   useEffect(() => {
     dialogRef.current?.querySelector("button")?.focus();
@@ -277,13 +280,20 @@ export function ShowOnTvGuide({
       style={DIALOG_STYLE}
     >
       <Card variant="L" tilt={-0.5} style={PANEL_STYLE}>
-        <GuideHeader onClose={onClose} />
-        <div style={{ fontSize: 32 }}>
-          Mirror this screen to your TV. Everyone still plays on their phone.
-        </div>
+        <GuideHeader
+          onClose={onClose}
+          title={t.landing.showOnTvTitle}
+          doneLabel={t.landing.done}
+        />
+        <div style={{ fontSize: 32 }}>{t.landing.showOnTvIntro}</div>
         <div style={GRID_STYLE}>
           {sections.map((section, index) => (
-            <GuideEntry key={section.id} section={section} index={index} />
+            <GuideEntry
+              key={section.id}
+              section={section}
+              index={index}
+              onThisDeviceLabel={t.landing.onThisDevice}
+            />
           ))}
         </div>
       </Card>

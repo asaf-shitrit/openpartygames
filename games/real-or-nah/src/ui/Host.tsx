@@ -19,6 +19,8 @@ import {
   useMusic,
   useReducedMotion,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { RonHostView } from "../types";
 import { PromptText, playerAvatar, playerFor, playerName } from "./common";
 import { HostReveal } from "./HostReveal";
@@ -32,6 +34,7 @@ export interface HostProps {
 }
 
 export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -45,8 +48,8 @@ export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps)
     >
       <TvHeader
         variant="game"
-        gameName="Real or Nah"
-        progress={`Fact ${view.factNumber} of ${view.factCount}`}
+        gameName={t.realOrNah.title}
+        progress={format(t.realOrNah.factOf, { number: view.factNumber, count: view.factCount })}
         roomCode={room.code}
       />
       <PhaseEnter phaseKey={`${view.factNumber}:${view.phase}`}>
@@ -104,6 +107,7 @@ interface PhaseProps {
 }
 
 function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps) {
+  const { t } = useLocale();
   return (
     <>
       <div
@@ -116,7 +120,7 @@ function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps)
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          <Marker size={64}>Write a believable lie on your phone</Marker>
+          <Marker size={64}>{t.realOrNah.writeHeading}</Marker>
           <LinedCard
             tilt={-1}
             style={{ marginTop: 12, padding: "62px 64px 62px 92px" }}
@@ -133,7 +137,7 @@ function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps)
           timerStartedAt={timerStartedAt}
           clock={clock}
           size={190}
-          note="left to write"
+          note={t.realOrNah.leftToWrite}
         />
       </div>
       <WriteProgress view={view} room={room} />
@@ -207,6 +211,7 @@ function WriteProgress({
   view: RonHostView;
   room: HostRoomView;
 }) {
+  const { t } = useLocale();
   const count = Math.max(1, view.playerIds.length);
   const tileRefs = useRef(new Map<PlayerId, HTMLElement>());
   const arrivals = useArrivals(view.submittedIds);
@@ -214,9 +219,12 @@ function WriteProgress({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
-        <Marker size={44}>Lies in</Marker>
+        <Marker size={44}>{t.realOrNah.liesIn}</Marker>
         <div style={{ fontSize: 36, fontWeight: 700 }}>
-          {view.submittedIds.length} of {view.playerIds.length}
+          {format(t.realOrNah.countOfTotal, {
+            count: view.submittedIds.length,
+            total: view.playerIds.length,
+          })}
         </div>
       </div>
       <div
@@ -257,7 +265,7 @@ function lieTileStyle(done: boolean): CSSProperties {
 }
 
 /** Done/Writing… with a matching icon, so outcome is never color alone. */
-function LieStatus({ done }: { done: boolean }) {
+function LieStatus({ done, t }: { done: boolean; t: Dictionary }) {
   return (
     <div
       style={{
@@ -270,7 +278,7 @@ function LieStatus({ done }: { done: boolean }) {
       }}
     >
       <Icon name={done ? "check" : "pencil"} size={28} />
-      <div>{done ? "Done" : "Writing…"}</div>
+      <div>{done ? t.realOrNah.done : t.realOrNah.writing}</div>
     </div>
   );
 }
@@ -286,13 +294,15 @@ function LieTile({
   done: boolean;
   registerRef: (el: HTMLElement | null) => void;
 }) {
+  const { t } = useLocale();
   const player = playerFor(room, id);
+  const name = playerName(player, t.common.someone);
   return (
     <div ref={registerRef} style={lieTileStyle(done)}>
       <Avatar
         id={playerAvatar(player)}
         size={72}
-        alt={`${playerName(player)}'s avatar`}
+        alt={format(t.realOrNah.avatarAlt, { name })}
       />
       <div
         style={{
@@ -302,14 +312,15 @@ function LieTile({
           textAlign: "center",
         }}
       >
-        {playerName(player)}
+        {name}
       </div>
-      <LieStatus done={done} />
+      <LieStatus done={done} t={t} />
     </div>
   );
 }
 
 function VotePhase({ view, deadline, timerStartedAt, clock }: Omit<PhaseProps, "room">) {
+  const { t } = useLocale();
   const options = view.options ?? [];
   useMusic("tension");
   return (
@@ -341,7 +352,7 @@ function VotePhase({ view, deadline, timerStartedAt, clock }: Omit<PhaseProps, "
         <VotedSide view={view} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 28 }}>
-        <Marker size={68}>Which one is real?</Marker>
+        <Marker size={68}>{t.realOrNah.whichIsReal}</Marker>
         <div
           style={{
             fontSize: 38,
@@ -349,7 +360,7 @@ function VotePhase({ view, deadline, timerStartedAt, clock }: Omit<PhaseProps, "
             color: "var(--opg-ink-secondary)",
           }}
         >
-          Vote on your phone.
+          {t.realOrNah.voteOnPhone}
         </div>
       </div>
       <div
@@ -374,6 +385,7 @@ function VotedSide({
   timerStartedAt,
   clock,
 }: Pick<PhaseProps, "view" | "deadline" | "timerStartedAt" | "clock">) {
+  const { t } = useLocale();
   const play = useCue();
   const reduced = useReducedMotion();
   const countRef = useRef<HTMLDivElement>(null);
@@ -412,7 +424,10 @@ function VotedSide({
       >
         <Icon name="check" size={30} color="var(--opg-marker)" />
         <div>
-          {view.votedIds.length} of {view.playerIds.length} voted
+          {format(t.realOrNah.votedOfTotalTv, {
+            voted: view.votedIds.length,
+            total: view.playerIds.length,
+          })}
         </div>
       </div>
     </div>

@@ -1,9 +1,16 @@
+import type { ReactNode } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { CUE_IDS, SoundProvider } from "@opg/ui";
 import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
 import { SoundBoard } from "./SoundBoard";
+
+/** These dev screens render real game UI, which reads its copy from the dictionary. */
+function renderLocalized(ui: ReactNode) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 class FakeEngine implements SoundEngine {
   unlockCount = 0;
@@ -68,7 +75,7 @@ function nthButton(name: string, index: number): HTMLElement {
 
 describe("SoundBoard", () => {
   it("renders one card per cue", () => {
-    render(
+    renderLocalized(
       <SoundProvider engine={new FakeEngine()}>
         <SoundBoard />
       </SoundProvider>,
@@ -83,7 +90,7 @@ describe("SoundBoard", () => {
   it("plays the sampled cue on the provider engine", async () => {
     const engine = new FakeEngine();
     const user = userEvent.setup();
-    render(
+    renderLocalized(
       <SoundProvider engine={engine}>
         <SoundBoard />
       </SoundProvider>,
@@ -96,7 +103,7 @@ describe("SoundBoard", () => {
     const engine = new FakeEngine();
     const synth = new FakeEngine();
     const user = userEvent.setup();
-    render(
+    renderLocalized(
       <SoundProvider engine={engine}>
         <SoundBoard createSynthEngine={() => synth} />
       </SoundProvider>,
@@ -111,7 +118,7 @@ describe("SoundBoard", () => {
   it("unlocks and shows the mute state", async () => {
     const engine = new FakeEngine();
     const user = userEvent.setup();
-    render(
+    renderLocalized(
       <SoundProvider engine={engine}>
         <SoundBoard />
       </SoundProvider>,

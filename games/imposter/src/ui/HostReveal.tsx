@@ -29,6 +29,8 @@ import {
   useMoment,
   useReducedMotion,
 } from "@opg/ui";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { REVEAL_MS, type ImposterHostView } from "../state";
 import { revealOutcome, topVoted } from "../rules";
 import type { RevealOutcome } from "../rules";
@@ -89,18 +91,16 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return findPlayer(players, id)?.name ?? t.common.someone;
 }
 
 function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
   return findPlayer(players, id)?.avatar ?? null;
 }
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId | null): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return format(t.imposter.avatarAlt, { name: nameOf(t, players, id) });
 }
 
 interface RevealPlan {
@@ -221,6 +221,7 @@ interface VerdictView {
 }
 
 interface VerdictArgs {
+  t: Dictionary;
   outcome: RevealOutcome;
   imposterId: PlayerId | null;
   verdict: boolean;
@@ -229,10 +230,10 @@ interface VerdictArgs {
   unmaskLive: boolean;
 }
 
-function centeredText(outcome: RevealOutcome, verdict: boolean): string | null {
+function centeredText(t: Dictionary, outcome: RevealOutcome, verdict: boolean): string | null {
   if (!verdict) return null;
-  if (outcome.kind === "tie") return "It's a tie!";
-  if (outcome.kind === "no-votes") return "No votes?!";
+  if (outcome.kind === "tie") return t.imposter.reveal.itsATie;
+  if (outcome.kind === "no-votes") return t.imposter.reveal.noVotesBang;
   return null;
 }
 
@@ -258,7 +259,7 @@ function caughtStamps(args: VerdictArgs): TileStamp[] {
   return [
     {
       id: args.imposterId,
-      text: "Imposter!",
+      text: args.t.imposter.reveal.imposterBadge,
       shake: "big",
       live: args.verdictLive,
     },
@@ -270,7 +271,7 @@ function escapedStamps(args: VerdictArgs): TileStamp[] {
   if (args.verdict && args.outcome.kind === "wrong") {
     stamps.push({
       id: args.outcome.accusedId,
-      text: "Not the imposter",
+      text: args.t.imposter.reveal.notImposter,
       shake: "small",
       live: args.verdictLive,
     });
@@ -278,7 +279,7 @@ function escapedStamps(args: VerdictArgs): TileStamp[] {
   if (args.unmask && args.imposterId !== null) {
     stamps.push({
       id: args.imposterId,
-      text: "Imposter!",
+      text: args.t.imposter.reveal.imposterBadge,
       shake: "none",
       live: args.unmaskLive,
     });
@@ -296,26 +297,26 @@ function verdictView(args: VerdictArgs): VerdictView {
     highlightedId: highlightedId(args),
     footprintsId: footprintsId(args),
     stamps: tileStamps(args),
-    centered: centeredText(args.outcome, args.verdict),
+    centered: centeredText(args.t, args.outcome, args.verdict),
   };
 }
 
 /** One of the four verdict sentences read out to screen readers at the verdict beat. */
 export function verdictSentence(
+  t: Dictionary,
   outcome: RevealOutcome,
   imposterId: PlayerId | null,
   players: PlayerSummary[],
 ): string {
-  const imposter = nameOf(players, imposterId);
-  if (outcome.kind === "caught") {
-    return `${imposter} was the imposter and got caught.`;
-  }
+  const imposter = nameOf(t, players, imposterId);
+  const r = t.imposter.reveal;
+  if (outcome.kind === "caught") return format(r.verdictCaught, { name: imposter });
   if (outcome.kind === "wrong") {
-    const accused = nameOf(players, outcome.accusedId);
-    return `${accused} was not the imposter. ${imposter} got away.`;
+    const accused = nameOf(t, players, outcome.accusedId);
+    return format(r.verdictWrong, { accused, name: imposter });
   }
-  if (outcome.kind === "tie") return `It's a tie. ${imposter} got away.`;
-  return `Nobody voted. ${imposter} got away.`;
+  if (outcome.kind === "tie") return format(r.verdictTie, { name: imposter });
+  return format(r.verdictNoVotes, { name: imposter });
 }
 
 function tileStyle(highlighted: boolean): CSSProperties {
@@ -354,12 +355,13 @@ function VoterAvatar({
   id: PlayerId;
   live: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <FxIn live={live} preset="pop" style={{ display: "inline-flex" }}>
       <Avatar
         id={avatarOf(players, id)}
         size={40}
-        alt={avatarLabel(players, id)}
+        alt={avatarLabel(t, players, id)}
       />
     </FxIn>
   );
@@ -422,16 +424,17 @@ interface RevealTileProps {
   shakeRef: RefObject<HTMLElement | null>;
 }
 
-function voteLabel(shown: number): string {
-  return `${shown} ${shown === 1 ? "vote" : "votes"}`;
+function voteLabel(t: Dictionary, shown: number): string {
+  return format(pickPluralByCount(shown, t.imposter.reveal.votes), { count: shown });
 }
 
 function TallyRow({ count, shown }: { count: number; shown: number }) {
+  const { t } = useLocale();
   return (
     <div style={{ height: 60, display: "flex", alignItems: "center", gap: 12 }}>
       <TallyScratch count={count} drawn={shown} size={50} />
       <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
-        {voteLabel(shown)}
+        {voteLabel(t, shown)}
       </div>
     </div>
   );
@@ -461,6 +464,7 @@ function VoterRow({
 }
 
 function RevealTile(props: RevealTileProps) {
+  const { t } = useLocale();
   const { id, index, voters, order, drawn, compact, live } = props;
   const shown = marksForTarget(order, id, drawn);
   return (
@@ -475,10 +479,10 @@ function RevealTile(props: RevealTileProps) {
         <Avatar
           id={avatarOf(props.players, id)}
           size={compact ? 88 : 110}
-          alt={avatarLabel(props.players, id)}
+          alt={avatarLabel(t, props.players, id)}
         />
         <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
-          {nameOf(props.players, id)}
+          {nameOf(t, props.players, id)}
         </div>
         <TallyRow count={voters.length} shown={shown} />
         <VoterRow
@@ -491,7 +495,7 @@ function RevealTile(props: RevealTileProps) {
           <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} />
         )}
         {props.footprints ? (
-          <div style={{ position: "absolute", right: -22, bottom: -22 }}>
+          <div style={{ position: "absolute", insetInlineEnd: -22, bottom: -22 }}>
             <FxIn live={props.live} preset="pop">
               <Footprints />
             </FxIn>
@@ -550,6 +554,7 @@ const CAPTION_RESERVED_HEIGHT = 60;
 const VERDICT_RESERVED_HEIGHT = 132;
 
 function Caption({ suspense }: { suspense: boolean }) {
+  const { t } = useLocale();
   return (
     <div
       data-testid="reveal-caption"
@@ -558,7 +563,7 @@ function Caption({ suspense }: { suspense: boolean }) {
         visibility: suspense ? "visible" : "hidden",
       }}
     >
-      {suspense ? <div style={CAPTION}>And the imposter is…</div> : null}
+      {suspense ? <div style={CAPTION}>{t.imposter.reveal.andImposterIs}</div> : null}
     </div>
   );
 }
@@ -600,12 +605,13 @@ function DecoyFooter({
   players: PlayerSummary[];
   live: boolean;
 }) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(t, players, view.imposterId);
   return (
     <FxIn live={live} preset="fadeIn">
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <div style={{ fontSize: 44, fontWeight: 700 }}>
-          {imposter}&apos;s decoy word was
+          {format(t.imposter.reveal.decoyWas, { name: imposter })}
         </div>
         <Highlight style={{ padding: "0 14px" }}>
           <Marker size={88}>{view.decoyWord ?? "—"}</Marker>
@@ -644,11 +650,15 @@ function UnmaskFooter({
 }
 
 /** The sticky note text at the "next" beat: same words the TV and the no-TV stage both use. */
-export function nextNoteText(view: ImposterHostView, players: PlayerSummary[]): string {
-  const imposter = nameOf(players, view.imposterId);
+export function nextNoteText(
+  t: Dictionary,
+  view: ImposterHostView,
+  players: PlayerSummary[],
+): string {
+  const imposter = nameOf(t, players, view.imposterId);
   return view.caught === true
-    ? `One last chance, ${imposter}…`
-    : `${imposter} slipped away: +1,000`;
+    ? format(t.imposter.reveal.oneLastChance, { name: imposter })
+    : format(t.imposter.reveal.slippedAwayPoints, { name: imposter });
 }
 
 function NextNote({
@@ -660,7 +670,8 @@ function NextNote({
   players: PlayerSummary[];
   stage: Stage;
 }) {
-  const note = nextNoteText(view, players);
+  const { t } = useLocale();
+  const note = nextNoteText(t, view, players);
   return (
     <div
       data-testid="reveal-next-note"
@@ -701,8 +712,9 @@ function VerdictAnnouncer({
   outcome: RevealOutcome;
   verdict: boolean;
 }) {
+  const { t } = useLocale();
   const text = verdict
-    ? verdictSentence(outcome, view.imposterId, players)
+    ? verdictSentence(t, outcome, view.imposterId, players)
     : "";
   return (
     <output aria-live="polite" style={HIDDEN}>
@@ -725,11 +737,12 @@ interface RevealStageProps {
 }
 
 function RevealStage(props: RevealStageProps) {
+  const { t } = useLocale();
   const { view, players, plan, stage, verdict, shakeRef } = props;
   return (
     <>
       <FxIn live={stage.introLive} preset="slideIn">
-        <Marker size={96}>The votes are in</Marker>
+        <Marker size={96}>{t.imposter.reveal.votesAreIn}</Marker>
       </FxIn>
       <Caption suspense={stage.suspense} />
       <CenteredVerdict
@@ -768,6 +781,7 @@ export interface HostRevealProps {
 }
 
 export function HostReveal(props: HostRevealProps) {
+  const { t } = useLocale();
   const plan = useMemo(() => revealPlan(props.view), [props.view]);
   const rootRef = useRef<HTMLDivElement>(null);
   const reduced = useReducedMotion();
@@ -778,6 +792,7 @@ export function HostReveal(props: HostRevealProps) {
   const spotlightOn = stage.suspense && !stage.verdictReached;
   const targets = useSpotlightTargets(rootRef, plan.topIds, spotlightOn);
   const verdict = verdictView({
+    t,
     outcome: plan.outcome,
     imposterId: props.view.imposterId,
     verdict: stage.verdictReached,

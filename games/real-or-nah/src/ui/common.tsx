@@ -8,6 +8,7 @@ import type {
         PlayerSummary,
 } from "@opg/protocol";
 import { Avatar } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 
 type Room = HostRoomView | PlayerRoomView;
 
@@ -24,8 +25,12 @@ export function findPlayer(
         return players.find((player) => player.id === id) ?? null;
 }
 
-export function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-        return findPlayer(players, id)?.name ?? id ?? "Someone";
+export function nameOf(
+        players: PlayerSummary[],
+        id: PlayerId | null,
+        someone: string,
+): string {
+        return findPlayer(players, id)?.name ?? id ?? someone;
 }
 
 export function avatarOf(
@@ -51,12 +56,13 @@ export function PersonTag({
         fontSize = 30,
         children,
 }: PersonTagProps) {
+        const { t } = useLocale();
         return (
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar
                                 id={avatar}
                                 size={avatarSize}
-                                alt={`${name}'s avatar`}
+                                alt={format(t.realOrNah.avatarAlt, { name })}
                         />
                         <div style={{ fontSize, fontWeight: 700 }}>{name}</div>
                         {children}
@@ -71,8 +77,11 @@ export interface PersonProps {
         fontSize?: number;
 }
 
-export function playerName(player: PlayerSummary | undefined): string {
-        return player?.name ?? "Player";
+export function playerName(
+        player: PlayerSummary | undefined,
+        someone: string,
+): string {
+        return player?.name ?? someone;
 }
 
 export function playerAvatar(
@@ -82,10 +91,11 @@ export function playerAvatar(
 }
 
 export function Person({ room, id, avatarSize, fontSize }: PersonProps) {
+        const { t } = useLocale();
         const player = playerFor(room, id);
         return (
                 <PersonTag
-                        name={playerName(player)}
+                        name={playerName(player, t.common.someone)}
                         avatar={playerAvatar(player)}
                         avatarSize={avatarSize}
                         fontSize={fontSize}

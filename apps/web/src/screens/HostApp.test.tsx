@@ -397,4 +397,18 @@ describe("HostApp", () => {
     showState(socket, makeHostView({ lobbyScreen: "pick" }));
     expect(engine.cues).toContain("whoosh");
   });
+
+  it("renders in Hebrew", () => {
+    localStorage.setItem("opg:host:BKTZ", "tok");
+    localStorage.setItem("opg:locale", "he");
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = connectHost();
+    showState(socket, makeHostView({ phase: "starting" }));
+    expect(screen.getByText("מתחילים את Imposter…")).toBeTruthy();
+    expect(screen.getByText("תתכוננו. הסיבוב הראשון בדרך.")).toBeTruthy();
+  });
 });

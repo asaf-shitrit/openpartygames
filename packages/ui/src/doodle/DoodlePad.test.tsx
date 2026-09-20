@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { DoodlePad } from "./DoodlePad";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaDecode } from "./geometry";
@@ -7,6 +9,15 @@ import type { Doodle } from "./types";
 import type { ClientRectLike } from "./geometry";
 
 afterEach(cleanup);
+
+function renderDoodlePad(ui: ReactElement) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
+
+function renderHebrewDoodlePad(ui: ReactElement) {
+  window.localStorage.setItem("opg:locale", "he");
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 const RECT: ClientRectLike = { left: 0, top: 0, width: 300, height: 300 };
 
@@ -64,7 +75,7 @@ function drag(
 
 describe("DoodlePad", () => {
   it("speaks the prompt and stroke count beside the canvas", () => {
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat riding a skateboard"
         clock={steppingClock(0, 100)}
@@ -78,7 +89,7 @@ describe("DoodlePad", () => {
   it("records a dragged stroke with its ink, quantized duration and gap, then updates what is spoken", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
     const clock = steppingClock(0, 50); // each event call advances the clock by 50ms
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={clock}
@@ -106,7 +117,7 @@ describe("DoodlePad", () => {
 
   it("only the first active pointer draws; a second pointer down is ignored", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={steppingClock(0, 20)}
@@ -128,7 +139,7 @@ describe("DoodlePad", () => {
   it("records the gap since the previous stroke ended", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
     const clock = steppingClock(0, 300);
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={clock}
@@ -147,7 +158,7 @@ describe("DoodlePad", () => {
 
   it("selecting a swatch marks it checked and colours the next stroke", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={steppingClock(0, 20)}
@@ -167,7 +178,7 @@ describe("DoodlePad", () => {
 
   it("undo pops the last stroke and repaints from the model", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={steppingClock(0, 20)}
@@ -186,7 +197,7 @@ describe("DoodlePad", () => {
   });
 
   it("undo is disabled with nothing drawn", () => {
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={steppingClock(0, 20)}
@@ -199,7 +210,7 @@ describe("DoodlePad", () => {
 
   it("clear needs a second tap to confirm, then empties the drawing", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
-    render(
+    renderDoodlePad(
       <DoodlePad
         prompt="a cat"
         clock={steppingClock(0, 20)}
@@ -214,5 +225,26 @@ describe("DoodlePad", () => {
     expect(onChange).toHaveBeenCalledTimes(1); // only the drawn stroke so far, not a clear yet
     fireEvent.click(screen.getByRole("button", { name: /tap again/i }));
     expect(onChange.mock.calls.at(-1)?.[0]?.s).toEqual([]);
+  });
+});
+
+describe("DoodlePad, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("speaks the prompt and pen names in Hebrew", () => {
+    renderHebrewDoodlePad(
+      <DoodlePad
+        prompt="חתול על סקייטבורד"
+        clock={steppingClock(0, 100)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+      />,
+    );
+    expect(spokenLabel()).toBe("הציור שלכם עבור חתול על סקייטבורד: 0 קווים עד כה");
+    expect(screen.getByRole("radio", { name: "עט אדום" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "בטלו" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "נקו" })).toBeTruthy();
   });
 });

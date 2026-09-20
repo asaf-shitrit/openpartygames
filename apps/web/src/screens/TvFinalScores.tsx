@@ -34,15 +34,15 @@ import type {
   MusicId,
   ServerClock,
 } from "@opg/ui";
-import { useLocale } from "@opg/i18n";
+import { format, joinNamesAnd, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
 import { PointArrow, TvPage } from "./shared";
 import {
+  FINALE_TIMING,
   crownCopy,
   crownCueId,
   finaleBeats,
-  FINALE_TIMING,
-  joinNames,
   rankPlayers,
   topRank,
 } from "./finale-timeline";
@@ -77,8 +77,9 @@ function findPlayer(
 function nameOf(
   players: readonly PlayerSummary[],
   id: PlayerId | null,
+  someone: string,
 ): string {
-  return findPlayer(players, id)?.name ?? "Someone";
+  return findPlayer(players, id)?.name ?? someone;
 }
 
 function avatarOf(players: readonly PlayerSummary[], id: PlayerId | null) {
@@ -90,7 +91,7 @@ function cueOptions(cue: CueId): CueOptions | undefined {
   return undefined;
 }
 
-function EmptyFinalScores({ code }: { code: string }) {
+function EmptyFinalScores({ t, code }: { t: Dictionary; code: string }) {
   return (
     <TvPage>
       <TvHeader variant="brand" roomCode={code} />
@@ -102,7 +103,7 @@ function EmptyFinalScores({ code }: { code: string }) {
           justifyContent: "center",
         }}
       >
-        <Marker size={64}>Waiting for final scores</Marker>
+        <Marker size={64}>{t.results.waitingForFinalScores}</Marker>
       </div>
     </TvPage>
   );
@@ -163,10 +164,12 @@ function stageFromMoment(moment: Moment, beats: readonly Beat[]): Stage {
 
 /** Compact scoreboard row: keeps the whole list, up to 8 players, inside a ~64px row. */
 function ScoreRow({
+  t,
   row,
   players,
   winner,
 }: {
+  t: Dictionary;
   row: RankedPlayer;
   players: PlayerSummary[];
   winner: boolean;
@@ -202,7 +205,7 @@ function ScoreRow({
       </div>
       <Avatar id={avatarOf(players, row.id)} size={48} />
       <div style={{ flexGrow: 1, fontSize: 32, fontWeight: 700 }}>
-        {nameOf(players, row.id)}
+        {nameOf(players, row.id, t.common.someone)}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {player && player.crowns > 0 ? (
@@ -218,14 +221,14 @@ function ScoreRow({
               transform: "rotate(-6deg)",
             }}
           >
-            new!
+            {t.results.newBadge}
           </div>
         ) : null}
       </div>
       <div
         style={{
           width: 140,
-          textAlign: "right",
+          textAlign: "end",
           fontSize: 32,
           fontWeight: 700,
         }}
@@ -237,10 +240,12 @@ function ScoreRow({
 }
 
 function ScoresList({
+  t,
   ranked,
   players,
   winners,
 }: {
+  t: Dictionary;
   ranked: RankedPlayer[];
   players: PlayerSummary[];
   winners: readonly PlayerId[];
@@ -248,11 +253,12 @@ function ScoresList({
   const winnerSet = new Set(winners);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Marker size={40}>Final scores</Marker>
+      <Marker size={40}>{t.results.finalScores}</Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {ranked.map((row) => (
           <ScoreRow
             key={row.id}
+            t={t}
             row={row}
             players={players}
             winner={winnerSet.has(row.id)}
@@ -263,11 +269,15 @@ function ScoresList({
   );
 }
 
-function vipName(players: readonly PlayerSummary[], vipId: PlayerId | null) {
-  return vipId ? nameOf(players, vipId) : null;
+function vipName(
+  t: Dictionary,
+  players: readonly PlayerSummary[],
+  vipId: PlayerId | null,
+) {
+  return vipId ? nameOf(players, vipId, t.common.someone) : null;
 }
 
-function FinalScoresFooter({ vip }: { vip: string | null }) {
+function FinalScoresFooter({ t, vip }: { t: Dictionary; vip: string | null }) {
   return (
     <div
       style={{
@@ -280,40 +290,49 @@ function FinalScoresFooter({ vip }: { vip: string | null }) {
     >
       <PointArrow />
       {vip ? (
-        <>
-          <Highlight style={{ padding: "0 6px" }}>
-            <span>{vip}</span>
-          </Highlight>
-          <div>picks the next game from their phone</div>
-        </>
-      ) : (
-        <div>picks the next game from their phone</div>
-      )}
+        <Highlight style={{ padding: "0 6px" }}>
+          <span>{vip}</span>
+        </Highlight>
+      ) : null}
+      <div>{t.results.picksNextGame}</div>
     </div>
   );
 }
 
-function WrapBanner({ show, live }: { show: boolean; live: boolean }) {
+function WrapBanner({
+  t,
+  show,
+  live,
+}: {
+  t: Dictionary;
+  show: boolean;
+  live: boolean;
+}) {
   if (!show) return null;
   return (
     <FxIn live={live} preset="slideIn">
-      <Marker size={72}>That&apos;s a wrap!</Marker>
+      <Marker size={72}>{t.results.wrapBanner}</Marker>
     </FxIn>
   );
 }
 
 function AwardCard({
+  t,
   award,
   copy,
   players,
   live,
 }: {
+  t: Dictionary;
   award: Award;
   copy: { title: string; detail: string };
   players: PlayerSummary[];
   live: boolean;
 }) {
-  const names = joinNames(award.playerIds.map((id) => nameOf(players, id)));
+  const names = joinNamesAnd(
+    t.common,
+    award.playerIds.map((id) => nameOf(players, id, t.common.someone)),
+  );
   return (
     <FxIn live={live} preset="tapeOn">
       <Card
@@ -335,7 +354,7 @@ function AwardCard({
               key={id}
               id={avatarOf(players, id)}
               size={48}
-              alt={nameOf(players, id)}
+              alt={nameOf(players, id, t.common.someone)}
             />
           ))}
         </div>
@@ -371,6 +390,7 @@ function AwardStrip({
       return (
         <AwardCard
           key={award.id}
+          t={t}
           award={award}
           copy={copy}
           players={players}
@@ -387,15 +407,20 @@ function AwardStrip({
 
 /** Small chip per award, title plus names, used in the settled layout's slim strip. */
 function AwardChip({
+  t,
   award,
   copy,
   players,
 }: {
+  t: Dictionary;
   award: Award;
   copy: { title: string; detail: string };
   players: PlayerSummary[];
 }) {
-  const names = joinNames(award.playerIds.map((id) => nameOf(players, id)));
+  const names = joinNamesAnd(
+    t.common,
+    award.playerIds.map((id) => nameOf(players, id, t.common.someone)),
+  );
   return (
     <div
       style={{
@@ -430,7 +455,13 @@ function SlimAwardStrip({
       const copy = awardCopyFor(gameId, award, t);
       if (copy === null) return null;
       return (
-        <AwardChip key={award.id} award={award} copy={copy} players={players} />
+        <AwardChip
+          key={award.id}
+          t={t}
+          award={award}
+          copy={copy}
+          players={players}
+        />
       );
     })
     .filter((chip) => chip !== null);
@@ -442,10 +473,12 @@ function SlimAwardStrip({
 
 /** Compact winner/crown banner for the settled layout: small avatars, a small crown, the line. */
 function SettledBanner({
+  t,
   ranked,
   players,
   crownLine,
 }: {
+  t: Dictionary;
   ranked: RankedPlayer[];
   players: PlayerSummary[];
   crownLine: string | null;
@@ -459,7 +492,7 @@ function SettledBanner({
             key={row.id}
             id={avatarOf(players, row.id)}
             size={56}
-            alt={nameOf(players, row.id)}
+            alt={nameOf(players, row.id, t.common.someone)}
           />
         ))}
       </div>
@@ -469,7 +502,7 @@ function SettledBanner({
   );
 }
 
-function CrownIntro({ stage }: { stage: Stage }) {
+function CrownIntro({ t, stage }: { t: Dictionary; stage: Stage }) {
   if (!stage.crownIntroReached || stage.crownReached) return null;
   return (
     <div style={{ position: "relative" }}>
@@ -487,13 +520,14 @@ function CrownIntro({ stage }: { stage: Stage }) {
         preset="fadeIn"
         style={{ position: "relative" }}
       >
-        <Marker size={64}>And the crown goes to…</Marker>
+        <Marker size={64}>{t.results.crownGoesTo}</Marker>
       </FxIn>
     </div>
   );
 }
 
 function RankReveal({
+  t,
   ranked,
   players,
   rank,
@@ -501,6 +535,7 @@ function RankReveal({
   live,
   label,
 }: {
+  t: Dictionary;
   ranked: RankedPlayer[];
   players: PlayerSummary[];
   rank: number;
@@ -527,7 +562,7 @@ function RankReveal({
                 {label}
               </span>
               <div style={{ fontSize: 32, fontWeight: 700 }}>
-                {nameOf(players, row.id)}
+                {nameOf(players, row.id, t.common.someone)}
               </div>
               <CountUp
                 from={0}
@@ -544,11 +579,13 @@ function RankReveal({
 }
 
 function CrownReveal({
+  t,
   stage,
   ranked,
   players,
   crownLine,
 }: {
+  t: Dictionary;
   stage: Stage;
   ranked: RankedPlayer[];
   players: PlayerSummary[];
@@ -584,7 +621,7 @@ function CrownReveal({
             <Avatar
               id={avatarOf(players, row.id)}
               size={140}
-              alt={nameOf(players, row.id)}
+              alt={nameOf(players, row.id, t.common.someone)}
             />
           </div>
         ))}
@@ -596,15 +633,19 @@ function CrownReveal({
 }
 
 function CrownAnnouncer({
+  t,
   crownReached,
   crownLine,
 }: {
+  t: Dictionary;
   crownReached: boolean;
   crownLine: string | null;
 }) {
   // A fuller sentence than the on-screen marker, so the two never collide under an exact text match.
   const text =
-    crownReached && crownLine ? `The crown is decided. ${crownLine}` : "";
+    crownReached && crownLine
+      ? format(t.results.crownAnnounce, { crownLine })
+      : "";
   return (
     <output aria-live="polite" style={HIDDEN}>
       {text}
@@ -613,15 +654,17 @@ function CrownAnnouncer({
 }
 
 function NotCompletedView({
+  t,
   view,
   ranked,
 }: {
+  t: Dictionary;
   view: HostRoomView;
   ranked: RankedPlayer[];
 }) {
   const gameName =
     view.games.find((g) => g.id === view.lastResult?.gameId)?.name ??
-    "Final scores";
+    t.results.finalScores;
   return (
     <TvPage>
       <TvHeader variant="game" gameName={gameName} roomCode={view.code} />
@@ -633,15 +676,16 @@ function NotCompletedView({
           gap: 24,
         }}
       >
-        <Marker size={64}>Game over</Marker>
-        <ScoresList ranked={ranked} players={view.players} winners={[]} />
+        <Marker size={64}>{t.results.gameOver}</Marker>
+        <ScoresList t={t} ranked={ranked} players={view.players} winners={[]} />
       </div>
-      <FinalScoresFooter vip={vipName(view.players, view.vipId)} />
+      <FinalScoresFooter t={t} vip={vipName(t, view.players, view.vipId)} />
     </TvPage>
   );
 }
 
 interface FinaleBodyProps {
+  t: Dictionary;
   view: HostRoomView;
   ranked: RankedPlayer[];
   winners: readonly PlayerId[];
@@ -653,6 +697,7 @@ interface FinaleBodyProps {
 
 /** Ceremony layout: awards row, then the crown stage. Never shown once settled. */
 function CeremonyLayout({
+  t,
   view,
   ranked,
   crownLine,
@@ -670,7 +715,7 @@ function CeremonyLayout({
         gap: 32,
       }}
     >
-      <WrapBanner show={!stage.crownIntroReached} live={stage.wrapLive} />
+      <WrapBanner t={t} show={!stage.crownIntroReached} live={stage.wrapLive} />
       <AwardStrip
         awards={awards}
         awardsShown={stage.awardsShown}
@@ -678,24 +723,27 @@ function CeremonyLayout({
         gameId={gameId}
         players={view.players}
       />
-      <CrownIntro stage={stage} />
+      <CrownIntro t={t} stage={stage} />
       <RankReveal
+        t={t}
         ranked={ranked}
         players={view.players}
         rank={3}
         visible={stage.thirdReached}
         live={stage.thirdLive}
-        label="3rd place"
+        label={t.results.thirdPlaceLabel}
       />
       <RankReveal
+        t={t}
         ranked={ranked}
         players={view.players}
         rank={2}
         visible={stage.secondReached}
         live={stage.secondLive}
-        label="2nd place"
+        label={t.results.secondPlaceLabel}
       />
       <CrownReveal
+        t={t}
         stage={stage}
         ranked={ranked}
         players={view.players}
@@ -707,6 +755,7 @@ function CeremonyLayout({
 
 /** Settled layout: a compact winner/crown banner, a slim award strip, then the ranked list. */
 function SettledLayout({
+  t,
   view,
   ranked,
   winners,
@@ -728,18 +777,19 @@ function SettledLayout({
       }}
     >
       <SettledBanner
+        t={t}
         ranked={ranked}
         players={view.players}
         crownLine={crownLine}
       />
       <SlimAwardStrip awards={awards} gameId={gameId} players={view.players} />
-      <ScoresList ranked={ranked} players={view.players} winners={winners} />
+      <ScoresList t={t} ranked={ranked} players={view.players} winners={winners} />
     </FxIn>
   );
 }
 
 function FinaleBody(props: FinaleBodyProps) {
-  const { stage, crownLine } = props;
+  const { t, stage, crownLine } = props;
   return (
     <>
       {stage.settleReached ? (
@@ -747,7 +797,11 @@ function FinaleBody(props: FinaleBodyProps) {
       ) : (
         <CeremonyLayout {...props} />
       )}
-      <CrownAnnouncer crownReached={stage.crownReached} crownLine={crownLine} />
+      <CrownAnnouncer
+        t={t}
+        crownReached={stage.crownReached}
+        crownLine={crownLine}
+      />
     </>
   );
 }
@@ -788,9 +842,9 @@ function finishedAtOf(result: GameResultSummary | null): number | null {
   return result.finishedAt ?? 0;
 }
 
-function gameNameFor(view: HostRoomView, gameId: string): string {
+function gameNameFor(t: Dictionary, view: HostRoomView, gameId: string): string {
   const found = view.games.find((g) => g.id === gameId);
-  if (found === undefined) return "Final scores";
+  if (found === undefined) return t.results.finalScores;
   return found.name;
 }
 
@@ -837,13 +891,14 @@ export function TvFinalScores({
 
   useBeatEntries(beats, moment, (beat) => playCueOnEnter(beat, play));
 
-  if (result === null) return <EmptyFinalScores code={view.code} />;
+  if (result === null) return <EmptyFinalScores t={t} code={view.code} />;
   if (!completedOf(result))
-    return <NotCompletedView view={view} ranked={ranked} />;
+    return <NotCompletedView t={t} view={view} ranked={ranked} />;
 
-  const gameName = gameNameFor(view, gameIdOf(result));
+  const gameName = gameNameFor(t, view, gameIdOf(result));
   const crownLine = crownCopy(
-    winnerIdsOf(result).map((id) => nameOf(view.players, id)),
+    t,
+    winnerIdsOf(result).map((id) => nameOf(view.players, id, t.common.someone)),
   );
 
   return (
@@ -851,10 +906,11 @@ export function TvFinalScores({
       <TvHeader
         variant="game"
         gameName={gameName}
-        progress="Final scores"
+        progress={t.results.finalScores}
         roomCode={view.code}
       />
       <FinaleBody
+        t={t}
         view={view}
         ranked={ranked}
         winners={winnerIdsOf(result)}
@@ -863,7 +919,7 @@ export function TvFinalScores({
         awards={awards}
         gameId={result.gameId}
       />
-      <FinalScoresFooter vip={vipName(view.players, view.vipId)} />
+      <FinalScoresFooter t={t} vip={vipName(t, view.players, view.vipId)} />
     </TvPage>
   );
 }

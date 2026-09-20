@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import { HostReveal, measureTargets, wobbleTiles } from "./HostReveal";
@@ -75,6 +76,7 @@ function setup(label: string, elapsedMs: number) {
         clock={clock}
       />
     </SoundProvider>,
+    { wrapper: LocaleProvider },
   );
   return { engine, advanceTo, rendered };
 }
@@ -256,5 +258,19 @@ describe("spotlight helpers", () => {
 
   it("wobbles nothing without a root", () => {
     expect(() => wobbleTiles(null, ["priya"], false)).not.toThrow();
+  });
+});
+
+describe("HostReveal in Hebrew", () => {
+  it("shows the verdict stamp in Hebrew once it lands", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { advanceTo } = setup("Host: reveal", 0);
+      advanceTo(8100);
+      expect(screen.getByText("מתחזה!")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

@@ -12,4 +12,15 @@ export const common = {
   listAndLast: "{list} and {last}",
   listOrTwo: "{a} or {b}",
   listOrLast: "{list} or {last}",
+  place: {
+    first: "1st",
+    second: "2nd",
+    third: "3rd",
+    fourth: "4th",
+    fifth: "5th",
+    sixth: "6th",
+    seventh: "7th",
+    eighth: "8th",
+    other: "{rank}th",
+  },
 };

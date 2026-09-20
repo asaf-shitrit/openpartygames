@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleGalleryEntry } from "../state";
 import { cascadeDelayMs, HostGallery } from "./HostGallery";
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
@@ -36,9 +38,17 @@ describe("cascadeDelayMs", () => {
   });
 });
 
+function renderGallery(entries: DoodleGalleryEntry[]) {
+  return render(
+    <LocaleProvider>
+      <HostGallery entries={entries} players={PLAYERS} clock={CLOCK} />
+    </LocaleProvider>,
+  );
+}
+
 describe("HostGallery", () => {
   it("renders the heading and every entry's title and artist", () => {
-    render(<HostGallery entries={[entry()]} players={PLAYERS} clock={CLOCK} />);
+    renderGallery([entry()]);
     expect(screen.getByText("The gallery — gone after tonight")).toBeTruthy();
     expect(screen.getByText("a dog on a scooter")).toBeTruthy();
     expect(screen.getByText("Priya")).toBeTruthy();
@@ -46,12 +56,19 @@ describe("HostGallery", () => {
   });
 
   it("marks a drawing that was never shown", () => {
-    render(<HostGallery entries={[entry({ shown: false, foundByCount: null })]} players={PLAYERS} clock={CLOCK} />);
+    renderGallery([entry({ shown: false, foundByCount: null })]);
     expect(screen.getByText("never shown")).toBeTruthy();
   });
 
   it("singular found-by copy for one finder", () => {
-    render(<HostGallery entries={[entry({ foundByCount: 1 })]} players={PLAYERS} clock={CLOCK} />);
+    renderGallery([entry({ foundByCount: 1 })]);
     expect(screen.getByText("Found by 1 player")).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is set", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderGallery([entry()]);
+    expect(screen.getByText("הגלריה — נעלמת אחרי הערב")).toBeTruthy();
+    expect(screen.getByText("נמצא על ידי 2 שחקנים")).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { PlayerSummary } from "@opg/protocol";
+import { LocaleProvider } from "@opg/i18n";
 import {
   previousTotal,
   rankBadge,
@@ -87,15 +88,17 @@ describe("Standings", () => {
 
   it("renders rows in the previous order before the reorder beat", () => {
     render(
-      <Standings
-        players={PLAYERS}
-        playerIds={playerIds}
-        totals={TOTALS}
-        pointsThisFact={POINTS_THIS_FACT}
-        countReached={false}
-        countLive={false}
-        reorderReached={false}
-      />,
+      <LocaleProvider>
+        <Standings
+          players={PLAYERS}
+          playerIds={playerIds}
+          totals={TOTALS}
+          pointsThisFact={POINTS_THIS_FACT}
+          countReached={false}
+          countLive={false}
+          reorderReached={false}
+        />
+      </LocaleProvider>,
     );
     const names = screen.getAllByText(/Dov|Maya|Sam/).map((el) => el.textContent);
     expect(names).toEqual(["Dov", "Maya", "Sam"]);
@@ -103,15 +106,17 @@ describe("Standings", () => {
 
   it("shows the count settled (no live count) on a late mount", () => {
     render(
-      <Standings
-        players={PLAYERS}
-        playerIds={playerIds}
-        totals={TOTALS}
-        pointsThisFact={POINTS_THIS_FACT}
-        countReached
-        countLive={false}
-        reorderReached
-      />,
+      <LocaleProvider>
+        <Standings
+          players={PLAYERS}
+          playerIds={playerIds}
+          totals={TOTALS}
+          pointsThisFact={POINTS_THIS_FACT}
+          countReached
+          countLive={false}
+          reorderReached
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("2,000")).toBeTruthy();
     expect(screen.getByText("1,500")).toBeTruthy();
@@ -119,16 +124,38 @@ describe("Standings", () => {
 
   it("shows a rank badge once the reorder is reached", () => {
     render(
-      <Standings
-        players={PLAYERS}
-        playerIds={playerIds}
-        totals={TOTALS}
-        pointsThisFact={POINTS_THIS_FACT}
-        countReached
-        countLive={false}
-        reorderReached
-      />,
+      <LocaleProvider>
+        <Standings
+          players={PLAYERS}
+          playerIds={playerIds}
+          totals={TOTALS}
+          pointsThisFact={POINTS_THIS_FACT}
+          countReached
+          countLive={false}
+          reorderReached
+        />
+      </LocaleProvider>,
     );
     expect(screen.getByText("▲1")).toBeTruthy();
+  });
+
+  it("labels each avatar in Hebrew when the locale is he", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    render(
+      <LocaleProvider>
+        <Standings
+          players={PLAYERS}
+          playerIds={playerIds}
+          totals={TOTALS}
+          pointsThisFact={POINTS_THIS_FACT}
+          countReached={false}
+          countLive={false}
+          reorderReached={false}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("הדירוג")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "האווטאר של Maya" })).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
   });
 });

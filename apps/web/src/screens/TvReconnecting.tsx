@@ -1,7 +1,9 @@
 // Overlay shown on the TV stage while the host socket reconnects mid-game.
+import { useLocale } from "@opg/i18n";
 import { Marker, StickyNote } from "@opg/ui";
 
 export function TvReconnecting() {
+  const { t } = useLocale();
   return (
     <output
       aria-live="polite"
@@ -26,10 +28,8 @@ export function TvReconnecting() {
           gap: 10,
         }}
       >
-        <Marker size={64}>Reconnecting…</Marker>
-        <div style={{ fontSize: 34 }}>
-          Hang tight. The game and scores are safe.
-        </div>
+        <Marker size={64}>{t.status.tvReconnectingHeading}</Marker>
+        <div style={{ fontSize: 34 }}>{t.status.tvReconnectingBody}</div>
       </StickyNote>
     </output>
   );

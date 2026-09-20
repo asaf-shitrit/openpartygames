@@ -2,6 +2,7 @@
 // keyboard navigation for free. The selected swatch is marked by a thicker ink ring plus a check
 // glyph — never colour alone (CLAUDE.md, design/AVATARS.md).
 import type { CSSProperties } from "react";
+import { format, useLocale } from "@opg/i18n";
 import type { InkIndex } from "./types";
 
 const SWATCH_SIZE = 44;
@@ -69,6 +70,7 @@ function Swatch({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <label style={{ position: "relative", display: "inline-flex" }}>
       <input
@@ -76,7 +78,7 @@ function Swatch({
         name={groupName}
         checked={selected}
         onChange={onSelect}
-        aria-label={selected ? `${name} pen, selected` : `${name} pen`}
+        aria-label={format(selected ? t.kit.doodle.penSelected : t.kit.doodle.pen, { name })}
         style={swatchStyle(ink, selected)}
       />
       {selected ? <CheckGlyph /> : null}
@@ -85,17 +87,18 @@ function Swatch({
 }
 
 export function DoodlePalette({ inks, inkNames, selected, onSelect, name }: DoodlePaletteProps) {
+  const { t } = useLocale();
   return (
     <div
       role="radiogroup"
-      aria-label="Pen colour"
+      aria-label={t.kit.doodle.penColorGroup}
       style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
     >
       {inks.map((ink, index) => (
         <Swatch
           key={ink}
           ink={ink}
-          name={inkNames[index] ?? `Ink ${index + 1}`}
+          name={inkNames[index] ?? format(t.kit.doodle.inkFallback, { n: index + 1 })}
           groupName={name}
           selected={index === selected}
           onSelect={() => onSelect(index)}

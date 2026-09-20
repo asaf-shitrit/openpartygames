@@ -4,6 +4,8 @@ import type { CSSProperties } from "react";
 import type { PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { Avatar, Card, DoodleView, FxIn, Icon, Marker } from "@opg/ui";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { DoodleGalleryEntry } from "../state";
 import { avatarOf, drawingLabel, nameOf } from "./common";
 
@@ -27,39 +29,42 @@ function GalleryTile({
   index,
   players,
   clock,
+  t,
 }: {
   entry: DoodleGalleryEntry;
   index: number;
   players: PlayerSummary[];
   clock: ServerClock;
+  t: Dictionary;
 }) {
+  const name = nameOf(players, entry.artistId, t.common.someone);
   return (
     <FxIn live preset="tapeOn" delayMs={cascadeDelayMs(index)}>
       <Card
         variant={index % 2 === 0 ? "M" : "Malt"}
         style={{ padding: 14, display: "flex", flexDirection: "column", gap: 10 }}
       >
-        <DoodleView doodle={entry.doodle} label={drawingLabel(nameOf(players, entry.artistId))} clock={clock} size={220} style={{ alignSelf: "center" }} />
+        <DoodleView doodle={entry.doodle} label={drawingLabel(t, name)} clock={clock} size={220} style={{ alignSelf: "center" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <Avatar id={avatarOf(players, entry.artistId)} size={36} alt={`${nameOf(players, entry.artistId)}'s avatar`} />
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{nameOf(players, entry.artistId)}</div>
+          <Avatar id={avatarOf(players, entry.artistId)} size={36} alt={format(t.doodleBluff.avatarAlt, { name })} />
+          <div style={{ fontWeight: 700, fontSize: 16 }}>{name}</div>
         </div>
         <div style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.25 }}>{entry.title}</div>
-        <ShownTag entry={entry} />
+        <ShownTag entry={entry} t={t} />
       </Card>
     </FxIn>
   );
 }
 
-function ShownTag({ entry }: { entry: DoodleGalleryEntry }) {
+function ShownTag({ entry, t }: { entry: DoodleGalleryEntry; t: Dictionary }) {
   if (!entry.shown) {
-    return <div style={{ fontSize: 14, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>never shown</div>;
+    return <div style={{ fontSize: 14, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.neverShown}</div>;
   }
   const count = entry.foundByCount ?? 0;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
       <Icon name="check" size={16} color="var(--opg-marker)" />
-      {count === 1 ? "Found by 1 player" : `Found by ${count} players`}
+      {format(pickPluralByCount(count, t.doodleBluff.foundByPlayers), { count })}
     </div>
   );
 }
@@ -71,12 +76,13 @@ export interface HostGalleryProps {
 }
 
 export function HostGallery({ entries, players, clock }: HostGalleryProps) {
+  const { t } = useLocale();
   return (
     <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 20, overflow: "hidden" }}>
-      <Marker size={40}>The gallery — gone after tonight</Marker>
+      <Marker size={40}>{t.doodleBluff.galleryHeading}</Marker>
       <div style={GRID}>
         {entries.map((entry, index) => (
-          <GalleryTile key={entry.drawingId} entry={entry} index={index} players={players} clock={clock} />
+          <GalleryTile key={entry.drawingId} entry={entry} index={index} players={players} clock={clock} t={t} />
         ))}
       </div>
     </div>

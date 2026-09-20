@@ -3,6 +3,8 @@ import type { CSSProperties, ReactNode } from "react";
 import type { HostRoomView, PlayerId, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { anchorAt, Avatar, DoodleView, Icon, Marker, PhaseEnter, Timer, TvHeader, useMusic } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { TITLE_MS, type DoodleHostView, type DoodlePhase } from "../state";
 import { avatarOf, drawingLabel, nameOf } from "./common";
 import { HostGallery } from "./HostGallery";
@@ -34,7 +36,22 @@ interface SectionProps {
   clock: ServerClock;
 }
 
-function PlayerTile({ id, players, done, doneLabel, workingLabel }: { id: PlayerId; players: PlayerSummary[]; done: boolean; doneLabel: string; workingLabel: string }) {
+function PlayerTile({
+  id,
+  players,
+  done,
+  doneLabel,
+  workingLabel,
+  t,
+}: {
+  id: PlayerId;
+  players: PlayerSummary[];
+  done: boolean;
+  doneLabel: string;
+  workingLabel: string;
+  t: Dictionary;
+}) {
+  const name = nameOf(players, id, t.common.someone);
   return (
     <div
       style={{
@@ -48,8 +65,8 @@ function PlayerTile({ id, players, done, doneLabel, workingLabel }: { id: Player
         borderRadius: "var(--opg-radius-m)",
       }}
     >
-      <Avatar id={avatarOf(players, id)} size={72} alt={`${nameOf(players, id)}'s avatar`} />
-      <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>{nameOf(players, id)}</div>
+      <Avatar id={avatarOf(players, id)} size={72} alt={format(t.doodleBluff.avatarAlt, { name })} />
+      <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>{name}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 24, fontWeight: 700, color: done ? undefined : "var(--opg-ink-secondary)" }}>
         <Icon name={done ? "check" : "pencil"} size={26} color={done ? "var(--opg-marker)" : "var(--opg-muted)"} />
         <div>{done ? doneLabel : workingLabel}</div>
@@ -59,8 +76,8 @@ function PlayerTile({ id, players, done, doneLabel, workingLabel }: { id: Player
 }
 
 /** design/TVDoodleBluffDraw.dc.html: the draw phase is 130s where this is the only thing on the TV. */
-function drawingProgressLabel(done: number): string {
-  return `Drawing ${done + 1} of 2`;
+function drawingProgressLabel(t: Dictionary, done: number): string {
+  return format(t.doodleBluff.drawingOfTotal, { current: done + 1, total: 2 });
 }
 
 function TileGrid({ children, count }: { children: ReactNode; count: number }) {
@@ -74,15 +91,24 @@ function TileGrid({ children, count }: { children: ReactNode; count: number }) {
 // ---------- draw ----------
 
 function Draw({ view, players, deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   return (
     <div style={BODY}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Marker size={52}>Everyone is drawing</Marker>
+        <Marker size={52}>{t.doodleBluff.everyoneIsDrawing}</Marker>
         <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
       </div>
       <TileGrid count={view.playerIds.length}>
         {view.playerIds.map((id) => (
-          <PlayerTile key={id} id={id} players={players} done={view.drawnIds.includes(id)} doneLabel="Both done" workingLabel={drawingProgressLabel(view.drawnCounts[id] ?? 0)} />
+          <PlayerTile
+            key={id}
+            id={id}
+            players={players}
+            done={view.drawnIds.includes(id)}
+            doneLabel={t.doodleBluff.bothDone}
+            workingLabel={drawingProgressLabel(t, view.drawnCounts[id] ?? 0)}
+            t={t}
+          />
         ))}
       </TileGrid>
     </div>
@@ -91,31 +117,34 @@ function Draw({ view, players, deadline, timerStartedAt, clock }: SectionProps) 
 
 // ---------- title ----------
 
-function TitleHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
+function TitleHeading({ view, deadline, timerStartedAt, clock, t }: SectionProps & { t: Dictionary }) {
   const eligible = Math.max(0, view.playerIds.length - 1);
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Marker size={44}>Who&apos;s written</Marker>
-      <div style={{ fontSize: 30, fontWeight: 700 }}>{view.writtenIds.length} of {eligible} have written a title</div>
+      <Marker size={44}>{t.doodleBluff.whosWritten}</Marker>
+      <div style={{ fontSize: 30, fontWeight: 700 }}>
+        {format(t.doodleBluff.writtenOfEligible, { written: view.writtenIds.length, eligible })}
+      </div>
       <Timer deadline={deadline} clock={clock} size={140} startedAt={timerStartedAt} ticks />
     </div>
   );
 }
 
 function Title({ view, players, deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   const replayStart = anchorAt(timerStartedAt, deadline, TITLE_MS);
   return (
     <div style={BODY}>
       {view.doodle !== null ? (
-        <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(players, view.artistId))} clock={clock} replay={replayStart === null ? undefined : { startedAt: replayStart }} size={320} style={{ alignSelf: "center", flexShrink: 0 }} />
+        <DoodleView doodle={view.doodle} label={drawingLabel(t, nameOf(players, view.artistId, t.common.someone))} clock={clock} replay={replayStart === null ? undefined : { startedAt: replayStart }} size={320} style={{ alignSelf: "center", flexShrink: 0 }} />
       ) : null}
-      <TitleHeading view={view} players={players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
+      <TitleHeading view={view} players={players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} t={t} />
       <TileGrid count={view.playerIds.length}>
         {view.playerIds.map((id) =>
           id === view.artistId ? (
-            <PlayerTile key={id} id={id} players={players} done workingLabel="" doneLabel="drew this one" />
+            <PlayerTile key={id} id={id} players={players} done workingLabel="" doneLabel={t.doodleBluff.drewThisOne} t={t} />
           ) : (
-            <PlayerTile key={id} id={id} players={players} done={view.writtenIds.includes(id)} doneLabel="Written" workingLabel="still writing" />
+            <PlayerTile key={id} id={id} players={players} done={view.writtenIds.includes(id)} doneLabel={t.doodleBluff.written} workingLabel={t.doodleBluff.stillWriting} t={t} />
           ),
         )}
       </TileGrid>
@@ -126,12 +155,15 @@ function Title({ view, players, deadline, timerStartedAt, clock }: SectionProps)
 // ---------- vote ----------
 
 function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Marker size={48}>Which title is real?</Marker>
+      <Marker size={48}>{t.doodleBluff.whichIsReal}</Marker>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
         <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
-        <div style={{ fontSize: 30, fontWeight: 700 }}>{view.votedIds.length} of {Math.max(0, view.playerIds.length - 1)} voted</div>
+        <div style={{ fontSize: 30, fontWeight: 700 }}>
+          {format(t.doodleBluff.votedOfTotal, { voted: view.votedIds.length, total: Math.max(0, view.playerIds.length - 1) })}
+        </div>
       </div>
     </div>
   );
@@ -164,17 +196,18 @@ function VoteOption({ text, index }: { text: string; index: number }) {
 
 function Vote(props: SectionProps) {
   const { view, clock } = props;
+  const { t } = useLocale();
   useMusic("tension");
   return (
     <div style={BODY}>
-      {view.doodle !== null ? <DoodleView doodle={view.doodle} label={drawingLabel(nameOf(props.players, view.artistId))} clock={clock} size={260} style={{ alignSelf: "center", flexShrink: 0 }} /> : null}
+      {view.doodle !== null ? <DoodleView doodle={view.doodle} label={drawingLabel(t, nameOf(props.players, view.artistId, t.common.someone))} clock={clock} size={260} style={{ alignSelf: "center", flexShrink: 0 }} /> : null}
       <VoteHeading {...props} />
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 24, alignContent: "flex-start", ...FILL_ROW }}>
         {(view.options ?? []).map((option, index) => (
           <VoteOption key={option.id} text={option.text} index={index} />
         ))}
       </div>
-      <div style={{ textAlign: "center", fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>Vote on your phone.</div>
+      <div style={{ textAlign: "center", fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.voteOnYourPhone}</div>
     </div>
   );
 }
@@ -198,10 +231,10 @@ function PhaseBody(props: SectionProps): ReactNode {
   return <Phase {...props} />;
 }
 
-function progressFor(view: DoodleHostView): string {
-  if (view.phase === "draw") return "Draw";
-  if (view.phase === "gallery") return "The gallery";
-  return `Drawing ${view.roundNumber} of ${view.roundCount}`;
+function progressFor(t: Dictionary, view: DoodleHostView): string {
+  if (view.phase === "draw") return t.doodleBluff.progressDraw;
+  if (view.phase === "gallery") return t.doodleBluff.progressGallery;
+  return format(t.doodleBluff.progressRound, { round: view.roundNumber, count: view.roundCount });
 }
 
 export interface HostProps {
@@ -213,9 +246,10 @@ export interface HostProps {
 }
 
 export function Host({ view, room, deadline, timerStartedAt, clock }: HostProps) {
+  const { t } = useLocale();
   return (
     <div style={{ height: "100%", padding: "44px 72px 40px", display: "flex", flexDirection: "column", gap: 28, overflow: "hidden" }}>
-      <TvHeader variant="game" gameName="Doodle Bluff" progress={progressFor(view)} roomCode={room.code} />
+      <TvHeader variant="game" gameName={t.doodleBluff.title} progress={progressFor(t, view)} roomCode={room.code} />
       <PhaseEnter phaseKey={`${view.roundNumber}:${view.phase}`}>
         <PhaseBody view={view} players={room.players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
       </PhaseEnter>

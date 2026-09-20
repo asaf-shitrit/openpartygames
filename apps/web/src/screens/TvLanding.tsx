@@ -1,5 +1,7 @@
 // design/TVLanding.dc.html — the host landing screen.
 import { useState } from "react";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { ApiError, createRoom } from "../api";
 import { LANDING_GAMES } from "../games";
 import { GITHUB_URL } from "../links";
@@ -19,36 +21,39 @@ import { TvPage } from "./shared";
 import { ShowOnTvChip } from "./ShowOnTv";
 import { TvFullTonight } from "./TvFullTonight";
 
-const STEPS = [
-  { n: "1", text: "Start a room on this screen", tilt: -1.5 },
-  { n: "2", text: "Everyone scans the code with their phone", tilt: 1 },
-  { n: "3", text: "The first player to join picks a game", tilt: -0.5 },
-];
+function steps(t: Dictionary["landing"]) {
+  return [
+    { n: "1", text: t.step1, tilt: -1.5 },
+    { n: "2", text: t.step2, tilt: 1 },
+    { n: "3", text: t.step3, tilt: -0.5 },
+  ];
+}
 
 function LandingHero({
   busy,
   error,
   onStart,
+  t,
 }: {
   busy: boolean;
   error: string | null;
   onStart: () => void;
+  t: Dictionary["landing"];
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <Marker size={84} style={{ lineHeight: 1.12 }}>
-          Party games for
+          {t.heroLine1}
         </Marker>
         <Highlight style={{ alignSelf: "flex-start", padding: "0 14px" }}>
           <Marker size={84} style={{ lineHeight: 1.12 }}>
-            your TV and phones
+            {t.heroTvAndPhones}
           </Marker>
         </Highlight>
       </div>
       <div style={{ maxWidth: 900, fontSize: 38, lineHeight: 1.35 }}>
-        Free, open source, no app. This screen hosts; everyone plays on their
-        phone.
+        {t.tvTagline}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 40 }}>
         <Button
@@ -56,7 +61,7 @@ function LandingHero({
           onClick={busy ? undefined : onStart}
           disabled={busy}
         >
-          <span>{busy ? "Starting…" : "Start a room"}</span>
+          <span>{busy ? t.starting : t.startRoom}</span>
           <svg
             width="40"
             height="40"
@@ -88,7 +93,7 @@ function LandingHero({
   );
 }
 
-function GameShowcase() {
+function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }) {
   const compact = LANDING_GAMES.length > 2;
   return (
     <div
@@ -134,8 +139,11 @@ function GameShowcase() {
               color: "var(--opg-ink-secondary)",
             }}
           >
-            {game.minPlayers}–{game.maxPlayers} players · about {game.minutes}{" "}
-            min
+            {format(playersRangeTemplate, {
+              min: game.minPlayers,
+              max: game.maxPlayers,
+              minutes: game.minutes,
+            })}
           </div>
         </Card>
       ))}
@@ -143,7 +151,7 @@ function GameShowcase() {
   );
 }
 
-function StepsRow() {
+function StepsRow({ t }: { t: Dictionary["landing"] }) {
   return (
     <div
       style={{
@@ -152,7 +160,7 @@ function StepsRow() {
         gap: 32,
       }}
     >
-      {STEPS.map((step) => (
+      {steps(t).map((step) => (
         <StickyNote
           key={step.n}
           tilt={step.tilt}
@@ -175,7 +183,7 @@ function StepsRow() {
   );
 }
 
-function LandingFooter() {
+function LandingFooter({ t }: { t: Dictionary["landing"] }) {
   return (
     <div
       style={{
@@ -193,21 +201,22 @@ function LandingFooter() {
         target="_blank"
         rel="noreferrer"
       >
-        Open source on GitHub
+        {t.openSourceOnGitHub}
       </a>
       <div style={{ color: "var(--opg-muted)" }}>·</div>
       <Link to="/privacy" className="opg-link">
-        Privacy
+        {t.privacy}
       </Link>
       <div style={{ color: "var(--opg-muted)" }}>·</div>
       <Link to="/credits" className="opg-link">
-        Credits
+        {t.credits}
       </Link>
     </div>
   );
 }
 
 export function TvLanding() {
+  const { t } = useLocale();
   const { unlock } = useSound();
   const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -221,9 +230,7 @@ export function TvLanding() {
       try {
         localStorage.setItem(`opg:host:${code}`, hostToken);
       } catch {
-        setError(
-          "This browser blocked local storage, so the room cannot be hosted here.",
-        );
+        setError(t.landing.errorStorageBlocked);
         return;
       }
       navigate(`/host/${code}`);
@@ -231,7 +238,7 @@ export function TvLanding() {
       if (err instanceof ApiError && err.code === "full-tonight") {
         setFull(true);
       } else {
-        setError("Could not start a room. Try again in a moment.");
+        setError(t.landing.errorGeneric);
       }
     } finally {
       setBusy(false);
@@ -259,13 +266,13 @@ export function TvLanding() {
           alignItems: "center",
         }}
       >
-        <LandingHero busy={busy} error={error} onStart={handleStart} />
-        <GameShowcase />
+        <LandingHero busy={busy} error={error} onStart={handleStart} t={t.landing} />
+        <GameShowcase playersRangeTemplate={t.lobby.playersRange} />
       </div>
 
-      <StepsRow />
+      <StepsRow t={t.landing} />
 
-      <LandingFooter />
+      <LandingFooter t={t.landing} />
     </TvPage>
   );
 }

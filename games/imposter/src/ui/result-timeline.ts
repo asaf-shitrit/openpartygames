@@ -3,6 +3,8 @@
 // clock with no per-beat server messages. Mirrors reveal-timeline.ts's patterns.
 import type { Beat, CueId, HapticName, Moment } from "@opg/ui";
 import { beatIndexOf, formatPoints, spacedBeats } from "@opg/ui";
+import { format } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 
 export const RESULT_TIMING = {
   caught: {
@@ -131,75 +133,78 @@ function amountText(tableAmount: number, myPoints: number): string {
   return formatPoints(value);
 }
 
-function cancelledResult(): PersonalResult {
+function cancelledResult(t: Dictionary): PersonalResult {
   return {
-    headline: "Word cancelled",
-    sub: "No points this word.",
+    headline: t.imposter.result.wordCancelled,
+    sub: t.imposter.result.noPointsThisWord,
     haptic: "soft",
     celebrate: false,
   };
 }
 
-function escapedResult(input: PersonalResultInput): PersonalResult {
+function escapedResult(t: Dictionary, input: PersonalResultInput): PersonalResult {
+  const r = t.imposter.result;
   if (input.isImposter) {
     return {
-      headline: "You slipped away!",
-      sub: `+${amountText(1000, input.myPoints)} for you.`,
+      headline: r.slippedAwayHeadline,
+      sub: format(r.forYouPoints, { amount: amountText(1000, input.myPoints) }),
       haptic: "good",
       celebrate: true,
     };
   }
   return {
-    headline: "The imposter got away",
-    sub: "0 this word.",
+    headline: r.imposterGotAwayHeadline,
+    sub: r.zeroThisWord,
     haptic: "soft",
     celebrate: false,
   };
 }
 
-function caughtImposterResult(input: PersonalResultInput): PersonalResult {
+function caughtImposterResult(t: Dictionary, input: PersonalResultInput): PersonalResult {
+  const r = t.imposter.result;
   if (input.guessCorrect === true) {
     return {
-      headline: "You stole the word!",
-      sub: `+${amountText(1000, input.myPoints)} for you.`,
+      headline: r.stoleTheWord,
+      sub: format(r.forYouPoints, { amount: amountText(1000, input.myPoints) }),
       haptic: "good",
       celebrate: true,
     };
   }
   return {
-    headline: "So close!",
-    sub: `The word was ${input.crewWord ?? "—"}.`,
+    headline: r.soClose,
+    sub: format(r.wordWasAmount, { word: input.crewWord ?? "—" }),
     haptic: "soft",
     celebrate: false,
   };
 }
 
-function caughtCrewResult(input: PersonalResultInput): PersonalResult {
+function caughtCrewResult(t: Dictionary, input: PersonalResultInput): PersonalResult {
+  const r = t.imposter.result;
   if (input.guessCorrect === true) {
-    return { headline: "They stole it!", sub: "0 this word.", haptic: "soft", celebrate: false };
+    return { headline: r.theyStoleIt, sub: r.zeroThisWord, haptic: "soft", celebrate: false };
   }
   if (input.votedImposter) {
     return {
-      headline: "Nice spotting!",
-      sub: `+${amountText(500, input.myPoints)} for you.`,
+      headline: r.niceSpotting,
+      sub: format(r.forYouPoints, { amount: amountText(500, input.myPoints) }),
       haptic: "good",
       celebrate: true,
     };
   }
   return {
-    headline: "Caught without you",
-    sub: "0 this word.",
+    headline: r.caughtWithoutYou,
+    sub: r.zeroThisWord,
     haptic: "soft",
     celebrate: false,
   };
 }
 
 /** This phone's result copy, one row of the result storyboard's phone column. */
-export function personalResult(input: PersonalResultInput): PersonalResult {
-  if (input.path === "cancelled") return cancelledResult();
-  if (input.path === "escaped") return escapedResult(input);
-  if (input.isImposter) return caughtImposterResult(input);
-  return caughtCrewResult(input);
+export function personalResult(t: Dictionary, input: PersonalResultInput): PersonalResult {
+  if (input.path === "cancelled") return cancelledResult(t);
+  if (input.path === "escaped") return escapedResult(t, input);
+  if (input.isImposter) return caughtImposterResult(t, input);
+  return caughtCrewResult(t, input);
 }
 
 function cancelledPhoneBeats(haptic: HapticName): Beat[] {

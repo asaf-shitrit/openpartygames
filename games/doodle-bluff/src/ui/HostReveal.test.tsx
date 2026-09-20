@@ -4,12 +4,14 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import type { PlayerSummary } from "@opg/protocol";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleHostView, DoodleReveal } from "../state";
 import { HostReveal } from "./HostReveal";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  window.localStorage.clear();
 });
 
 function recordingEngine(): SoundEngine & { cues: CueId[] } {
@@ -87,9 +89,11 @@ function setup(elapsedMs: number, view: DoodleHostView = hostView()) {
     }
   };
   const rendered = render(
-    <SoundProvider engine={engine}>
-      <HostReveal view={view} players={PLAYERS} deadline={START + 12000} timerStartedAt={START} clock={clock} />
-    </SoundProvider>,
+    <LocaleProvider>
+      <SoundProvider engine={engine}>
+        <HostReveal view={view} players={PLAYERS} deadline={START + 12000} timerStartedAt={START} clock={clock} />
+      </SoundProvider>
+    </LocaleProvider>,
   );
   return { engine, advanceTo, rendered };
 }
@@ -143,5 +147,16 @@ describe("HostReveal with no reveal yet", () => {
     vi.useFakeTimers();
     const { rendered } = setup(0, hostView({ reveal: null }));
     expect(rendered.container.textContent).toBe("");
+  });
+});
+
+describe("HostReveal in Hebrew", () => {
+  it("shows the truth beat's copy in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    vi.useFakeTimers();
+    const { advanceTo } = setup(0);
+    advanceTo(7300);
+    expect(screen.getByText("הכותרת האמיתית")).toBeTruthy();
+    expect(screen.getByText(/צויר על ידי/)).toBeTruthy();
   });
 });

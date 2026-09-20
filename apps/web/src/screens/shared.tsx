@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { useId, useMemo } from "react";
 import { create } from "qrcode";
+import { format, useLocale } from "@opg/i18n";
 
 export interface TvPageProps {
   children: ReactNode;
@@ -34,6 +35,7 @@ export interface QrCodeProps {
 
 /** Renders a QR code as crisp SVG rects from qrcode's bit matrix. */
 export function QrCode({ value, size = 156 }: QrCodeProps) {
+  const { t } = useLocale();
   const { dimension, path } = useMemo(() => {
     const qr = create(value);
     const n = qr.modules.size;
@@ -56,7 +58,7 @@ export function QrCode({ value, size = 156 }: QrCodeProps) {
       viewBox={`0 0 ${dimension} ${dimension}`}
       aria-labelledby={titleId}
     >
-      <title id={titleId}>{`QR code linking to ${value}`}</title>
+      <title id={titleId}>{format(t.status.qrCodeAlt, { value })}</title>
       <path fill="#2B2B2B" d={path} />
     </svg>
   );

@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { PhoneLanding } from "./PhoneLanding";
 
 const CREATED = { code: "BKTZ", hostToken: "host-token" };
@@ -15,6 +16,14 @@ function startButton(): HTMLElement {
 
 function bodyText(body: BodyInit | null | undefined): Promise<string> {
   return new Response(body).text();
+}
+
+function renderLanding(): void {
+  render(
+    <LocaleProvider>
+      <PhoneLanding />
+    </LocaleProvider>,
+  );
 }
 
 beforeEach(() => {
@@ -41,7 +50,7 @@ describe("PhoneLanding", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<PhoneLanding />);
+    renderLanding();
     await user.click(startButton());
     await waitFor(() =>
       expect(localStorage.getItem("opg:host:BKTZ")).toBe("host-token"),
@@ -51,7 +60,7 @@ describe("PhoneLanding", () => {
 
   it("sends a join tap to the join form", async () => {
     const user = userEvent.setup();
-    render(<PhoneLanding />);
+    renderLanding();
     await user.click(screen.getByRole("button", { name: /join a room/i }));
     expect(window.location.pathname).toBe("/join");
   });
@@ -61,7 +70,7 @@ describe("PhoneLanding", () => {
       Response.json({ error: "full-tonight" }, { status: 503 }),
     );
     const user = userEvent.setup();
-    render(<PhoneLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(
       await screen.findByText("We're full tonight. Come back tomorrow."),
@@ -73,7 +82,7 @@ describe("PhoneLanding", () => {
       Response.json({ error: "internal" }, { status: 500 }),
     );
     const user = userEvent.setup();
-    render(<PhoneLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(
       await screen.findByText("Could not start a room. Try again in a moment."),
@@ -88,7 +97,7 @@ describe("PhoneLanding", () => {
       },
     });
     const user = userEvent.setup();
-    render(<PhoneLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(
       await screen.findByText(
@@ -99,11 +108,24 @@ describe("PhoneLanding", () => {
   });
 
   it("offers the TV as an option without naming a mode by what is missing", () => {
-    render(<PhoneLanding />);
+    renderLanding();
     expect(
       screen.getByText(
         "Playing with a TV or laptop? Open this page there for the big screen.",
       ),
     ).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderLanding();
+      expect(screen.getByText("משחקי מסיבות בשבילכם")).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "הצטרפו לחדר" }),
+      ).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

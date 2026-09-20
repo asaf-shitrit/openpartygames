@@ -1,5 +1,6 @@
 // Phone teaser while the TV builds up to a reveal. Buzzes a slow heartbeat plus a visual pulse.
 import { useRef } from "react";
+import { useLocale } from "@opg/i18n";
 import { useHeartbeat, type HeartbeatTempo } from "../haptics";
 import { Card } from "../primitives";
 
@@ -74,11 +75,6 @@ function RoomDoodle() {
   );
 }
 
-const DEFAULT_TITLE = {
-  screen: "Eyes on the TV",
-  room: "Eyes on the room",
-} satisfies Record<EyesOnTvVariant, string>;
-
 export function EyesOnTv({
   title,
   detail,
@@ -87,7 +83,8 @@ export function EyesOnTv({
 }: EyesOnTvProps) {
   const ref = useRef<HTMLOutputElement | null>(null);
   useHeartbeat(tempo, ref);
-  const resolvedTitle = title ?? DEFAULT_TITLE[variant];
+  const { t } = useLocale();
+  const resolvedTitle = title ?? t.kit.eyesOnTv[variant];
   return (
     <Card variant="L" tilt={-1} style={{ padding: "26px 22px" }}>
       <div

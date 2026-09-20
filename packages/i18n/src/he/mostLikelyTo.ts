@@ -22,7 +22,6 @@ export const mostLikelyTo: Dictionary["mostLikelyTo"] = {
   youSuffixLower: " (אתם)",
   votes: { one: "הצבעה אחת", other: "{count} הצבעות" },
   zeroVotes: "0 הצבעות",
-  eyesOnTv: "תסתכלו על הטלוויזיה",
   hereItComes: "זה מגיע…",
   votesAreIn: "כל ההצבעות בפנים…",
   mostLikely: "הכי סביר!",

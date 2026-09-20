@@ -1,3 +1,26 @@
 import type { Dictionary } from "../dictionary";
 
-export const results: Dictionary["results"] = {};
+export const results: Dictionary["results"] = {
+  gameOver: "המשחק נגמר",
+  points: "{score} נקודות",
+  waitingForFinalScores: "מחכים לניקוד הסופי",
+  finalScores: "ניקוד סופי",
+  newBadge: "חדש!",
+  almostTime: "עוד רגע",
+  awardsComing: "הפרסים בדרך…",
+  gotAward: "קיבלתם פרס!",
+  wrapBanner: "זהו זה!",
+  crownGoesTo: "והכתר עובר אל…",
+  crownDecided: "הכתר נקבע",
+  crownAnnounce: "הכתר נקבע. {crownLine}",
+  youWinCrown: "זכיתם בכתר!",
+  crownWins: "{name} זוכה בכתר!",
+  crownShares: "{names} חולקים בכתר!",
+  finishedPlace: "סיימתם {place}",
+  finishedPlaceWithScore: "סיימתם {place} עם {score}",
+  thirdPlaceBang: "מקום שלישי!",
+  secondPlaceBang: "מקום שני!",
+  thirdPlaceLabel: "מקום שלישי",
+  secondPlaceLabel: "מקום שני",
+  picksNextGame: "בוחר/ת את המשחק הבא מהטלפון שלו/ה",
+};

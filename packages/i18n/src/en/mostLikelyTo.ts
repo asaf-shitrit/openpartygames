@@ -20,7 +20,6 @@ export const mostLikelyTo = {
   youSuffixLower: " (you)",
   votes: { one: "{count} vote", other: "{count} votes" },
   zeroVotes: "0 votes",
-  eyesOnTv: "Eyes on the TV",
   hereItComes: "Here it comes…",
   votesAreIn: "The votes are in…",
   mostLikely: "Most likely!",

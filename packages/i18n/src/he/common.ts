@@ -14,4 +14,15 @@ export const common: Dictionary["common"] = {
   listAndLast: "{list} ו{last}",
   listOrTwo: "{a} או {b}",
   listOrLast: "{list} או {last}",
+  place: {
+    first: "במקום הראשון",
+    second: "במקום השני",
+    third: "במקום השלישי",
+    fourth: "במקום הרביעי",
+    fifth: "במקום החמישי",
+    sixth: "במקום השישי",
+    seventh: "במקום השביעי",
+    eighth: "במקום השמיני",
+    other: "במקום ה-{rank}",
+  },
 };

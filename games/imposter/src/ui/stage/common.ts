@@ -9,10 +9,12 @@ export function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-export function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+export function nameOf(
+  players: PlayerSummary[],
+  id: PlayerId | null,
+  someone: string,
+): string {
+  return findPlayer(players, id)?.name ?? someone;
 }
 
 export function avatarOf(players: PlayerSummary[], id: PlayerId | null) {

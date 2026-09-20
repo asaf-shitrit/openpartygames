@@ -31,15 +31,15 @@ describe("findPlayer", () => {
 
 describe("nameOf", () => {
   it("returns the matched player's name", () => {
-    expect(nameOf(PLAYERS, "maya")).toBe("Maya");
+    expect(nameOf(PLAYERS, "maya", "Someone")).toBe("Maya");
   });
 
   it("falls back to the raw id when nobody matches", () => {
-    expect(nameOf(PLAYERS, "ghost")).toBe("ghost");
+    expect(nameOf(PLAYERS, "ghost", "Someone")).toBe("ghost");
   });
 
-  it("falls back to 'Someone' for a null id", () => {
-    expect(nameOf(PLAYERS, null)).toBe("Someone");
+  it("falls back to the given placeholder for a null id", () => {
+    expect(nameOf(PLAYERS, null, "Someone")).toBe("Someone");
   });
 });
 

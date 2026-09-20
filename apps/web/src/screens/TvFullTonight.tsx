@@ -1,4 +1,6 @@
 // design/TVFullTonight.dc.html — shown when the daily room cap is hit.
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { GITHUB_LABEL, GITHUB_URL } from "../links";
 import { Card, Icon, Marker, Tape, TvHeader } from "@opg/ui";
 import { TvPage } from "./shared";
@@ -31,7 +33,7 @@ function SadCloud() {
   );
 }
 
-function TonightOptions() {
+function TonightOptions({ t }: { t: Dictionary }) {
   return (
     <div
       style={{
@@ -50,9 +52,9 @@ function TonightOptions() {
           background: "var(--opg-paper)",
         }}
       >
-        <Marker size={46}>Come back tomorrow</Marker>
+        <Marker size={46}>{t.status.comeBackHeading}</Marker>
         <div style={{ fontSize: 32, lineHeight: 1.3 }}>
-          There'll be room for your party again tomorrow.
+          {t.status.comeBackBody}
         </div>
       </Card>
       <Card
@@ -65,9 +67,9 @@ function TonightOptions() {
           background: "var(--opg-paper)",
         }}
       >
-        <Marker size={46}>Run your own copy, free</Marker>
+        <Marker size={46}>{t.status.runOwnCopyHeading}</Marker>
         <div style={{ fontSize: 32, lineHeight: 1.3 }}>
-          OpenPartyGames is open source. The setup guide is at
+          {t.status.runOwnCopyBody}
         </div>
         <a
           className="opg-link"
@@ -84,6 +86,7 @@ function TonightOptions() {
 }
 
 export function TvFullTonight() {
+  const { t } = useLocale();
   return (
     <TvPage>
       <TvHeader variant="brand" />
@@ -116,16 +119,15 @@ export function TvFullTonight() {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <Marker size={96}>We're full tonight</Marker>
+              <Marker size={96}>{t.status.fullTonightHeading}</Marker>
               <div style={{ maxWidth: 900, fontSize: 40, lineHeight: 1.3 }}>
-                So many parties are running that we've hit tonight's limit on
-                new rooms.
+                {t.status.fullTonightBody}
               </div>
             </div>
             <SadCloud />
           </div>
 
-          <TonightOptions />
+          <TonightOptions t={t} />
 
           <div
             style={{
@@ -138,7 +140,7 @@ export function TvFullTonight() {
             }}
           >
             <Icon name="check" size={30} color="var(--opg-ink-secondary)" />
-            <div>Rooms already playing keep going.</div>
+            <div>{t.status.roomsKeepGoing}</div>
           </div>
         </Card>
       </div>

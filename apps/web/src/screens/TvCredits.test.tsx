@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
 import { AUDIO_CREDITS, MUSIC_CREDITS } from "@opg/ui";
@@ -80,9 +81,11 @@ describe("musicCreditLines", () => {
 describe("TvCredits", () => {
   it("lists every audio author", () => {
     render(
-      <SoundProvider engine={new FakeEngine()}>
-        <TvCredits />
-      </SoundProvider>,
+      <LocaleProvider>
+        <SoundProvider engine={new FakeEngine()}>
+          <TvCredits />
+        </SoundProvider>
+      </LocaleProvider>,
     );
     for (const credit of AUDIO_CREDITS) {
       expect(screen.getAllByText(credit.author).length).toBeGreaterThan(0);
@@ -92,9 +95,11 @@ describe("TvCredits", () => {
 
   it("lists every music author on the Music card", () => {
     render(
-      <SoundProvider engine={new FakeEngine()}>
-        <TvCredits />
-      </SoundProvider>,
+      <LocaleProvider>
+        <SoundProvider engine={new FakeEngine()}>
+          <TvCredits />
+        </SoundProvider>
+      </LocaleProvider>,
     );
     for (const credit of MUSIC_CREDITS) {
       expect(
@@ -105,9 +110,11 @@ describe("TvCredits", () => {
 
   it("credits a cue's author under sound effects", () => {
     render(
-      <SoundProvider engine={new FakeEngine()}>
-        <TvCredits />
-      </SoundProvider>,
+      <LocaleProvider>
+        <SoundProvider engine={new FakeEngine()}>
+          <TvCredits />
+        </SoundProvider>
+      </LocaleProvider>,
     );
     expect(screen.getByText("Sound effects")).toBeTruthy();
     const author = AUDIO_CREDITS[0]?.author ?? "";
@@ -115,5 +122,20 @@ describe("TvCredits", () => {
     expect(
       screen.getByText(new RegExp(author.replace(/[()]/gu, "\\$&"))),
     ).toBeTruthy();
+  });
+
+  it("renders in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    render(
+      <LocaleProvider>
+        <SoundProvider engine={new FakeEngine()}>
+          <TvCredits />
+        </SoundProvider>
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("קרדיטים")).toBeTruthy();
+    expect(screen.getByText("עיצוב משחק וקוד")).toBeTruthy();
+    expect(screen.getByText("אפקטים קוליים")).toBeTruthy();
+    expect(screen.getByText("הקוד ברישיון AGPL-3.0")).toBeTruthy();
   });
 });

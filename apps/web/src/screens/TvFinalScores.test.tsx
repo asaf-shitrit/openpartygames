@@ -308,6 +308,18 @@ describe("TvFinalScores, waiting", () => {
   });
 });
 
+describe("TvFinalScores, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("waits in Hebrew when there is no result yet", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderLocalized(<TvFinalScores view={makeHostView({ lastResult: null })} />);
+    expect(screen.getByText("מחכים לניקוד הסופי")).toBeTruthy();
+  });
+});
+
 describe("finaleMusic", () => {
   it("stays quiet during the ceremony and brings the lobby loop back after", () => {
     const result = makeResult();

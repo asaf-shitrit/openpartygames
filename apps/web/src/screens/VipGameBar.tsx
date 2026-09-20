@@ -1,5 +1,7 @@
 import { Button } from "@opg/ui";
 import { useState } from "react";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 
 export interface VipGameBarProps {
   onSkip: () => void;
@@ -8,10 +10,11 @@ export interface VipGameBarProps {
 
 /** In-game controls only the VIP sees, placed under the game so they never cover it. */
 export function VipGameBar({ onSkip, onEnd }: VipGameBarProps) {
+  const { t } = useLocale();
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   return (
     <section
-      aria-label="VIP controls"
+      aria-label={t.picker.vipControlsAriaLabel}
       style={{
         maxWidth: 480,
         margin: "0 auto",
@@ -22,16 +25,18 @@ export function VipGameBar({ onSkip, onEnd }: VipGameBarProps) {
         borderTop: "2px dashed #8A8A8A",
       }}
     >
-      <div style={{ fontSize: 16, fontWeight: 700, color: "#555555" }}>You're the VIP</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#555555" }}>
+        {t.picker.youreVip}
+      </div>
       {confirmingEnd ? (
-        <EndConfirm onEnd={onEnd} onCancel={() => setConfirmingEnd(false)} />
+        <EndConfirm t={t} onEnd={onEnd} onCancel={() => setConfirmingEnd(false)} />
       ) : (
         <div style={{ display: "flex", gap: 12 }}>
           <Button variant="secondary" onClick={onSkip}>
-            Skip this part
+            {t.picker.skipThisPart}
           </Button>
           <Button variant="secondary" onClick={() => setConfirmingEnd(true)}>
-            End game
+            {t.picker.endGame}
           </Button>
         </div>
       )}
@@ -39,14 +44,22 @@ export function VipGameBar({ onSkip, onEnd }: VipGameBarProps) {
   );
 }
 
-function EndConfirm({ onEnd, onCancel }: { onEnd: () => void; onCancel: () => void }) {
+function EndConfirm({
+  t,
+  onEnd,
+  onCancel,
+}: {
+  t: Dictionary;
+  onEnd: () => void;
+  onCancel: () => void;
+}) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ fontSize: 18 }}>End the game for everyone? Scores so far won't earn a crown.</div>
+      <div style={{ fontSize: 18 }}>{t.picker.endGameConfirm}</div>
       <div style={{ display: "flex", gap: 12 }}>
-        <Button onClick={onEnd}>Yes, end it</Button>
+        <Button onClick={onEnd}>{t.picker.yesEndIt}</Button>
         <Button variant="secondary" onClick={onCancel}>
-          Keep playing
+          {t.picker.keepPlaying}
         </Button>
       </div>
     </div>

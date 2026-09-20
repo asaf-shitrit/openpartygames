@@ -1,6 +1,8 @@
 // Pure beat timeline for the finale ceremony: awards, then the crown. Anchored on
 // `lastResult.finishedAt`, so the TV and every phone stage the same ~25s moment off the
 // server clock alone, with no per-beat server messages.
+import { format, joinNamesAnd } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { PlayerId } from "@opg/protocol";
 import type { Beat, CueId } from "@opg/ui";
 import { CUE_IDS } from "@opg/ui";
@@ -137,32 +139,13 @@ export function topRank(ranked: readonly RankedPlayer[]): number {
   return ranked.reduce((top, row) => Math.max(top, row.rank), 0);
 }
 
-/** "A", "A and B", "A, B and C". */
-export function joinNames(names: readonly string[]): string {
-  if (names.length === 0) return "";
-  if (names.length === 1) return names[0] ?? "";
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  const last = names.at(-1);
-  const rest = names.slice(0, -1).join(", ");
-  return `${rest} and ${last}`;
-}
-
-/** "Dov wins the crown!" / "Dov and Maya share the crown!" / "Dov, Maya and Sam share the crown!". */
-export function crownCopy(names: readonly string[]): string | null {
+/** "{name} wins the crown!" / "{names} share the crown!", or null when nobody won. */
+export function crownCopy(t: Dictionary, names: readonly string[]): string | null {
   if (names.length === 0) return null;
-  if (names.length === 1) return `${names[0]} wins the crown!`;
-  return `${joinNames(names)} share the crown!`;
-}
-
-const TEEN_SUFFIX_RANKS = new Set([11, 12, 13]);
-
-/** 1st, 2nd, 3rd, 4th, 11th, 12th, 13th, 21st, ... */
-export function ordinal(rank: number): string {
-  const rem100 = rank % 100;
-  if (TEEN_SUFFIX_RANKS.has(rem100)) return `${rank}th`;
-  const rem10 = rank % 10;
-  if (rem10 === 1) return `${rank}st`;
-  if (rem10 === 2) return `${rank}nd`;
-  if (rem10 === 3) return `${rank}rd`;
-  return `${rank}th`;
+  if (names.length === 1) {
+    return format(t.results.crownWins, { name: names[0] ?? "" });
+  }
+  return format(t.results.crownShares, {
+    names: joinNamesAnd(t.common, names),
+  });
 }

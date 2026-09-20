@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import { HostResult } from "./HostResult";
@@ -74,6 +75,7 @@ function setup(label: string, elapsedMs: number) {
         clock={clock}
       />
     </SoundProvider>,
+    { wrapper: LocaleProvider },
   );
   return { engine, advanceTo, rendered };
 }
@@ -156,6 +158,7 @@ describe("HostResult, cancelled word", () => {
           clock={{ now: () => RESULT_PREVIEW_START }}
         />
       </SoundProvider>,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("Word cancelled")).toBeTruthy();
     expect(screen.getByText("Standings")).toBeTruthy();
@@ -181,6 +184,7 @@ describe("HostResult, countdown", () => {
           clock={clock}
         />
       </SoundProvider>,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("0:03")).toBeTruthy();
 
@@ -208,7 +212,35 @@ describe("HostResult, final word", () => {
           clock={{ now: () => RESULT_PREVIEW_START + 12000 }}
         />
       </SoundProvider>,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("Final scores next")).toBeTruthy();
+  });
+});
+
+describe("HostResult in Hebrew", () => {
+  it("shows the cancelled headline and standings in Hebrew", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { view, room } = hostSample("Host: result caught nope");
+      const cancelled = { ...view, caught: null, guess: null, guessCorrect: null };
+      render(
+        <SoundProvider engine={recordingEngine()}>
+          <HostResult
+            view={cancelled}
+            players={room.players}
+            deadline={room.game?.deadline ?? null}
+            timerStartedAt={RESULT_PREVIEW_START}
+            clock={{ now: () => RESULT_PREVIEW_START }}
+          />
+        </SoundProvider>,
+        { wrapper: LocaleProvider },
+      );
+      expect(screen.getByText("המילה בוטלה")).toBeTruthy();
+      expect(screen.getByText("הדירוג")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

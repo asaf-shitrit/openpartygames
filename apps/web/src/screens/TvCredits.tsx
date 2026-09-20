@@ -1,4 +1,6 @@
 // design/TVCredits.dc.html — route /credits.
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import {
   AUDIO_CREDITS,
   Card,
@@ -64,55 +66,59 @@ interface CreditCard {
 const SOUND_LINES = soundCreditLines(AUDIO_CREDITS);
 const MUSIC_LINES = musicCreditLines(MUSIC_CREDITS);
 
-const CARDS: CreditCard[] = [
-  {
-    title: "Game design & code",
-    lines: ["The OpenPartyGames contributors"],
-    variant: "M",
-    tilt: -1,
-  },
-  {
-    title: "Music",
-    lines: MUSIC_LINES,
-    variant: "Malt",
-    tilt: 1,
-  },
-  {
-    title: "Sound effects",
-    lines: SOUND_LINES.map((line) => line.author),
-    note: licenseNote(SOUND_LINES),
-    variant: "M",
-    tilt: -0.5,
-  },
-  {
-    title: "Facts",
-    lines: ["Wikipedia “Did you know”", "Open Trivia DB"],
-    note: "CC BY-SA 4.0",
-    variant: "Malt",
-    tilt: 1,
-  },
-  {
-    title: "Fonts",
-    lines: ["Permanent Marker", "Atkinson Hyperlegible"],
-    variant: "M",
-    tilt: -1,
-  },
-  {
-    title: "License",
-    lines: ["Code licensed under AGPL-3.0"],
-    variant: "Malt",
-    tilt: 0.5,
-  },
-];
+function buildCards(t: Dictionary): CreditCard[] {
+  return [
+    {
+      title: t.status.creditsGameDesignTitle,
+      lines: [t.status.creditsGameDesignLine],
+      variant: "M",
+      tilt: -1,
+    },
+    {
+      title: t.status.creditsMusicTitle,
+      lines: MUSIC_LINES,
+      variant: "Malt",
+      tilt: 1,
+    },
+    {
+      title: t.status.creditsSoundTitle,
+      lines: SOUND_LINES.map((line) => line.author),
+      note: licenseNote(SOUND_LINES),
+      variant: "M",
+      tilt: -0.5,
+    },
+    {
+      title: t.status.creditsFactsTitle,
+      lines: [t.status.creditsFactsWikipedia, t.status.creditsFactsOpenTrivia],
+      note: "CC BY-SA 4.0",
+      variant: "Malt",
+      tilt: 1,
+    },
+    {
+      title: t.status.creditsFontsTitle,
+      lines: ["Permanent Marker", "Atkinson Hyperlegible"],
+      variant: "M",
+      tilt: -1,
+    },
+    {
+      title: t.status.creditsLicenseTitle,
+      lines: [t.status.creditsLicenseLine],
+      variant: "Malt",
+      tilt: 0.5,
+    },
+  ];
+}
 
 export function TvCredits() {
+  const { t } = useLocale();
+  const cards = buildCards(t);
   return (
     <TvPage>
       <TvHeader variant="brand" />
       <Highlight
         style={{ alignSelf: "flex-start", marginTop: 12, padding: "0 14px" }}
       >
-        <Marker size={96}>Credits</Marker>
+        <Marker size={96}>{t.status.creditsHeading}</Marker>
       </Highlight>
       <div
         style={{
@@ -122,7 +128,7 @@ export function TvCredits() {
           marginTop: 16,
         }}
       >
-        {CARDS.map((card) => (
+        {cards.map((card) => (
           <Card
             key={card.title}
             variant={card.variant}

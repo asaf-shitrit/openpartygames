@@ -23,13 +23,16 @@ import {
   useReducedMotion,
 } from "@opg/ui";
 import type { CardProps } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { gameIconFor } from "../games";
 import { TvPage } from "./shared";
+import { formatPlayerCount } from "./PhoneVipControls";
 
-function ratingLabel(rating: Rating): string {
-  if (rating === "adult") return "Adult";
-  if (rating === "teen") return "Teen";
-  return "Family";
+function ratingLabel(t: Dictionary, rating: Rating): string {
+  if (rating === "adult") return t.picker.ratingAdult;
+  if (rating === "teen") return t.picker.ratingTeen;
+  return t.picker.ratingFamily;
 }
 
 interface PickedState {
@@ -95,11 +98,13 @@ function cardMetrics(compact: boolean): CardMetrics {
 }
 
 function GameCard({
+  t,
   game,
   selected,
   justPicked,
   compact,
 }: {
+  t: Dictionary;
   game: GameSummary;
   selected: boolean;
   justPicked: boolean;
@@ -129,10 +134,10 @@ function GameCard({
           <Stamp
             size={metrics.stamp}
             tilt={6}
-            style={{ position: "absolute", right: 22, top: 22 }}
+            style={{ position: "absolute", insetInlineEnd: 22, top: 22 }}
           >
             <Icon name="check" size={metrics.stamp - 4} />
-            <span>Picked</span>
+            <span>{t.picker.picked}</span>
           </Stamp>
         ) : null}
         <Icon
@@ -151,15 +156,26 @@ function GameCard({
             color: "var(--opg-ink-secondary)",
           }}
         >
-          {game.minPlayers}–{game.maxPlayers} players · about {game.minutes}{" "}
-          min
+          {format(t.picker.playersAboutMinutes, {
+            min: game.minPlayers,
+            max: game.maxPlayers,
+            minutes: game.minutes,
+          })}
         </div>
       </Card>
     </div>
   );
 }
 
-function PackRow({ pack, last }: { pack: PackSummary; last: boolean }) {
+function PackRow({
+  t,
+  pack,
+  last,
+}: {
+  t: Dictionary;
+  pack: PackSummary;
+  last: boolean;
+}) {
   return (
     <div
       style={{
@@ -181,7 +197,7 @@ function PackRow({ pack, last }: { pack: PackSummary; last: boolean }) {
         {pack.name}
       </div>
       <Chip height={42} fontSize={26}>
-        {ratingLabel(pack.rating)}
+        {ratingLabel(t, pack.rating)}
       </Chip>
       <Switch checked={pack.enabled} size={42} label={`${pack.name} pack`} />
     </div>
@@ -193,28 +209,30 @@ interface VipLook {
   name: string;
 }
 
-function vipLook(vip: PlayerSummary | null): VipLook {
-  if (!vip) return { avatar: null, name: "Someone" };
+function vipLook(t: Dictionary, vip: PlayerSummary | null): VipLook {
+  if (!vip) return { avatar: null, name: t.common.someone };
   return { avatar: vip.avatar, name: vip.name };
 }
 
-function PickHeader({ vip }: { vip: PlayerSummary | null }) {
-  const { avatar, name } = vipLook(vip);
+function PickHeader({ t, vip }: { t: Dictionary; vip: PlayerSummary | null }) {
+  const { avatar, name } = vipLook(t, vip);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
       <Avatar id={avatar} size={92} />
       <Highlight style={{ padding: "0 12px" }}>
         <Marker size={72}>{name}</Marker>
       </Highlight>
-      <Marker size={72}>is picking a game</Marker>
+      <Marker size={72}>{t.picker.pickingGame}</Marker>
     </div>
   );
 }
 
 function PacksPanel({
+  t,
   packs,
   selectedGame,
 }: {
+  t: Dictionary;
   packs: PackSummary[];
   selectedGame: GameSummary | null;
 }) {
@@ -229,12 +247,15 @@ function PacksPanel({
       }}
     >
       <Marker size={50}>
-        {selectedGame ? `${selectedGame.name} packs` : "Packs"}
+        {selectedGame
+          ? format(t.picker.gamePacks, { game: selectedGame.name })
+          : t.picker.packs}
       </Marker>
       <div style={{ display: "flex", flexDirection: "column" }}>
         {packs.map((pack, index) => (
           <PackRow
             key={pack.id}
+            t={t}
             pack={pack}
             last={index === packs.length - 1}
           />
@@ -247,7 +268,7 @@ function PacksPanel({
               padding: "18px 0",
             }}
           >
-            No packs for this game yet.
+            {t.picker.noPacksYet}
           </div>
         ) : null}
       </div>
@@ -267,16 +288,18 @@ function PacksPanel({
           color="var(--opg-ink-secondary)"
           style={{ marginTop: 3 }}
         />
-        <div>Adult packs stay off unless the VIP turns them on.</div>
+        <div>{t.picker.adultPacksNote}</div>
       </div>
     </Card>
   );
 }
 
 function PickerFooter({
+  t,
   vipName,
   activePlayers,
 }: {
+  t: Dictionary;
   vipName: string;
   activePlayers: number;
 }) {
@@ -292,8 +315,10 @@ function PickerFooter({
     >
       <Icon name="monitor" size={36} />
       <div>
-        {vipName} starts the game from their phone · {activePlayers}{" "}
-        {activePlayers === 1 ? "player" : "players"}
+        {format(t.picker.startsFromPhone, {
+          vip: vipName,
+          players: formatPlayerCount(t, activePlayers),
+        })}
       </div>
     </div>
   );
@@ -314,11 +339,12 @@ function countActivePlayers(players: PlayerSummary[]): number {
   return players.filter((player) => !player.waitingForNextGame).length;
 }
 
-function footerName(vip: PlayerSummary | null): string {
-  return vip?.name ?? "The VIP";
+function footerName(t: Dictionary, vip: PlayerSummary | null): string {
+  return vip?.name ?? t.picker.theVip;
 }
 
 export function TvGamePicker({ view }: { view: HostRoomView }) {
+  const { t } = useLocale();
   const vip = pickPlayer(view.players, view.vipId);
   const selectedGame = pickGame(view.games, view.selectedGameId);
   const active = countActivePlayers(view.players);
@@ -329,7 +355,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
     <TvPage>
       <TvHeader variant="brand" roomCode={view.code} />
 
-      <PickHeader vip={vip} />
+      <PickHeader t={t} vip={vip} />
 
       <div
         style={{
@@ -352,6 +378,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
           {view.games.map((game) => (
             <GameCard
               key={game.id}
+              t={t}
               game={game}
               selected={game.id === view.selectedGameId}
               justPicked={game.id === justPicked}
@@ -360,10 +387,10 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
           ))}
         </div>
 
-        <PacksPanel packs={view.packs} selectedGame={selectedGame} />
+        <PacksPanel t={t} packs={view.packs} selectedGame={selectedGame} />
       </div>
 
-      <PickerFooter vipName={footerName(vip)} activePlayers={active} />
+      <PickerFooter t={t} vipName={footerName(t, vip)} activePlayers={active} />
     </TvPage>
   );
 }

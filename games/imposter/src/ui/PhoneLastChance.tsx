@@ -16,6 +16,7 @@ import {
   TextInput,
   Timer,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import { MAX_GUESS_LENGTH, POINTS_PER_WORD } from "../state";
 import type { ImposterAction, ImposterHostView, ImposterPlayerView } from "../state";
 import type { SectionProps } from "./Phone";
@@ -35,10 +36,8 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(players: PlayerSummary[], id: PlayerId | null, someone: string): string {
+  return findPlayer(players, id)?.name ?? someone;
 }
 
 function money(value: number): string {
@@ -179,12 +178,13 @@ function GuessForm({
   send: (action: ImposterAction) => void;
   clock: ServerClock;
 }) {
+  const { t } = useLocale();
   const [text, setText] = useState(view.myGuess ?? "");
   const [sent, setSent] = useState(view.myGuess !== null);
   const sendTyping = useTypingSender({ send, clock, disabled: sent });
   const canSubmit = !sent && text.trim().length > 0;
-  let label = "Submit guess";
-  if (sent) label = "Guess sent";
+  let label = t.imposter.lastChance.submitGuess;
+  if (sent) label = t.imposter.lastChance.guessSent;
 
   const onChange = (value: string) => {
     setText(value);
@@ -194,18 +194,18 @@ function GuessForm({
   return (
     <>
       <TextInput
-        label="Your guess"
+        label={t.imposter.lastChance.yourGuessLabel}
         value={text}
         onChange={onChange}
         maxLength={MAX_GUESS_LENGTH}
-        placeholder="Type the crew's word"
+        placeholder={t.imposter.lastChance.typeCrewWord}
         disabled={sent}
       />
       <Button
         size="lg"
         fullWidth
         disabled={!canSubmit}
-        disabledReason={sent ? "Guess sent" : undefined}
+        disabledReason={sent ? t.imposter.lastChance.guessSent : undefined}
         onClick={() => {
           send({ type: "guess", text: text.trim() });
           setSent(true);
@@ -221,6 +221,7 @@ function GuessForm({
 /** TV mode's own caught banner and decoy reminder, shown above the guess form. No-TV rooms
  * carry the same beats (caught banner, tiles, timer) on the stage above instead. */
 function CaughtBanner({ view }: { view: ImposterPlayerView }) {
+  const { t } = useLocale();
   return (
     <LinedCard
       tilt={1}
@@ -239,11 +240,10 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
         color="var(--opg-marker)"
         style={{ transform: "rotate(-3deg)" }}
       >
-        You got caught!
+        {t.imposter.lastChance.caughtHeadline}
       </Marker>
       <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.4 }}>
-        Guess the crew&apos;s word. Get it right and you steal{" "}
-        {money(POINTS_PER_WORD)} points.
+        {format(t.imposter.lastChance.caughtDesc, { points: money(POINTS_PER_WORD) })}
       </div>
       <div
         style={{
@@ -253,7 +253,7 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
           fontSize: 19,
         }}
       >
-        <div style={{ fontWeight: 400 }}>Your decoy was</div>
+        <div style={{ fontWeight: 400 }}>{t.imposter.lastChance.decoyWas}</div>
         <Highlight style={{ padding: "0 6px" }}>
           <strong style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
             {view.decoyWord ?? "—"}
@@ -292,12 +292,13 @@ function StageArea({
 
 /** The imposter's own last-chance screen: guess the crew's word before time runs out. */
 export function GuessView(props: SectionProps) {
+  const { t } = useLocale();
   const { view, players, me, deadline, timerStartedAt, clock, send, stage } = props;
   return (
     <>
       <PhoneStrip
-        gameName="Imposter"
-        progress="Last chance"
+        gameName={t.imposter.title}
+        progress={t.imposter.progress.lastChance}
         right={
           <Timer
             deadline={deadline}
@@ -347,14 +348,15 @@ function useLastChanceTempo(
 /** The crew's screen while the imposter guesses: eyes on the TV, tempo rising near the end.
  * A no-TV room already shows the same drain on its own stage, so there is nothing to wait on. */
 export function GuessWaiting(props: SectionProps) {
+  const { t } = useLocale();
   const { view, players, deadline, timerStartedAt, clock, stage } = props;
-  const imposter = nameOf(players, view.imposterId);
+  const imposter = nameOf(players, view.imposterId, t.common.someone);
   const tempo = useLastChanceTempo(deadline, clock);
   return (
     <>
       <PhoneStrip
-        gameName="Imposter"
-        progress="Last chance"
+        gameName={t.imposter.title}
+        progress={t.imposter.progress.lastChance}
         right={<Timer deadline={deadline} clock={clock} />}
       />
       <StageArea
@@ -366,8 +368,8 @@ export function GuessWaiting(props: SectionProps) {
       />
       {stage === null ? (
         <EyesOnTv
-          title={`${imposter} is guessing…`}
-          detail="Eyes on the TV"
+          title={format(t.imposter.lastChance.guessing, { name: imposter })}
+          detail={t.kit.eyesOnTv.screen}
           tempo={tempo}
         />
       ) : null}

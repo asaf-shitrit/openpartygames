@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodleHostView, DoodlePlayerView } from "../state";
 import { Phone } from "./Phone";
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
@@ -62,24 +64,22 @@ function playerView(overrides: Partial<DoodlePlayerView> = {}): DoodlePlayerView
   };
 }
 
+function renderPhone(view: DoodlePlayerView, stage: DoodleHostView | null = null) {
+  return render(
+    <LocaleProvider>
+      <Phone view={view} room={room()} deadline={null} timerStartedAt={null} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} stage={stage} />
+    </LocaleProvider>,
+  );
+}
+
 describe("Phone", () => {
   it("renders the draw phase", () => {
-    render(<Phone view={playerView()} room={room()} deadline={null} timerStartedAt={null} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} stage={null} />);
+    renderPhone(playerView());
     expect(screen.getByText("Waiting on your prompts…")).toBeTruthy();
   });
 
   it("shows Look up on the gallery phase with a shared screen", () => {
-    render(
-      <Phone
-        view={playerView({ phase: "gallery" })}
-        room={room()}
-        deadline={null}
-        timerStartedAt={null}
-        clock={CLOCK}
-        send={vi.fn<(action: DoodleAction) => void>()}
-        stage={null}
-      />,
-    );
+    renderPhone(playerView({ phase: "gallery" }));
     expect(screen.getByText("Look up")).toBeTruthy();
   });
 
@@ -103,17 +103,14 @@ describe("Phone", () => {
         { drawingId: "maya:0", artistId: "maya", doodle: { v: 1, s: [] }, title: "a cat riding a skateboard", shown: true, foundByCount: 1 },
       ],
     };
-    render(
-      <Phone
-        view={playerView({ phase: "gallery" })}
-        room={room()}
-        deadline={null}
-        timerStartedAt={null}
-        clock={CLOCK}
-        send={vi.fn<(action: DoodleAction) => void>()}
-        stage={stage}
-      />,
-    );
+    renderPhone(playerView({ phase: "gallery" }), stage);
     expect(screen.getByText("a cat riding a skateboard")).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is set", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderPhone(playerView({ phase: "gallery" }));
+    expect(screen.getByText("תסתכלו למעלה")).toBeTruthy();
+    expect(screen.getByText("הגלריה על הטלוויזיה.")).toBeTruthy();
   });
 });

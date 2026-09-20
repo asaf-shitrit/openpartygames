@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { ServerClock } from "@opg/ui";
 import { Button, Card, DoodleView, Icon, Marker, PRESSABLE_CLASS } from "@opg/ui";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerOption, DoodlePlayerView } from "../state";
 
 export interface PhoneVoteProps {
@@ -12,11 +14,12 @@ export interface PhoneVoteProps {
   send: (action: DoodleAction) => void;
 }
 
-function DrawingCard({ view, clock }: { view: DoodlePlayerView; clock: ServerClock }) {
+function DrawingCard({ view, clock, t }: { view: DoodlePlayerView; clock: ServerClock; t: Dictionary }) {
   if (view.doodle === null) return null;
+  const label = view.isArtist ? t.doodleBluff.yourDrawingLabel : t.doodleBluff.drawingBeingVotedLabel;
   return (
     <Card style={{ padding: 10, alignSelf: "center" }}>
-      <DoodleView doodle={view.doodle} label={view.isArtist ? "Your drawing" : "The drawing being voted on"} clock={clock} size={180} />
+      <DoodleView doodle={view.doodle} label={label} clock={clock} size={180} />
     </Card>
   );
 }
@@ -42,7 +45,7 @@ function rowStyle(mine: boolean, selected: boolean): CSSProperties {
     fontSize: 19,
     fontWeight: 700,
     color: "var(--opg-ink)",
-    textAlign: "left",
+    textAlign: "start",
     cursor: mine ? "not-allowed" : "pointer",
   };
 }
@@ -69,13 +72,13 @@ function VoteRow({ option, selected, onSelect }: { option: DoodlePlayerOption; s
   );
 }
 
-function VoteForm({ view, send }: { view: DoodlePlayerView; send: (action: DoodleAction) => void }) {
+function VoteForm({ view, send, t }: { view: DoodlePlayerView; send: (action: DoodleAction) => void; t: Dictionary }) {
   const [selected, setSelected] = useState<string | null>(null);
   const options = view.options ?? [];
   return (
     <>
-      <Marker size={26}>Which title is real?</Marker>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>Pick one. Not your own.</div>
+      <Marker size={26}>{t.doodleBluff.whichIsReal}</Marker>
+      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.pickOneNotYourOwn}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {options.map((option) => (
           <VoteRow key={option.id} option={option} selected={selected === option.id} onSelect={() => setSelected(option.id)} />
@@ -90,47 +93,48 @@ function VoteForm({ view, send }: { view: DoodlePlayerView; send: (action: Doodl
         style={{ marginTop: "auto" }}
       >
         <Icon name="check" size={22} />
-        Lock in
+        {t.doodleBluff.lockIn}
       </Button>
     </>
   );
 }
 
-function VoteLocked() {
+function VoteLocked({ t }: { t: Dictionary }) {
   return (
     <Card
       variant="M"
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="check" size={40} color="var(--opg-marker)" />
-      <Marker size={30}>Vote locked in</Marker>
-      <div style={{ fontSize: 18, fontWeight: 700 }}>Hold tight for the reveal</div>
+      <Marker size={30}>{t.doodleBluff.voteLockedIn}</Marker>
+      <div style={{ fontSize: 18, fontWeight: 700 }}>{t.doodleBluff.holdTightForReveal}</div>
     </Card>
   );
 }
 
-function ArtistSpectator() {
+function ArtistSpectator({ t }: { t: Dictionary }) {
   return (
     <Card
       variant="M"
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="eye-off" size={40} color="var(--opg-ink-secondary)" />
-      <Marker size={30}>Your drawing — no peeking at your own title</Marker>
-      <div style={{ fontSize: 18, fontWeight: 700 }}>The room is voting</div>
+      <Marker size={30}>{t.doodleBluff.noPeekingOwnTitle}</Marker>
+      <div style={{ fontSize: 18, fontWeight: 700 }}>{t.doodleBluff.roomIsVoting}</div>
     </Card>
   );
 }
 
 export function PhoneVote({ view, clock, send }: PhoneVoteProps) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, flexGrow: 1 }}>
-      <DrawingCard view={view} clock={clock} />
-      {view.isArtist ? <ArtistSpectator /> : <NonArtist view={view} send={send} />}
+      <DrawingCard view={view} clock={clock} t={t} />
+      {view.isArtist ? <ArtistSpectator t={t} /> : <NonArtist view={view} send={send} t={t} />}
     </div>
   );
 }
 
-function NonArtist({ view, send }: { view: DoodlePlayerView; send: (action: DoodleAction) => void }) {
-  return view.myVote !== null ? <VoteLocked /> : <VoteForm view={view} send={send} />;
+function NonArtist({ view, send, t }: { view: DoodlePlayerView; send: (action: DoodleAction) => void; t: Dictionary }) {
+  return view.myVote !== null ? <VoteLocked t={t} /> : <VoteForm view={view} send={send} t={t} />;
 }

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
 import type { Stroke } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerView } from "../state";
 import type { SentCursors } from "./PhoneDraw";
 import { commitDrawingChange, PhoneDraw, pendingChunks, readMirror, resyncCursor, storageKey } from "./PhoneDraw";
@@ -15,6 +16,7 @@ function sentCursorsRef(initial: SentCursors = {}): MutableRefObject<SentCursors
 afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
+  window.localStorage.clear();
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
@@ -79,15 +81,23 @@ describe("pendingChunks", () => {
   });
 });
 
+function renderDraw(view: DoodlePlayerView, send: (action: DoodleAction) => void = vi.fn<(action: DoodleAction) => void>()) {
+  return render(
+    <LocaleProvider>
+      <PhoneDraw view={view} roomCode="BKTZ" clock={CLOCK} send={send} />
+    </LocaleProvider>,
+  );
+}
+
 describe("PhoneDraw", () => {
   it("shows the progress label and the active prompt", () => {
-    render(<PhoneDraw view={baseView()} roomCode="BKTZ" clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderDraw(baseView());
     expect(screen.getByText("Drawing 1 of 2")).toBeTruthy();
     expect(screen.getByText("Draw this — no words: a cat riding a skateboard")).toBeTruthy();
   });
 
   it("switches to the second prompt on Next drawing", () => {
-    render(<PhoneDraw view={baseView()} roomCode="BKTZ" clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderDraw(baseView());
     fireEvent.click(screen.getByText("Next drawing"));
     expect(screen.getByText("Drawing 2 of 2")).toBeTruthy();
     expect(screen.getByText("Draw this — no words: a dog on a scooter")).toBeTruthy();
@@ -95,7 +105,7 @@ describe("PhoneDraw", () => {
 
   it("the squiggle button submits a valid drawing and marks it done", () => {
     const send = vi.fn<(action: DoodleAction) => void>();
-    render(<PhoneDraw view={baseView()} roomCode="BKTZ" clock={CLOCK} send={send} />);
+    renderDraw(baseView(), send);
     fireEvent.click(screen.getByText("Can't draw? Send a squiggle"));
     const strokeCalls = send.mock.calls.filter(([action]) => action.type === "strokes");
     expect(strokeCalls.length).toBeGreaterThan(0);
@@ -104,29 +114,29 @@ describe("PhoneDraw", () => {
   });
 
   it("disables the squiggle button once that drawing is done", () => {
-    render(
-      <PhoneDraw
-        view={baseView({ myDone: { "p1:0": true } })}
-        roomCode="BKTZ"
-        clock={CLOCK}
-        send={vi.fn<(action: DoodleAction) => void>()}
-      />,
-    );
+    renderDraw(baseView({ myDone: { "p1:0": true } }));
     expect(screen.getByText("Can't draw? Send a squiggle").hasAttribute("disabled")).toBe(true);
   });
 
   it("shows a waiting state when there are no prompts yet", () => {
-    render(<PhoneDraw view={baseView({ myPrompts: [] })} roomCode="BKTZ" clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderDraw(baseView({ myPrompts: [] }));
     expect(screen.getByText("Waiting on your prompts…")).toBeTruthy();
   });
 
   it("the done button submits doodle-done once, and stays disabled once done", () => {
     const send = vi.fn<(action: DoodleAction) => void>();
-    render(<PhoneDraw view={baseView()} roomCode="BKTZ" clock={CLOCK} send={send} />);
+    renderDraw(baseView(), send);
     const [doneButton] = screen.getAllByText("I'm done with this one");
     if (doneButton === undefined) throw new Error("expected a done button");
     fireEvent.click(doneButton);
     expect(send).toHaveBeenCalledWith({ type: "doodle-done", drawingId: "p1:0" });
+  });
+
+  it("renders in Hebrew when the locale is set", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderDraw(baseView());
+    expect(screen.getByText("ציור 1 מתוך 2")).toBeTruthy();
+    expect(screen.getByText("ציירו את זה — בלי מילים: a cat riding a skateboard")).toBeTruthy();
   });
 });
 

@@ -52,6 +52,13 @@
     "Permanent Marker", "Secular One", "Arial Hebrew", system-ui, sans-serif;
 }
 
+/* Reading-order icons mirror under RTL; a physical arrow (pointing at something on the TV)
+   never carries this attribute value, so it is untouched. Not `!important`: an inline
+   `transform` at a call site still wins the cascade over this rule. */
+[dir="rtl"] svg[data-icon="arrow-right"] {
+  transform: scaleX(-1);
+}
+
 .opg-root,
 .opg-root * {
   box-sizing: border-box;

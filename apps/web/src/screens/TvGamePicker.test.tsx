@@ -1,9 +1,16 @@
+import type { ReactElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
 import { makeGame, makeHostView, makePack, makePlayer } from "./fixtures/room";
 import { TvGamePicker } from "./TvGamePicker";
+
+/** This screen reads its copy from the dictionary, so every render needs a provider. */
+function renderLocalized(ui: ReactElement) {
+  return render(ui, { wrapper: LocaleProvider });
+}
 
 class FakeEngine implements SoundEngine {
   readonly cues: CueId[] = [];
@@ -60,7 +67,7 @@ afterEach(cleanup);
 
 describe("TvGamePicker", () => {
   it("marks the picked game and names its packs", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           games: [IMPOSTER, DRAW],
@@ -73,7 +80,7 @@ describe("TvGamePicker", () => {
   });
 
   it("shows no picked stamp while the VIP has not chosen", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           games: [IMPOSTER, DRAW],
@@ -86,7 +93,7 @@ describe("TvGamePicker", () => {
   });
 
   it("names the VIP who is picking", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           players: [makePlayer({ id: "p1", name: "Priya", isVip: true })],
@@ -101,7 +108,7 @@ describe("TvGamePicker", () => {
   });
 
   it("falls back when no VIP has joined", () => {
-    render(<TvGamePicker view={makeHostView({ players: [], vipId: null })} />);
+    renderLocalized(<TvGamePicker view={makeHostView({ players: [], vipId: null })} />);
     expect(screen.getByText("Someone")).toBeTruthy();
     expect(
       screen.getByText(/The VIP starts the game from their phone/),
@@ -109,7 +116,7 @@ describe("TvGamePicker", () => {
   });
 
   it("shows an adult pack as on and a teen pack as off", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           packs: [
@@ -136,7 +143,7 @@ describe("TvGamePicker", () => {
   });
 
   it("counts the players who are still playing", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           players: [
@@ -151,18 +158,18 @@ describe("TvGamePicker", () => {
   });
 
   it("counts a lone player in the singular", () => {
-    render(<TvGamePicker view={makeHostView({ players: [makePlayer()] })} />);
+    renderLocalized(<TvGamePicker view={makeHostView({ players: [makePlayer()] })} />);
     expect(screen.getByText(/· 1 player$/)).toBeTruthy();
   });
 
   it("says when a game has no packs yet", () => {
-    render(<TvGamePicker view={makeHostView({ packs: [] })} />);
+    renderLocalized(<TvGamePicker view={makeHostView({ packs: [] })} />);
     expect(screen.getByText("No packs for this game yet.")).toBeTruthy();
   });
 
   it("plays no cue on mount, even with a game already picked", () => {
     const engine = new FakeEngine();
-    render(
+    renderLocalized(
       <SoundProvider engine={engine}>
         <TvGamePicker
           view={makeHostView({
@@ -176,7 +183,7 @@ describe("TvGamePicker", () => {
   });
 
   it("shows all three games and lets the third be picked", () => {
-    render(
+    renderLocalized(
       <TvGamePicker
         view={makeHostView({
           games: [IMPOSTER, DRAW, CHARADES],
@@ -193,7 +200,7 @@ describe("TvGamePicker", () => {
 
   it("pops and tapes the newly picked card when the pick changes live", () => {
     const engine = new FakeEngine();
-    const { rerender } = render(
+    const { rerender } = renderLocalized(
       <SoundProvider engine={engine}>
         <TvGamePicker
           view={makeHostView({
@@ -214,5 +221,25 @@ describe("TvGamePicker", () => {
       </SoundProvider>,
     );
     expect(engine.cues).toEqual(["tape"]);
+  });
+});
+
+describe("TvGamePicker, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("renders the pick heading and packs panel in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderLocalized(
+      <TvGamePicker
+        view={makeHostView({
+          players: [makePlayer({ id: "p1", name: "Priya", isVip: true })],
+          vipId: "p1",
+        })}
+      />,
+    );
+    expect(screen.getByText("בוחר/ת משחק")).toBeTruthy();
+    expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
   });
 });

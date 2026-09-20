@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import type { ImposterHostView, ImposterPlayerView } from "../../state";
 import { imposterPreviews } from "../preview";
@@ -61,6 +62,7 @@ describe("StageLastChance", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
       />,
+      { wrapper: LocaleProvider },
     );
     const figure = screen.getByRole("figure");
     expect(figure.children).toHaveLength(view.guessLength ?? 0);
@@ -80,6 +82,7 @@ describe("StageLastChance", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("Priya got caught!")).toBeTruthy();
     expect(screen.getByText(/steals 1,000 points\./)).toBeTruthy();
@@ -98,6 +101,7 @@ describe("StageLastChance", () => {
         timerStartedAt={room.game?.timerStartedAt ?? null}
         clock={clock}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("Priya got caught!")).toBeTruthy();
     expect(screen.getByText("Guessing…")).toBeTruthy();

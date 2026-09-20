@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import { LANDING_GAMES } from "../games";
 import { TvLanding } from "./TvLanding";
 
@@ -62,6 +64,10 @@ function bodyText(body: BodyInit | null | undefined): Promise<string> {
   return new Response(body).text();
 }
 
+function renderLanding(children: ReactNode = <TvLanding />) {
+  return render(<LocaleProvider>{children}</LocaleProvider>);
+}
+
 beforeEach(() => {
   window.history.pushState(null, "", "/");
 });
@@ -86,7 +92,7 @@ describe("TvLanding", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    renderLanding();
     await user.click(startButton());
     await waitFor(() =>
       expect(localStorage.getItem("opg:host:BKTZ")).toBe("host-token"),
@@ -99,7 +105,7 @@ describe("TvLanding", () => {
       Response.json({ error: "full-tonight" }, { status: 503 }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(await screen.findByText("We're full tonight")).toBeTruthy();
   });
@@ -109,7 +115,7 @@ describe("TvLanding", () => {
       Response.json({ error: "internal" }, { status: 500 }),
     );
     const user = userEvent.setup();
-    render(<TvLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(
       await screen.findByText("Could not start a room. Try again in a moment."),
@@ -124,7 +130,7 @@ describe("TvLanding", () => {
       },
     });
     const user = userEvent.setup();
-    render(<TvLanding />);
+    renderLanding();
     await user.click(startButton());
     expect(
       await screen.findByText(
@@ -136,7 +142,7 @@ describe("TvLanding", () => {
 
   it("shows the Show on TV chip in the header and opens the guide", async () => {
     const user = userEvent.setup();
-    render(<TvLanding />);
+    renderLanding();
     await user.click(screen.getByRole("button", { name: "Show on TV" }));
     expect(
       screen.getByRole("dialog", { name: "Show this on your TV" }),
@@ -144,7 +150,7 @@ describe("TvLanding", () => {
   });
 
   it("shows every landing game's name, including a third game", () => {
-    render(<TvLanding />);
+    renderLanding();
     expect(LANDING_GAMES.length).toBeGreaterThanOrEqual(3);
     for (const game of LANDING_GAMES) {
       expect(screen.getByText(game.name)).toBeTruthy();
@@ -155,12 +161,25 @@ describe("TvLanding", () => {
     stubFetch(async () => Response.json(CREATED));
     const engine = new FakeEngine();
     const user = userEvent.setup();
-    render(
+    renderLanding(
       <SoundProvider engine={engine}>
         <TvLanding />
       </SoundProvider>,
     );
     await user.click(startButton());
     expect(engine.unlockCount).toBe(1);
+  });
+
+  it("renders in Hebrew when the locale is Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderLanding();
+      expect(screen.getByText("משחקי מסיבות בשבילכם")).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "הציגו בטלוויזיה" }),
+      ).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

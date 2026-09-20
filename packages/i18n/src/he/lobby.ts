@@ -8,7 +8,7 @@ export const lobby: Dictionary["lobby"] = {
   youSuffix: " (אתם)",
   vip: "VIP",
   vipYouNote: "אתם ה-VIP ובוחרים את המשחק.",
-  vipPicksNote: "{name} הוא ה-VIP ובוחר את המשחק.",
+  vipPicksNote: "{name} הוא/היא ה-VIP ובוחר/ת את המשחק.",
   watchTv: "תסתכלו על הטלוויזיה.",
   theVip: "ה-VIP",
   picked: "{name} בחר/ה",
@@ -25,5 +25,5 @@ export const lobby: Dictionary["lobby"] = {
   openSeat: "מקום פנוי",
   playersOfMax: "{count} מתוך {max} שחקנים",
   waitingForFirst: "ממתינים לשחקן הראשון שיצטרף",
-  vipPicksFromPhone: "הוא ה-VIP ובוחר את המשחק מהטלפון שלו",
+  vipPicksFromPhone: "הוא/היא ה-VIP ובוחר/ת את המשחק מהטלפון שלו/ה",
 };

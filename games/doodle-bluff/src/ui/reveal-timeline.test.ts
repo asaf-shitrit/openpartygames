@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Moment } from "@opg/ui";
+import { en, he } from "@opg/i18n";
 import {
   hostRevealBeats,
   personalReveal,
@@ -65,7 +66,7 @@ describe("titlesShown", () => {
 
 describe("personalReveal", () => {
   it("artist, nobody found it", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: true,
       myVote: null,
       truthOptionId: "o1",
@@ -77,7 +78,7 @@ describe("personalReveal", () => {
   });
 
   it("artist, some players found it", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: true,
       myVote: null,
       truthOptionId: "o1",
@@ -90,7 +91,7 @@ describe("personalReveal", () => {
   });
 
   it("voter who sat out", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: false,
       myVote: null,
       truthOptionId: "o1",
@@ -102,7 +103,7 @@ describe("personalReveal", () => {
   });
 
   it("voter who found the truth", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: false,
       myVote: "o1",
       truthOptionId: "o1",
@@ -114,7 +115,7 @@ describe("personalReveal", () => {
   });
 
   it("voter who fooled someone with their own title", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: false,
       myVote: "o2",
       truthOptionId: "o1",
@@ -126,7 +127,7 @@ describe("personalReveal", () => {
   });
 
   it("voter who neither found nor fooled", () => {
-    const result = personalReveal({
+    const result = personalReveal(en, {
       isArtist: false,
       myVote: "o2",
       truthOptionId: "o1",
@@ -135,6 +136,18 @@ describe("personalReveal", () => {
     });
     expect(result.headline).toBe("Not this time");
     expect(result.haptic).toBe("caught");
+  });
+
+  it("returns Hebrew copy for the Hebrew dictionary", () => {
+    const result = personalReveal(he, {
+      isArtist: false,
+      myVote: "o1",
+      truthOptionId: "o1",
+      myPoints: 500,
+      foundByCount: 1,
+    });
+    expect(result.headline).toBe("מצאתם את זה!");
+    expect(result.sub).toContain("500");
   });
 });
 

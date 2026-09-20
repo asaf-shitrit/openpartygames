@@ -18,6 +18,8 @@ import {
   TallyScratch,
   useMoment,
 } from "@opg/ui";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { REVEAL_MS, type ImposterHostView } from "../../state";
 import { revealOutcome } from "../../rules";
 import type { RevealOutcome } from "../../rules";
@@ -89,8 +91,10 @@ function verdictTargetId(outcome: RevealOutcome, imposterId: PlayerId | null): P
   return null;
 }
 
-function verdictStampText(outcome: RevealOutcome): string {
-  return outcome.kind === "caught" ? "Imposter!" : "Not the imposter";
+function verdictStampText(t: Dictionary, outcome: RevealOutcome): string {
+  return outcome.kind === "caught"
+    ? t.imposter.reveal.imposterBadge
+    : t.imposter.reveal.notImposter;
 }
 
 /** The row the unmask beat lands on: the real imposter, only when they were not caught. */
@@ -98,15 +102,19 @@ function unmaskTargetId(outcome: RevealOutcome, imposterId: PlayerId | null): Pl
   return outcome.kind === "caught" ? null : imposterId;
 }
 
-function centerCaption(outcome: RevealOutcome, verdictReached: boolean): string | null {
+function centerCaption(
+  t: Dictionary,
+  outcome: RevealOutcome,
+  verdictReached: boolean,
+): string | null {
   if (!verdictReached) return null;
-  if (outcome.kind === "tie") return "It's a tie!";
-  if (outcome.kind === "no-votes") return "No votes?!";
+  if (outcome.kind === "tie") return t.imposter.reveal.itsATie;
+  if (outcome.kind === "no-votes") return t.imposter.reveal.noVotesBang;
   return null;
 }
 
-function voteLabel(shown: number): string {
-  return `${shown} ${shown === 1 ? "vote" : "votes"}`;
+function voteLabel(t: Dictionary, shown: number): string {
+  return format(pickPluralByCount(shown, t.imposter.reveal.votes), { count: shown });
 }
 
 interface RowBadge {
@@ -116,6 +124,7 @@ interface RowBadge {
 }
 
 interface RowBadgeArgs {
+  t: Dictionary;
   id: PlayerId;
   stage: Stage;
   verdictId: PlayerId | null;
@@ -123,12 +132,12 @@ interface RowBadgeArgs {
   outcome: RevealOutcome;
 }
 
-function rowBadge({ id, stage, verdictId, unmaskId, outcome }: RowBadgeArgs): RowBadge | null {
+function rowBadge({ t, id, stage, verdictId, unmaskId, outcome }: RowBadgeArgs): RowBadge | null {
   if (stage.verdictReached && id === verdictId) {
-    return { text: verdictStampText(outcome), live: stage.verdictLive, shake: "small" };
+    return { text: verdictStampText(t, outcome), live: stage.verdictLive, shake: "small" };
   }
   if (stage.unmaskReached && id === unmaskId) {
-    return { text: "Imposter!", live: stage.unmaskLive, shake: "none" };
+    return { text: t.imposter.reveal.imposterBadge, live: stage.unmaskLive, shake: "none" };
   }
   return null;
 }
@@ -152,14 +161,15 @@ function RestRow({
   total: number;
   players: PlayerSummary[];
 }) {
-  const name = nameOf(players, id);
+  const { t } = useLocale();
+  const name = nameOf(players, id, t.common.someone);
   const voted = shown > 0;
   return (
     <div style={REST_ROW}>
       <Avatar
         id={avatarOf(players, id)}
         size={32}
-        alt={`${name}'s avatar`}
+        alt={format(t.imposter.avatarAlt, { name })}
         style={voted ? undefined : { opacity: 0.55 }}
       />
       <div style={{ flexGrow: 1, fontSize: 17, fontWeight: 700, opacity: voted ? 1 : 0.55 }}>
@@ -168,11 +178,11 @@ function RestRow({
       {voted ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <TallyScratch count={total} drawn={shown} size={20} />
-          <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(shown)}</div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
       ) : (
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-          0 votes
+          {format(pickPluralByCount(0, t.imposter.reveal.votes), { count: 0 })}
         </div>
       )}
     </div>
@@ -203,15 +213,20 @@ interface FocusRowProps {
 }
 
 function FocusRow({ id, shown, total, badge, suspenseStartedAt, clock, players }: FocusRowProps) {
-  const name = nameOf(players, id);
+  const { t } = useLocale();
+  const name = nameOf(players, id, t.common.someone);
   return (
     <div style={FOCUS_ROW} data-testid="stage-reveal-focus-row">
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Avatar id={avatarOf(players, id)} size={56} alt={`${name}'s avatar`} />
+        <Avatar
+          id={avatarOf(players, id)}
+          size={56}
+          alt={format(t.imposter.avatarAlt, { name })}
+        />
         <div style={{ flexGrow: 1, fontSize: 20, fontWeight: 700 }}>{name}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <TallyScratch count={total} drawn={shown} size={22} />
-          <div style={{ fontSize: 18, fontWeight: 700 }}>{voteLabel(shown)}</div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
       </div>
       {badge === null ? null : (
@@ -228,7 +243,7 @@ function FocusRow({ id, shown, total, badge, suspenseStartedAt, clock, players }
             durationMs={REVEAL_TIMING.verdictMs - REVEAL_TIMING.suspenseMs}
             clock={clock}
             size={98}
-            label="Verdict incoming"
+            label={t.imposter.reveal.verdictIncoming}
           />
         </div>
       )}
@@ -275,10 +290,11 @@ function NextNote({
   view: ImposterHostView;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   if (!nextReached) return null;
   return (
     <StickyNote tilt={-2} style={{ padding: "10px 18px", fontSize: 18, fontWeight: 700 }}>
-      {nextNoteText(view, players)}
+      {nextNoteText(t, view, players)}
     </StickyNote>
   );
 }
@@ -294,9 +310,10 @@ function VerdictAnnouncer({
   imposterId: PlayerId | null;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   return (
     <output aria-live="polite" style={HIDDEN}>
-      {verdictReached ? verdictSentence(outcome, imposterId, players) : ""}
+      {verdictReached ? verdictSentence(t, outcome, imposterId, players) : ""}
     </output>
   );
 }
@@ -311,6 +328,7 @@ export interface StageRevealProps {
 
 /** The stage region during the reveal: the same 12s ceremony as the TV, in one column. */
 export function StageReveal(props: StageRevealProps) {
+  const { t } = useLocale();
   const { view, players, clock } = props;
   const plan = useMemo(() => revealPlan(view), [view]);
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, REVEAL_MS);
@@ -322,7 +340,7 @@ export function StageReveal(props: StageRevealProps) {
   const suspenseOn = stage.suspenseReached && !stage.verdictReached && verdictId !== null;
   const suspenseStartedAt =
     startedAt === null ? null : startedAt + REVEAL_TIMING.suspenseMs;
-  const caption = centerCaption(plan.outcome, stage.verdictReached);
+  const caption = centerCaption(t, plan.outcome, stage.verdictReached);
 
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
@@ -332,7 +350,7 @@ export function StageReveal(props: StageRevealProps) {
           id={id}
           shown={marksForTarget(plan.order, id, drawn)}
           total={plan.tally[id]?.length ?? 0}
-          badge={rowBadge({ id, stage, verdictId, unmaskId, outcome: plan.outcome })}
+          badge={rowBadge({ t, id, stage, verdictId, unmaskId, outcome: plan.outcome })}
           suspenseStartedAt={suspenseOn && id === verdictId ? suspenseStartedAt : null}
           clock={clock}
           players={players}

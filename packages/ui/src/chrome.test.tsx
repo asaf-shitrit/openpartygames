@@ -6,10 +6,21 @@ import {
   render,
   screen,
 } from "@testing-library/react";
+import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
+import { LocaleProvider } from "@opg/i18n";
 import { HeaderChip, PhoneStrip, PlayerChip, TvHeader } from "./chrome";
 import { SoundProvider } from "./audio/SoundProvider";
 import { FakeSoundEngine } from "./fixtures/audio";
+
+function renderChrome(ui: ReactElement) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
+
+function renderHebrewChrome(ui: ReactElement) {
+  window.localStorage.setItem("opg:locale", "he");
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 type PropertyOwner = Document | HTMLElement;
 
@@ -80,20 +91,20 @@ afterEach(() => {
 
 describe("TvHeader", () => {
   it("renders the brand variant with the sound chip", () => {
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     expect(screen.getByText("OpenPartyGames")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Sound on" })).toBeTruthy();
     expect(screen.queryByText("Room")).toBeNull();
   });
 
   it("shows the room chip when a code is present", () => {
-    render(<TvHeader variant="brand" roomCode="ABCD" />);
+    renderChrome(<TvHeader variant="brand" roomCode="ABCD" />);
     expect(screen.getByText("Room")).toBeTruthy();
     expect(screen.getByText("ABCD")).toBeTruthy();
   });
 
   it("renders the game variant with name and progress", () => {
-    render(
+    renderChrome(
       <TvHeader
         variant="game"
         gameName="Quip Clash"
@@ -107,18 +118,18 @@ describe("TvHeader", () => {
   });
 
   it("omits progress and room code when they are absent", () => {
-    render(<TvHeader variant="game" gameName="Quip Clash" />);
+    renderChrome(<TvHeader variant="game" gameName="Quip Clash" />);
     expect(screen.getByText("Quip Clash")).toBeTruthy();
     expect(screen.queryByText("Room")).toBeNull();
   });
 
   it("renders an empty game title when no name is given", () => {
-    const { container } = render(<TvHeader variant="game" />);
+    const { container } = renderChrome(<TvHeader variant="game" />);
     expect(container.querySelector(".opg-marker")?.textContent).toBe("");
   });
 
   it("toggles the sound setting from the chip", async () => {
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     await userEvent.click(screen.getByRole("button", { name: "Sound on" }));
     expect(screen.getByText("Sound off")).toBeTruthy();
     expect(
@@ -130,12 +141,12 @@ describe("TvHeader", () => {
 
   it("starts muted when the stored setting says so", () => {
     localStorage.setItem("opg:muted", "1");
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     expect(screen.getByText("Sound off")).toBeTruthy();
   });
 
   it("renders actions before the chips in the brand variant", () => {
-    render(
+    renderChrome(
       <TvHeader variant="brand" roomCode="ABCD" actions={<span>Help</span>} />,
     );
     expect(precedes(screen.getByText("Help"), screen.getByText("Room"))).toBe(
@@ -144,7 +155,7 @@ describe("TvHeader", () => {
   });
 
   it("renders actions before the chips in the game variant", () => {
-    render(
+    renderChrome(
       <TvHeader
         variant="game"
         gameName="Quip Clash"
@@ -161,27 +172,27 @@ describe("TvHeader", () => {
 describe("full screen chip", () => {
   it("is hidden when fullscreen is unsupported", () => {
     stubFullscreen(false);
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     expect(screen.queryByRole("button", { name: "Full screen" })).toBeNull();
   });
 
   it("is shown when fullscreen is supported", () => {
     stubFullscreen(true);
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     expect(screen.getByRole("button", { name: "Full screen" })).toBeTruthy();
   });
 
   it("requests fullscreen when clicked", async () => {
     const request = vi.fn<() => Promise<void>>(() => Promise.resolve());
     stubFullscreen(true, request);
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     await userEvent.click(screen.getByRole("button", { name: "Full screen" }));
     expect(request).toHaveBeenCalledTimes(1);
   });
 
   it("hides once the page is full screen", () => {
     stubFullscreen(true);
-    render(<TvHeader variant="brand" />);
+    renderChrome(<TvHeader variant="brand" />);
     act(() => {
       defineValue(document, "fullscreenElement", document.createElement("div"));
       document.dispatchEvent(new Event("fullscreenchange"));
@@ -225,7 +236,7 @@ describe("HeaderChip", () => {
 
 describe("PhoneStrip", () => {
   it("renders the game name, progress and right slot", () => {
-    render(
+    renderChrome(
       <PhoneStrip
         gameName="Quip Clash"
         progress="Round 2"
@@ -238,30 +249,30 @@ describe("PhoneStrip", () => {
   });
 
   it("renders without progress or right slot", () => {
-    render(<PhoneStrip gameName="Solo" />);
+    renderChrome(<PhoneStrip gameName="Solo" />);
     expect(screen.getByText("Solo")).toBeTruthy();
   });
 
   it("shows the room code when given, for the rejoin path in a no-TV room", () => {
-    render(<PhoneStrip gameName="Quip Clash" roomCode="BKTZ" />);
+    renderChrome(<PhoneStrip gameName="Quip Clash" roomCode="BKTZ" />);
     expect(screen.getByText("Room BKTZ")).toBeTruthy();
   });
 
   it("omits the room code line on a shared screen", () => {
-    render(<PhoneStrip gameName="Quip Clash" />);
+    renderChrome(<PhoneStrip gameName="Quip Clash" />);
     expect(screen.queryByText(/^Room /)).toBeNull();
   });
 });
 
 describe("PlayerChip", () => {
   it("labels the avatar and shows the player name", () => {
-    render(<PlayerChip name="Nia" avatar="cat" />);
+    renderChrome(<PlayerChip name="Nia" avatar="cat" />);
     expect(screen.getByText("Nia")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Nia's avatar" })).toBeTruthy();
   });
 
   it("renders a decorative avatar when there is no avatar id", () => {
-    render(<PlayerChip name="Nia" avatar={null} />);
+    renderChrome(<PlayerChip name="Nia" avatar={null} />);
     expect(screen.getByText("Nia")).toBeTruthy();
     expect(screen.queryByRole("img")).toBeNull();
   });
@@ -270,7 +281,7 @@ describe("PlayerChip", () => {
 describe("sound chip", () => {
   it("says Sound on while running and mutes on click", () => {
     const engine = new FakeSoundEngine("running");
-    render(
+    renderChrome(
       <SoundProvider engine={engine}>
         <TvHeader variant="brand" />
       </SoundProvider>,
@@ -285,7 +296,7 @@ describe("sound chip", () => {
   it("says Sound off while muted, and one click unmutes and unlocks", () => {
     localStorage.setItem("opg:muted", "1");
     const engine = new FakeSoundEngine("locked");
-    render(
+    renderChrome(
       <SoundProvider engine={engine}>
         <TvHeader variant="brand" />
       </SoundProvider>,
@@ -300,7 +311,7 @@ describe("sound chip", () => {
 
   it("says Tap for sound while locked and unlocks on click", () => {
     const engine = new FakeSoundEngine("locked");
-    render(
+    renderChrome(
       <SoundProvider engine={engine}>
         <TvHeader variant="brand" />
       </SoundProvider>,
@@ -311,5 +322,27 @@ describe("sound chip", () => {
     // The chip unlocks, and so does the provider's page-wide click listener; resuming twice is harmless.
     expect(engine.unlockCount).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Sound on" })).toBeTruthy();
+  });
+});
+
+describe("chrome, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("labels the room chip and the sound chip in Hebrew", () => {
+    renderHebrewChrome(<TvHeader variant="brand" roomCode="ABCD" />);
+    expect(screen.getByText("חדר")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "קול פועל" })).toBeTruthy();
+  });
+
+  it("shows the Hebrew room-code line on the phone strip", () => {
+    renderHebrewChrome(<PhoneStrip gameName="Quip Clash" roomCode="BKTZ" />);
+    expect(screen.getByText("חדר BKTZ")).toBeTruthy();
+  });
+
+  it("labels the avatar in Hebrew", () => {
+    renderHebrewChrome(<PlayerChip name="Nia" avatar="cat" />);
+    expect(screen.getByRole("img", { name: "האווטאר של Nia" })).toBeTruthy();
   });
 });

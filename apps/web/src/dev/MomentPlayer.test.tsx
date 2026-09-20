@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,6 +14,11 @@ import {
   toPreviewFixtures,
 } from "./MomentPlayer";
 import type { DevMoment, HostPreview } from "./MomentPlayer";
+
+/** These dev screens render real game UI, which reads its copy from the dictionary. */
+function renderLocalized(ui: ReactNode) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 afterEach(cleanup);
 
@@ -41,7 +48,7 @@ const TWO_MOMENTS = [
 ];
 
 function renderMoments(moments: readonly DevMoment[]) {
-  render(<MomentPlayer moments={moments} />);
+  renderLocalized(<MomentPlayer moments={moments} />);
 }
 
 /** Scrubs the shared reveal slider, in ms. */

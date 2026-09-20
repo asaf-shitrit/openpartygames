@@ -19,6 +19,8 @@ import {
   useMusic,
   useReducedMotion,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { ImposterHostView, ImposterPhase } from "../state";
 import { HostLastChance } from "./HostLastChance";
 import { HostResult } from "./HostResult";
@@ -32,18 +34,16 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return findPlayer(players, id)?.name ?? t.common.someone;
 }
 
 function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
   return findPlayer(players, id)?.avatar ?? null;
 }
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId | null): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return format(t.imposter.avatarAlt, { name: nameOf(t, players, id) });
 }
 
 const TILTS = [-1.5, 1, -1, 1.5, -1, 2];
@@ -69,6 +69,7 @@ interface SectionProps {
 // ---------- word-check ----------
 
 function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -79,7 +80,7 @@ function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <Marker size={112}>Check your phones!</Marker>
+        <Marker size={112}>{t.imposter.wordCheck.heading}</Marker>
         <div
           style={{
             maxWidth: 1300,
@@ -88,7 +89,7 @@ function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
             lineHeight: 1.25,
           }}
         >
-          Everyone got a secret word. One of you got a decoy, and knows it.
+          {t.imposter.wordCheck.explainer}
         </div>
       </div>
       <div
@@ -99,7 +100,7 @@ function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
           gap: 12,
         }}
       >
-        <div style={{ fontSize: 30, ...SECONDARY }}>Clues start in</div>
+        <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.wordCheck.cluesStartIn}</div>
         <Timer
           deadline={deadline}
           clock={clock}
@@ -113,6 +114,7 @@ function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
 }
 
 function ClueOrderCard({ view, players }: SectionProps) {
+  const { t } = useLocale();
   const order = view.clueOrder.length > 0 ? view.clueOrder : view.playerIds;
   return (
     <Card
@@ -126,7 +128,7 @@ function ClueOrderCard({ view, players }: SectionProps) {
       }}
     >
       <Tape left={820} top={-24} width={200} height={46} rotate={-3} />
-      <Marker size={56}>Clue order</Marker>
+      <Marker size={56}>{t.imposter.clues.orderLabel}</Marker>
       <div
         style={{
           display: "grid",
@@ -162,10 +164,10 @@ function ClueOrderCard({ view, players }: SectionProps) {
             <Avatar
               id={avatarOf(players, id)}
               size={150}
-              alt={avatarLabel(players, id)}
+              alt={avatarLabel(t, players, id)}
             />
             <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1 }}>
-              {nameOf(players, id)}
+              {nameOf(t, players, id)}
             </div>
           </div>
         ))}
@@ -218,6 +220,7 @@ function speakerTurnNumber(view: ImposterHostView): number {
 /** Replaces the countdown ring in the clue phase: there is no deadline any more, so this
  * slot shows whose turn it is in the order instead of time left. */
 function TurnStamp({ view }: { view: ImposterHostView }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -237,14 +240,15 @@ function TurnStamp({ view }: { view: ImposterHostView }) {
         {speakerTurnNumber(view)}
       </div>
       <div style={{ fontSize: 24, fontWeight: 700 }}>
-        of {view.clueOrder.length}
+        {format(t.imposter.clues.turnOf, { count: view.clueOrder.length })}
       </div>
     </div>
   );
 }
 
 function SpeakerCard({ view, players }: SectionProps) {
-  const speaker = nameOf(players, view.currentSpeakerId);
+  const { t } = useLocale();
+  const speaker = nameOf(t, players, view.currentSpeakerId);
   const cardRef = useRef<HTMLDivElement>(null);
   useSpeakerChangeCue(view.currentSpeakerId, cardRef);
   return (
@@ -265,7 +269,7 @@ function SpeakerCard({ view, players }: SectionProps) {
           <Avatar
             id={avatarOf(players, view.currentSpeakerId)}
             size={260}
-            alt={avatarLabel(players, view.currentSpeakerId)}
+            alt={avatarLabel(t, players, view.currentSpeakerId)}
           />
           <div
             style={{
@@ -276,12 +280,12 @@ function SpeakerCard({ view, players }: SectionProps) {
             }}
           >
             <TurnStamp view={view} />
-            <div style={{ fontSize: 30, ...SECONDARY }}>Turn</div>
+            <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.turnLabel}</div>
           </div>
         </div>
-        <Marker size={104}>{speaker}&apos;s turn</Marker>
+        <Marker size={104}>{format(t.imposter.clues.speakerTurn, { name: speaker })}</Marker>
         <div style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.2 }}>
-          Say one clue out loud
+          {t.imposter.clues.sayClueOutLoud}
         </div>
       </Card>
     </div>
@@ -328,14 +332,15 @@ function ClueStatus({
   speaking: boolean;
   upNext: boolean;
 }) {
-  if (done) return <div style={{ fontSize: 30, ...SECONDARY }}>Done</div>;
+  const { t } = useLocale();
+  if (done) return <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.done}</div>;
   if (speaking)
     return (
       <Marker size={34} color="var(--opg-marker)" style={{ lineHeight: 1 }}>
-        Speaking
+        {t.imposter.clues.speaking}
       </Marker>
     );
-  if (upNext) return <div style={{ fontSize: 30, ...SECONDARY }}>Up next</div>;
+  if (upNext) return <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.upNext}</div>;
   return null;
 }
 
@@ -354,6 +359,7 @@ function ClueRow({
   speakerId: PlayerId | null;
   nextId: PlayerId | null;
 }) {
+  const { t } = useLocale();
   const done = list.doneSpeakerIds.includes(id);
   const speaking = id === speakerId;
   return (
@@ -383,10 +389,10 @@ function ClueRow({
       <Avatar
         id={avatarOf(players, id)}
         size={68}
-        alt={avatarLabel(players, id)}
+        alt={avatarLabel(t, players, id)}
       />
       <div style={{ flexGrow: 1, fontSize: 38, fontWeight: 700 }}>
-        {nameOf(players, id)}
+        {nameOf(t, players, id)}
       </div>
       <ClueStatus done={done} speaking={speaking} upNext={id === nextId} />
     </div>
@@ -394,6 +400,7 @@ function ClueRow({
 }
 
 function ClueOrderList({ view, players }: SectionProps) {
+  const { t } = useLocale();
   const speakerId = view.currentSpeakerId;
   const index = speakerId ? view.clueOrder.indexOf(speakerId) : -1;
   const nextId = index >= 0 ? (view.clueOrder[index + 1] ?? null) : null;
@@ -408,7 +415,7 @@ function ClueOrderList({ view, players }: SectionProps) {
       }}
     >
       <Marker size={56} style={{ marginBottom: 4 }}>
-        Clue order
+        {t.imposter.clues.orderLabel}
       </Marker>
       {view.clueOrder.map((id, rowIndex) => (
         <ClueRow
@@ -426,6 +433,7 @@ function ClueOrderList({ view, players }: SectionProps) {
 }
 
 function Clues(props: SectionProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -448,7 +456,7 @@ function Clues(props: SectionProps) {
             lineHeight: 1.25,
           }}
         >
-          Listen closely. The imposter is bluffing.
+          {t.imposter.clues.listenClosely}
         </StickyNote>
       </div>
       <ClueOrderList {...props} />
@@ -459,6 +467,7 @@ function Clues(props: SectionProps) {
 // ---------- vote ----------
 
 function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
+  const { t } = useLocale();
   const total = view.playerIds.length;
   const voted = view.playerIds.filter((id) =>
     view.votedIds.includes(id),
@@ -473,9 +482,9 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Marker size={108}>Vote on your phones!</Marker>
+        <Marker size={108}>{t.imposter.vote.heading}</Marker>
         <div style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.2 }}>
-          Who has the decoy word?
+          {t.imposter.vote.question}
         </div>
       </div>
       <div
@@ -494,7 +503,7 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
           ticks
         />
         <div style={{ fontSize: 36, fontWeight: 700 }}>
-          {voted} of {total} voted
+          {format(t.imposter.vote.votedOfTotal, { voted, total })}
         </div>
       </div>
     </div>
@@ -502,6 +511,7 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
 }
 
 function VoteStatus({ hasVoted }: { hasVoted: boolean }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -519,7 +529,7 @@ function VoteStatus({ hasVoted }: { hasVoted: boolean }) {
         size={hasVoted ? 36 : 34}
         color={hasVoted ? "var(--opg-marker)" : "var(--opg-muted)"}
       />
-      <div>{hasVoted ? "Voted" : "Thinking…"}</div>
+      <div>{hasVoted ? t.imposter.vote.voted : t.imposter.vote.thinking}</div>
     </div>
   );
 }
@@ -537,6 +547,7 @@ function VoteTile({
   justArrived: boolean;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   const cardRef = useRef<HTMLDivElement>(null);
   const play = useCue();
   const reduced = useReducedMotion();
@@ -564,10 +575,10 @@ function VoteTile({
         <Avatar
           id={avatarOf(players, id)}
           size={150}
-          alt={avatarLabel(players, id)}
+          alt={avatarLabel(t, players, id)}
         />
         <div style={{ fontSize: 38, fontWeight: 700, lineHeight: 1.1 }}>
-          {nameOf(players, id)}
+          {nameOf(t, players, id)}
         </div>
         <VoteStatus hasVoted={hasVoted} />
       </Card>
@@ -576,6 +587,7 @@ function VoteTile({
 }
 
 function Vote(props: SectionProps) {
+  const { t } = useLocale();
   const { view, players } = props;
   const arrivals = useArrivals(view.votedIds);
   useMusic("tension");
@@ -607,7 +619,7 @@ function Vote(props: SectionProps) {
           ...SECONDARY,
         }}
       >
-        You can vote for anyone but yourself
+        {t.imposter.vote.cantVoteSelf}
       </div>
     </div>
   );
@@ -644,6 +656,7 @@ export function Host({
   timerStartedAt,
   clock,
 }: HostProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -657,8 +670,11 @@ export function Host({
     >
       <TvHeader
         variant="game"
-        gameName="Imposter"
-        progress={`Word ${view.wordNumber} of ${view.wordCount}`}
+        gameName={t.imposter.title}
+        progress={format(t.imposter.progress.wordOf, {
+          number: view.wordNumber,
+          count: view.wordCount,
+        })}
         roomCode={room.code}
       />
       <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>

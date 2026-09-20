@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en, LocaleProvider } from "@opg/i18n";
 import {
   makeGame,
   makePack,
@@ -8,6 +10,11 @@ import {
   makePlayerView,
 } from "./fixtures/room";
 import { formatPlayerCount, PhoneVipControls } from "./PhoneVipControls";
+
+/** This screen reads its copy from the dictionary, so every render needs a provider. */
+function renderLocalized(ui: ReactNode) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 const PRIYA = makePlayer({ id: "p1", name: "Priya", isVip: true });
 const SAM = makePlayer({ id: "p2", name: "Sam", avatar: "star" });
@@ -35,7 +42,7 @@ function setup(
     onKick: vi.fn<(id: string) => void>(),
     onStartGame: vi.fn<() => void>(),
   };
-  render(
+  renderLocalized(
     <PhoneVipControls
       view={makePlayerView({
         players: PLAYERS,
@@ -190,8 +197,8 @@ describe("PhoneVipControls", () => {
   });
 
   it("pluralizes the player count", () => {
-    expect(formatPlayerCount(1)).toBe("1 player");
-    expect(formatPlayerCount(2)).toBe("2 players");
+    expect(formatPlayerCount(en, 1)).toBe("1 player");
+    expect(formatPlayerCount(en, 2)).toBe("2 players");
     setup({ players: [makePlayer({ id: "p1", name: "Maya", isVip: true })] });
     expect(screen.getByText("Room BKTZ · 1 player")).toBeTruthy();
   });
@@ -282,5 +289,21 @@ describe("PhoneVipControls", () => {
   it("drops the hero code in a shared-screen room", () => {
     setup({ sharedScreen: true });
     expect(screen.queryByText("Your room code")).toBeNull();
+  });
+});
+
+describe("PhoneVipControls, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("renders the VIP heading and start button in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    setup();
+    expect(screen.getByText("אתם ה-VIP")).toBeTruthy();
+    expect(screen.getByText("בחרו משחק")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /התחילו את/ }),
+    ).toBeTruthy();
   });
 });

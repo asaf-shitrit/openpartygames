@@ -16,6 +16,7 @@ import { results } from "./en/results";
 import { picker } from "./en/picker";
 import { landing } from "./en/landing";
 import { status } from "./en/status";
+import { kit } from "./en/kit";
 
 export const en = {
   common,
@@ -30,4 +31,5 @@ export const en = {
   picker,
   landing,
   status,
+  kit,
 };

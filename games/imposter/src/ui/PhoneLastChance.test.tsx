@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import type { ImposterAction } from "../state";
 import {
@@ -103,6 +104,7 @@ describe("GuessView typing", () => {
         send={send}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     const input = screen.getByLabelText("Your guess");
 
@@ -148,6 +150,7 @@ describe("GuessView typing", () => {
         send={send}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     fireEvent.change(screen.getByLabelText("Your guess"), {
       target: { value: "horse" },
@@ -177,6 +180,7 @@ describe("GuessView typing", () => {
         send={send}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     const input = screen.getByLabelText("Your guess");
     // The first keystroke sends immediately; the second lands inside the throttle window and
@@ -208,6 +212,7 @@ describe("GuessView typing", () => {
         send={send}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     fireEvent.change(screen.getByLabelText("Your guess"), {
       target: { value: "h" },
@@ -239,6 +244,7 @@ describe("GuessWaiting", () => {
         send={vi.fn<(action: ImposterAction) => void>()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(screen.getByText("Priya is guessing…")).toBeTruthy();
     expect(screen.getByText("Eyes on the TV")).toBeTruthy();
@@ -261,6 +267,7 @@ describe("GuessWaiting", () => {
         send={vi.fn<(action: ImposterAction) => void>()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
 
     // A 1300ms window before the switch carries one slow beat (1100ms apart).
@@ -288,5 +295,31 @@ describe("GuessWaiting", () => {
     });
     expect(vibrate.mock.calls.length).toBe(2);
     expect(vibrate.mock.calls.length).toBeGreaterThan(slowBeats);
+  });
+});
+
+describe("GuessView in Hebrew", () => {
+  it("labels the guess field in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { view, room } = findPreview("Phone: Priya last chance");
+      const clock: ServerClock = { now: () => room.serverNow };
+      render(
+        <GuessView
+          view={view}
+          players={room.players}
+          me={room.players.find((p) => p.id === room.you) ?? null}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+          send={vi.fn<(action: ImposterAction) => void>()}
+          stage={null}
+        />,
+        { wrapper: LocaleProvider },
+      );
+      expect(screen.getByLabelText("הניחוש שלכם")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

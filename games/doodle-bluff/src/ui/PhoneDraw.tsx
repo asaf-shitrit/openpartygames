@@ -6,6 +6,8 @@ import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
 import { Button, Card, DoodlePad, Icon, Marker, PRESSABLE_CLASS } from "@opg/ui";
 import type { Doodle, Stroke } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { doodleSchema, MAX_POINTS_PER_CHUNK, type DoodleAction, type DoodlePlayerPrompt, type DoodlePlayerView } from "../state";
 
 const TAP_TARGET = 44;
@@ -94,8 +96,8 @@ export interface PhoneDrawProps {
   send: (action: DoodleAction) => void;
 }
 
-function progressLabel(index: number, total: number): string {
-  return `Drawing ${index + 1} of ${total}`;
+function progressLabel(t: Dictionary, index: number, total: number): string {
+  return format(t.doodleBluff.drawingOfTotal, { current: index + 1, total });
 }
 
 interface OneDrawingProps {
@@ -155,6 +157,7 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send,
 }
 
 function DoneButton({ drawingId, done, send }: { drawingId: string; done: boolean; send: (a: DoodleAction) => void }) {
+  const { t } = useLocale();
   return (
     <Button
       fullWidth
@@ -165,7 +168,7 @@ function DoneButton({ drawingId, done, send }: { drawingId: string; done: boolea
       style={{ marginTop: 12 }}
     >
       <Icon name="check" size={22} />
-      {done ? "Done" : "I'm done with this one"}
+      {done ? t.doodleBluff.doneShort : t.doodleBluff.imDoneWithThisOne}
     </Button>
   );
 }
@@ -183,6 +186,7 @@ function SquiggleButton({
   sentRef: MutableRefObject<SentCursors>;
   send: (action: DoodleAction) => void;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
@@ -203,12 +207,13 @@ function SquiggleButton({
         textDecoration: "underline",
       }}
     >
-      Can&apos;t draw? Send a squiggle
+      {t.doodleBluff.cantDrawSendSquiggle}
     </button>
   );
 }
 
 export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
+  const { t } = useLocale();
   const prompts = view.myPrompts;
   const [activeIndex, setActiveIndex] = useState(0);
   const sentRef = useRef<SentCursors>({});
@@ -221,7 +226,7 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
   if (prompts.length === 0 || active === undefined) {
     return (
       <Card style={{ padding: 20, textAlign: "center" }}>
-        <Marker size={26}>Waiting on your prompts…</Marker>
+        <Marker size={26}>{t.doodleBluff.waitingOnPrompts}</Marker>
       </Card>
     );
   }
@@ -229,7 +234,7 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Marker size={24}>{progressLabel(activeIndex, prompts.length)}</Marker>
+        <Marker size={24}>{progressLabel(t, activeIndex, prompts.length)}</Marker>
         {prompts.length > 1 ? (
           <button
             type="button"
@@ -237,11 +242,11 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
             onClick={() => setActiveIndex((i) => (i + 1) % prompts.length)}
             style={{ minHeight: TAP_TARGET, padding: "0 14px", fontWeight: 700 }}
           >
-            Next drawing
+            {t.doodleBluff.nextDrawing}
           </button>
         ) : null}
       </div>
-      <Card style={{ padding: "10px 14px", fontSize: 18, fontWeight: 700 }}>Draw this — no words: {active.prompt}</Card>
+      <Card style={{ padding: "10px 14px", fontSize: 18, fontWeight: 700 }}>{format(t.doodleBluff.drawThisNoWords, { prompt: active.prompt })}</Card>
       {prompts.map((prompt, index) => (
         <OneDrawing
           key={prompt.drawingId}

@@ -1,10 +1,12 @@
 // design/PhoneNoTvLanding.dc.html — phone landing: start a room, or join one.
 import { useState } from "react";
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { ApiError, createRoom } from "../api";
 import { navigate } from "../router";
 import { Button, Icon, Marker, PhoneScreen, PRESSABLE_CLASS } from "@opg/ui";
 
-function BrandHeader() {
+function BrandHeader({ brand }: { brand: string }) {
   return (
     <div
       style={{
@@ -17,8 +19,8 @@ function BrandHeader() {
         aria-hidden="true"
         style={{
           position: "absolute",
-          left: 0,
-          right: 0,
+          insetInlineStart: 0,
+          insetInlineEnd: 0,
           bottom: 3,
           height: 12,
           background: "var(--opg-highlight)",
@@ -30,25 +32,25 @@ function BrandHeader() {
         className="opg-marker"
         style={{ position: "relative", fontSize: 24, lineHeight: 1.2 }}
       >
-        OpenPartyGames
+        {brand}
       </div>
     </div>
   );
 }
 
-function Hero() {
+function Hero({ t }: { t: Dictionary["landing"] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Marker size={40} style={{ lineHeight: 1.15 }}>
-        Party games for
+        {t.heroLine1}
       </Marker>
       <div style={{ alignSelf: "flex-start", position: "relative", padding: "0 10px" }}>
         <div
           aria-hidden="true"
           style={{
             position: "absolute",
-            left: 0,
-            right: 0,
+            insetInlineStart: 0,
+            insetInlineEnd: 0,
             top: "44%",
             height: "50%",
             background: "var(--opg-highlight)",
@@ -57,14 +59,14 @@ function Hero() {
           }}
         />
         <Marker size={40} style={{ position: "relative", lineHeight: 1.15 }}>
-          you and your phones
+          {t.heroPhones}
         </Marker>
       </div>
     </div>
   );
 }
 
-function JoinButton() {
+function JoinButton({ label }: { label: string }) {
   return (
     <button
       type="button"
@@ -85,7 +87,7 @@ function JoinButton() {
       }}
     >
       <Icon name="arrow-right" size={24} />
-      <span>Join a room</span>
+      <span>{label}</span>
     </button>
   );
 }
@@ -94,14 +96,15 @@ interface StartSectionProps {
   busy: boolean;
   error: string | null;
   onStart: () => void;
+  t: Dictionary["landing"];
 }
 
-function StartSection({ busy, error, onStart }: StartSectionProps) {
+function StartSection({ busy, error, onStart, t }: StartSectionProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
       <Button size="lg" fullWidth disabled={busy} onClick={onStart}>
         <Icon name="plus" size={24} color="var(--opg-paper)" />
-        <span>{busy ? "Starting…" : "Start a room"}</span>
+        <span>{busy ? t.starting : t.startRoom}</span>
       </Button>
       <div
         style={{
@@ -112,10 +115,10 @@ function StartSection({ busy, error, onStart }: StartSectionProps) {
           marginTop: -6,
         }}
       >
-        You'll get a code to read out
+        {t.codeToReadOut}
       </div>
 
-      <JoinButton />
+      <JoinButton label={t.joinRoom} />
 
       {error ? (
         <div
@@ -133,7 +136,7 @@ function StartSection({ busy, error, onStart }: StartSectionProps) {
   );
 }
 
-function TvHintNote() {
+function TvHintNote({ hint }: { hint: string }) {
   return (
     <div
       style={{
@@ -148,13 +151,14 @@ function TvHintNote() {
     >
       <Icon name="monitor" size={24} color="var(--opg-ink-secondary)" />
       <div style={{ fontSize: 16, lineHeight: 1.3, color: "var(--opg-ink-secondary)" }}>
-        Playing with a TV or laptop? Open this page there for the big screen.
+        {hint}
       </div>
     </div>
   );
 }
 
 export function PhoneLanding() {
+  const { t } = useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,17 +170,15 @@ export function PhoneLanding() {
       try {
         localStorage.setItem(`opg:host:${code}`, hostToken);
       } catch {
-        setError(
-          "This browser blocked local storage, so the room cannot be hosted here.",
-        );
+        setError(t.landing.errorStorageBlocked);
         return;
       }
       navigate(`/${code}`);
     } catch (err) {
       if (err instanceof ApiError && err.code === "full-tonight") {
-        setError("We're full tonight. Come back tomorrow.");
+        setError(t.landing.errorFullTonight);
       } else {
-        setError("Could not start a room. Try again in a moment.");
+        setError(t.landing.errorGeneric);
       }
     } finally {
       setBusy(false);
@@ -189,7 +191,7 @@ export function PhoneLanding() {
 
   return (
     <PhoneScreen>
-      <BrandHeader />
+      <BrandHeader brand={t.join.brand} />
       <div
         style={{
           flexGrow: 1,
@@ -199,14 +201,13 @@ export function PhoneLanding() {
           gap: 22,
         }}
       >
-        <Hero />
+        <Hero t={t.landing} />
         <div style={{ fontSize: 19, lineHeight: 1.4, color: "var(--opg-ink)" }}>
-          Free, open source, no app. Everyone plays from the phone in their
-          pocket.
+          {t.landing.phoneTagline}
         </div>
-        <StartSection busy={busy} error={error} onStart={handleStart} />
+        <StartSection busy={busy} error={error} onStart={handleStart} t={t.landing} />
       </div>
-      <TvHintNote />
+      <TvHintNote hint={t.landing.tvHint} />
     </PhoneScreen>
   );
 }

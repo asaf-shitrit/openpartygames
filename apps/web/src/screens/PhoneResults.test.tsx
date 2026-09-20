@@ -235,3 +235,24 @@ describe("PhoneResults, an old save", () => {
     expect(screen.getByText("You finished 1st with 12")).toBeTruthy();
   });
 });
+
+describe("PhoneResults, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("shows the settled rank card in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          players: [PRIYA, SAM, LEE],
+          lastResult: makeOldSaveResult(),
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("סיימתם במקום הראשון עם 12")).toBeTruthy();
+  });
+});
