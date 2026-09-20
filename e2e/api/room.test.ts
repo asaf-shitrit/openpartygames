@@ -205,6 +205,21 @@ async function newRoom(): Promise<{ code: string; hostToken: string }> {
   return { code: created.code, hostToken: created.hostToken };
 }
 
+async function newHebrewRoom(): Promise<{ code: string; hostToken: string }> {
+  const response = await fetch(`${BASE_URL}/api/rooms`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contentLanguage: "he" }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `POST /api/rooms -> ${response.status}: ${await response.text()}`,
+    );
+  }
+  const body: CreateRoomResponse = await response.json();
+  return { code: body.code, hostToken: body.hostToken };
+}
+
 async function makeLobby(playerCount = 3): Promise<Lobby> {
   const { code, hostToken } = await newRoom();
   const host = await hostClient(code, hostToken);
@@ -220,6 +235,25 @@ async function makeLobby(playerCount = 3): Promise<Lobby> {
     (client) => hostViewOf(client).players.length === playerCount,
     WAIT_MS,
     "all players joined",
+  );
+  return { code, host, players };
+}
+
+async function makeHebrewLobby(playerCount = 3): Promise<Lobby> {
+  const { code, hostToken } = await newHebrewRoom();
+  const host = await hostClient(code, hostToken);
+  await host.waitFor(
+    (client) => client.welcomes.some((welcome) => welcome.role === "host"),
+    WAIT_MS,
+    "host welcome (hebrew)",
+  );
+  const players = await Promise.all(
+    PLAYER_NAMES.slice(0, playerCount).map((name) => playerClient(code, name)),
+  );
+  await host.waitFor(
+    (client) => hostViewOf(client).players.length === playerCount,
+    WAIT_MS,
+    "all players joined (hebrew)",
   );
   return { code, host, players };
 }
@@ -1074,5 +1108,57 @@ describe("api e2e", () => {
     const refusal = vip.errors.find((error) => error.code === "invalid-action");
     expect(refusal?.message).toBe("This game plays on a shared screen.");
     await closeAllPlayers(lobby);
+  });
+
+  it("plays Imposter in Hebrew and refuses Real or Nah with no-language-packs", async () => {
+    const lobby = await makeHebrewLobby(3);
+    expect(hostViewOf(lobby.host).contentLanguage).toBe("he");
+
+    const games = hostViewOf(lobby.host).games;
+    expect(games.find((g) => g.id === "imposter")?.hasContentInLanguage).toBe(
+      true,
+    );
+    expect(
+      games.find((g) => g.id === "real-or-nah")?.hasContentInLanguage,
+    ).toBe(false);
+
+    // Real or Nah has no Hebrew pack (out of scope: it needs sourced facts), so
+    // starting it in a Hebrew room fails with a distinct code, not silent English content.
+    const ronVip = vipOf(lobby);
+    ronVip.send({ t: "pick-game", gameId: "real-or-nah" });
+    await lobby.host.waitFor(
+      (client) => hostViewOf(client).selectedGameId === "real-or-nah",
+      WAIT_MS,
+      "pick real-or-nah (hebrew)",
+    );
+    ronVip.send({ t: "start-game" });
+    await ronVip.waitFor(
+      (client) =>
+        client.errors.some((error) => error.code === "no-language-packs"),
+      WAIT_MS,
+      "no-language-packs (hebrew real-or-nah)",
+    );
+    expect(hostViewOf(lobby.host).phase).toBe("lobby");
+
+    // Imposter does have a Hebrew pack, and it actually plays: the word a player sees
+    // is drawn from it, not from the English catalog.
+    await startGame(lobby, "imposter");
+    await lobby.host.waitFor(
+      (client) => hostViewOf(client).phase === "in-game",
+      WAIT_MS,
+      "imposter started (hebrew)",
+    );
+    const someone = lobby.players[0];
+    if (!someone) throw new Error("expected a player");
+    await someone.waitFor(
+      safe((client) => playerViewOf(client).game !== null),
+      WAIT_MS,
+      "imposter player view (hebrew)",
+    );
+    const word = imposterPlayerView(someone).word;
+    expect(word).toBeTruthy();
+    expect(/[֐-׿]/u.test(word ?? "")).toBe(true);
+
+    await closeAll(lobby);
   });
 });

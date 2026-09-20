@@ -6,6 +6,7 @@ import type {
   Award,
   AvatarId,
   ClientMessage,
+  ContentLanguage,
   HostRoomView,
   PlayerId,
   PlayerRoomView,
@@ -245,6 +246,8 @@ export interface CreateRoomOptions {
   newToken: () => string;
   /** False for a no-TV room, where every player's own phone carries the shared stage. Defaults to true. */
   sharedScreen?: boolean;
+  /** Which packs the room draws from. Defaults to "en". */
+  contentLanguage?: ContentLanguage;
 }
 
 // ---------- Testing ----------

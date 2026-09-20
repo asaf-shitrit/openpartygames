@@ -74,6 +74,7 @@ function testView(): RoomView {
     you: "p1",
     code: "BKTZ",
     sharedScreen: true,
+    contentLanguage: "en",
     phase: "lobby",
     lobbyScreen: "join",
     players: [],

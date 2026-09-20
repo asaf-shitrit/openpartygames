@@ -540,6 +540,7 @@ function commonRoom(
     lastResult: null,
     game: { id: "imposter", view, stage, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
+    contentLanguage: "en" as const,
   };
 }
 

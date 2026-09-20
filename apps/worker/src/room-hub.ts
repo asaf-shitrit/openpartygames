@@ -3,6 +3,7 @@ import {
   normalizeRoomCode,
   parseClientMessage,
   ROOM_CODE_RE,
+  type ContentLanguage,
   type RoomInfoResponse,
   type ServerMessage,
 } from "@opg/protocol";
@@ -144,6 +145,7 @@ export class RoomHub {
     code: string,
     hostToken: string,
     sharedScreen = true,
+    contentLanguage: ContentLanguage = "en",
   ): Promise<boolean> {
     const now = this.options.now();
     if (this.room && !this.room.isIdleSince(now, IDLE_MS)) return false;
@@ -156,6 +158,7 @@ export class RoomHub {
       now,
       newToken: this.options.newToken,
       sharedScreen,
+      contentLanguage,
     });
     this.room = room;
 

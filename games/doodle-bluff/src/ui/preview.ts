@@ -253,6 +253,7 @@ function commonRoom(view: DoodleHostView | DoodlePlayerView, timing: RoomTiming)
     lastResult: null,
     game: { id: "doodle-bluff", view, deadline, timerStartedAt, stage },
     serverNow: SERVER_NOW,
+    contentLanguage: "en" as const,
   };
 }
 

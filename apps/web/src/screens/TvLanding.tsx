@@ -218,6 +218,7 @@ function LandingFooter({ t }: { t: Dictionary["landing"] }) {
 export function TvLanding() {
   const { t } = useLocale();
   const { unlock } = useSound();
+  const { locale } = useLocale();
   const [full, setFull] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -226,7 +227,7 @@ export function TvLanding() {
     setBusy(true);
     setError(null);
     try {
-      const { code, hostToken } = await createRoom(true);
+      const { code, hostToken } = await createRoom(true, locale);
       try {
         localStorage.setItem(`opg:host:${code}`, hostToken);
       } catch {

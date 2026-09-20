@@ -246,6 +246,26 @@ describe("validatePack word pairs", () => {
     ).toMatch(/language/);
   });
 
+  it("requires a pack to name itself in its own language", () => {
+    // The catalog a room sees is scoped to its content language, so a Hebrew room lists
+    // only Hebrew packs — and their names are the one part of that list it cannot skip.
+    expect(
+      validatePack(
+        validWordPack({ language: "he", name: "Israeli Snacks" }),
+        wordOpts,
+      ).join(),
+    ).toMatch(/not written in Hebrew/);
+    expect(
+      validatePack(validWordPack({ name: "אוכל ישראלי" }), wordOpts).join(),
+    ).toMatch(/not written in English/);
+    expect(
+      validatePack(
+        validWordPack({ language: "he", name: "אוכל ישראלי" }),
+        wordOpts,
+      ),
+    ).toEqual([]);
+  });
+
   it("rejects empty items", () => {
     expect(validatePack(validWordPack({ items: [] }), wordOpts).join()).toMatch(
       /non-empty array/,

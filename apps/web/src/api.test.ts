@@ -33,6 +33,16 @@ describe("createRoom", () => {
     });
   });
 
+  it("sends a JSON body with contentLanguage when it is given explicitly", async () => {
+    const mock = stubFetch(Response.json({ code: "BKTZ", hostToken: "tok" }));
+    await createRoom(true, "he");
+    expect(mock).toHaveBeenCalledWith("/api/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sharedScreen: true, contentLanguage: "he" }),
+    });
+  });
+
   it("maps a server error body to ApiError.code", async () => {
     stubFetch(Response.json({ error: "full-tonight" }, { status: 503 }));
     await expect(createRoom()).rejects.toMatchObject({

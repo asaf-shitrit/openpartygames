@@ -19,7 +19,7 @@ export const ALLOWED_LICENSES = Object.freeze([
   "CC-BY-4.0",
   "CC-BY-SA-4.0",
 ]);
-export const ALLOWED_LANGUAGES = Object.freeze(["en"]);
+export const ALLOWED_LANGUAGES = Object.freeze(["en", "he"]);
 
 export const MAX_WORD_LENGTH = 24;
 export const MAX_ANSWER_LENGTH = 40;
@@ -150,8 +150,27 @@ function kindErrors(pack, folder) {
     : [`kind "${pack.kind}" must be "${expectedKind}" in packs/${folder}/`];
 }
 
+const HEBREW = /[\u0590-\u05FF]/;
+
+/**
+ * A pack's own name is shown in the pack picker, and the catalog a room sees is scoped to
+ * its content language — so a Hebrew room only ever lists Hebrew packs, and their names are
+ * the one part of that list a Hebrew reader cannot skip. The name belongs in the pack's own
+ * language, not in English with Hebrew items behind it.
+ */
+function nameLanguageErrors(pack) {
+  const hasHebrew = HEBREW.test(pack.name);
+  if (pack.language === "he" && !hasHebrew) {
+    return [`name ${JSON.stringify(pack.name)} is not written in Hebrew, but the pack is`];
+  }
+  if (pack.language === "en" && hasHebrew) {
+    return [`name ${JSON.stringify(pack.name)} is not written in English, but the pack is`];
+  }
+  return [];
+}
+
 function vocabularyErrors(pack) {
-  const errors = [];
+  const errors = [...nameLanguageErrors(pack)];
   if (!ALLOWED_RATINGS.includes(pack.rating)) {
     errors.push(
       `rating ${JSON.stringify(pack.rating)} must be one of ${ALLOWED_RATINGS.join(", ")}`,

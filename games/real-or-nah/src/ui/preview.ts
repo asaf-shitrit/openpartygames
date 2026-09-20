@@ -404,6 +404,7 @@ function commonRoom(
         maxPlayers: 8,
         minutes: 15,
         noTv: false,
+        hasContentInLanguage: true,
       },
     ],
     selectedGameId: "real-or-nah",
@@ -419,6 +420,7 @@ function commonRoom(
     lastResult: null,
     game: { id: "real-or-nah", view, stage: null, deadline, timerStartedAt },
     serverNow: SERVER_NOW,
+    contentLanguage: "en" as const,
   };
 }
 

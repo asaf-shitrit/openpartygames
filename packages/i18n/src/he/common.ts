@@ -10,6 +10,7 @@ export const common: Dictionary["common"] = {
   errorNotEnoughPlayers: "עדיין אין מספיק שחקנים.",
   errorInvalidAction: "זה לא עבד. בדקו את המשחק והחפיסות.",
   errorGeneric: "משהו השתבש. נסו שוב.",
+  errorNoLanguagePacks: "המשחק הזה בשפה אחרת. בחרו משחק בשפה של החדר, או פתחו חדר בשפה שלו.",
   listAndTwo: "{a} ו{b}",
   listAndLast: "{list} ו{last}",
   listOrTwo: "{a} או {b}",

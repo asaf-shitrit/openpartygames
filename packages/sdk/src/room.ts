@@ -11,6 +11,7 @@ import {
   type Award,
   type AvatarId,
   type ClientMessage,
+  type ContentLanguage,
   type ErrorCode,
   type GameResultSummary,
   type HostRoomView,
@@ -147,6 +148,8 @@ interface InternalState {
   emptySince: number | null;
   /** False in a no-TV room. Snapshots saved before this field existed lack it; blankState() defaults it to true on restore. */
   sharedScreen: boolean;
+  /** Which packs the room draws from. Snapshots saved before this field existed lack it; blankState() defaults it to "en" on restore. */
+  contentLanguage: ContentLanguage;
 }
 
 interface Out {
@@ -224,6 +227,7 @@ class RoomImpl implements RoomCore {
   private hostConnected: boolean;
   private emptySince: number | null;
   private sharedScreen: boolean;
+  private contentLanguage: ContentLanguage;
 
   constructor(state: InternalState, games: AnyGame[], newToken: () => string) {
     this.code = state.code;
@@ -264,6 +268,7 @@ class RoomImpl implements RoomCore {
     this.hostConnected = state.hostConnected;
     this.emptySince = state.emptySince;
     this.sharedScreen = state.sharedScreen;
+    this.contentLanguage = state.contentLanguage;
   }
 
   // ---------- lookups ----------
@@ -280,9 +285,19 @@ class RoomImpl implements RoomCore {
     return this.gameDef(this.selectedGameId);
   }
 
+  /**
+   * The catalog restricted to the room's content language: a Hebrew room never sees an
+   * English pack, so it can never enable one, toggle one, or fall back to one.
+   */
+  private packsInLanguage(kind: ContentKind): PackMeta[] {
+    return this.packCatalog.filter(
+      (p) => p.kind === kind && p.language === this.contentLanguage,
+    );
+  }
+
   private enabledPackIds(kind: ContentKind): string[] {
-    return this.packCatalog
-      .filter((p) => p.kind === kind && this.packEnabled[p.id] === true)
+    return this.packsInLanguage(kind)
+      .filter((p) => this.packEnabled[p.id] === true)
       .map((p) => p.id);
   }
 
@@ -661,6 +676,7 @@ class RoomImpl implements RoomCore {
       hostConnected: this.hostConnected,
       emptySince: this.emptySince,
       sharedScreen: this.sharedScreen,
+      contentLanguage: this.contentLanguage,
     };
     return { version: 1, data: JSON.stringify(state) };
   }
@@ -942,6 +958,18 @@ class RoomImpl implements RoomCore {
     return false;
   }
 
+  /**
+   * No pack is enabled for this game right now. Distinguishes "nothing exists in this
+   * room's language" (the VIP has nothing to turn on) from "the VIP turned every pack off".
+   */
+  private failToStart(def: AnyGame, out: Out): void {
+    if (this.packsInLanguage(def.contentKind).length === 0) {
+      this.fail(out, "no-language-packs", `${def.name} plays in a different language than this room.`);
+      return;
+    }
+    this.fail(out, "invalid-action", "Turn on a pack to start.");
+  }
+
   private onStartGame(caller: Caller, _now: number, out: Out): void {
     if (!this.requireVip(caller, out)) return;
     if (this.phase !== "lobby") {
@@ -963,7 +991,7 @@ class RoomImpl implements RoomCore {
     }
     const packIds = this.enabledPackIds(def.contentKind);
     if (packIds.length === 0) {
-      this.fail(out, "invalid-action", "Turn on a pack to start.");
+      this.failToStart(def, out);
       return;
     }
     // Game players are every non-waiting player at this moment, including one who is
@@ -1170,12 +1198,14 @@ class RoomImpl implements RoomCore {
         maxPlayers: g.maxPlayers,
         minutes: g.minutes,
         noTv: g.noTv === true,
+        hasContentInLanguage: this.packsInLanguage(g.contentKind).length > 0,
       })),
       selectedGameId: this.selectedGameId,
       packs: this.packSummaries(),
       lastResult: this.lastResult ? resultSummary(this.lastResult) : null,
       serverNow: now,
       sharedScreen: this.sharedScreen,
+      contentLanguage: this.contentLanguage,
     };
   }
 
@@ -1194,8 +1224,7 @@ class RoomImpl implements RoomCore {
   private packSummaries(): PackSummary[] {
     const kind = this.selectedGame()?.contentKind;
     if (kind === undefined) return [];
-    return this.packCatalog
-      .filter((p) => p.kind === kind)
+    return this.packsInLanguage(kind)
       .map((p) => ({
         id: p.id,
         name: p.name,
@@ -1281,6 +1310,7 @@ export function createRoom(options: CreateRoomOptions): RoomCore {
     hostConnected: false,
     emptySince: options.now,
     sharedScreen: options.sharedScreen ?? true,
+    contentLanguage: options.contentLanguage ?? "en",
   };
   return new RoomImpl(state, games, options.newToken);
 }
@@ -1305,6 +1335,7 @@ function blankState(): InternalState {
     hostConnected: false,
     emptySince: null,
     sharedScreen: true,
+    contentLanguage: "en",
   };
 }
 

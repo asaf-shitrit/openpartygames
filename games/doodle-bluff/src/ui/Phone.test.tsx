@@ -35,6 +35,7 @@ function room(): PlayerRoomView {
     game: null,
     serverNow: 1000,
     sharedScreen: true,
+    contentLanguage: "en",
   };
 }
 
