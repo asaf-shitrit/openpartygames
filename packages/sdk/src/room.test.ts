@@ -68,6 +68,14 @@ const PACK_FACTS: PackMeta = {
   language: "en",
   itemCount: 4,
 };
+const PACK_FAMILY_HE: PackMeta = {
+  id: "pack-family-he",
+  name: "Family Pack (Hebrew)",
+  kind: "word-pairs",
+  rating: "family",
+  language: "he",
+  itemCount: 4,
+};
 
 const CONTENT: GameContent = {
   kind: "word-pairs",
@@ -87,6 +95,7 @@ interface RoomOptions {
   seed?: number;
   game?: typeof tapGame;
   sharedScreen?: boolean;
+  contentLanguage?: "en" | "he";
 }
 
 interface Harness {
@@ -104,23 +113,25 @@ function at<T>(items: readonly T[], index: number): T {
   return value;
 }
 
-function makeRoom(options?: RoomOptions): Harness {
+function makeRoom(options: RoomOptions = {}): Harness {
   let clock = 0;
   let seq = 0;
   const newToken = (): string => {
     seq++;
     return `t${seq}`;
   };
+  const { code = "BCDF", game = tapGame, seed = 1, sharedScreen, contentLanguage, packs } = options;
   const room = createRoom({
-    code: options?.code ?? "BCDF",
+    code,
     hostToken: HOST_TOKEN,
-    games: [options?.game ?? tapGame],
-    seed: options?.seed ?? 1,
+    games: [game],
+    seed,
     now: clock,
     newToken,
-    sharedScreen: options?.sharedScreen,
+    sharedScreen,
+    contentLanguage,
   });
-  if (options?.packs) room.setPackCatalog(options.packs, clock);
+  if (packs) room.setPackCatalog(packs, clock);
   return {
     room,
     host: { kind: "host" },
@@ -511,6 +522,16 @@ describe("picking a game and packs", () => {
     const h = makeRoom({ packs: [PACK_FAMILY, PACK_FACTS] });
     expect(h.room.hostView(0).packs.map((p) => p.id)).toEqual([PACK_FAMILY.id]);
   });
+
+  it("never shows a pack outside the room's content language", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY, PACK_FAMILY_HE],
+      contentLanguage: "he",
+    });
+    expect(h.room.hostView(0).packs.map((p) => p.id)).toEqual([
+      PACK_FAMILY_HE.id,
+    ]);
+  });
 });
 
 describe("start-game", () => {
@@ -571,6 +592,54 @@ describe("start-game", () => {
       kind: "word-pairs" satisfies ContentKind,
       packIds: [PACK_FAMILY.id],
     });
+  });
+
+  it("never falls back to a pack outside the room's content language", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY, PACK_FAMILY_HE],
+      contentLanguage: "he",
+    });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
+    expect(res.effects).toContainEqual({
+      type: "load-content",
+      kind: "word-pairs" satisfies ContentKind,
+      packIds: [PACK_FAMILY_HE.id],
+    });
+  });
+
+  it("fails with no-language-packs when the room's language has no pack of this kind at all", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], contentLanguage: "he" });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
+    expect(errorCode(res.reply)).toBe("no-language-packs");
+    expect(hasLoadContent(res.effects)).toBe(false);
+    expect(h.room.hostView(0).phase).toBe("lobby");
+  });
+
+  it("still fails with invalid-action when the VIP turned off every pack in the room's language", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY_HE],
+      contentLanguage: "he",
+    });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const first = vip(h.room, at(players, 0).playerId);
+    h.room.handle(
+      first,
+      { t: "set-pack", packId: PACK_FAMILY_HE.id, enabled: false },
+      0,
+    );
+    const res = h.room.handle(first, { t: "start-game" }, 0);
+    expect(errorCode(res.reply)).toBe("invalid-action");
+    expect(hasLoadContent(res.effects)).toBe(false);
   });
 });
 
@@ -716,6 +785,46 @@ describe("sharedScreen", () => {
       () => "r1",
     );
     expect(restored.hostView(0).sharedScreen).toBe(true);
+  });
+});
+
+describe("contentLanguage", () => {
+  it("defaults to English", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    expect(h.room.hostView(0).contentLanguage).toBe("en");
+  });
+
+  it("is set at creation and never changes on its own", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY_HE], contentLanguage: "he" });
+    expect(h.room.hostView(0).contentLanguage).toBe("he");
+  });
+
+  it("round-trips through a snapshot", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY_HE], contentLanguage: "he" });
+    const restored = restoreRoom(h.room.snapshot(), [tapGame], () => "r1");
+    expect(restored.hostView(0).contentLanguage).toBe("he");
+  });
+
+  it("restores English from a snapshot written before the field existed", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const data = JSON.parse(h.room.snapshot().data);
+    delete data.contentLanguage;
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+    expect(restored.hostView(0).contentLanguage).toBe("en");
+  });
+
+  it("flags a game with no pack in the room's language, for a picker to grey out", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY], contentLanguage: "he" });
+    expect(h.room.hostView(0).games[0]?.hasContentInLanguage).toBe(false);
+  });
+
+  it("leaves a game with a pack in the room's language flagged as available", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY_HE], contentLanguage: "he" });
+    expect(h.room.hostView(0).games[0]?.hasContentInLanguage).toBe(true);
   });
 });
 

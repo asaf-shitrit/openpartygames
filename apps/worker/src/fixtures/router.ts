@@ -1,4 +1,4 @@
-import type { RoomInfoResponse } from "@opg/protocol";
+import type { ContentLanguage, RoomInfoResponse } from "@opg/protocol";
 import type { Limiter } from "../limits";
 import {
   createRouter,
@@ -11,8 +11,12 @@ import {
 
 export class FakeRooms implements RoomNamespace {
   readonly taken: Set<string>;
-  readonly initCalls: { code: string; hostToken: string; sharedScreen: boolean }[] =
-    [];
+  readonly initCalls: {
+    code: string;
+    hostToken: string;
+    sharedScreen: boolean;
+    contentLanguage: ContentLanguage;
+  }[] = [];
   readonly forwarded: string[] = [];
   infoCalls = 0;
   info: RoomInfoResponse | null = null;
@@ -23,8 +27,8 @@ export class FakeRooms implements RoomNamespace {
 
   getByName(_code: string): RoomStub {
     return {
-      init: async (initCode, hostToken, sharedScreen = true) => {
-        this.initCalls.push({ code: initCode, hostToken, sharedScreen });
+      init: async (initCode, hostToken, sharedScreen = true, contentLanguage = "en") => {
+        this.initCalls.push({ code: initCode, hostToken, sharedScreen, contentLanguage });
         return !this.taken.has(initCode);
       },
       info: async () => {

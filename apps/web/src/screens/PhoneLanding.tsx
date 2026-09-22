@@ -158,7 +158,7 @@ function TvHintNote({ hint }: { hint: string }) {
 }
 
 export function PhoneLanding() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,7 +166,7 @@ export function PhoneLanding() {
     setBusy(true);
     setError(null);
     try {
-      const { code, hostToken } = await createRoom(false);
+      const { code, hostToken } = await createRoom(false, locale);
       try {
         localStorage.setItem(`opg:host:${code}`, hostToken);
       } catch {

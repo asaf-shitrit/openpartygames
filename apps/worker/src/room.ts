@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import type { RoomInfoResponse, ServerMessage } from "@opg/protocol";
+import type { ContentLanguage, RoomInfoResponse, ServerMessage } from "@opg/protocol";
 import type { Caller, RoomSnapshot } from "@opg/sdk";
 import { createContentSource } from "./content";
 import { createD1PackReader } from "./d1-reader";
@@ -47,8 +47,9 @@ export class Room extends DurableObject<Env> {
     code: string,
     hostToken: string,
     sharedScreen = true,
+    contentLanguage: ContentLanguage = "en",
   ): Promise<boolean> {
-    return (await this.hub).init(code, hostToken, sharedScreen);
+    return (await this.hub).init(code, hostToken, sharedScreen, contentLanguage);
   }
 
   /** Room metadata for GET /api/rooms/:code. Null when the room was never initialized. */

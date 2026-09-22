@@ -8,6 +8,7 @@ export const common = {
   errorNotEnoughPlayers: "Not enough players yet.",
   errorInvalidAction: "That didn't work. Check the game and packs.",
   errorGeneric: "Something went wrong. Try again.",
+  errorNoLanguagePacks: "That game plays in another language. Pick one in this room's language, or start a room in its language.",
   listAndTwo: "{a} and {b}",
   listAndLast: "{list} and {last}",
   listOrTwo: "{a} or {b}",

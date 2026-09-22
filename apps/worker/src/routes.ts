@@ -4,6 +4,7 @@ import {
   ROOM_CODE_RE,
   type ApiErrorCode,
   type ApiErrorResponse,
+  type ContentLanguage,
   type CreateRoomResponse,
   type RoomInfoResponse,
 } from "@opg/protocol";
@@ -14,8 +15,16 @@ const MAX_CODE_ATTEMPTS = 10;
 
 /** One room Durable Object, as the router needs it. */
 export interface RoomStub {
-  /** `sharedScreen` defaults to true (a TV room) when omitted, matching today's behaviour. */
-  init(code: string, hostToken: string, sharedScreen?: boolean): Promise<boolean>;
+  /**
+   * `sharedScreen` defaults to true (a TV room) when omitted, matching today's behaviour.
+   * `contentLanguage` defaults to "en" when omitted, same reasoning.
+   */
+  init(
+    code: string,
+    hostToken: string,
+    sharedScreen?: boolean,
+    contentLanguage?: ContentLanguage,
+  ): Promise<boolean>;
   info(): Promise<RoomInfoResponse | null>;
   fetch(request: Request): Promise<Response>;
 }
@@ -114,10 +123,22 @@ async function handleApi(
     : upgrade(deps, route.code, request);
 }
 
-/** True (a TV room) when the body is missing, empty, malformed or omits the field: today's behaviour. */
-async function parseSharedScreen(request: Request): Promise<boolean> {
+interface CreateRoomFields {
+  sharedScreen: boolean;
+  contentLanguage: ContentLanguage;
+}
+
+/**
+ * `sharedScreen` defaults to true (a TV room) and `contentLanguage` to "en" when the body
+ * is missing, empty, malformed or omits the field: today's behaviour.
+ */
+async function parseCreateRoomFields(request: Request): Promise<CreateRoomFields> {
   const text = await request.text();
-  return parseCreateRoomRequest(text).sharedScreen ?? true;
+  const body = parseCreateRoomRequest(text);
+  return {
+    sharedScreen: body.sharedScreen ?? true,
+    contentLanguage: body.contentLanguage ?? "en",
+  };
 }
 
 async function createRoom(
@@ -129,11 +150,11 @@ async function createRoom(
     return apiError("rate-limited", 429);
   }
 
-  const sharedScreen = await parseSharedScreen(request);
+  const fields = await parseCreateRoomFields(request);
   const withinCap = await tryConsumeRoom(deps);
   if (withinCap === null) return apiError("internal", 500);
   if (!withinCap) return apiError("full-tonight", 429);
-  return startRoom(deps, deps.newHostToken(), 0, sharedScreen);
+  return startRoom(deps, deps.newHostToken(), 0, fields);
 }
 
 async function tryConsumeRoom(deps: RouteDeps): Promise<boolean | null> {
@@ -150,12 +171,12 @@ async function startRoom(
   deps: RouteDeps,
   hostToken: string,
   attempt: number,
-  sharedScreen: boolean,
+  fields: CreateRoomFields,
 ): Promise<Response> {
   if (attempt >= MAX_CODE_ATTEMPTS) return apiError("internal", 500);
   const code = deps.newRoomCode();
-  if (!(await initRoom(deps, code, hostToken, sharedScreen)))
-    return startRoom(deps, hostToken, attempt + 1, sharedScreen);
+  if (!(await initRoom(deps, code, hostToken, fields)))
+    return startRoom(deps, hostToken, attempt + 1, fields);
   return json({ code, hostToken });
 }
 
@@ -163,10 +184,12 @@ async function initRoom(
   deps: RouteDeps,
   code: string,
   hostToken: string,
-  sharedScreen: boolean,
+  fields: CreateRoomFields,
 ): Promise<boolean> {
   try {
-    return await deps.rooms.getByName(code).init(code, hostToken, sharedScreen);
+    return await deps.rooms
+      .getByName(code)
+      .init(code, hostToken, fields.sharedScreen, fields.contentLanguage);
   } catch (error) {
     console.error("failed to initialize room", code, error);
     return false;

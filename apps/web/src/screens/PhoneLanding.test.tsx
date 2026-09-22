@@ -45,6 +45,7 @@ describe("PhoneLanding", () => {
       vi.fn<typeof fetch>(async (_input, init) => {
         expect(JSON.parse(await bodyText(init?.body))).toEqual({
           sharedScreen: false,
+          contentLanguage: "en",
         });
         return Response.json(CREATED);
       }),

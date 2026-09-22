@@ -24,6 +24,14 @@ export type AvatarId = (typeof AVATARS)[number];
 export type Rating = "family" | "teen" | "adult";
 export const RATINGS: readonly Rating[] = ["family", "teen", "adult"];
 
+/**
+ * A room's content language: which packs it can draw from. Distinct from a player's own
+ * UI language (`@opg/i18n`'s `Locale`) — the secret word is shared state, so it is a
+ * property of the room, not of a player.
+ */
+export type ContentLanguage = "en" | "he";
+export const CONTENT_LANGUAGES: readonly ContentLanguage[] = ["en", "he"];
+
 // Consonants only (no vowels, no Y) so codes can't spell words.
 export const ROOM_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ";
 export const ROOM_CODE_LENGTH = 4;
@@ -69,6 +77,12 @@ export interface GameSummary {
   minutes: number;
   /** True when the game plays with no shared screen. */
   noTv: boolean;
+  /**
+   * False when no pack of this game's content kind exists in the room's content language, so
+   * starting it always fails with "no-language-packs". A picker can use this to grey the game
+   * out before the VIP ever taps it (not wired up yet — see PhoneVipControls).
+   */
+  hasContentInLanguage: boolean;
 }
 
 export interface PackSummary {
@@ -131,6 +145,8 @@ export interface RoomViewBase {
   serverNow: number;
   /** False in a no-TV room: every player carries the shared stage on their own phone. */
   sharedScreen: boolean;
+  /** Which packs this room draws from; set at creation from the creator's locale. */
+  contentLanguage: ContentLanguage;
 }
 
 export interface HostRoomView extends RoomViewBase {
@@ -182,6 +198,7 @@ export type ErrorCode =
   | "not-joined"
   | "not-vip"
   | "not-enough-players"
+  | "no-language-packs"
   | "game-in-progress"
   | "invalid-action"
   | "host-token-invalid"
@@ -201,9 +218,13 @@ export interface CreateRoomResponse {
   hostToken: string;
 }
 
-/** Body of POST /api/rooms. Omitting `sharedScreen` (today's clients) makes a TV room. */
+/**
+ * Body of POST /api/rooms. Omitting `sharedScreen` (today's clients) makes a TV room.
+ * Omitting `contentLanguage` (today's clients) makes an English-content room.
+ */
 export const createRoomRequestSchema = z.object({
   sharedScreen: z.boolean().optional(),
+  contentLanguage: z.enum(CONTENT_LANGUAGES).optional(),
 });
 
 export type CreateRoomRequest = z.infer<typeof createRoomRequestSchema>;

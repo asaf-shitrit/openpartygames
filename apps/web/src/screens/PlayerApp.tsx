@@ -75,6 +75,7 @@ function errorCopy(t: Dictionary): Map<ErrorCode, string> {
     ["name-invalid", t.common.errorNameInvalid],
     ["not-enough-players", t.common.errorNotEnoughPlayers],
     ["invalid-action", t.common.errorInvalidAction],
+    ["no-language-packs", t.common.errorNoLanguagePacks],
   ]);
 }
 

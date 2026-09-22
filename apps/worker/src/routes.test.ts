@@ -36,7 +36,7 @@ describe("POST /api/rooms", () => {
     });
     expect(routes.budgetDays).toEqual(["2023-11-14"]);
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
   });
 
@@ -45,7 +45,7 @@ describe("POST /api/rooms", () => {
     await routes.request("POST", "/api/rooms", IP);
 
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("POST /api/rooms", () => {
     await routes.request("POST", "/api/rooms", IP, "");
 
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
   });
 
@@ -63,7 +63,7 @@ describe("POST /api/rooms", () => {
     await routes.request("POST", "/api/rooms", IP, "not json");
 
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
   });
 
@@ -77,7 +77,7 @@ describe("POST /api/rooms", () => {
     );
 
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: false },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: false, contentLanguage: "en" },
     ]);
   });
 
@@ -91,7 +91,35 @@ describe("POST /api/rooms", () => {
     );
 
     expect(routes.rooms.initCalls).toEqual([
-      { code: "BCDF", hostToken: "host-1", sharedScreen: true },
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
+    ]);
+  });
+
+  it("creates a Hebrew-content room when the body says so", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request(
+      "POST",
+      "/api/rooms",
+      IP,
+      JSON.stringify({ contentLanguage: "he" }),
+    );
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "he" },
+    ]);
+  });
+
+  it("defaults to English when the language field has the wrong type", async () => {
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    await routes.request(
+      "POST",
+      "/api/rooms",
+      IP,
+      JSON.stringify({ contentLanguage: "fr" }),
+    );
+
+    expect(routes.rooms.initCalls).toEqual([
+      { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
   });
 

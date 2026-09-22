@@ -2,6 +2,7 @@
 import { z } from "zod";
 import type {
   ApiErrorCode,
+  ContentLanguage,
   CreateRoomResponse,
   RoomInfoResponse,
 } from "@opg/protocol";
@@ -60,24 +61,34 @@ async function readError(res: Response): Promise<ApiError> {
   );
 }
 
-/** The fetch init for POST /api/rooms; omitting `sharedScreen` sends no body, matching an older client. */
-function createRoomInit(sharedScreen?: boolean): RequestInit {
-  if (sharedScreen === undefined) return { method: "POST" };
+/**
+ * The fetch init for POST /api/rooms; omitting both fields sends no body, matching an
+ * older client.
+ */
+function createRoomInit(
+  sharedScreen?: boolean,
+  contentLanguage?: ContentLanguage,
+): RequestInit {
+  if (sharedScreen === undefined && contentLanguage === undefined) {
+    return { method: "POST" };
+  }
   return {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sharedScreen }),
+    body: JSON.stringify({ sharedScreen, contentLanguage }),
   };
 }
 
 /**
  * POST /api/rooms — creates a room and returns its code and host token.
- * Omitting `sharedScreen` (the default) makes a shared-screen room, same as an older client.
+ * Omitting `sharedScreen` (the default) makes a shared-screen room, and omitting
+ * `contentLanguage` (the default) makes an English-content room, same as an older client.
  */
 export async function createRoom(
   sharedScreen?: boolean,
+  contentLanguage?: ContentLanguage,
 ): Promise<CreateRoomResponse> {
-  const res = await fetch("/api/rooms", createRoomInit(sharedScreen));
+  const res = await fetch("/api/rooms", createRoomInit(sharedScreen, contentLanguage));
   if (!res.ok) throw await readError(res);
   const body = await parseJson(res, createRoomSchema);
   if (!body) throw new ApiError("internal", "Unexpected room response");

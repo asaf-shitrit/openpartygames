@@ -221,6 +221,7 @@ function commonRoom(view: MltHostView | MltPlayerView, timing: RoomTiming) {
     lastResult: null,
     game: { id: "most-likely-to", view, deadline, timerStartedAt, stage },
     serverNow: SERVER_NOW,
+    contentLanguage: "en" as const,
   };
 }
 

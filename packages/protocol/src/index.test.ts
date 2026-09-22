@@ -77,6 +77,18 @@ describe("parseCreateRoomRequest", () => {
       parseCreateRoomRequest(JSON.stringify({ sharedScreen: false })),
     ).toEqual({ sharedScreen: false });
   });
+
+  it("reads an explicit contentLanguage value", () => {
+    expect(
+      parseCreateRoomRequest(JSON.stringify({ contentLanguage: "he" })),
+    ).toEqual({ contentLanguage: "he" });
+  });
+
+  it("drops an unsupported contentLanguage", () => {
+    expect(
+      parseCreateRoomRequest(JSON.stringify({ contentLanguage: "fr" })),
+    ).toEqual({});
+  });
 });
 
 describe("room codes", () => {

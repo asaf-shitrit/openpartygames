@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, SoundEngine, SoundStatus } from "@opg/ui";
-import { LocaleProvider } from "@opg/i18n";
 import { LANDING_GAMES } from "../games";
 import { TvLanding } from "./TvLanding";
 
@@ -87,6 +87,7 @@ describe("TvLanding", () => {
       vi.fn<typeof fetch>(async (_input, init) => {
         expect(JSON.parse(await bodyText(init?.body))).toEqual({
           sharedScreen: true,
+          contentLanguage: "en",
         });
         return Response.json(CREATED);
       }),
