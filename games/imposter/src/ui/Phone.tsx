@@ -474,6 +474,19 @@ function WordCard(props: SectionProps) {
 }
 
 /** The speaker's own word, held in the centre of the screen and coverable on demand. */
+/**
+ * Basis 0, not `auto`: an `auto` basis sizes a column from its content, so the word card
+ * never shrinks and pushes "I'm done" off the bottom of the phone. The card is the part
+ * with slack — the button is not.
+ */
+const FILL_COLUMN: CSSProperties = {
+  flex: "1 1 0",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+};
+
 function WordPeek({
   view,
   hidden,
@@ -484,11 +497,11 @@ function WordPeek({
   onToggle: () => void;
 }) {
   return (
-    <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={FILL_COLUMN}>
       <Card
         variant="M"
         style={{
-          flexGrow: 1,
+          ...FILL_COLUMN,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -856,7 +869,7 @@ export function Phone({
   stage,
 }: PhoneProps) {
   return (
-    <PhoneScreen>
+    <PhoneScreen fit={view.phase === "clues"}>
       <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>
         {renderPhase({
           view,

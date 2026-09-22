@@ -240,7 +240,9 @@ function VoteForm(props: SectionProps) {
       </div>
       <div
         style={{
-          flexGrow: 1,
+          // Basis 0, not auto: an auto basis sizes this list from its rows, so it never
+          // gives up space and "Lock in vote" ends up under the bottom edge of the phone.
+          flex: "1 1 0",
           minHeight: 0,
           overflowY: "auto",
           display: "flex",
@@ -339,7 +341,7 @@ export function Phone({
   stage,
 }: PhoneProps) {
   return (
-    <PhoneScreen>
+    <PhoneScreen fit={view.phase === "vote"}>
       <PhaseEnter phaseKey={`${view.roundNumber}:${view.phase}`}>
         {renderPhase({
           view,
