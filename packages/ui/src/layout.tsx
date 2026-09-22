@@ -50,15 +50,27 @@ export function Stage({ children, background = "#2B2B2B" }: StageProps) {
 export interface PhoneScreenProps {
   children: ReactNode;
   style?: CSSProperties;
+  /**
+   * Clamp the column to the phone instead of letting it grow. `minHeight` alone gives a
+   * column no reason to shrink, so a flexible middle keeps its content size and pushes the
+   * action under it off the bottom edge — where a player cannot tap it and nothing scrolls,
+   * because a sliver of it is still on screen.
+   *
+   * Set it on a screen built as header / flexible middle / action, where the middle has
+   * `flex: "1 1 0"` and `minHeight: 0` and can give up space. Leave it off a screen that is
+   * genuinely a long list and means to scroll.
+   */
+  fit?: boolean;
 }
 
 /** Max-width 480px phone column on the paper grid. */
-export function PhoneScreen({ children, style }: PhoneScreenProps) {
+export function PhoneScreen({ children, style, fit = false }: PhoneScreenProps) {
   return (
     <div
       className="opg-root opg-grid-phone"
       style={{
         minHeight: "100dvh",
+        height: fit ? "100dvh" : undefined,
         width: "100%",
         maxWidth: 480,
         margin: "0 auto",

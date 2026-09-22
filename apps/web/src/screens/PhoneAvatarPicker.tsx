@@ -149,9 +149,15 @@ function AvatarGrid({
   return (
     <div
       style={{
+        // The grid is what scrolls, not the page: "That's me" has to stay on screen, and
+        // a basis of 0 is what lets the grid give up the space to keep it there.
+        flex: "1 1 0",
+        minHeight: 0,
+        overflowY: "auto",
         display: "grid",
         gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
         gap: 12,
+        alignContent: "start",
       }}
     >
       {AVATARS.map((id, index) => {
@@ -250,7 +256,7 @@ export function PhoneAvatarPicker({
   const stamp = playerName(me, t.avatarPicker.fallbackYou);
 
   return (
-    <PhoneScreen>
+    <PhoneScreen fit>
       <PickerHeading name={greeting} t={t} />
 
       <AvatarGrid taken={taken} picked={playerAvatar(me)} onPick={onPick} t={t} />
