@@ -175,7 +175,7 @@ export {
   emptyDoodle,
 } from "./doodle/types";
 export type { Doodle, GridPoint, InkIndex, Stroke } from "./doodle/types";
-export { DOODLE_INK_NAMES, DOODLE_INKS } from "./doodle/inks";
+export { doodleInkNames, DOODLE_INKS } from "./doodle/inks";
 export {
   deltaDecode,
   deltaEncode,

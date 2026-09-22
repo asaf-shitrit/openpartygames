@@ -188,7 +188,6 @@ function Waiting({
     <>
       <PromptLine prompt={prompt} size={20} />
       <EyesOnTv
-        title={t.mostLikelyTo.eyesOnTv}
         detail={suspense ? t.mostLikelyTo.hereItComes : t.mostLikelyTo.votesAreIn}
         tempo={suspense ? "fast" : "slow"}
       />

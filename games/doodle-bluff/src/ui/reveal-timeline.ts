@@ -4,6 +4,8 @@
 import type { HapticName } from "@opg/ui";
 import type { Beat, CueId, Moment } from "@opg/ui";
 import { spacedBeats } from "@opg/ui";
+import { format, pickPluralByCount } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 
 export const REVEAL_TIMING = {
   replayMs: 0,
@@ -77,35 +79,38 @@ function card(headline: string, sub: string, haptic: HapticName, celebrate = fal
   return { headline, sub, haptic, celebrate };
 }
 
-function artistReveal(input: PersonalRevealInput): PersonalReveal {
+function artistReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal {
+  const p = t.doodleBluff.personal;
   const points = input.myPoints ?? 0;
   if (input.foundByCount === 0) {
-    return card("Nobody found it!", "Your drawing fooled the whole room.", "soft");
+    return card(p.nobodyFoundItHeadline, p.nobodyFoundItSub, "soft");
   }
+  const players = format(pickPluralByCount(input.foundByCount, p.players), { count: input.foundByCount });
   return card(
-    "They found you!",
-    `${input.foundByCount === 1 ? "1 player" : `${input.foundByCount} players`} spotted the truth. +${points.toLocaleString("en-US")}`,
+    p.foundYouHeadline,
+    format(p.foundYouSub, { players, points: points.toLocaleString("en-US") }),
     "good",
     true,
   );
 }
 
-function voterReveal(input: PersonalRevealInput): PersonalReveal {
-  if (input.myVote === null) return card("You sat this one out", "Vote next round to score.", "soft");
+function voterReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal {
+  const p = t.doodleBluff.personal;
+  if (input.myVote === null) return card(p.satOutHeadline, p.satOutSub, "soft");
   const found = input.myVote === input.truthOptionId;
   const points = input.myPoints ?? 0;
   if (found) {
-    return card("You found it!", `That was the real title. +${points.toLocaleString("en-US")}`, "good", true);
+    return card(p.foundItHeadline, format(p.foundItSub, { points: points.toLocaleString("en-US") }), "good", true);
   }
   if (points > 0) {
-    return card("You fooled someone!", `Your title caught a player out. +${points.toLocaleString("en-US")}`, "good", true);
+    return card(p.fooledSomeoneHeadline, format(p.fooledSomeoneSub, { points: points.toLocaleString("en-US") }), "good", true);
   }
-  return card("Not this time", "That title wasn't the truth.", "caught");
+  return card(p.notThisTimeHeadline, p.notThisTimeSub, "caught");
 }
 
 /** This device's result copy, one row of the reveal storyboard's personal column. */
-export function personalReveal(input: PersonalRevealInput): PersonalReveal {
-  return input.isArtist ? artistReveal(input) : voterReveal(input);
+export function personalReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal {
+  return input.isArtist ? artistReveal(t, input) : voterReveal(t, input);
 }
 
 /**

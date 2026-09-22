@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { HostRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { RonHostView } from "../types";
 import { Host } from "./Host";
 import { realOrNahPreviews } from "./preview";
@@ -29,13 +30,15 @@ function renderHost(label: string) {
   const { view, room } = hostSample(label);
   const clock: ServerClock = { now: () => room.serverNow };
   return render(
-    <Host
-      view={view}
-      room={room}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-    />,
+    <LocaleProvider>
+      <Host
+        view={view}
+        room={room}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+      />
+    </LocaleProvider>,
   );
 }
 
@@ -51,6 +54,27 @@ describe("Host write phase", () => {
     expect(screen.getByText("Maya")).toBeTruthy();
     expect(screen.getByText("Sam")).toBeTruthy();
     expect(screen.getByText("Lies in")).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is he", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    const { view, room } = hostSample("Host: write");
+    const clock: ServerClock = { now: () => room.serverNow };
+    render(
+      <LocaleProvider>
+        <Host
+          view={view}
+          room={room}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("כתבו שקר משכנע בטלפון שלכם")).toBeTruthy();
+    expect(screen.getByText("שקרים נכנסים")).toBeTruthy();
+    expect(screen.getAllByText("בוצע")).toHaveLength(4);
+    window.localStorage.removeItem("opg:locale");
   });
 });
 
@@ -92,26 +116,30 @@ describe("Host reveal phase", () => {
     const second = hostSample("Host: reveal, 3 foolers");
     const clock: ServerClock = { now: () => first.room.serverNow };
     const { container, rerender } = render(
-      <Host
-        view={first.view}
-        room={first.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <Host
+          view={first.view}
+          room={first.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     const wrapper = container.querySelector(".opg-phase-enter");
     expect(wrapper).toBeTruthy();
     expect(wrapper?.textContent).toContain("Which one is real?");
 
     rerender(
-      <Host
-        view={second.view}
-        room={second.room}
-        deadline={null}
-        timerStartedAt={second.room.game?.timerStartedAt ?? null}
-        clock={clock}
-      />,
+      <LocaleProvider>
+        <Host
+          view={second.view}
+          room={second.room}
+          deadline={null}
+          timerStartedAt={second.room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />
+      </LocaleProvider>,
     );
     const next = container.querySelector(".opg-phase-enter");
     expect(next).toBeTruthy();

@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { HostRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleHostView } from "../state";
 import { Host } from "./Host";
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
@@ -57,82 +59,63 @@ function hostView(overrides: Partial<DoodleHostView> = {}): DoodleHostView {
   };
 }
 
+function renderHost(view: DoodleHostView, deadline: number | null = null, timerStartedAt: number | null = null) {
+  return render(
+    <LocaleProvider>
+      <Host view={view} room={room()} deadline={deadline} timerStartedAt={timerStartedAt} clock={CLOCK} />
+    </LocaleProvider>,
+  );
+}
+
 describe("Host", () => {
   it("draw: shows every player and who is done", () => {
-    render(
-      <Host
-        view={hostView({ drawnIds: ["maya"], drawnCounts: { maya: 2, dov: 0 } })}
-        room={room()}
-        deadline={null}
-        timerStartedAt={null}
-        clock={CLOCK}
-      />,
-    );
+    renderHost(hostView({ drawnIds: ["maya"], drawnCounts: { maya: 2, dov: 0 } }));
     expect(screen.getByText("Everyone is drawing")).toBeTruthy();
     expect(screen.getByText("Both done")).toBeTruthy();
     expect(screen.getByText("Drawing 1 of 2")).toBeTruthy();
   });
 
   it("draw: counts a finished first drawing, so the TV moves while a player does", () => {
-    render(
-      <Host
-        view={hostView({ drawnCounts: { maya: 1, dov: 0 } })}
-        room={room()}
-        deadline={null}
-        timerStartedAt={null}
-        clock={CLOCK}
-      />,
-    );
+    renderHost(hostView({ drawnCounts: { maya: 1, dov: 0 } }));
     expect(screen.getByText("Drawing 2 of 2")).toBeTruthy();
     expect(screen.getByText("Drawing 1 of 2")).toBeTruthy();
   });
 
   it("title: shows who has written and marks the artist", () => {
-    render(
-      <Host
-        view={hostView({ phase: "title", artistId: "maya", doodle: { v: 1, s: [] }, writtenIds: ["dov"] })}
-        room={room()}
-        deadline={2000}
-        timerStartedAt={1000}
-        clock={CLOCK}
-      />,
-    );
+    renderHost(hostView({ phase: "title", artistId: "maya", doodle: { v: 1, s: [] }, writtenIds: ["dov"] }), 2000, 1000);
     expect(screen.getByText("drew this one")).toBeTruthy();
     expect(screen.getByText(/have written a title/)).toBeTruthy();
   });
 
   it("vote: shows the options", () => {
-    render(
-      <Host
-        view={hostView({
-          phase: "vote",
-          artistId: "maya",
-          doodle: { v: 1, s: [] },
-          options: [{ id: "o1", text: "a cat riding a skateboard" }],
-        })}
-        room={room()}
-        deadline={2000}
-        timerStartedAt={1000}
-        clock={CLOCK}
-      />,
+    renderHost(
+      hostView({
+        phase: "vote",
+        artistId: "maya",
+        doodle: { v: 1, s: [] },
+        options: [{ id: "o1", text: "a cat riding a skateboard" }],
+      }),
+      2000,
+      1000,
     );
     expect(screen.getByText("Which title is real?")).toBeTruthy();
     expect(screen.getByText("a cat riding a skateboard")).toBeTruthy();
   });
 
   it("gallery: renders the gallery grid", () => {
-    render(
-      <Host
-        view={hostView({
-          phase: "gallery",
-          gallery: [{ drawingId: "maya:0", artistId: "maya", doodle: { v: 1, s: [] }, title: "a duck on a unicycle", shown: true, foundByCount: 1 }],
-        })}
-        room={room()}
-        deadline={null}
-        timerStartedAt={null}
-        clock={CLOCK}
-      />,
+    renderHost(
+      hostView({
+        phase: "gallery",
+        gallery: [{ drawingId: "maya:0", artistId: "maya", doodle: { v: 1, s: [] }, title: "a duck on a unicycle", shown: true, foundByCount: 1 }],
+      }),
     );
     expect(screen.getByText("a duck on a unicycle")).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is set", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderHost(hostView({ drawnIds: ["maya"], drawnCounts: { maya: 2, dov: 0 } }));
+    expect(screen.getByText("כולם מציירים")).toBeTruthy();
+    expect(screen.getByText("שני הציורים מוכנים")).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en, he, LocaleProvider } from "@opg/i18n";
 import {
   detectHostDevice,
   guideSections,
@@ -8,6 +9,23 @@ import {
   ShowOnTvGuide,
   type HostDevice,
 } from "./ShowOnTv";
+import type { ShowOnTvGuideProps } from "./ShowOnTv";
+
+function renderGuide(props: ShowOnTvGuideProps) {
+  return render(
+    <LocaleProvider>
+      <ShowOnTvGuide {...props} />
+    </LocaleProvider>,
+  );
+}
+
+function renderChip() {
+  return render(
+    <LocaleProvider>
+      <ShowOnTvChip />
+    </LocaleProvider>,
+  );
+}
 
 const MAC_SAFARI =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
@@ -48,7 +66,7 @@ describe("detectHostDevice", () => {
 
 describe("guideSections", () => {
   it("uses the default order and flags nothing for other devices", () => {
-    const sections = guideSections("other", "openpartygames.org");
+    const sections = guideSections("other", "openpartygames.org", en.landing);
     expect(sections.map((section) => section.id)).toEqual([
       "mac",
       "ios",
@@ -62,7 +80,7 @@ describe("guideSections", () => {
   it.each(["mac", "ios", "chrome"] as const)(
     "puts the %s section first and flags it",
     (device) => {
-      const sections = guideSections(device, "openpartygames.org");
+      const sections = guideSections(device, "openpartygames.org", en.landing);
       expect(sections.find((section) => section.onThisDevice)).toMatchObject({
         id: device,
       });
@@ -73,34 +91,32 @@ describe("guideSections", () => {
   );
 
   it("shows the host address in the TV-browser steps", () => {
-    const sections = guideSections("other", "openpartygames.org");
+    const sections = guideSections("other", "openpartygames.org", en.landing);
     const tvBrowser = sections.find((section) => section.id === "tv-browser");
     expect(tvBrowser?.steps).toContain("Go to openpartygames.org.");
+  });
+
+  it("translates the section titles and steps into Hebrew", () => {
+    const sections = guideSections("mac", "openpartygames.org", he.landing);
+    expect(sections[0]).toMatchObject({
+      id: "mac",
+      title: "מ-Mac ל-Apple TV או טלוויזיית AirPlay",
+    });
+    const tvBrowser = sections.find((section) => section.id === "tv-browser");
+    expect(tvBrowser?.steps).toContain("גשו אל openpartygames.org.");
   });
 });
 
 describe("ShowOnTvGuide", () => {
   it("names the dialog for screen readers", () => {
-    render(
-      <ShowOnTvGuide
-        device="mac"
-        host="openpartygames.org"
-        onClose={() => {}}
-      />,
-    );
+    renderGuide({ device: "mac", host: "openpartygames.org", onClose: () => {} });
     expect(
       screen.getByRole("dialog", { name: "Show this on your TV" }),
     ).toBeTruthy();
   });
 
   it("puts the current device's section first with a badge", () => {
-    render(
-      <ShowOnTvGuide
-        device="ios"
-        host="openpartygames.org"
-        onClose={() => {}}
-      />,
-    );
+    renderGuide({ device: "ios", host: "openpartygames.org", onClose: () => {} });
     expect(screen.getByText("On this device")).toBeTruthy();
     const headings = screen.getAllByRole("heading", { level: 3 });
     expect(headings.at(0)?.textContent).toBe(
@@ -109,54 +125,47 @@ describe("ShowOnTvGuide", () => {
   });
 
   it("focuses Done on mount", () => {
-    render(
-      <ShowOnTvGuide
-        device="mac"
-        host="openpartygames.org"
-        onClose={() => {}}
-      />,
-    );
+    renderGuide({ device: "mac", host: "openpartygames.org", onClose: () => {} });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Done" }),
     );
   });
 
+  it("renders in Hebrew when the locale is Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderGuide({ device: "mac", host: "openpartygames.org", onClose: () => {} });
+      expect(
+        screen.getByRole("dialog", { name: "הציגו את זה בטלוויזיה שלכם" }),
+      ).toBeTruthy();
+      expect(screen.getByRole("button", { name: "סיום" })).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
   it("calls onClose when Done is clicked", async () => {
     const onClose = vi.fn<() => void>();
     const user = userEvent.setup();
-    render(
-      <ShowOnTvGuide
-        device="mac"
-        host="openpartygames.org"
-        onClose={onClose}
-      />,
-    );
+    renderGuide({ device: "mac", host: "openpartygames.org", onClose });
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("calls onClose on Escape", () => {
     const onClose = vi.fn<() => void>();
-    render(
-      <ShowOnTvGuide
-        device="mac"
-        host="openpartygames.org"
-        onClose={onClose}
-      />,
-    );
+    renderGuide({ device: "mac", host: "openpartygames.org", onClose });
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("removes the Escape listener on unmount", () => {
     const onClose = vi.fn<() => void>();
-    const { unmount } = render(
-      <ShowOnTvGuide
-        device="mac"
-        host="openpartygames.org"
-        onClose={onClose}
-      />,
-    );
+    const { unmount } = renderGuide({
+      device: "mac",
+      host: "openpartygames.org",
+      onClose,
+    });
     unmount();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
@@ -165,13 +174,13 @@ describe("ShowOnTvGuide", () => {
 
 describe("ShowOnTvChip", () => {
   it("renders a Show on TV button", () => {
-    render(<ShowOnTvChip />);
+    renderChip();
     expect(screen.getByRole("button", { name: "Show on TV" })).toBeTruthy();
   });
 
   it("opens the guide when clicked", async () => {
     const user = userEvent.setup();
-    render(<ShowOnTvChip />);
+    renderChip();
     await user.click(screen.getByRole("button", { name: "Show on TV" }));
     expect(
       screen.getByRole("dialog", { name: "Show this on your TV" }),
@@ -180,7 +189,7 @@ describe("ShowOnTvChip", () => {
 
   it("closes on Done and returns focus to the chip", async () => {
     const user = userEvent.setup();
-    render(<ShowOnTvChip />);
+    renderChip();
     const chip = screen.getByRole("button", { name: "Show on TV" });
     await user.click(chip);
     await user.click(screen.getByRole("button", { name: "Done" }));
@@ -190,7 +199,7 @@ describe("ShowOnTvChip", () => {
 
   it("closes on Escape", async () => {
     const user = userEvent.setup();
-    render(<ShowOnTvChip />);
+    renderChip();
     await user.click(screen.getByRole("button", { name: "Show on TV" }));
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();

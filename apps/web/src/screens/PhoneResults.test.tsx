@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import type { ReactNode } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
@@ -11,6 +13,11 @@ import {
   makeTiedResult,
 } from "./fixtures/room";
 import { PhoneResults } from "./PhoneResults";
+
+/** These screens read their copy from the dictionary, so every render needs a provider. */
+function renderLocalized(ui: ReactNode) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
 
 const PRIYA = makePlayer({ id: "p1", name: "Priya", avatar: "drop" });
 const SAM = makePlayer({ id: "p2", name: "Sam", avatar: "star" });
@@ -51,7 +58,7 @@ function setup(
       });
     }
   };
-  const rendered = render(
+  const rendered = renderLocalized(
     <PhoneResults
       view={makePlayerView({
         you,
@@ -186,7 +193,7 @@ describe("PhoneResults, mounted late", () => {
 
 describe("PhoneResults, not completed", () => {
   it("shows Game over with my score", () => {
-    render(
+    renderLocalized(
       <PhoneResults
         view={makePlayerView({
           you: "p1",
@@ -215,7 +222,7 @@ describe("PhoneResults, not completed", () => {
 
 describe("PhoneResults, an old save", () => {
   it("shows the settled rank card straight away", () => {
-    render(
+    renderLocalized(
       <PhoneResults
         view={makePlayerView({
           you: "p1",
@@ -226,5 +233,26 @@ describe("PhoneResults, an old save", () => {
       />,
     );
     expect(screen.getByText("You finished 1st with 12")).toBeTruthy();
+  });
+});
+
+describe("PhoneResults, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("shows the settled rank card in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          players: [PRIYA, SAM, LEE],
+          lastResult: makeOldSaveResult(),
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("סיימתם במקום הראשון עם 12")).toBeTruthy();
   });
 });

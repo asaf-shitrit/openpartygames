@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
 import { Avatar, Icon } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import type { ImposterHostView } from "../../state";
 import { avatarOf, nameOf } from "./common";
 
@@ -39,7 +40,7 @@ const ROW: CSSProperties = {
 
 const BADGE: CSSProperties = {
   position: "absolute",
-  right: -5,
+  insetInlineEnd: -5,
   top: -5,
   width: 19,
   height: 19,
@@ -60,7 +61,10 @@ function VoteAvatar({
   voted: boolean;
   players: PlayerSummary[];
 }) {
-  const alt = `${nameOf(players, id)}'s avatar`;
+  const { t } = useLocale();
+  const alt = format(t.imposter.avatarAlt, {
+    name: nameOf(players, id, t.common.someone),
+  });
   if (!voted) {
     return (
       <Avatar
@@ -91,12 +95,16 @@ export interface StageVoteProps {
 
 /** The stage region during the vote: who has locked in, never their pick. */
 export function StageVote({ view, players }: StageVoteProps) {
+  const { t } = useLocale();
   return (
     <div style={WRAP}>
       <div style={HEADER}>
-        <div style={LABEL}>WHO HAS VOTED</div>
+        <div style={LABEL}>{t.imposter.vote.whoHasVotedLabel}</div>
         <div style={LABEL}>
-          {view.votedIds.length} of {view.playerIds.length}
+          {format(t.imposter.vote.ofTotal, {
+            voted: view.votedIds.length,
+            total: view.playerIds.length,
+          })}
         </div>
       </div>
       <div style={ROW}>

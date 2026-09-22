@@ -27,6 +27,8 @@ import {
   useFlipList,
   useMoment,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { resultDurationMs, type ImposterHostView } from "../state";
 import {
   hostResultBeats,
@@ -45,18 +47,16 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return findPlayer(players, id)?.name ?? t.common.someone;
 }
 
 function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
   return findPlayer(players, id)?.avatar ?? null;
 }
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId | null): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return format(t.imposter.avatarAlt, { name: nameOf(t, players, id) });
 }
 
 const SECONDARY: CSSProperties = {
@@ -128,6 +128,7 @@ function CrossGlyph() {
 }
 
 function StampContent({ correct }: { correct: boolean }) {
+  const { t } = useLocale();
   return (
     <span
       style={{
@@ -138,7 +139,7 @@ function StampContent({ correct }: { correct: boolean }) {
       }}
     >
       {correct ? <CheckGlyph /> : <CrossGlyph />}
-      {correct ? "GOT IT!" : "NOPE"}
+      {correct ? t.imposter.result.stampGotIt : t.imposter.result.stampNope}
     </span>
   );
 }
@@ -164,7 +165,8 @@ function GuessLine({
   moment: Moment;
   hero: boolean;
 }) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(t, players, view.imposterId);
   const guess = view.guess ?? "";
   const guessLetters = Array.from(guess).length;
   const tileSize = hero
@@ -180,7 +182,7 @@ function GuessLine({
       }}
     >
       <Marker size={hero ? HERO_NAME_SIZE : COMPACT_NAME_SIZE}>
-        {imposter} guessed…
+        {format(t.imposter.result.guessedEllipsis, { name: imposter })}
       </Marker>
       <LetterTiles
         length={guessLetters}
@@ -280,11 +282,12 @@ function WordLine({
   stage: Stage;
   crewWord: string | null;
 }) {
+  const { t } = useLocale();
   if (!stage.word) return null;
   return (
     <FxIn live={stage.wordLive} preset="fadeIn">
       <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <div style={{ fontSize: 44, fontWeight: 700 }}>The word was</div>
+        <div style={{ fontSize: 44, fontWeight: 700 }}>{t.imposter.result.theWordWas}</div>
         <Highlight style={{ padding: "0 18px" }}>
           <Marker size={68} style={{ letterSpacing: "0.02em" }}>
             {crewWord ?? "—"}
@@ -355,19 +358,21 @@ function EscapedLeft({
   players: PlayerSummary[];
   stage: Stage;
 }) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(t, players, view.imposterId);
   return (
     <FxIn live={stage.wordLive} preset="fadeIn">
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <SneakDoodle />
-        <Marker size={72}>{imposter} slipped away</Marker>
+        <Marker size={72}>{format(t.imposter.reveal.slippedAway, { name: imposter })}</Marker>
       </div>
     </FxIn>
   );
 }
 
 function CancelledLeft() {
-  return <Marker size={72}>Word cancelled</Marker>;
+  const { t } = useLocale();
+  return <Marker size={72}>{t.imposter.result.wordCancelled}</Marker>;
 }
 
 function ResultHeadline({
@@ -412,9 +417,10 @@ interface PointRow {
   reason: string;
 }
 
-function imposterReason(view: ImposterHostView): string {
-  if (!view.caught) return "not caught";
-  return view.guessCorrect ? "guessed right" : "caught, wrong guess";
+function imposterReason(t: Dictionary, view: ImposterHostView): string {
+  const r = t.imposter.result;
+  if (!view.caught) return r.reasonNotCaught;
+  return view.guessCorrect ? r.reasonGuessedRight : r.reasonCaughtWrongGuess;
 }
 
 function votedFor(
@@ -429,18 +435,22 @@ function votedFor(
 }
 
 function reasonFor(
+  t: Dictionary,
   id: PlayerId,
   view: ImposterHostView,
   players: PlayerSummary[],
 ): string {
-  if (id === view.imposterId) return imposterReason(view);
+  if (id === view.imposterId) return imposterReason(t, view);
   const target = votedFor(id, view.tally);
-  if (target === null) return "no vote";
-  if (target === view.imposterId) return `spotted ${nameOf(players, target)}`;
-  return `voted ${nameOf(players, target)}`;
+  const r = t.imposter.result;
+  if (target === null) return r.reasonNoVote;
+  const name = nameOf(t, players, target);
+  if (target === view.imposterId) return format(r.reasonSpotted, { name });
+  return format(r.reasonVoted, { name });
 }
 
 function pointRows(
+  t: Dictionary,
   view: ImposterHostView,
   players: PlayerSummary[],
 ): PointRow[] {
@@ -448,7 +458,7 @@ function pointRows(
   const rows: PointRow[] = [];
   for (const id of view.playerIds) {
     const value = points[id] ?? 0;
-    const reason = reasonFor(id, view, players);
+    const reason = reasonFor(t, id, view, players);
     const key = `${value}|${reason}`;
     const existing = rows.find((row) => row.key === key);
     if (existing) {
@@ -470,6 +480,7 @@ function PointRowView({
   row: PointRow;
   players: PlayerSummary[];
 }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -487,7 +498,7 @@ function PointRowView({
             key={id}
             id={avatarOf(players, id)}
             size={62}
-            alt={avatarLabel(players, id)}
+            alt={avatarLabel(t, players, id)}
           />
         ))}
         {row.ids.length > 4 ? (
@@ -498,7 +509,7 @@ function PointRowView({
       </div>
       <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1.2 }}>
-          {row.ids.map((id) => nameOf(players, id)).join(", ")}
+          {row.ids.map((id) => nameOf(t, players, id)).join(", ")}
         </div>
         <div
           style={{
@@ -511,8 +522,10 @@ function PointRowView({
         </div>
       </div>
       <Marker size={46} style={{ lineHeight: 1 }}>
-        +{formatPoints(row.points)}
-        {row.ids.length > 1 ? " each" : ""}
+        {format(
+          row.ids.length > 1 ? t.imposter.result.pointsEach : t.imposter.result.pointsSingle,
+          { points: formatPoints(row.points) },
+        )}
       </Marker>
     </div>
   );
@@ -529,8 +542,9 @@ function PointsCard({
   players: PlayerSummary[];
   stage: Stage;
 }) {
+  const { t } = useLocale();
   if (!stage.points) return null;
-  const rows = pointRows(view, players);
+  const rows = pointRows(t, view, players);
   return (
     <Card
       variant="M"
@@ -542,7 +556,7 @@ function PointsCard({
         gap: 14,
       }}
     >
-      <Marker size={48}>Points this word</Marker>
+      <Marker size={48}>{t.imposter.result.pointsThisWord}</Marker>
       {rows.map((row, index) => (
         <FxIn
           key={row.key}
@@ -586,6 +600,7 @@ function StandingsRow({
   rankDelta: number;
   registerRef: (el: HTMLElement | null) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div
       ref={registerRef}
@@ -595,10 +610,10 @@ function StandingsRow({
       <Avatar
         id={avatarOf(players, id)}
         size={64}
-        alt={avatarLabel(players, id)}
+        alt={avatarLabel(t, players, id)}
       />
       <div style={{ flexGrow: 1, fontSize: 36, fontWeight: 700 }}>
-        {nameOf(players, id)}
+        {nameOf(t, players, id)}
       </div>
       {stage.reorder && rankDelta > 0 ? <RankBadge delta={rankDelta} /> : null}
       <div
@@ -649,6 +664,7 @@ function StandingsCard({
     [previousOrder, newOrder],
   );
   const flip = useFlipList(order);
+  const { t } = useLocale();
   return (
     <Card
       variant="Malt"
@@ -662,7 +678,7 @@ function StandingsCard({
       }}
     >
       <Marker size={56} style={{ marginBottom: 8 }}>
-        Standings
+        {t.imposter.result.standings}
       </Marker>
       {order.map((id, index) => (
         <StandingsRow
@@ -725,10 +741,11 @@ function ResultRight({
   clock: ServerClock;
   stage: Stage;
 }) {
+  const { t } = useLocale();
   const lastWord = view.wordNumber >= view.wordCount;
   const nextLabel = lastWord
-    ? "Final scores next"
-    : `Word ${view.wordNumber + 1} starts in`;
+    ? t.imposter.progress.finalScoresNext
+    : format(t.imposter.result.wordStartsIn, { number: view.wordNumber + 1 });
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <StandingsCard view={view} players={players} stage={stage} />

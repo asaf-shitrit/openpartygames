@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import type { PlayerSummary } from "@opg/protocol";
-import { avatarOf, findPlayer, nameOf } from "./common";
+import { en, he } from "@opg/i18n";
+import { avatarOf, drawingLabel, findPlayer, nameOf } from "./common";
 
 const PLAYERS: PlayerSummary[] = [
   {
@@ -40,15 +41,15 @@ describe("findPlayer", () => {
 
 describe("nameOf", () => {
   it("returns the player's name", () => {
-    expect(nameOf(PLAYERS, "dov")).toBe("Dov");
+    expect(nameOf(PLAYERS, "dov", en.common.someone)).toBe("Dov");
   });
 
-  it("falls back to Someone for an unknown id", () => {
-    expect(nameOf(PLAYERS, "zed")).toBe("Someone");
+  it("falls back to the someone fallback for an unknown id", () => {
+    expect(nameOf(PLAYERS, "zed", en.common.someone)).toBe("Someone");
   });
 
-  it("falls back to Someone for a null id", () => {
-    expect(nameOf(PLAYERS, null)).toBe("Someone");
+  it("falls back to the someone fallback for a null id", () => {
+    expect(nameOf(PLAYERS, null, en.common.someone)).toBe("Someone");
   });
 });
 
@@ -63,5 +64,15 @@ describe("avatarOf", () => {
 
   it("returns null for a null id", () => {
     expect(avatarOf(PLAYERS, null)).toBeNull();
+  });
+});
+
+describe("drawingLabel", () => {
+  it("names whose drawing it is, in English", () => {
+    expect(drawingLabel(en, "Dov")).toBe("Dov's drawing");
+  });
+
+  it("names whose drawing it is, in Hebrew", () => {
+    expect(drawingLabel(he, "דוב")).toBe("הציור של דוב");
   });
 });

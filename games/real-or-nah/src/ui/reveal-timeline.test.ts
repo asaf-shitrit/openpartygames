@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Beat, Moment } from "@opg/ui";
+import { en, he } from "@opg/i18n";
 import { revealDurationMs, revealPlan } from "../reveal-plan";
 import type { RevealSegment } from "../reveal-plan";
 import { planLiesOf, type RonReveal } from "../types";
@@ -188,18 +189,23 @@ describe("revealProgress", () => {
 
 describe("callout", () => {
   it("says everyone when every voter was fooled and there are at least two", () => {
-    expect(callout(2, 2)).toBe("Fooled everyone!");
-    expect(callout(4, 4)).toBe("Fooled everyone!");
+    expect(callout(en, 2, 2)).toBe("Fooled everyone!");
+    expect(callout(en, 4, 4)).toBe("Fooled everyone!");
   });
 
   it("says the count once at least three were fooled without fooling everyone", () => {
-    expect(callout(3, 5)).toBe("Fooled 3 people!");
+    expect(callout(en, 3, 5)).toBe("Fooled 3 people!");
   });
 
   it("is null otherwise", () => {
-    expect(callout(0, 5)).toBeNull();
-    expect(callout(1, 5)).toBeNull();
-    expect(callout(2, 5)).toBeNull();
+    expect(callout(en, 0, 5)).toBeNull();
+    expect(callout(en, 1, 5)).toBeNull();
+    expect(callout(en, 2, 5)).toBeNull();
+  });
+
+  it("routes through the Hebrew dictionary too", () => {
+    expect(callout(he, 2, 2)).toBe("רימו את כולם!");
+    expect(callout(he, 3, 5)).toBe("רימו 3 אנשים!");
   });
 });
 
@@ -207,7 +213,7 @@ describe("personalRevealCards", () => {
   const segments = revealPlan({ lies: planLiesOf(REVEAL) });
 
   it("gives the author of a fooling lie a celebration card", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: DOV,
@@ -225,7 +231,7 @@ describe("personalRevealCards", () => {
   });
 
   it("gives a fooled voter a soft card naming the author and the lie", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: MAYA,
@@ -241,7 +247,7 @@ describe("personalRevealCards", () => {
   });
 
   it("gives a dud author a soft 'fooled nobody' card", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: SAM,
@@ -256,7 +262,7 @@ describe("personalRevealCards", () => {
   });
 
   it("gives the finder a celebration card and everyone else a plain truth card", () => {
-    const found = personalRevealCards({
+    const found = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: MAYA,
@@ -267,7 +273,7 @@ describe("personalRevealCards", () => {
     expect(found?.headline).toBe("You found it!");
     expect(found?.celebrate).toBe(true);
 
-    const missed = personalRevealCards({
+    const missed = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: SAM,
@@ -280,7 +286,7 @@ describe("personalRevealCards", () => {
   });
 
   it("always adds a standings card with no haptic", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: SAM,
@@ -295,7 +301,7 @@ describe("personalRevealCards", () => {
   });
 
   it("orders cards chronologically by atMs", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
       me: DOV,
@@ -311,11 +317,38 @@ describe("personalRevealCards", () => {
       expect((b?.atMs ?? 0) >= (a?.atMs ?? 0)).toBe(true);
     }
   });
+
+  it("names the place in words in Hebrew, with no digit and no suffix rule", () => {
+    const cards = personalRevealCards(he, {
+      segments,
+      reveal: REVEAL,
+      me: SAM,
+      names: NAMES,
+      standingsOrdinal: 3,
+      myPointsThisFact: 0,
+    });
+    const standings = cards.find((c) => c.id === "standings");
+    // English builds "3rd" from a suffix rule; Hebrew has no such rule, so the place is
+    // a word from the dictionary and the headline carries no digit at all.
+    expect(standings?.headline).toBe("אתם במקום השלישי");
+    expect(standings?.headline).not.toMatch(/\d/);
+    expect(standings?.sub).toBe("+0 בעובדה הזו");
+
+    const authored = personalRevealCards(he, {
+      segments,
+      reveal: REVEAL,
+      me: DOV,
+      names: NAMES,
+      standingsOrdinal: 1,
+      myPointsThisFact: 1000,
+    }).find((c) => c.id === "author-fooled");
+    expect(authored?.headline).toBe("רימיתם את Sam וNoa!");
+  });
 });
 
 describe("personalCardBeats", () => {
   it("carries each card's id, atMs and optional haptic into a Beat", () => {
-    const cards = personalRevealCards({
+    const cards = personalRevealCards(en, {
       segments: revealPlan({ lies: planLiesOf(REVEAL) }),
       reveal: REVEAL,
       me: DOV,

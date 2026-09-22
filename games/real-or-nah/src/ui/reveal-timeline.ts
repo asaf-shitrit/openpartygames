@@ -4,6 +4,9 @@
 import type { PlayerId } from "@opg/protocol";
 import type { Beat, HapticName, Moment } from "@opg/ui";
 import { reached } from "@opg/ui";
+import { format, joinNamesAnd } from "@opg/i18n";
+import { placeFor } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { RevealSegment } from "../reveal-plan";
 import type { RonReveal } from "../types";
 
@@ -235,34 +238,26 @@ function lieIndexOf(
   return -1;
 }
 
-function formatNames(
-  ids: readonly PlayerId[],
-  names: Record<PlayerId, string>,
-): string {
-  const list = ids.map((id) => names[id] ?? "Someone");
-  if (list.length <= 1) return list[0] ?? "";
-  if (list.length === 2) return `${list[0]} and ${list[1]}`;
-  const last = list[list.length - 1];
-  return `${list.slice(0, -1).join(", ")} and ${last}`;
-}
-
 function dudsCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   beats: readonly Beat[],
 ): PersonalCard | null {
   const myLie = input.reveal.lies.find((lie) => lie.authorId === input.me);
   if (myLie === undefined || myLie.fooledIds.length > 0) return null;
+  const p = t.realOrNah.personal;
   return {
     id: "duds",
     atMs: beatAtMs(beats, "duds"),
-    headline: "Your lie fooled nobody",
-    sub: "Next time!",
+    headline: p.dudsHeadline,
+    sub: p.dudsSub,
     haptic: "soft",
     celebrate: false,
   };
 }
 
 function fooledByCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   beats: readonly Beat[],
 ): PersonalCard | null {
@@ -270,18 +265,20 @@ function fooledByCard(
   if (lie === undefined) return null;
   const index = lieIndexOf(input.segments, lie.optionId);
   if (index < 0) return null;
-  const author = input.names[lie.authorId ?? ""] ?? "Someone";
+  const author = input.names[lie.authorId ?? ""] ?? t.common.someone;
+  const p = t.realOrNah.personal;
   return {
     id: "fooled-by",
     atMs: beatAtMs(beats, `lie-${index}-fooled`) + CARD_FOLLOW_MS,
-    headline: `${author}'s lie got you`,
-    sub: `"${lie.text}"`,
+    headline: format(p.fooledByHeadline, { author }),
+    sub: format(p.fooledBySub, { text: lie.text }),
     haptic: "soft",
     celebrate: false,
   };
 }
 
 function authorFooledCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   beats: readonly Beat[],
 ): PersonalCard | null {
@@ -291,27 +288,31 @@ function authorFooledCard(
   if (lie === undefined) return null;
   const index = lieIndexOf(input.segments, lie.optionId);
   if (index < 0) return null;
+  const names = lie.fooledIds.map((id) => input.names[id] ?? t.common.someone);
+  const p = t.realOrNah.personal;
   return {
     id: "author-fooled",
     atMs: beatAtMs(beats, `lie-${index}-author`) + CARD_FOLLOW_MS,
-    headline: `You fooled ${formatNames(lie.fooledIds, input.names)}!`,
-    sub: `+${lie.points.toLocaleString("en-US")}`,
+    headline: format(p.authorFooledHeadline, { names: joinNamesAnd(t.common, names) }),
+    sub: format(p.authorFooledSub, { points: lie.points.toLocaleString("en-US") }),
     haptic: "good",
     celebrate: true,
   };
 }
 
 function truthCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   beats: readonly Beat[],
 ): PersonalCard {
   const atMs = beatAtMs(beats, "truth-real") + CARD_FOLLOW_MS;
+  const p = t.realOrNah.personal;
   if (input.reveal.foundByIds.includes(input.me)) {
     return {
       id: "truth-found",
       atMs,
-      headline: "You found it!",
-      sub: "+1,000",
+      headline: p.truthFoundHeadline,
+      sub: format(p.truthFoundSub, { points: "1,000" }),
       haptic: "good",
       celebrate: true,
     };
@@ -319,49 +320,46 @@ function truthCard(
   return {
     id: "truth-missed",
     atMs,
-    headline: `The truth: ${input.reveal.answer}`,
+    headline: format(p.truthMissedHeadline, { answer: input.reveal.answer }),
     sub: "",
     haptic: "soft",
     celebrate: false,
   };
 }
 
-function ordinalSuffix(n: number): string {
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 13) return "th";
-  if (n % 10 === 1) return "st";
-  if (n % 10 === 2) return "nd";
-  if (n % 10 === 3) return "rd";
-  return "th";
-}
-
+/** "3rd" in English; Hebrew names a place by number alone, so this is a no-op there. */
 function standingsCard(
+  t: Dictionary,
   input: PersonalRevealInput,
   beats: readonly Beat[],
 ): PersonalCard {
   const atMs = beatAtMs(beats, "standings-count") + CARD_FOLLOW_MS;
   const points = input.myPointsThisFact;
   const sign = points >= 0 ? "+" : "";
+  const p = t.realOrNah.personal;
   return {
     id: "standings",
     atMs,
-    headline: `You're ${input.standingsOrdinal}${ordinalSuffix(input.standingsOrdinal)}`,
-    sub: `${sign}${points.toLocaleString("en-US")} this fact`,
+    headline: format(p.standingsHeadline, {
+      place: placeFor(t, input.standingsOrdinal),
+    }),
+    sub: format(p.standingsSub, { sign, points: points.toLocaleString("en-US") }),
     celebrate: false,
   };
 }
 
 /** This phone's stack of result cards, in the order they land. */
 export function personalRevealCards(
+  t: Dictionary,
   input: PersonalRevealInput,
 ): PersonalCard[] {
   const beats = hostRevealBeats(input.segments);
   const cards = [
-    dudsCard(input, beats),
-    fooledByCard(input, beats),
-    authorFooledCard(input, beats),
-    truthCard(input, beats),
-    standingsCard(input, beats),
+    dudsCard(t, input, beats),
+    fooledByCard(t, input, beats),
+    authorFooledCard(t, input, beats),
+    truthCard(t, input, beats),
+    standingsCard(t, input, beats),
   ];
   return cards.filter((card): card is PersonalCard => card !== null);
 }
@@ -378,8 +376,8 @@ export function personalCardBeats(cards: readonly PersonalCard[]): Beat[] {
 // ---------- Callout ----------
 
 /** "Fooled everyone!" (>=2 voters, all fooled), "Fooled N people!" (>=3), else null. */
-export function callout(fooledCount: number, voterCount: number): string | null {
-  if (fooledCount >= 2 && fooledCount === voterCount) return "Fooled everyone!";
-  if (fooledCount >= 3) return `Fooled ${fooledCount} people!`;
+export function callout(t: Dictionary, fooledCount: number, voterCount: number): string | null {
+  if (fooledCount >= 2 && fooledCount === voterCount) return t.realOrNah.calloutEveryone;
+  if (fooledCount >= 3) return format(t.realOrNah.calloutCount, { count: fooledCount });
   return null;
 }

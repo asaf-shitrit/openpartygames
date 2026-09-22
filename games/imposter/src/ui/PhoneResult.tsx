@@ -21,6 +21,8 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { resultDurationMs } from "../state";
 import type { ImposterHostView, ImposterPlayerView } from "../state";
 import {
@@ -40,10 +42,8 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(players: PlayerSummary[], id: PlayerId | null, someone: string): string {
+  return findPlayer(players, id)?.name ?? someone;
 }
 
 /** Whether this phone's owner voted for the imposter. */
@@ -53,13 +53,15 @@ function votedImposter(view: ImposterPlayerView): boolean {
 
 /** The teaser shown before the personal beat lands. */
 function preResultTitle(
+  t: Dictionary,
   path: ResultPath,
   isImposter: boolean,
   guesserName: string,
 ): string {
-  if (path === "escaped") return "The imposter got away…";
-  if (isImposter) return "Your guess is in…";
-  return `${guesserName} guessed…`;
+  const r = t.imposter.result;
+  if (path === "escaped") return r.preImposterGotAway;
+  if (isImposter) return r.preYourGuessIn;
+  return format(r.preNameGuessed, { name: guesserName });
 }
 
 function PreResult({
@@ -71,9 +73,10 @@ function PreResult({
   isImposter: boolean;
   guesserName: string;
 }) {
+  const { t } = useLocale();
   return (
     <EyesOnTv
-      title={preResultTitle(path, isImposter, guesserName)}
+      title={preResultTitle(t, path, isImposter, guesserName)}
       tempo={path === "caught" ? "fast" : "slow"}
     />
   );
@@ -88,6 +91,7 @@ interface ResultCardProps {
 
 /** The burst renders behind the text: a wrapper at z-index 0, content at z-index 1. */
 function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
+  const { t } = useLocale();
   return (
     <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
       <Card
@@ -141,7 +145,7 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
                 gap: 6,
               }}
             >
-              <div style={{ fontSize: 17 }}>The crew&apos;s word was</div>
+              <div style={{ fontSize: 17 }}>{t.imposter.result.crewWordWas}</div>
               <Highlight style={{ padding: "0 10px" }}>
                 <Marker size={32}>{crewWord}</Marker>
               </Highlight>
@@ -154,6 +158,7 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
 }
 
 function TotalCard({ from, to, live }: { from: number; to: number; live: boolean }) {
+  const { t } = useLocale();
   return (
     <Card
       variant="M"
@@ -166,7 +171,7 @@ function TotalCard({ from, to, live }: { from: number; to: number; live: boolean
         gap: 12,
       }}
     >
-      <div style={{ fontSize: 18, fontWeight: 700 }}>Your total</div>
+      <div style={{ fontSize: 18, fontWeight: 700 }}>{t.imposter.result.yourTotal}</div>
       <CountUp
         from={from}
         to={to}
@@ -237,12 +242,13 @@ export interface PhoneResultProps extends SectionProps {
 }
 
 export function PhoneResult(props: PhoneResultProps) {
+  const { t } = useLocale();
   const { view, players, me, deadline, timerStartedAt, clock, progress, stage } =
     props;
   const path = resultPath(view.caught);
   const isImposter = view.role === "imposter";
   const myPoints = myPointsFor(view);
-  const personal = personalResult({
+  const personal = personalResult(t, {
     path,
     isImposter,
     votedImposter: votedImposter(view),
@@ -267,7 +273,7 @@ export function PhoneResult(props: PhoneResultProps) {
   return (
     <>
       <PhoneStrip
-        gameName="Imposter"
+        gameName={t.imposter.title}
         progress={progress}
         right={<Timer deadline={deadline} clock={clock} />}
       />
@@ -290,7 +296,7 @@ export function PhoneResult(props: PhoneResultProps) {
         <PreResult
           path={path}
           isImposter={isImposter}
-          guesserName={nameOf(players, view.imposterId)}
+          guesserName={nameOf(players, view.imposterId, t.common.someone)}
         />
       )}
       {countReached ? (

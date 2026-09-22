@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import type { ImposterHostView, ImposterPlayerView } from "../state";
@@ -43,6 +44,7 @@ function renderHost(label: string) {
       timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
     />,
+    { wrapper: LocaleProvider },
   );
 }
 
@@ -109,6 +111,7 @@ describe("Host phases", () => {
         timerStartedAt={null}
         clock={clock}
       />,
+      { wrapper: LocaleProvider },
     );
     const wrapper = container.querySelector(".opg-phase-enter");
     expect(wrapper).toBeTruthy();
@@ -200,6 +203,7 @@ describe("Host sound cues", () => {
           clock={clock}
         />
       </SoundProvider>,
+      { wrapper: LocaleProvider },
     );
     expect(engine.cues).toEqual([]);
 
@@ -231,6 +235,7 @@ describe("Host sound cues", () => {
           clock={clock}
         />
       </SoundProvider>,
+      { wrapper: LocaleProvider },
     );
     expect(engine.cues).toEqual([]);
 
@@ -246,5 +251,18 @@ describe("Host sound cues", () => {
       </SoundProvider>,
     );
     expect(engine.cues).toEqual(["whoosh"]);
+  });
+});
+
+describe("Host in Hebrew", () => {
+  it("renders the word-check heading and clue order in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderHost("Host: check your phones");
+      expect(screen.getByText("תבדקו בטלפונים!")).toBeTruthy();
+      expect(screen.getByText("סדר הרמזים")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import type { IconName } from "./Icon";
 import { Icon } from "./Icon";
@@ -82,5 +82,42 @@ describe("Icon", () => {
     const svg = firstChild(container);
     expect(svg.getAttribute("stroke")).toBe("currentColor");
     expect(svg.getAttribute("stroke-width")).toBe("3");
+  });
+
+  it("marks itself with its name for the RTL mirror rule in styles.css", () => {
+    const { container } = render(<Icon name="arrow-right" />);
+    expect(firstChild(container).getAttribute("data-icon")).toBe("arrow-right");
+  });
+});
+
+describe("Icon direction", () => {
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `[dir="rtl"] svg[data-icon="arrow-right"] { transform: scaleX(-1); }`;
+
+  beforeEach(() => {
+    document.head.appendChild(styleEl);
+  });
+  afterEach(() => {
+    styleEl.remove();
+    document.documentElement.removeAttribute("dir");
+  });
+
+  it("mirrors the reading-order arrow under an RTL ancestor", () => {
+    document.documentElement.setAttribute("dir", "rtl");
+    const { container } = render(<Icon name="arrow-right" />);
+    expect(getComputedStyle(firstChild(container)).transform).toBe(
+      "scaleX(-1)",
+    );
+  });
+
+  it("leaves the arrow unmirrored without an RTL ancestor", () => {
+    const { container } = render(<Icon name="arrow-right" />);
+    expect(getComputedStyle(firstChild(container)).transform).toBe("");
+  });
+
+  it("leaves a non-directional icon unmirrored even under RTL", () => {
+    document.documentElement.setAttribute("dir", "rtl");
+    const { container } = render(<Icon name="check" />);
+    expect(getComputedStyle(firstChild(container)).transform).toBe("");
   });
 });

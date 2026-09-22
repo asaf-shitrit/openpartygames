@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleHostView, DoodlePlayerView, DoodleReveal } from "../state";
 import { PhoneReveal } from "./PhoneReveal";
 
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  window.localStorage.clear();
 });
 
 const START = 1_700_000_000_000;
@@ -68,7 +70,9 @@ function setup(view: DoodlePlayerView, stage: DoodleHostView | null, elapsedMs: 
     }
   };
   render(
-    <PhoneReveal view={view} players={PLAYERS} me="maya" deadline={START + 12000} timerStartedAt={START} clock={clock} stage={stage} />,
+    <LocaleProvider>
+      <PhoneReveal view={view} players={PLAYERS} me="maya" deadline={START + 12000} timerStartedAt={START} clock={clock} stage={stage} />
+    </LocaleProvider>,
   );
   return { advanceTo };
 }
@@ -126,5 +130,16 @@ describe("PhoneReveal, no-TV mode", () => {
     const { advanceTo } = setup(playerView(), stage, 0);
     advanceTo(7300);
     expect(screen.getByText("a dog on a scooter")).toBeTruthy();
+  });
+});
+
+describe("PhoneReveal in Hebrew", () => {
+  it("shows the personal card's Hebrew copy", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    vi.useFakeTimers();
+    const { advanceTo } = setup(playerView(), null, 0);
+    advanceTo(7500);
+    expect(screen.getByText("מצאתם את זה!")).toBeTruthy();
+    expect(screen.getByText("סה\"כ 1,000")).toBeTruthy();
   });
 });

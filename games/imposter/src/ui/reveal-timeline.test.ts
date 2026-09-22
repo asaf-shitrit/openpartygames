@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Beat, Moment } from "@opg/ui";
+import { en } from "@opg/i18n";
 import { REVEAL_MS } from "../state";
 import type { RevealOutcome } from "../rules";
 import {
@@ -159,19 +160,19 @@ describe("revealRole", () => {
 
 describe("personalReveal", () => {
   it("writes the caught rows", () => {
-    expect(personalReveal(true, "imposter", "Priya")).toEqual({
+    expect(personalReveal(en, true, "imposter", "Priya")).toEqual({
       headline: "You got caught!",
       sub: "Get ready to guess the crew's word.",
       haptic: "caught",
       celebrate: false,
     });
-    expect(personalReveal(true, "spotter", "Priya")).toEqual({
+    expect(personalReveal(en, true, "spotter", "Priya")).toEqual({
       headline: "You spotted Priya!",
       sub: "+500 if they miss the word.",
       haptic: "good",
       celebrate: true,
     });
-    expect(personalReveal(true, "crew", "Priya")).toEqual({
+    expect(personalReveal(en, true, "crew", "Priya")).toEqual({
       headline: "Priya was the imposter",
       sub: "Get ready for their last chance.",
       haptic: "soft",
@@ -180,19 +181,19 @@ describe("personalReveal", () => {
   });
 
   it("writes the escaped rows", () => {
-    expect(personalReveal(false, "imposter", "Priya")).toEqual({
+    expect(personalReveal(en, false, "imposter", "Priya")).toEqual({
       headline: "You slipped away!",
       sub: "+1,000 for you.",
       haptic: "good",
       celebrate: true,
     });
-    expect(personalReveal(false, "spotter", "Priya")).toEqual({
+    expect(personalReveal(en, false, "spotter", "Priya")).toEqual({
       headline: "You were right about Priya!",
       sub: "Not enough votes to catch them.",
       haptic: "soft",
       celebrate: false,
     });
-    expect(personalReveal(false, "crew", "Priya")).toEqual({
+    expect(personalReveal(en, false, "crew", "Priya")).toEqual({
       headline: "Priya got away",
       sub: "The imposter keeps the points.",
       haptic: "soft",

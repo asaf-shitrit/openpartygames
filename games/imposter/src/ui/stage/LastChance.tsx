@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import type { PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { anchorAt, Card, LetterTiles, Marker, Suspense, Timer } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import { LAST_CHANCE_MS, POINTS_PER_WORD, type ImposterHostView } from "../../state";
 import { nameOf } from "./common";
 
@@ -54,13 +55,14 @@ export function StageLastChance({
   timerStartedAt,
   clock,
 }: StageLastChanceProps) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(players, view.imposterId, t.common.someone);
   const guessLength = view.guessLength ?? 0;
   const startedAt = anchorAt(timerStartedAt, deadline, LAST_CHANCE_MS);
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
       <Marker size={26} color="var(--opg-marker)">
-        {imposter} got caught!
+        {format(t.imposter.lastChance.caughtStage, { name: imposter })}
       </Marker>
       <div style={RING_WRAP}>
         <Suspense
@@ -69,7 +71,7 @@ export function StageLastChance({
           clock={clock}
           size={168}
           variant="drain"
-          label="Guessing…"
+          label={t.imposter.lastChance.guessingEllipsis}
         />
         <div style={TIMER_OVERLAY}>
           <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} />
@@ -84,8 +86,10 @@ export function StageLastChance({
           textAlign: "center",
         }}
       >
-        Guess the crew&apos;s word. Get it right and {imposter} steals{" "}
-        {money(POINTS_PER_WORD)} points.
+        {format(t.imposter.lastChance.stageDesc, {
+          name: imposter,
+          points: money(POINTS_PER_WORD),
+        })}
       </div>
     </Card>
   );

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { en } from "@opg/i18n";
 import type { Award } from "@opg/protocol";
 import { imposterAwardCopy } from "./award-copy";
 
@@ -8,42 +9,42 @@ function award(id: string, value: number): Award {
 
 describe("imposterAwardCopy", () => {
   it("word-thief: singular and plural", () => {
-    expect(imposterAwardCopy(award("word-thief", 1))).toEqual({
+    expect(imposterAwardCopy(award("word-thief", 1), en)).toEqual({
       title: "Word thief",
       detail: "Stole the word 1 time",
     });
-    expect(imposterAwardCopy(award("word-thief", 3))).toEqual({
+    expect(imposterAwardCopy(award("word-thief", 3), en)).toEqual({
       title: "Word thief",
       detail: "Stole the word 3 times",
     });
   });
 
   it("master-of-disguise: singular and plural", () => {
-    expect(imposterAwardCopy(award("master-of-disguise", 1))).toEqual({
+    expect(imposterAwardCopy(award("master-of-disguise", 1), en)).toEqual({
       title: "Master of disguise",
       detail: "Slipped away 1 time",
     });
-    expect(imposterAwardCopy(award("master-of-disguise", 4))).toEqual({
+    expect(imposterAwardCopy(award("master-of-disguise", 4), en)).toEqual({
       title: "Master of disguise",
       detail: "Slipped away 4 times",
     });
   });
 
   it("sharpest-eye", () => {
-    expect(imposterAwardCopy(award("sharpest-eye", 2))).toEqual({
+    expect(imposterAwardCopy(award("sharpest-eye", 2), en)).toEqual({
       title: "Sharpest eye",
       detail: "Spotted the imposter 2 times",
     });
   });
 
   it("trusted-crew", () => {
-    expect(imposterAwardCopy(award("trusted-crew", 3))).toEqual({
+    expect(imposterAwardCopy(award("trusted-crew", 3), en)).toEqual({
       title: "Trusted crew",
       detail: "Nobody suspected them in 3 words",
     });
   });
 
   it("returns null for an unknown id", () => {
-    expect(imposterAwardCopy(award("mystery", 1))).toBeNull();
+    expect(imposterAwardCopy(award("mystery", 1), en)).toBeNull();
   });
 });

@@ -12,6 +12,8 @@ import {
   useCue,
   useMusic,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { LAST_CHANCE_MS, POINTS_PER_WORD, type ImposterHostView } from "../state";
 
 function findPlayer(
@@ -22,18 +24,16 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return findPlayer(players, id)?.name ?? t.common.someone;
 }
 
 function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
   return findPlayer(players, id)?.avatar ?? null;
 }
 
-function avatarLabel(players: PlayerSummary[], id: PlayerId | null): string {
-  return `${nameOf(players, id)}'s avatar`;
+function avatarLabel(t: Dictionary, players: PlayerSummary[], id: PlayerId | null): string {
+  return format(t.imposter.avatarAlt, { name: nameOf(t, players, id) });
 }
 
 function money(value: number): string {
@@ -74,8 +74,11 @@ function TypingStatus({
   imposter: string;
   guessLength: number;
 }) {
-  const text =
-    guessLength === 0 ? `${imposter} is thinking…` : `${imposter} is typing…`;
+  const { t } = useLocale();
+  const text = format(
+    guessLength === 0 ? t.imposter.lastChance.thinking : t.imposter.lastChance.typing,
+    { name: imposter },
+  );
   return <div style={{ fontSize: 40, fontWeight: 700 }}>{text}</div>;
 }
 
@@ -88,7 +91,8 @@ function TypingCard({
   players: PlayerSummary[];
   guessLength: number;
 }) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(t, players, view.imposterId);
   return (
     <div
       style={{
@@ -101,7 +105,7 @@ function TypingCard({
       <Avatar
         id={avatarOf(players, view.imposterId)}
         size={220}
-        alt={avatarLabel(players, view.imposterId)}
+        alt={avatarLabel(t, players, view.imposterId)}
       />
       <TypingStatus imposter={imposter} guessLength={guessLength} />
       <LetterTiles length={guessLength} live size={64} />
@@ -124,7 +128,8 @@ export function HostLastChance({
   timerStartedAt,
   clock,
 }: HostLastChanceProps) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(t, players, view.imposterId);
   const guessLength = view.guessLength ?? 0;
   const seconds = Math.round(LAST_CHANCE_MS / 1000);
   useGuessLengthSound(guessLength);
@@ -148,7 +153,7 @@ export function HostLastChance({
           textAlign: "center",
         }}
       >
-        <Marker size={112}>Last chance, {imposter}!</Marker>
+        <Marker size={112}>{format(t.imposter.lastChance.heading, { name: imposter })}</Marker>
         <div
           style={{
             maxWidth: 1500,
@@ -157,8 +162,10 @@ export function HostLastChance({
             lineHeight: 1.25,
           }}
         >
-          {seconds} seconds to guess the crew&apos;s word. A right guess steals{" "}
-          {money(POINTS_PER_WORD)} points.
+          {format(t.imposter.lastChance.countdown, {
+            seconds,
+            points: money(POINTS_PER_WORD),
+          })}
         </div>
       </div>
       <div
@@ -185,7 +192,7 @@ export function HostLastChance({
             startedAt={timerStartedAt}
             ticks
           />
-          <div style={{ fontSize: 34, ...SECONDARY }}>Seconds left</div>
+          <div style={{ fontSize: 34, ...SECONDARY }}>{t.imposter.lastChance.secondsLeft}</div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import userEvent from "@testing-library/user-event";
 import type { ServerClock } from "@opg/ui";
 import type {
@@ -61,6 +62,7 @@ function renderPhone(label: string, send: (action: ImposterAction) => void) {
       send={send}
       stage={null}
     />,
+    { wrapper: LocaleProvider },
   );
 }
 
@@ -205,6 +207,7 @@ describe("clue turn", () => {
         send={mockSend()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(freshVibrate).toHaveBeenCalledWith([90, 60, 90]);
     cleanup();
@@ -220,6 +223,7 @@ describe("clue turn", () => {
         send={mockSend()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(staleVibrate).not.toHaveBeenCalled();
   });
@@ -239,6 +243,7 @@ describe("clue turn", () => {
         send={mockSend()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(vibrate).toHaveBeenCalledWith([90, 60, 90]);
   });
@@ -294,7 +299,9 @@ describe("voting", () => {
         stage={null}
       />
     );
-    const { rerender } = render(phoneFor(selecting.view));
+    const { rerender } = render(phoneFor(selecting.view),
+      { wrapper: LocaleProvider },
+    );
     await userEvent.click(submitButton("Priya's avatar Priya"));
     await userEvent.click(submitButton("Lock in vote"));
     rerender(phoneFor(locked.view));
@@ -328,6 +335,7 @@ describe("voting", () => {
         send={send}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     await userEvent.click(submitButton("Priya's avatar Priya"));
     await userEvent.click(submitButton("Lock in vote"));
@@ -371,6 +379,7 @@ describe("voting", () => {
         send={mockSend()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     expect(lockVibrate).not.toHaveBeenCalled();
 
@@ -407,6 +416,7 @@ describe("voting", () => {
         send={mockSend()}
         stage={null}
       />,
+      { wrapper: LocaleProvider },
     );
     const wrapper = container.querySelector(".opg-phase-enter");
     expect(wrapper).toBeTruthy();
@@ -481,6 +491,18 @@ describe("reveal, last chance and result", () => {
       renderPhone(label, mockSend());
       expect(screen.queryAllByRole("button")).toHaveLength(0);
       cleanup();
+    }
+  });
+});
+
+describe("Phone in Hebrew", () => {
+  it("renders the word card in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderPhone("Phone: Maya crew card", mockSend());
+      expect(screen.getByText("החזיקו כדי להציץ")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
     }
   });
 });

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  crownCopy,
-  finaleBeats,
-  joinNames,
-  ordinal,
-  rankPlayers,
-} from "./finale-timeline";
+import { en, format, he, placeFor } from "@opg/i18n";
+import { crownCopy, finaleBeats, rankPlayers } from "./finale-timeline";
 
 describe("finaleBeats", () => {
   it("lays out the wrap, awards, crown-intro, third, second and crown beats", () => {
@@ -117,57 +112,54 @@ describe("rankPlayers", () => {
 
 describe("crownCopy", () => {
   it("returns null when nobody won", () => {
-    expect(crownCopy([])).toBeNull();
+    expect(crownCopy(en, [])).toBeNull();
   });
 
   it("names one winner", () => {
-    expect(crownCopy(["Dov"])).toBe("Dov wins the crown!");
+    expect(crownCopy(en, ["Dov"])).toBe("Dov wins the crown!");
   });
 
   it("joins two winners with 'and'", () => {
-    expect(crownCopy(["Dov", "Maya"])).toBe("Dov and Maya share the crown!");
+    expect(crownCopy(en, ["Dov", "Maya"])).toBe(
+      "Dov and Maya share the crown!",
+    );
   });
 
   it("joins three or more winners with commas and 'and'", () => {
-    expect(crownCopy(["Dov", "Maya", "Sam"])).toBe(
+    expect(crownCopy(en, ["Dov", "Maya", "Sam"])).toBe(
       "Dov, Maya and Sam share the crown!",
+    );
+  });
+
+  it("names the winner in the reader's language", () => {
+    expect(crownCopy(he, ["Dov"])).toBe(
+      format(he.results.crownWins, { name: "Dov" }),
     );
   });
 });
 
-describe("joinNames", () => {
-  it("returns an empty string for no names", () => {
-    expect(joinNames([])).toBe("");
-  });
-
-  it("returns a single name as-is", () => {
-    expect(joinNames(["Cleo"])).toBe("Cleo");
-  });
-
-  it("joins two names with 'and'", () => {
-    expect(joinNames(["Cleo", "Ben"])).toBe("Cleo and Ben");
-  });
-
-  it("joins three or more names with commas and 'and'", () => {
-    expect(joinNames(["Cleo", "Ben", "Ava"])).toBe("Cleo, Ben and Ava");
-  });
-});
-
-describe("ordinal", () => {
+describe("placeFor", () => {
+  // Every game caps at 8 players, so every rank a room can reach has its own word
+  // rather than a number with a suffix glued on — a rule English has and Hebrew does not.
   it.each([
     [1, "1st"],
     [2, "2nd"],
     [3, "3rd"],
-    [4, "4th"],
-    [11, "11th"],
-    [12, "12th"],
-    [13, "13th"],
-    [21, "21st"],
-    [22, "22nd"],
-    [23, "23rd"],
-    [101, "101st"],
-    [111, "111th"],
-  ])("formats %i as %s", (rank, expected) => {
-    expect(ordinal(rank)).toBe(expected);
+    [8, "8th"],
+  ])("names place %i in English as %s", (rank, expected) => {
+    expect(placeFor(en, rank)).toContain(expected);
+  });
+
+  it("names every reachable place in Hebrew without a suffix rule", () => {
+    for (let rank = 1; rank <= 8; rank += 1) {
+      const place = placeFor(he, rank);
+      expect(place).not.toBe("");
+      expect(place).not.toContain(String(rank));
+    }
+  });
+
+  it("falls back to the numbered form past the last named place", () => {
+    expect(placeFor(en, 9)).toContain("9");
+    expect(placeFor(he, 9)).toContain("9");
   });
 });

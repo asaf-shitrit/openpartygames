@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import { PhoneReveal } from "./PhoneReveal";
 import { REVEAL_PREVIEW_START, imposterPreviews } from "./preview";
@@ -59,6 +60,7 @@ function setup(label: string, elapsedMs: number) {
       clock={clock}
       stage={null}
     />,
+    { wrapper: LocaleProvider },
   );
   return { advanceTo, rendered };
 }
@@ -159,5 +161,20 @@ describe("PhoneReveal, mounted late", () => {
     expect(screen.getByText("Priya was the imposter")).toBeTruthy();
     expect(screen.getByText("Get ready for their last chance.")).toBeTruthy();
     expect(vibrate).not.toHaveBeenCalled();
+  });
+});
+
+describe("PhoneReveal in Hebrew", () => {
+  it("shows the teaser and the spotter result in Hebrew", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { advanceTo } = setup("Phone: Dov reveal", 0);
+      expect(screen.getByText("תסתכלו על הטלוויזיה")).toBeTruthy();
+      advanceTo(8400);
+      expect(screen.getByText("זיהיתם את Priya!")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

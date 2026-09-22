@@ -3,6 +3,8 @@
 import type { PlayerId } from "@opg/protocol";
 import type { Beat, CueId, HapticName, Moment } from "@opg/ui";
 import { spacedBeats } from "@opg/ui";
+import { format } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { RevealOutcome } from "../rules";
 
 export const REVEAL_TIMING = {
@@ -128,53 +130,55 @@ export interface PersonalReveal {
 
 /** This phone's result copy, one row of the reveal storyboard's phone column. */
 export function personalReveal(
+  t: Dictionary,
   caught: boolean,
   role: RevealRole,
   imposterName: string,
 ): PersonalReveal {
+  const r = t.imposter.reveal;
   if (caught) {
     if (role === "imposter") {
       return {
-        headline: "You got caught!",
-        sub: "Get ready to guess the crew's word.",
+        headline: r.caughtHeadline,
+        sub: r.caughtSub,
         haptic: "caught",
         celebrate: false,
       };
     }
     if (role === "spotter") {
       return {
-        headline: `You spotted ${imposterName}!`,
-        sub: "+500 if they miss the word.",
+        headline: format(r.spottedHeadline, { name: imposterName }),
+        sub: r.spottedSub,
         haptic: "good",
         celebrate: true,
       };
     }
     return {
-      headline: `${imposterName} was the imposter`,
-      sub: "Get ready for their last chance.",
+      headline: format(r.crewCaughtHeadline, { name: imposterName }),
+      sub: r.crewCaughtSub,
       haptic: "soft",
       celebrate: false,
     };
   }
   if (role === "imposter") {
     return {
-      headline: "You slipped away!",
-      sub: "+1,000 for you.",
+      headline: r.escapedHeadline,
+      sub: r.escapedSub,
       haptic: "good",
       celebrate: true,
     };
   }
   if (role === "spotter") {
     return {
-      headline: `You were right about ${imposterName}!`,
-      sub: "Not enough votes to catch them.",
+      headline: format(r.spotterEscapedHeadline, { name: imposterName }),
+      sub: r.spotterEscapedSub,
       haptic: "soft",
       celebrate: false,
     };
   }
   return {
-    headline: `${imposterName} got away`,
-    sub: "The imposter keeps the points.",
+    headline: format(r.crewEscapedHeadline, { name: imposterName }),
+    sub: r.crewEscapedSub,
     haptic: "soft",
     celebrate: false,
   };

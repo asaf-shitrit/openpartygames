@@ -1,6 +1,8 @@
 // Hand-drawn countdown circle from design/AVATARS.md. Renders on whole seconds.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { useCue } from "./audio/SoundProvider";
 import type { CueId } from "./audio/types";
 import type { ServerClock } from "./game-ui";
@@ -35,7 +37,7 @@ export const TIMER_URGENT_MS = 5000;
 const RING_PATH =
   "M40 5c19 1 33 15 33 34 0 19-15 34-35 33C19 71 5 57 6 38 7 20 22 5 42 6";
 
-function format(totalSeconds: number): string {
+function formatClock(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
@@ -43,7 +45,7 @@ function format(totalSeconds: number): string {
 
 /** Remaining time as text, or dashes when there is no deadline. */
 function formatLeft(seconds: number | null): string {
-  return seconds === null ? "--:--" : format(seconds);
+  return seconds === null ? "--:--" : formatClock(seconds);
 }
 
 function isUrgentVisual(stage: TimerStage): boolean {
@@ -51,9 +53,11 @@ function isUrgentVisual(stage: TimerStage): boolean {
 }
 
 /** Spoken timer text; urgency is stated so it is never only a color or shape. */
-function timerAriaLabel(seconds: number | null, stage: TimerStage): string {
-  if (seconds === null) return "No timer";
-  return `Time left ${formatLeft(seconds)}${isUrgentVisual(stage) ? ", almost out" : ""}`;
+function timerAriaLabel(seconds: number | null, stage: TimerStage, t: Dictionary["kit"]): string {
+  if (seconds === null) return t.timer.noTimer;
+  const time = formatLeft(seconds);
+  const template = isUrgentVisual(stage) ? t.timer.leftAlmostOut : t.timer.left;
+  return format(template, { time });
 }
 
 interface RingLook {
@@ -280,6 +284,7 @@ export function Timer({
 }: TimerProps) {
   const reduced = useReducedMotion();
   const cue = useCue();
+  const { t } = useLocale();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const digitsRef = useRef<HTMLDivElement | null>(null);
 
@@ -312,7 +317,7 @@ export function Timer({
         ...style,
       }}
       role="timer"
-      aria-label={timerAriaLabel(seconds, stage)}
+      aria-label={timerAriaLabel(seconds, stage, t.kit)}
     >
       <TimerRing
         size={size}

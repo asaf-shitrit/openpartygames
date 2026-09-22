@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { RonAction, RonPlayerView } from "../types";
 import { Phone } from "./Phone";
 import { realOrNahPreviews } from "./preview";
@@ -33,14 +34,16 @@ function renderPhone(
   const { view, room } = phoneSample(label);
   const clock: ServerClock = { now: () => room.serverNow };
   render(
-    <Phone
-      view={view}
-      room={room}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-      send={send}
-    />,
+    <LocaleProvider>
+      <Phone
+        view={view}
+        room={room}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+        send={send}
+      />
+    </LocaleProvider>,
   );
 }
 
@@ -82,6 +85,14 @@ describe("Phone write phase", () => {
     expect(screen.getByText("Waiting for 2 more")).toBeTruthy();
     expect(screen.queryByLabelText("Your lie")).toBeNull();
   });
+
+  it("renders in Hebrew, with the plural wait count", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderPhone("Phone: lie locked in");
+    expect(screen.getByText("השקר ננעל")).toBeTruthy();
+    expect(screen.getByText("מחכים לעוד שניים")).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
+  });
 });
 
 describe("Phone vote phase", () => {
@@ -119,28 +130,32 @@ describe("Phone vote phase", () => {
     const second = phoneSample("Phone: reveal");
     const clock: ServerClock = { now: () => first.room.serverNow };
     const { container, rerender } = render(
-      <Phone
-        view={first.view}
-        room={first.room}
-        deadline={null}
-        timerStartedAt={null}
-        clock={clock}
-        send={vi.fn<(action: RonAction) => void>()}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={first.view}
+          room={first.room}
+          deadline={null}
+          timerStartedAt={null}
+          clock={clock}
+          send={vi.fn<(action: RonAction) => void>()}
+        />
+      </LocaleProvider>,
     );
     const wrapper = container.querySelector(".opg-phase-enter");
     expect(wrapper).toBeTruthy();
     expect(wrapper?.textContent).toContain("Which one is real?");
 
     rerender(
-      <Phone
-        view={second.view}
-        room={second.room}
-        deadline={null}
-        timerStartedAt={second.room.game?.timerStartedAt ?? null}
-        clock={clock}
-        send={vi.fn<(action: RonAction) => void>()}
-      />,
+      <LocaleProvider>
+        <Phone
+          view={second.view}
+          room={second.room}
+          deadline={null}
+          timerStartedAt={second.room.game?.timerStartedAt ?? null}
+          clock={clock}
+          send={vi.fn<(action: RonAction) => void>()}
+        />
+      </LocaleProvider>,
     );
     const next = container.querySelector(".opg-phase-enter");
     expect(next).toBeTruthy();

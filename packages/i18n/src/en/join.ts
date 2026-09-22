@@ -1,0 +1,18 @@
+export const join = {
+  brand: "OpenPartyGames",
+  roomCodeLabel: "Room code",
+  askSomeone: "Ask someone in the room",
+  yourNameLabel: "Your name",
+  yourNamePlaceholder: "Your name",
+  heading: "Join a game",
+  joining: "Joining…",
+  join: "Join",
+  noAccount: "No account needed.",
+  errorCode: "Enter the 4-letter room code.",
+  errorName: "Enter a name.",
+  errorMissing: "That room code doesn't exist.",
+  errorFull: "That room is full or locked.",
+  errorUnreachable: "Could not reach the room. Check your connection.",
+  errorRateLimited: "Too many tries. Wait a moment and try again.",
+  soundsAlikeHint: "Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again.",
+};

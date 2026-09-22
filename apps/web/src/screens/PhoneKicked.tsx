@@ -1,5 +1,6 @@
 // Kicked from the room.
 import type { AvatarId } from "@opg/protocol";
+import { format, useLocale } from "@opg/i18n";
 import { Avatar, Button, Card, Marker, PhoneScreen } from "@opg/ui";
 import { navigate } from "../router";
 
@@ -9,6 +10,7 @@ export interface PhoneKickedProps {
 }
 
 export function PhoneKicked({ name, avatar = null }: PhoneKickedProps) {
+  const { t } = useLocale();
   return (
     <PhoneScreen>
       <div
@@ -32,14 +34,14 @@ export function PhoneKicked({ name, avatar = null }: PhoneKickedProps) {
           }}
         >
           <Avatar id={avatar} size={96} />
-          <Marker size={40}>You were removed</Marker>
+          <Marker size={40}>{t.status.removedHeading}</Marker>
           <div style={{ fontSize: 20, lineHeight: 1.4 }}>
             {name
-              ? `${name}, the VIP removed you from the room.`
-              : "The VIP removed you from the room."}
+              ? format(t.status.removedByNamed, { name })
+              : t.status.removedByAnon}
           </div>
           <Button size="lg" fullWidth onClick={() => navigate("/")}>
-            <span>Join a new room</span>
+            <span>{t.status.joinNewRoom}</span>
           </Button>
         </Card>
       </div>

@@ -2,11 +2,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerView } from "../state";
 import { PhoneVote } from "./PhoneVote";
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
@@ -41,32 +43,47 @@ function baseView(overrides: Partial<DoodlePlayerView> = {}): DoodlePlayerView {
   };
 }
 
+function renderVote(view: DoodlePlayerView, send: (action: DoodleAction) => void = vi.fn<(action: DoodleAction) => void>()) {
+  return render(
+    <LocaleProvider>
+      <PhoneVote view={view} clock={CLOCK} send={send} />
+    </LocaleProvider>,
+  );
+}
+
 describe("PhoneVote", () => {
   it("shows the spectator card for the artist", () => {
-    render(<PhoneVote view={baseView({ isArtist: true })} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderVote(baseView({ isArtist: true }));
     expect(screen.getByText("The room is voting")).toBeTruthy();
   });
 
   it("disables the voter's own option", () => {
-    render(<PhoneVote view={baseView()} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderVote(baseView());
     expect(screen.getByText("a dog on a scooter").closest("button")?.hasAttribute("disabled")).toBe(true);
   });
 
   it("locks in a vote for a non-own option", () => {
     const send = vi.fn<(action: DoodleAction) => void>();
-    render(<PhoneVote view={baseView()} clock={CLOCK} send={send} />);
+    renderVote(baseView(), send);
     fireEvent.click(screen.getByText("a cat riding a skateboard"));
     fireEvent.click(screen.getByText("Lock in"));
     expect(send).toHaveBeenCalledWith({ type: "vote", optionId: "o1" });
   });
 
   it("disables Lock in before a pick is made", () => {
-    render(<PhoneVote view={baseView()} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderVote(baseView());
     expect(screen.getByText("Lock in").closest("button")?.hasAttribute("disabled")).toBe(true);
   });
 
   it("shows the locked card once a vote is cast", () => {
-    render(<PhoneVote view={baseView({ myVote: "o1" })} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />);
+    renderVote(baseView({ myVote: "o1" }));
     expect(screen.getByText("Vote locked in")).toBeTruthy();
+  });
+
+  it("renders in Hebrew when the locale is set", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderVote(baseView());
+    expect(screen.getByText("איזו כותרת אמיתית?")).toBeTruthy();
+    expect(screen.getByText("בחרו אחת. לא את שלכם.")).toBeTruthy();
   });
 });

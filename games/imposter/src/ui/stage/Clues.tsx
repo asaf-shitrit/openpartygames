@@ -6,6 +6,7 @@
 import type { CSSProperties } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
 import { Avatar } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import type { ImposterHostView } from "../../state";
 import { avatarOf, nameOf } from "./common";
 
@@ -75,7 +76,10 @@ function ClueAvatar({
   speaking: boolean;
   players: PlayerSummary[];
 }) {
-  const alt = `${nameOf(players, id)}'s avatar`;
+  const { t } = useLocale();
+  const alt = format(t.imposter.avatarAlt, {
+    name: nameOf(players, id, t.common.someone),
+  });
   if (speaking) {
     return (
       <div style={SPEAKING_RING} data-testid="stage-clues-speaking">
@@ -101,9 +105,10 @@ export interface StageCluesProps {
 
 /** The stage region during clues: small and permanent, a glance rather than a focus. */
 export function StageClues({ view, players }: StageCluesProps) {
+  const { t } = useLocale();
   return (
     <div style={WRAP}>
-      <div style={LABEL}>CLUE ORDER</div>
+      <div style={LABEL}>{t.imposter.clues.orderLabelStage}</div>
       <div style={ROW}>
         {view.clueOrder.map((id) => (
           <ClueAvatar

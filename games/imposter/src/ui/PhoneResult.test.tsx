@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import type { ImposterAction, ImposterPlayerView } from "../state";
@@ -82,6 +83,7 @@ function setup(view: ImposterPlayerView, elapsedMs: number) {
       progress="Word 3 of 6"
       stage={null}
     />,
+    { wrapper: LocaleProvider },
   );
   return { advanceTo, rendered };
 }
@@ -159,5 +161,20 @@ describe("PhoneResult, mounted late", () => {
     expect(screen.getByText("You stole the word!")).toBeTruthy();
     expect(vibrate).not.toHaveBeenCalled();
     expect(rendered.container.querySelector("canvas")).toBeNull();
+  });
+});
+
+describe("PhoneResult in Hebrew", () => {
+  it("teases the steal and lands it in Hebrew", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { advanceTo } = setup(priyaStole, 0);
+      expect(screen.getByText("הניחוש שלכם בפנים…")).toBeTruthy();
+      advanceTo(3900);
+      expect(screen.getByText("גנבתם את המילה!")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

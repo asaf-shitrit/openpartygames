@@ -1,10 +1,12 @@
 // The phone drawing pad: a <canvas> sized to its CSS box, a six-swatch palette, undo and clear.
 // Pointer handling and timing live in ./useDoodlePad; this is the thin render (plan/0003-doodle-bluff.md).
 import type { CSSProperties } from "react";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { ServerClock } from "../game-ui";
 import { SR_ONLY } from "../sr-only";
 import type { ClientRectLike } from "./geometry";
-import { DOODLE_INK_NAMES, DOODLE_INKS } from "./inks";
+import { doodleInkNames, DOODLE_INKS } from "./inks";
 import type { DoodleCanvasContext } from "./paint";
 import type { Doodle } from "./types";
 import { DoodlePalette } from "./DoodlePalette";
@@ -39,9 +41,10 @@ function defaultGetContext(canvas: HTMLCanvasElement): DoodleCanvasContext | nul
   return canvas.getContext("2d");
 }
 
-function ariaLabelFor(prompt: string, strokeCount: number): string {
-  const count = strokeCount === 1 ? "1 stroke" : `${strokeCount} strokes`;
-  return `Your drawing for ${prompt}: ${count} so far`;
+function ariaLabelFor(prompt: string, strokeCount: number, t: Dictionary["kit"]): string {
+  const form = pickPluralByCount(strokeCount, t.doodle.strokes);
+  const strokes = format(form, { count: strokeCount });
+  return format(t.doodle.ariaLabel, { prompt, strokes });
 }
 
 export function DoodlePad({
@@ -49,13 +52,14 @@ export function DoodlePad({
   clock,
   size = DEFAULT_SIZE,
   inks = DOODLE_INKS,
-  inkNames = DOODLE_INK_NAMES,
+  inkNames,
   initialDoodle,
   onChange,
   rectOf = defaultRectOf,
   getContext = defaultGetContext,
   style,
 }: DoodlePadProps) {
+  const { t } = useLocale();
   const {
     canvasRef,
     strokeCount,
@@ -85,10 +89,10 @@ export function DoodlePad({
           borderRadius: "30px 10px 26px 12px / 12px 26px 10px 30px",
         }}
       />
-      <span style={SR_ONLY}>{ariaLabelFor(prompt, strokeCount)}</span>
+      <span style={SR_ONLY}>{ariaLabelFor(prompt, strokeCount, t.kit)}</span>
       <DoodlePalette
         inks={inks}
-        inkNames={inkNames}
+        inkNames={inkNames ?? doodleInkNames(t.kit.ink)}
         selected={selectedInk}
         onSelect={setSelectedInk}
         name="doodle-pad-ink"
@@ -100,17 +104,17 @@ export function DoodlePad({
           disabled={strokeCount === 0}
           style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700 }}
         >
-          Undo
+          {t.kit.doodle.undo}
         </button>
         <button
           type="button"
           onClick={clear}
           onBlur={cancelClear}
           disabled={strokeCount === 0}
-          aria-label={confirmingClear ? "Clear the drawing? Tap again to confirm" : "Clear"}
+          aria-label={confirmingClear ? t.kit.doodle.confirmClear : t.kit.doodle.clear}
           style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700 }}
         >
-          {confirmingClear ? "Tap again to clear" : "Clear"}
+          {confirmingClear ? t.kit.doodle.tapAgainToClear : t.kit.doodle.clear}
         </button>
       </div>
     </div>

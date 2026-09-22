@@ -1,3 +1,4 @@
+import { en, he } from "@opg/i18n";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -66,12 +67,22 @@ describe("registry", () => {
 
   it("describes Most Likely To awards", () => {
     expect(
-      awardCopyFor("most-likely-to", {
-        id: "crowd-reader",
-        playerIds: ["maya"],
-        value: 4,
-      }),
+      awardCopyFor(
+        "most-likely-to",
+        { id: "crowd-reader", playerIds: ["maya"], value: 4 },
+        en,
+      ),
     ).toEqual({ title: "Crowd reader", detail: "Read the room 4 times" });
+  });
+
+  it("describes them in the reader's language", () => {
+    expect(
+      awardCopyFor(
+        "most-likely-to",
+        { id: "crowd-reader", playerIds: ["maya"], value: 4 },
+        he,
+      ),
+    ).toEqual({ title: "קורא/ת קהל", detail: "קרא/ה את החדר 4 פעמים" });
   });
 });
 

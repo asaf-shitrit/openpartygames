@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
+import { LocaleProvider } from "@opg/i18n";
 import { PhoneReveal, ordinalOf } from "./PhoneReveal";
 import { RON_REVEAL_PREVIEW_START, realOrNahPreviews } from "./preview";
 
@@ -61,14 +62,16 @@ function setup(label: string, elapsedMs: number) {
     }
   };
   const rendered = render(
-    <PhoneReveal
-      view={view}
-      players={room.players}
-      myId={room.you}
-      deadline={room.game?.deadline ?? null}
-      timerStartedAt={room.game?.timerStartedAt ?? null}
-      clock={clock}
-    />,
+    <LocaleProvider>
+      <PhoneReveal
+        view={view}
+        players={room.players}
+        myId={room.you}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+      />
+    </LocaleProvider>,
   );
   return { advanceTo, rendered };
 }
@@ -119,6 +122,19 @@ describe("PhoneReveal, sticker layering", () => {
     const order = burst.compareDocumentPosition(content);
     expect((order & Node.DOCUMENT_POSITION_FOLLOWING) !== 0).toBe(true);
     expect(Number(burst.style.zIndex)).toBeLessThan(Number(content.style.zIndex));
+  });
+});
+
+describe("PhoneReveal, Hebrew locale", () => {
+  it("renders the settled personal cards in Hebrew, with a plain-number rank", () => {
+    vi.useFakeTimers();
+    stubVibrate();
+    window.localStorage.setItem("opg:locale", "he");
+    setup("Phone: reveal", 21999);
+    expect(screen.getByText("השקר של Maya תפס אתכם")).toBeTruthy();
+    expect(screen.getByText("רימיתם את Sam וNoa!")).toBeTruthy();
+    expect(screen.getByText(/^האמת: emus$/)).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
   });
 });
 

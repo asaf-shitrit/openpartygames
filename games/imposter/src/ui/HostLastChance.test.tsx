@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { CueId, CueOptions, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
 import type { ImposterHostView } from "../state";
@@ -57,6 +58,7 @@ function renderLastChance(view: ImposterHostView, engine: SoundEngine) {
         clock={CLOCK}
       />
     </SoundProvider>,
+    { wrapper: LocaleProvider },
   );
 }
 
@@ -122,5 +124,18 @@ describe("HostLastChance", () => {
       { cue: "scratch", options: undefined },
       { cue: "pop", options: { gain: 0.5 } },
     ]);
+  });
+});
+
+describe("HostLastChance in Hebrew", () => {
+  it("names the imposter and says thinking in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { view } = hostSample("Host: last chance");
+      renderLastChance({ ...view, guessLength: 0 }, recordingEngine());
+      expect(screen.getByText("Priya חושב/ת…")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
   });
 });

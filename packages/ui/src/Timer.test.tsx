@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { LocaleProvider } from "@opg/i18n";
 import { TIMER_URGENT_MS, Timer } from "./Timer";
 import type { ServerClock } from "./game-ui";
 import { SoundProvider } from "./audio/SoundProvider";
@@ -15,6 +17,15 @@ function firstChild(container: HTMLElement): HTMLElement {
   const node = container.firstElementChild;
   if (!(node instanceof HTMLElement)) throw new Error("expected an element");
   return node;
+}
+
+function renderTimer(ui: ReactElement) {
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
+}
+
+function renderHebrewTimer(ui: ReactElement) {
+  window.localStorage.setItem("opg:locale", "he");
+  return render(<LocaleProvider>{ui}</LocaleProvider>);
 }
 
 const vibrateDescriptor = Object.getOwnPropertyDescriptor(navigator, "vibrate");
@@ -35,7 +46,7 @@ function restoreVibrate(): void {
 
 describe("Timer", () => {
   it("shows dashes and a no-timer label without a deadline", () => {
-    render(<Timer deadline={null} clock={clockAt(0)} />);
+    renderTimer(<Timer deadline={null} clock={clockAt(0)} />);
     expect(screen.getByText("--:--")).toBeTruthy();
     expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
       "No timer",
@@ -44,7 +55,7 @@ describe("Timer", () => {
   });
 
   it("counts down in minutes and seconds", () => {
-    render(<Timer deadline={65_000} clock={clockAt(5_000)} />);
+    renderTimer(<Timer deadline={65_000} clock={clockAt(5_000)} />);
     expect(screen.getByText("1:00")).toBeTruthy();
     expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
       "Time left 1:00",
@@ -52,15 +63,19 @@ describe("Timer", () => {
   });
 
   it("pads seconds and clamps expired timers at zero", () => {
-    const { rerender } = render(<Timer deadline={69_000} clock={clockAt(0)} />);
+    const { rerender } = renderTimer(<Timer deadline={69_000} clock={clockAt(0)} />);
     expect(screen.getByText("1:09")).toBeTruthy();
-    rerender(<Timer deadline={1_000} clock={clockAt(60_000)} />);
+    rerender(
+      <LocaleProvider>
+        <Timer deadline={1_000} clock={clockAt(60_000)} />
+      </LocaleProvider>,
+    );
     expect(screen.getByText("0:00")).toBeTruthy();
     expect(screen.getByRole("timer").getAttribute("data-stage")).toBe("done");
   });
 
   it("uses the small phone styling below 120px", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={15_000} clock={clockAt(0)} size={78} />,
     );
     expect(screen.getByText("0:15").style.fontSize).toBe("22px");
@@ -69,7 +84,7 @@ describe("Timer", () => {
   });
 
   it("uses the big TV styling at 120px and above", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={15_000} clock={clockAt(0)} size={150} />,
     );
     expect(screen.getByText("0:15").style.fontSize).toBe("48px");
@@ -79,16 +94,36 @@ describe("Timer", () => {
   });
 
   it("merges a custom style", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={null} clock={clockAt(0)} style={{ marginTop: 8 }} />,
     );
     expect(firstChild(container).style.marginTop).toBe("8px");
   });
 });
 
+describe("Timer, in Hebrew", () => {
+  afterEach(() => {
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("speaks the no-timer state as an open-ended condition, not an absence", () => {
+    renderHebrewTimer(<Timer deadline={null} clock={clockAt(0)} />);
+    expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+      "זמן פתוח",
+    );
+  });
+
+  it("speaks the remaining time and the almost-out state", () => {
+    renderHebrewTimer(<Timer deadline={4_000} clock={clockAt(0)} />);
+    expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
+      "נותרו 0:04, כמעט נגמר",
+    );
+  });
+});
+
 describe("Timer urgency", () => {
   it("pulses and reddens the ring in the last five seconds", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={4_000} clock={clockAt(0)} />,
     );
     const timer = screen.getByRole("timer");
@@ -107,14 +142,14 @@ describe("Timer urgency", () => {
   });
 
   it("treats exactly five seconds left as urgent", () => {
-    render(<Timer deadline={TIMER_URGENT_MS} clock={clockAt(0)} />);
+    renderTimer(<Timer deadline={TIMER_URGENT_MS} clock={clockAt(0)} />);
     expect(screen.getByRole("timer").getAttribute("data-urgent")).toBe(
       "true",
     );
   });
 
   it("stays calm above the urgent threshold", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={TIMER_URGENT_MS + 1_000} clock={clockAt(0)} />,
     );
     const timer = screen.getByRole("timer");
@@ -128,7 +163,7 @@ describe("Timer urgency", () => {
   });
 
   it("thickens the hurry-stage ring by one", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={9_000} clock={clockAt(0)} size={150} />,
     );
     const timer = screen.getByRole("timer");
@@ -138,7 +173,7 @@ describe("Timer urgency", () => {
   });
 
   it("does not pulse an already expired timer", () => {
-    render(<Timer deadline={1_000} clock={clockAt(60_000)} />);
+    renderTimer(<Timer deadline={1_000} clock={clockAt(60_000)} />);
     const timer = screen.getByRole("timer");
     expect(timer.getAttribute("data-urgent")).toBeNull();
     expect(timer.getAttribute("data-stage")).toBe("done");
@@ -146,7 +181,7 @@ describe("Timer urgency", () => {
   });
 
   it("thickens the big TV ring by two while urgent", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={2_000} clock={clockAt(0)} size={150} />,
     );
     const timer = screen.getByRole("timer");
@@ -157,7 +192,7 @@ describe("Timer urgency", () => {
   });
 
   it("scales up the digits and marks the aria-label in the final stage", () => {
-    render(<Timer deadline={2_000} clock={clockAt(0)} />);
+    renderTimer(<Timer deadline={2_000} clock={clockAt(0)} />);
     expect(screen.getByRole("timer").getAttribute("aria-label")).toBe(
       "Time left 0:02, almost out",
     );
@@ -176,7 +211,7 @@ describe("Timer cadence", () => {
   it("renders aligned to whole seconds, not before", () => {
     let now = 7_500;
     const clock: ServerClock = { now: () => now };
-    render(<Timer deadline={10_000} clock={clock} />);
+    renderTimer(<Timer deadline={10_000} clock={clock} />);
     expect(screen.getByText("0:03")).toBeTruthy();
 
     // The next second boundary is 500ms away (now=8000, left=2000 -> "0:02").
@@ -194,7 +229,7 @@ describe("Timer cadence", () => {
   });
 
   it("does not schedule a timer without a deadline", () => {
-    render(<Timer deadline={null} clock={clockAt(0)} />);
+    renderTimer(<Timer deadline={null} clock={clockAt(0)} />);
     act(() => {
       vi.advanceTimersByTime(5_000);
     });
@@ -204,7 +239,7 @@ describe("Timer cadence", () => {
   it("moves through every stage as time passes", () => {
     let now = 0;
     const clock: ServerClock = { now: () => now };
-    render(<Timer deadline={12_000} clock={clock} />);
+    renderTimer(<Timer deadline={12_000} clock={clock} />);
     const timer = screen.getByRole("timer");
     expect(timer.getAttribute("data-stage")).toBe("calm");
 
@@ -248,7 +283,7 @@ describe("Timer ticks", () => {
     let now = 0;
     const clock: ServerClock = { now: () => now };
     const engine = new FakeSoundEngine();
-    render(
+    renderTimer(
       <SoundProvider engine={engine}>
         <Timer deadline={11_000} clock={clock} ticks />
       </SoundProvider>,
@@ -273,7 +308,7 @@ describe("Timer ticks", () => {
     let now = 0;
     const clock: ServerClock = { now: () => now };
     const engine = new FakeSoundEngine();
-    render(
+    renderTimer(
       <SoundProvider engine={engine}>
         <Timer deadline={11_000} clock={clock} />
       </SoundProvider>,
@@ -289,7 +324,7 @@ describe("Timer ticks", () => {
     let now = 4_000;
     const clock: ServerClock = { now: () => now };
     const engine = new FakeSoundEngine();
-    render(
+    renderTimer(
       <SoundProvider engine={engine}>
         <Timer deadline={11_000} clock={clock} ticks />
       </SoundProvider>,
@@ -318,7 +353,7 @@ describe("Timer haptics", () => {
     const vibrate = stubVibrate();
     let now = 0;
     const clock: ServerClock = { now: () => now };
-    render(<Timer deadline={4_000} clock={clock} haptics />);
+    renderTimer(<Timer deadline={4_000} clock={clock} haptics />);
     expect(vibrate).not.toHaveBeenCalled();
 
     // 4s left at mount (urgent, not final yet): entering final at 3s fires immediately,
@@ -346,7 +381,7 @@ describe("Timer haptics", () => {
     const vibrate = stubVibrate();
     let now = 2_000;
     const clock: ServerClock = { now: () => now };
-    render(<Timer deadline={4_000} clock={clock} haptics />);
+    renderTimer(<Timer deadline={4_000} clock={clock} haptics />);
     expect(vibrate).not.toHaveBeenCalled();
 
     now = 3_000;
@@ -360,7 +395,7 @@ describe("Timer haptics", () => {
     const vibrate = stubVibrate();
     let now = 1_000;
     const clock: ServerClock = { now: () => now };
-    render(<Timer deadline={4_000} clock={clock} />);
+    renderTimer(<Timer deadline={4_000} clock={clock} />);
     now = 2_000;
     act(() => {
       vi.advanceTimersByTime(1_000);
@@ -371,14 +406,14 @@ describe("Timer haptics", () => {
 
 describe("Timer ring", () => {
   it("without startedAt, there is no progress circle", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={10_000} clock={clockAt(0)} />,
     );
     expect(container.querySelectorAll("path")).toHaveLength(1);
   });
 
   it("draws a draining progress circle with a duration and negative delay", () => {
-    const { container } = render(
+    const { container } = renderTimer(
       <Timer deadline={10_000} clock={clockAt(3_000)} startedAt={0} />,
     );
     const paths = container.querySelectorAll("path");

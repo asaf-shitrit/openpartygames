@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { Icon, Marker, PhaseEnter, PhoneScreen, PhoneStrip } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type { DoodleAction, DoodleHostView, DoodlePlayerView } from "../state";
 import { HostGallery } from "./HostGallery";
 import { PhoneDraw } from "./PhoneDraw";
@@ -22,18 +24,19 @@ export interface PhoneProps {
   stage: DoodleHostView | null;
 }
 
-function progressFor(view: DoodlePlayerView): string {
-  if (view.phase === "draw") return "Draw";
-  if (view.phase === "gallery") return "The gallery";
-  return `Drawing ${view.roundNumber} of ${view.roundCount}`;
+function progressFor(t: Dictionary, view: DoodlePlayerView): string {
+  if (view.phase === "draw") return t.doodleBluff.progressDraw;
+  if (view.phase === "gallery") return t.doodleBluff.progressGallery;
+  return format(t.doodleBluff.progressRound, { round: view.roundNumber, count: view.roundCount });
 }
 
 function LookUp() {
+  const { t } = useLocale();
   return (
     <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, textAlign: "center" }}>
       <Icon name="monitor" size={48} color="var(--opg-ink-secondary)" />
-      <Marker size={30}>Look up</Marker>
-      <div style={{ fontSize: 18, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>The gallery is on the TV.</div>
+      <Marker size={30}>{t.doodleBluff.lookUp}</Marker>
+      <div style={{ fontSize: 18, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.galleryOnTv}</div>
     </div>
   );
 }
@@ -57,7 +60,8 @@ function renderPhase(props: PhoneProps): ReactNode {
 }
 
 function Strip({ view }: { view: DoodlePlayerView }) {
-  return <PhoneStrip gameName="Doodle Bluff" progress={progressFor(view)} />;
+  const { t } = useLocale();
+  return <PhoneStrip gameName={t.doodleBluff.title} progress={progressFor(t, view)} />;
 }
 
 export function Phone(props: PhoneProps) {

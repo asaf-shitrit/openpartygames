@@ -1,6 +1,7 @@
 // TV and phone chrome: headers, phone strip and the "you" player chip.
 import type { ReactNode } from "react";
 import type { AvatarId } from "@opg/protocol";
+import { format, useLocale } from "@opg/i18n";
 import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
@@ -18,6 +19,7 @@ function RoomChip({
   height: number;
   fontSize: number;
 }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -34,7 +36,7 @@ function RoomChip({
       }}
     >
       <span style={{ fontWeight: 400, color: "var(--opg-ink-secondary)" }}>
-        Room
+        {t.kit.room}
       </span>
       <span style={{ fontWeight: 700 }}>{code}</span>
     </div>
@@ -94,15 +96,20 @@ interface SoundChipCopy {
 }
 
 /** "Tap for sound" until the browser unlocks the audio context, then the mute toggle. */
-function soundChipCopy(status: SoundStatus, muted: boolean): SoundChipCopy {
-  if (muted) return { icon: "sound-off", label: "Sound off" };
-  if (status === "locked") return { icon: "sound-off", label: "Tap for sound" };
-  return { icon: "sound", label: "Sound on" };
+function soundChipCopy(
+  status: SoundStatus,
+  muted: boolean,
+  t: ReturnType<typeof useLocale>["t"],
+): SoundChipCopy {
+  if (muted) return { icon: "sound-off", label: t.kit.sound.off };
+  if (status === "locked") return { icon: "sound-off", label: t.kit.sound.tapForSound };
+  return { icon: "sound", label: t.kit.sound.on };
 }
 
 function SoundChip({ height, fontSize }: { height: number; fontSize: number }) {
   const sound = useSound();
-  const copy = soundChipCopy(sound.status, sound.muted);
+  const { t } = useLocale();
+  const copy = soundChipCopy(sound.status, sound.muted, t);
   function onClick(): void {
     // The click is a user gesture, so a locked context resumes here whatever the mute state.
     if (sound.status === "locked") sound.unlock();
@@ -128,11 +135,12 @@ function FullscreenChip({
   fontSize: number;
 }) {
   const { supported, active, enter } = useFullscreen();
+  const { t } = useLocale();
   if (!supported || active) return null;
   return (
     <HeaderChip
       icon="expand"
-      label="Full screen"
+      label={t.kit.fullScreen}
       onClick={enter}
       height={height}
       fontSize={fontSize}
@@ -252,6 +260,7 @@ export interface PhoneStripProps {
 
 /** Phone in-game top strip: game name, progress, an optional room code, and the timer. */
 export function PhoneStrip({ gameName, progress, right, roomCode }: PhoneStripProps) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -279,7 +288,7 @@ export function PhoneStrip({ gameName, progress, right, roomCode }: PhoneStripPr
         ) : null}
         {roomCode ? (
           <div style={{ fontSize: 16, fontWeight: 700, color: "#8A8A8A" }}>
-            Room {roomCode}
+            {format(t.kit.roomCode, { code: roomCode })}
           </div>
         ) : null}
       </div>
@@ -296,12 +305,13 @@ export interface PlayerChipProps {
 
 /** Phone bottom "you" chip: avatar + name. */
 export function PlayerChip({ name, avatar, size = 50 }: PlayerChipProps) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <Avatar
         id={avatar}
         size={size}
-        alt={avatar ? `${name}'s avatar` : undefined}
+        alt={avatar ? format(t.kit.playerAvatarAlt, { name }) : undefined}
       />
       <div style={{ fontSize: 21, fontWeight: 700 }}>{name}</div>
     </div>

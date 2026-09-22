@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ImposterHostView } from "../../state";
 import { imposterPreviews } from "../preview";
 import { StageVote } from "./Vote";
@@ -20,7 +21,9 @@ function hostVoteView(): ImposterHostView {
 describe("StageVote", () => {
   it("shows how many have voted", () => {
     const view = hostVoteView();
-    render(<StageVote view={view} players={[]} />);
+    render(<StageVote view={view} players={[]} />,
+      { wrapper: LocaleProvider },
+    );
     expect(
       screen.getByText(`${view.votedIds.length} of ${view.playerIds.length}`),
     ).toBeTruthy();
@@ -28,7 +31,9 @@ describe("StageVote", () => {
 
   it("marks one avatar per voter, never their target", () => {
     const view = hostVoteView();
-    render(<StageVote view={view} players={[]} />);
+    render(<StageVote view={view} players={[]} />,
+      { wrapper: LocaleProvider },
+    );
     expect(screen.getAllByTestId("stage-vote-voted")).toHaveLength(
       view.votedIds.length,
     );
@@ -36,7 +41,9 @@ describe("StageVote", () => {
 
   it("marks nobody voted when votedIds is empty", () => {
     const view = { ...hostVoteView(), votedIds: [] };
-    render(<StageVote view={view} players={[]} />);
+    render(<StageVote view={view} players={[]} />,
+      { wrapper: LocaleProvider },
+    );
     expect(screen.queryAllByTestId("stage-vote-voted")).toHaveLength(0);
     expect(screen.getByText(`0 of ${view.playerIds.length}`)).toBeTruthy();
   });

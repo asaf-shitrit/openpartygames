@@ -19,6 +19,8 @@ import {
   PRESSABLE_CLASS,
   Switch,
 } from "@opg/ui";
+import { format, joinNamesOr, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { QrCode } from "./shared";
 import { gameIconFor } from "../games";
 
@@ -33,10 +35,10 @@ export interface PhoneVipControlsProps {
   onStartGame: () => void;
 }
 
-function ratingLabel(rating: Rating): string {
-  if (rating === "adult") return "Adult";
-  if (rating === "teen") return "Teen";
-  return "Family";
+function ratingLabel(t: Dictionary, rating: Rating): string {
+  if (rating === "adult") return t.picker.ratingAdult;
+  if (rating === "teen") return t.picker.ratingTeen;
+  return t.picker.ratingFamily;
 }
 
 /** A game that has not opted into a room with no shared screen. */
@@ -44,34 +46,36 @@ function isBlocked(game: GameSummary, sharedScreen: boolean): boolean {
   return !game.noTv && !sharedScreen;
 }
 
-function startDisabledReason(
-  selectedGame: GameSummary | null,
-  sharedScreen: boolean,
-  playerCount: number,
-  packCount: number,
-): string | undefined {
-  if (!selectedGame) return "Pick a game first";
+interface DisabledCheck {
+  t: Dictionary;
+  selectedGame: GameSummary | null;
+  sharedScreen: boolean;
+  playerCount: number;
+  packCount: number;
+}
+
+function startDisabledReason(check: DisabledCheck): string | undefined {
+  const { t, selectedGame, sharedScreen, playerCount, packCount } = check;
+  if (!selectedGame) return t.picker.pickGameFirst;
   if (isBlocked(selectedGame, sharedScreen)) {
-    return `${selectedGame.name} plays on a shared screen. Turn that on to start it.`;
+    return format(t.picker.gameNeedsSharedScreen, { game: selectedGame.name });
   }
   if (playerCount < selectedGame.minPlayers) {
-    return `Need at least ${selectedGame.minPlayers} players`;
+    return format(t.picker.needAtLeastPlayers, {
+      count: selectedGame.minPlayers,
+    });
   }
-  if (packCount === 0) return "Turn on at least one pack";
+  if (packCount === 0) return t.picker.turnOnPack;
   return undefined;
 }
 
-/** "Imposter", "Imposter or Most Likely To", "Imposter, Most Likely To or X". */
-function joinWithOr(names: string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
-}
-
 function PlayerRow({
+  t,
   player,
   isYou,
   onKick,
 }: {
+  t: Dictionary;
   player: PlayerSummary;
   isYou: boolean;
   onKick: (id: string) => void;
@@ -81,7 +85,7 @@ function PlayerRow({
       <Avatar id={player.avatar} size={36} />
       <div style={{ flexGrow: 1, fontSize: 19, fontWeight: 700 }}>
         {player.name}
-        {player.isVip ? " (VIP)" : ""}
+        {player.isVip ? t.picker.vipSuffix : ""}
       </div>
       {isYou ? (
         <div
@@ -92,23 +96,29 @@ function PlayerRow({
             color: "var(--opg-ink-secondary)",
           }}
         >
-          You
+          {t.picker.you}
         </div>
       ) : (
         <Button
           size="md"
           variant="secondary"
           onClick={() => onKick(player.id)}
-          aria-label={`Kick ${player.name}`}
+          aria-label={format(t.picker.kickAriaLabel, { name: player.name })}
         >
-          <span>Kick</span>
+          <span>{t.picker.kick}</span>
         </Button>
       )}
     </div>
   );
 }
 
-function GameButtonReason({ blocked }: { blocked: boolean }) {
+function GameButtonReason({
+  t,
+  blocked,
+}: {
+  t: Dictionary;
+  blocked: boolean;
+}) {
   if (!blocked) return null;
   return (
     <div
@@ -122,17 +132,19 @@ function GameButtonReason({ blocked }: { blocked: boolean }) {
       }}
     >
       <Icon name="monitor" size={18} />
-      <div>Plays on a shared screen.</div>
+      <div>{t.picker.sharedScreenOnly}</div>
     </div>
   );
 }
 
 function GameButton({
+  t,
   game,
   selected,
   blocked,
   onPick,
 }: {
+  t: Dictionary;
   game: GameSummary;
   selected: boolean;
   blocked: boolean;
@@ -151,7 +163,7 @@ function GameButton({
         display: "flex",
         flexDirection: "column",
         gap: 4,
-        textAlign: "left",
+        textAlign: "start",
         opacity: blocked ? 0.45 : 1,
         background: selected ? "var(--opg-highlight-soft)" : "var(--opg-card)",
         border: selected
@@ -182,7 +194,7 @@ function GameButton({
             }}
           >
             <Icon name="check" size={22} color="var(--opg-marker)" />
-            <div>Picked</div>
+            <div>{t.picker.picked}</div>
           </div>
         ) : null}
       </div>
@@ -196,19 +208,21 @@ function GameButton({
           color: "var(--opg-ink-secondary)",
         }}
       >
-        about {game.minutes} min
+        {format(t.picker.aboutMinutes, { minutes: game.minutes })}
       </div>
-      <GameButtonReason blocked={blocked} />
+      <GameButtonReason t={t} blocked={blocked} />
     </button>
   );
 }
 
 function GamePicker({
+  t,
   games,
   selectedGameId,
   sharedScreen,
   onPickGame,
 }: {
+  t: Dictionary;
   games: GameSummary[];
   selectedGameId: string;
   sharedScreen: boolean;
@@ -217,7 +231,7 @@ function GamePicker({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <Marker size={24} style={{ lineHeight: 1.15 }}>
-        Pick a game
+        {t.picker.pickAGame}
       </Marker>
       <div
         style={{
@@ -232,6 +246,7 @@ function GamePicker({
         {games.map((game) => (
           <GameButton
             key={game.id}
+            t={t}
             game={game}
             selected={game.id === selectedGameId}
             blocked={isBlocked(game, sharedScreen)}
@@ -244,10 +259,12 @@ function GamePicker({
 }
 
 function PackRow({
+  t,
   pack,
   last,
   onSetPack,
 }: {
+  t: Dictionary;
   pack: PackSummary;
   last: boolean;
   onSetPack: (id: string, enabled: boolean) => void;
@@ -277,7 +294,7 @@ function PackRow({
         fontSize={16}
         style={{ padding: "0 8px", borderWidth: 2 }}
       >
-        {ratingLabel(pack.rating)}
+        {ratingLabel(t, pack.rating)}
       </Chip>
       <Switch
         checked={pack.enabled}
@@ -290,16 +307,18 @@ function PackRow({
 }
 
 function PackList({
+  t,
   packs,
   onSetPack,
 }: {
+  t: Dictionary;
   packs: PackSummary[];
   onSetPack: (id: string, enabled: boolean) => void;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <Marker size={24} style={{ lineHeight: 1.15 }}>
-        Packs
+        {t.picker.packs}
       </Marker>
       <Card
         variant="M"
@@ -308,6 +327,7 @@ function PackList({
         {packs.map((pack, index) => (
           <PackRow
             key={pack.id}
+            t={t}
             pack={pack}
             last={index === packs.length - 1}
             onSetPack={onSetPack}
@@ -321,7 +341,7 @@ function PackList({
               padding: "14px 0",
             }}
           >
-            No packs for this game yet.
+            {t.picker.noPacksYet}
           </div>
         ) : null}
       </Card>
@@ -332,23 +352,31 @@ function PackList({
           color: "var(--opg-ink-secondary)",
         }}
       >
-        Adult packs stay off unless the VIP turns them on.
+        {t.picker.adultPacksNote}
       </div>
     </div>
   );
 }
 
-function sharedScreenHint(sharedScreen: boolean, blockedNames: string[]): string {
-  if (sharedScreen) return "A shared screen is on for this room.";
-  if (blockedNames.length === 0) return "Play on a TV or laptop.";
-  return `Play on a TV or laptop — adds ${joinWithOr(blockedNames)}`;
+function sharedScreenHint(
+  t: Dictionary,
+  sharedScreen: boolean,
+  blockedNames: string[],
+): string {
+  if (sharedScreen) return t.picker.sharedScreenOnRoom;
+  if (blockedNames.length === 0) return t.picker.playOnTvLaptop;
+  return format(t.picker.playOnTvLaptopAdds, {
+    names: joinNamesOr(t.common, blockedNames),
+  });
 }
 
 function SharedScreenToggle({
+  t,
   sharedScreen,
   blockedNames,
   onSetSharedScreen,
 }: {
+  t: Dictionary;
   sharedScreen: boolean;
   blockedNames: string[];
   onSetSharedScreen: (value: boolean) => void;
@@ -373,7 +401,7 @@ function SharedScreenToggle({
         }}
       >
         <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
-          Add a shared screen
+          {t.picker.addSharedScreen}
         </div>
         <div
           style={{
@@ -382,13 +410,13 @@ function SharedScreenToggle({
             color: "var(--opg-ink-secondary)",
           }}
         >
-          {sharedScreenHint(sharedScreen, blockedNames)}
+          {sharedScreenHint(t, sharedScreen, blockedNames)}
         </div>
       </div>
       <Switch
         checked={sharedScreen}
         size={30}
-        label="Add a shared screen"
+        label={t.picker.addSharedScreen}
         onChange={onSetSharedScreen}
       />
     </Card>
@@ -396,9 +424,11 @@ function SharedScreenToggle({
 }
 
 function LockCard({
+  t,
   locked,
   onSetLocked,
 }: {
+  t: Dictionary;
   locked: boolean;
   onSetLocked: (locked: boolean) => void;
 }) {
@@ -422,7 +452,7 @@ function LockCard({
         }}
       >
         <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
-          Lock room
+          {t.picker.lockRoom}
         </div>
         <div
           style={{
@@ -431,13 +461,13 @@ function LockCard({
             color: "var(--opg-ink-secondary)",
           }}
         >
-          Stops new people joining
+          {t.picker.lockRoomHint}
         </div>
       </div>
       <Switch
         checked={locked}
         size={30}
-        label="Lock room"
+        label={t.picker.lockRoom}
         onChange={(value) => onSetLocked(value)}
       />
     </Card>
@@ -445,10 +475,12 @@ function LockCard({
 }
 
 function PlayersCard({
+  t,
   players,
   you,
   onKick,
 }: {
+  t: Dictionary;
   players: PlayerSummary[];
   you: string;
   onKick: (id: string) => void;
@@ -456,7 +488,7 @@ function PlayersCard({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <Marker size={24} style={{ lineHeight: 1.15 }}>
-        Players ({players.length})
+        {format(t.picker.playersHeading, { count: players.length })}
       </Marker>
       <Card
         variant="M"
@@ -473,6 +505,7 @@ function PlayersCard({
             }}
           >
             <PlayerRow
+              t={t}
               player={player}
               isYou={player.id === you}
               onKick={onKick}
@@ -484,7 +517,40 @@ function PlayersCard({
   );
 }
 
+function StartButtonError({ error }: { error: string | null }) {
+  if (!error) return null;
+  return (
+    <div
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        color: "var(--opg-marker)",
+        textAlign: "center",
+      }}
+    >
+      {error}
+    </div>
+  );
+}
+
+function StartButtonLabel({
+  t,
+  selectedGame,
+}: {
+  t: Dictionary;
+  selectedGame: GameSummary | null;
+}) {
+  return (
+    <span>
+      {selectedGame
+        ? format(t.picker.startNamedGame, { game: selectedGame.name })
+        : t.picker.startGame}
+    </span>
+  );
+}
+
 function StartButton({
+  t,
   selectedGame,
   disabledReason,
   minPlayers,
@@ -493,6 +559,7 @@ function StartButton({
   error,
   onStartGame,
 }: {
+  t: Dictionary;
   selectedGame: GameSummary | null;
   disabledReason: string | undefined;
   minPlayers: number;
@@ -521,18 +588,7 @@ function StartButton({
         background: "var(--opg-paper)",
       }}
     >
-      {error ? (
-        <div
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: "var(--opg-marker)",
-            textAlign: "center",
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
+      <StartButtonError error={error} />
       <Button
         size="xl"
         fullWidth
@@ -540,10 +596,12 @@ function StartButton({
         disabledReason={disabledReason}
         onClick={onStartGame}
       >
-        <Icon name="arrow-right" size={24} color="var(--opg-paper)" />
-        <span>
-          {selectedGame ? `Start ${selectedGame.name}` : "Start game"}
-        </span>
+        <Icon
+          name="arrow-right"
+          size={24}
+          color="var(--opg-paper)"
+        />
+        <StartButtonLabel t={t} selectedGame={selectedGame} />
       </Button>
       <div
         style={{
@@ -553,14 +611,18 @@ function StartButton({
           color: "var(--opg-ink-secondary)",
         }}
       >
-        {minPlayers}–{maxPlayers} players · {activeCount} here
+        {format(t.picker.playerRangeHere, {
+          min: minPlayers,
+          max: maxPlayers,
+          count: activeCount,
+        })}
       </div>
     </div>
   );
 }
 
 /** The room code as separated letters ("B · K · T · Z"), read aloud on the starter's phone. */
-function RoomCodeHero({ code }: { code: string }) {
+function RoomCodeHero({ t, code }: { t: Dictionary; code: string }) {
   return (
     <Card
       variant="L"
@@ -581,7 +643,7 @@ function RoomCodeHero({ code }: { code: string }) {
           color: "var(--opg-ink-secondary)",
         }}
       >
-        Your room code
+        {t.picker.yourRoomCode}
       </div>
       <div
         className="opg-marker"
@@ -608,13 +670,13 @@ function RoomCodeHero({ code }: { code: string }) {
           </span>
         ))}
       </div>
-      <JoinShare code={code} />
+      <JoinShare t={t} code={code} />
     </Card>
   );
 }
 
 /** A QR to scan and a link to send, for anyone not close enough to hear the code. */
-function JoinShare({ code }: { code: string }) {
+function JoinShare({ t, code }: { t: Dictionary; code: string }) {
   const [copied, setCopied] = useState(false);
   const joinUrl = `${window.location.origin}/${code}`;
 
@@ -625,7 +687,9 @@ function JoinShare({ code }: { code: string }) {
     // other branch unreachable, since the DOM lib declares `share` as always present.
     const canShare = "share" in navigator;
     if (canShare) {
-      void navigator.share({ title: "Join my game", url: joinUrl }).catch(noop);
+      void navigator
+        .share({ title: t.picker.shareTitle, url: joinUrl })
+        .catch(noop);
       return;
     }
     void navigator.clipboard
@@ -648,7 +712,7 @@ function JoinShare({ code }: { code: string }) {
         type="button"
         className={PRESSABLE_CLASS}
         onClick={share}
-        aria-label="Share the link to join this room"
+        aria-label={t.picker.shareAriaLabel}
         style={{
           padding: 8,
           background: "var(--opg-paper)",
@@ -667,7 +731,7 @@ function JoinShare({ code }: { code: string }) {
           color: "var(--opg-ink-secondary)",
         }}
       >
-        {copied ? "Link copied" : "Scan it, or tap to share"}
+        {copied ? t.picker.linkCopied : t.picker.scanOrTap}
       </div>
     </div>
   );
@@ -682,8 +746,40 @@ function gameLimits(game: GameSummary | null) {
 }
 
 /** "1 player", "2 players". */
-export function formatPlayerCount(count: number): string {
-  return `${count} ${count === 1 ? "player" : "players"}`;
+export function formatPlayerCount(t: Dictionary, count: number): string {
+  return format(pickPluralByCount(count, t.picker.playerCount), { count });
+}
+
+function VipHeader({
+  t,
+  code,
+  playerCount,
+}: {
+  t: Dictionary;
+  code: string;
+  playerCount: number;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
+        <Marker size={34} style={{ lineHeight: 1.15 }}>
+          {t.picker.youreVip}
+        </Marker>
+      </Highlight>
+      <div
+        style={{
+          fontSize: 17,
+          fontWeight: 700,
+          color: "var(--opg-ink-secondary)",
+        }}
+      >
+        {format(t.picker.roomLine, {
+          code,
+          players: formatPlayerCount(t, playerCount),
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function PhoneVipControls({
@@ -696,57 +792,52 @@ export function PhoneVipControls({
   onKick,
   onStartGame,
 }: PhoneVipControlsProps) {
+  const { t } = useLocale();
   const selectedGame =
     view.games.find((g) => g.id === view.selectedGameId) ?? null;
   const activePlayers = view.players.filter((p) => !p.waitingForNextGame);
   const enabledPacks = view.packs.filter((p) => p.enabled);
   const limits = gameLimits(selectedGame);
-  const disabledReason = startDisabledReason(
+  const disabledReason = startDisabledReason({
+    t,
     selectedGame,
-    view.sharedScreen,
-    activePlayers.length,
-    enabledPacks.length,
-  );
+    sharedScreen: view.sharedScreen,
+    playerCount: activePlayers.length,
+    packCount: enabledPacks.length,
+  });
   const blockedGameNames = view.games
     .filter((g) => isBlocked(g, view.sharedScreen))
     .map((g) => g.name);
 
   return (
     <PhoneScreen>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-          <Marker size={34} style={{ lineHeight: 1.15 }}>
-            You're the VIP
-          </Marker>
-        </Highlight>
-        <div
-          style={{
-            fontSize: 17,
-            fontWeight: 700,
-            color: "var(--opg-ink-secondary)",
-          }}
-        >
-          Room {view.code} · {formatPlayerCount(view.players.length)}
-        </div>
-      </div>
+      <VipHeader t={t} code={view.code} playerCount={view.players.length} />
 
-      {view.sharedScreen ? null : <RoomCodeHero code={view.code} />}
+      {view.sharedScreen ? null : <RoomCodeHero t={t} code={view.code} />}
 
       <GamePicker
+        t={t}
         games={view.games}
         selectedGameId={view.selectedGameId}
         sharedScreen={view.sharedScreen}
         onPickGame={onPickGame}
       />
       <SharedScreenToggle
+        t={t}
         sharedScreen={view.sharedScreen}
         blockedNames={blockedGameNames}
         onSetSharedScreen={onSetSharedScreen}
       />
-      <PackList packs={view.packs} onSetPack={onSetPack} />
-      <LockCard locked={view.locked} onSetLocked={onSetLocked} />
-      <PlayersCard players={view.players} you={view.you} onKick={onKick} />
+      <PackList t={t} packs={view.packs} onSetPack={onSetPack} />
+      <LockCard t={t} locked={view.locked} onSetLocked={onSetLocked} />
+      <PlayersCard
+        t={t}
+        players={view.players}
+        you={view.you}
+        onKick={onKick}
+      />
       <StartButton
+        t={t}
         selectedGame={selectedGame}
         disabledReason={disabledReason}
         minPlayers={limits.min}

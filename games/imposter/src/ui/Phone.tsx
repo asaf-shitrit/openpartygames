@@ -19,6 +19,8 @@ import {
   Timer,
   useBuzz,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import type {
   ImposterAction,
   ImposterHostView,
@@ -40,10 +42,8 @@ function findPlayer(
   return players.find((player) => player.id === id) ?? null;
 }
 
-function nameOf(players: PlayerSummary[], id: PlayerId | null): string {
-  const player = findPlayer(players, id);
-  if (player) return player.name;
-  return id ?? "Someone";
+function nameOf(players: PlayerSummary[], id: PlayerId | null, someone: string): string {
+  return findPlayer(players, id)?.name ?? someone;
 }
 
 function avatarOf(players: PlayerSummary[], id: PlayerId | null) {
@@ -54,24 +54,28 @@ function displayName(me: PlayerSummary | null): string {
   return me?.name ?? "?";
 }
 
-function avatarAlt(me: PlayerSummary | null): string | undefined {
-  return me === null ? undefined : `${me.name}'s avatar`;
+function avatarAlt(t: Dictionary, me: PlayerSummary | null): string | undefined {
+  return me === null ? undefined : format(t.imposter.avatarAlt, { name: me.name });
 }
 
 /** The result phase's own progress label: "Word N of M", or a heads-up on the last word. */
-function resultProgress(view: ImposterPlayerView): string {
-  if (view.wordNumber >= view.wordCount) return "Final scores next";
-  return `Word ${view.wordNumber} of ${view.wordCount}`;
+function resultProgress(t: Dictionary, view: ImposterPlayerView): string {
+  if (view.wordNumber >= view.wordCount) return t.imposter.progress.finalScoresNext;
+  return format(t.imposter.progress.wordOf, { number: view.wordNumber, count: view.wordCount });
 }
 
-function progressFor(view: ImposterPlayerView): string {
+function progressFor(t: Dictionary, view: ImposterPlayerView): string {
+  const wordOf = format(t.imposter.progress.wordOf, {
+    number: view.wordNumber,
+    count: view.wordCount,
+  });
   const byPhase = {
-    "word-check": `Word ${view.wordNumber} of ${view.wordCount}`,
-    clues: `Word ${view.wordNumber} of ${view.wordCount}`,
-    vote: "Vote",
-    reveal: "The votes are in",
-    "last-chance": "Last chance",
-    result: resultProgress(view),
+    "word-check": wordOf,
+    clues: wordOf,
+    vote: t.imposter.progress.vote,
+    reveal: t.imposter.progress.votesAreIn,
+    "last-chance": t.imposter.progress.lastChance,
+    result: resultProgress(t, view),
   } satisfies Record<ImposterPhase, string>;
   return byPhase[view.phase];
 }
@@ -91,7 +95,8 @@ interface SectionProps {
 export type { SectionProps };
 
 function Strip({ progress, right }: { progress: string; right?: ReactNode }) {
-  return <PhoneStrip gameName="Imposter" progress={progress} right={right} />;
+  const { t } = useLocale();
+  return <PhoneStrip gameName={t.imposter.title} progress={progress} right={right} />;
 }
 
 /** Position of the current speaker in the clue order, 1-based; 0 when nobody is speaking. */
@@ -105,6 +110,7 @@ function speakerTurnNumber(view: ImposterPlayerView): number {
 /** Replaces the countdown in the clue phase's timer slot: there is no deadline any more, so
  * this shows whose turn it is in the order instead of time left. */
 function TurnPill({ view }: { view: ImposterPlayerView }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -116,7 +122,7 @@ function TurnPill({ view }: { view: ImposterPlayerView }) {
         background: "var(--opg-card)",
       }}
     >
-      {speakerTurnNumber(view)} of {view.clueOrder.length}
+      {speakerTurnNumber(view)} {format(t.imposter.clues.turnOf, { count: view.clueOrder.length })}
     </div>
   );
 }
@@ -139,6 +145,7 @@ function WordCardTimerSlot({
 /** The speaking player's own timer slot: same circular shape as the Timer it replaces, but
  * showing their position in the order instead of a countdown. */
 function YourTurnBadge({ view }: { view: ImposterPlayerView }) {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -159,19 +166,21 @@ function YourTurnBadge({ view }: { view: ImposterPlayerView }) {
         {speakerTurnNumber(view)}
       </div>
       <div style={{ fontSize: 16, fontWeight: 700 }}>
-        of {view.clueOrder.length}
+        {format(t.imposter.clues.turnOf, { count: view.clueOrder.length })}
       </div>
     </div>
   );
 }
 
-const HIDE_LABELS = {
-  full: { shown: "Hide word", hidden: "Show word" },
-  compact: { shown: "Hide", hidden: "Show" },
-};
+function hideLabels(t: Dictionary) {
+  return {
+    full: { shown: t.imposter.wordPanel.hideWord, hidden: t.imposter.wordPanel.showWord },
+    compact: { shown: t.imposter.wordPanel.hideShort, hidden: t.imposter.wordPanel.showShort },
+  };
+}
 
-function hideLabel(hidden: boolean, compact: boolean): string {
-  const labels = compact ? HIDE_LABELS.compact : HIDE_LABELS.full;
+function hideLabel(t: Dictionary, hidden: boolean, compact: boolean): string {
+  const labels = compact ? hideLabels(t).compact : hideLabels(t).full;
   return hidden ? labels.hidden : labels.shown;
 }
 
@@ -191,6 +200,7 @@ function HideButton({
   onToggle: () => void;
   compact?: boolean;
 }) {
+  const { t } = useLocale();
   const dims = hideDims(compact);
   return (
     <button
@@ -211,22 +221,23 @@ function HideButton({
       }}
     >
       <Icon name="eye-off" size={dims.iconSize} color="var(--opg-paper)" />
-      <span>{hideLabel(hidden, compact)}</span>
+      <span>{hideLabel(t, hidden, compact)}</span>
     </button>
   );
 }
 
 function MeTag({ me }: { me: PlayerSummary | null }) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <Avatar id={me?.avatar ?? null} size={44} alt={avatarAlt(me)} />
+      <Avatar id={me?.avatar ?? null} size={44} alt={avatarAlt(t, me)} />
       <div style={{ fontSize: 20, fontWeight: 700 }}>{displayName(me)}</div>
     </div>
   );
 }
 
-function meName(me: PlayerSummary | null): string {
-  return me?.name ?? "You";
+function meName(t: Dictionary, me: PlayerSummary | null): string {
+  return me?.name ?? t.imposter.meFallback;
 }
 
 function meAvatarId(me: PlayerSummary | null) {
@@ -235,28 +246,31 @@ function meAvatarId(me: PlayerSummary | null) {
 
 /** Avatar + name footer shared by the word and guess screens. */
 function MeRow({ me }: { me: PlayerSummary | null }) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(me)} />
-      <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(me)}</div>
+      <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(t, me)} />
+      <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(t, me)}</div>
     </div>
   );
 }
 
 function clueSubtitle(args: {
+  t: Dictionary;
   view: ImposterPlayerView;
   players: PlayerSummary[];
   meId: PlayerId | null;
   myIndex: number;
   speakerIndex: number;
 }): string {
-  const { view, players, meId, myIndex, speakerIndex } = args;
-  if (view.nextSpeakerId === meId) return "You're up next!";
+  const { t, view, players, meId, myIndex, speakerIndex } = args;
+  const c = t.imposter.clues;
+  if (view.nextSpeakerId === meId) return c.upNextBang;
   if (myIndex > speakerIndex && myIndex > 0) {
-    const before = nameOf(players, view.clueOrder[myIndex - 1] ?? null);
-    return `You're up after ${before}`;
+    const before = nameOf(players, view.clueOrder[myIndex - 1] ?? null, t.common.someone);
+    return format(c.upAfter, { name: before });
   }
-  return "Your clue is in";
+  return c.clueIsIn;
 }
 
 interface ClueBannerCopy {
@@ -265,23 +279,25 @@ interface ClueBannerCopy {
 }
 
 function clueBannerCopy(args: {
+  t: Dictionary;
   view: ImposterPlayerView;
   players: PlayerSummary[];
   meId: PlayerId | null;
 }): ClueBannerCopy {
-  const { view, players, meId } = args;
+  const { t, view, players, meId } = args;
   const speakerId = view.currentSpeakerId;
   const speaker = findPlayer(players, speakerId);
   if (speaker === null || speakerId === null) {
     return {
-      title: "Read your word on your phone",
-      sub: "Clues start in a moment",
+      title: t.imposter.clues.readOnPhone,
+      sub: t.imposter.clues.startingMoment,
     };
   }
   const myIndex = meId === null ? -1 : view.clueOrder.indexOf(meId);
   return {
-    title: `${speaker.name} is giving a clue`,
+    title: format(t.imposter.clues.giving, { name: speaker.name }),
     sub: clueSubtitle({
+      t,
       view,
       players,
       meId,
@@ -300,7 +316,9 @@ function ClueBanner({
   players: PlayerSummary[];
   me: PlayerSummary | null;
 }) {
+  const { t } = useLocale();
   const { title, sub } = clueBannerCopy({
+    t,
     view,
     players,
     meId: me?.id ?? null,
@@ -334,26 +352,20 @@ interface WordPanelCopy {
   desc: string;
 }
 
-function wordPanelCopy(isImposter: boolean): WordPanelCopy {
+function wordPanelCopy(t: Dictionary, isImposter: boolean): WordPanelCopy {
+  const p = t.imposter.wordPanel;
   if (isImposter) {
-    return {
-      title: "Psst… you're the imposter",
-      label: "Your decoy word",
-      desc: "Everyone else has a word from the same family. Blend in, and don't get caught.",
-    };
+    return { title: p.imposterTitle, label: p.imposterLabel, desc: p.imposterDesc };
   }
-  return {
-    title: "Shh… here's your word",
-    label: "Your secret word",
-    desc: "Someone has a decoy from the same family. Prove you know yours without giving it away.",
-  };
+  return { title: p.crewTitle, label: p.crewLabel, desc: p.crewDesc };
 }
 
 /** The word-check card's face-up content. Only mounted once the card is flipped, so the
  * word never touches the DOM before that. */
 function WordPanel({ view }: { view: ImposterPlayerView }) {
+  const { t } = useLocale();
   const isImposter = view.role === "imposter";
-  const { title, label, desc } = wordPanelCopy(isImposter);
+  const { title, label, desc } = wordPanelCopy(t, isImposter);
   return (
     <div
       style={{
@@ -387,6 +399,7 @@ function WordPanel({ view }: { view: ImposterPlayerView }) {
 
 /** The card's back: identical for crew and the imposter, so a peek never leaks a role. */
 function WordCardBack() {
+  const { t } = useLocale();
   return (
     <div
       style={{
@@ -397,7 +410,7 @@ function WordCardBack() {
       }}
     >
       <Icon name="cards" size={56} color="var(--opg-ink-secondary)" />
-      <Marker size={26}>Hold to peek</Marker>
+      <Marker size={26}>{t.imposter.wordPanel.holdToPeek}</Marker>
     </div>
   );
 }
@@ -419,6 +432,7 @@ function WordCardStage({
 }
 
 function WordCard(props: SectionProps) {
+  const { t } = useLocale();
   const { view, players, me, deadline, clock, stage } = props;
   const [revealed, setRevealed] = useState(false);
   const [everRevealed, setEverRevealed] = useState(false);
@@ -441,7 +455,7 @@ function WordCard(props: SectionProps) {
   return (
     <>
       <Strip
-        progress={progressFor(view)}
+        progress={progressFor(t, view)}
         right={
           <WordCardTimerSlot view={view} deadline={deadline} clock={clock} />
         }
@@ -453,7 +467,7 @@ function WordCard(props: SectionProps) {
         style={{ flexGrow: 1, display: "flex", marginTop: 8 }}
       >
         <FlipCard
-          label="Your secret card"
+          label={t.imposter.wordPanel.secretCard}
           flipped={revealed}
           onFlip={reveal}
           back={<WordCardBack />}
@@ -496,6 +510,7 @@ function WordPeek({
   hidden: boolean;
   onToggle: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <div style={FILL_COLUMN}>
       <Card
@@ -520,7 +535,7 @@ function WordPeek({
               textAlign: "center",
             }}
           >
-            Covered
+            {t.imposter.wordPanel.covered}
           </div>
         ) : null}
       </Card>
@@ -545,13 +560,14 @@ function useOnceOnMount(effect: () => void): void {
 }
 
 function YourTurn(props: SectionProps) {
+  const { t } = useLocale();
   const { view, me, clock, send, players, stage } = props;
   const [hidden, setHidden] = useState(false);
   const toggle = () => setHidden((value) => !value);
-  const next = nameOf(players, view.nextSpeakerId);
+  const next = nameOf(players, view.nextSpeakerId, t.common.someone);
   const passNote = view.nextSpeakerId
-    ? `Passes to ${next}`
-    : "Last clue for this word";
+    ? format(t.imposter.clues.passesTo, { name: next })
+    : t.imposter.clues.lastClueForWord;
   const buzz = useBuzz();
   const noteRef = useRef<HTMLDivElement>(null);
 
@@ -566,7 +582,7 @@ function YourTurn(props: SectionProps) {
 
   return (
     <>
-      <Strip progress={progressFor(view)} right={<MeTag me={me} />} />
+      <Strip progress={progressFor(t, view)} right={<MeTag me={me} />} />
       {stage === null ? null : <StageClues view={stage} players={players} />}
       <div ref={noteRef}>
         <StickyNote
@@ -581,9 +597,9 @@ function YourTurn(props: SectionProps) {
           }}
         >
           <div>
-            <Marker size={34}>Your turn!</Marker>
+            <Marker size={34}>{t.imposter.clues.yourTurnBang}</Marker>
             <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>
-              Say one clue out loud.
+              {t.imposter.clues.sayClueShort}
             </div>
           </div>
           <YourTurnBadge view={view} />
@@ -595,7 +611,7 @@ function YourTurn(props: SectionProps) {
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Button size="xl" fullWidth onClick={() => send({ type: "done" })}>
           <Icon name="check" size={24} color="var(--opg-paper)" />
-          <span>I&apos;m done</span>
+          <span>{t.imposter.clues.imDone}</span>
         </Button>
         <div
           style={{
@@ -614,12 +630,14 @@ function YourTurn(props: SectionProps) {
 function voteRowStyle(index: number, selected: boolean): CSSProperties {
   return {
     height: 66,
-    padding: selected ? "0 14px 0 12px" : "0 16px 0 12px",
+    paddingBlock: 0,
+    paddingInlineStart: 12,
+    paddingInlineEnd: selected ? 14 : 16,
     display: "flex",
     alignItems: "center",
     gap: 14,
     width: "100%",
-    textAlign: "left",
+    textAlign: "start",
     color: "var(--opg-ink)",
     background: selected ? "var(--opg-highlight-soft)" : "var(--opg-card)",
     border: selected
@@ -632,12 +650,13 @@ function voteRowStyle(index: number, selected: boolean): CSSProperties {
 }
 
 function VotePickMark({ selected }: { selected: boolean }) {
+  const { t } = useLocale();
   if (!selected)
     return <Icon name="pencil" size={30} color="var(--opg-muted)" />;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <Icon name="check" size={28} color="var(--opg-marker)" />
-      <div style={{ fontSize: 17, fontWeight: 700 }}>Your pick</div>
+      <div style={{ fontSize: 17, fontWeight: 700 }}>{t.imposter.vote.yourPick}</div>
     </div>
   );
 }
@@ -655,6 +674,7 @@ function VoteRow({
   players: PlayerSummary[];
   onPick: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
@@ -665,10 +685,10 @@ function VoteRow({
       <Avatar
         id={avatarOf(players, id)}
         size={48}
-        alt={`${nameOf(players, id)}'s avatar`}
+        alt={format(t.imposter.avatarAlt, { name: nameOf(players, id, t.common.someone) })}
       />
       <div style={{ flexGrow: 1, fontSize: 21, fontWeight: 700 }}>
-        {nameOf(players, id)}
+        {nameOf(players, id, t.common.someone)}
       </div>
       <VotePickMark selected={selected} />
     </button>
@@ -703,12 +723,13 @@ function useVoteLockBuzz(
 function VoteLocked(
   props: SectionProps & { pulseRef?: RefObject<HTMLDivElement | null> },
 ) {
+  const { t } = useLocale();
   const { view, players, deadline, clock, pulseRef, stage } = props;
   const votedFor = findPlayer(players, view.myVote);
   return (
     <>
       <Strip
-        progress={progressFor(view)}
+        progress={progressFor(t, view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
       {stage === null ? null : <StageVote view={stage} players={players} />}
@@ -726,15 +747,17 @@ function VoteLocked(
           }}
         >
           <Icon name="check" size={40} color="var(--opg-marker)" />
-          <Marker size={32}>Vote locked in</Marker>
+          <Marker size={32}>{t.imposter.vote.lockedIn}</Marker>
           <div style={{ fontSize: 18, fontWeight: 700 }}>
-            {votedFor ? `You voted for ${votedFor.name}.` : "You voted."}
+            {votedFor
+              ? format(t.imposter.vote.youVotedFor, { name: votedFor.name })
+              : t.imposter.vote.youVoted}
           </div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-            Waiting for the others to vote.
+            {t.imposter.vote.waitingOthers}
           </div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-            {view.votedCount} voted so far
+            {format(t.imposter.vote.votedSoFar, { count: view.votedCount })}
           </div>
         </Card>
       </div>
@@ -757,22 +780,23 @@ function VoteView(props: SectionProps) {
  * or a new word always starts from a clean pick/sent state.
  */
 function VoteForm(props: SectionProps) {
+  const { t } = useLocale();
   const { view, players, deadline, clock, send, stage } = props;
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
   return (
     <>
       <Strip
-        progress={progressFor(view)}
+        progress={progressFor(t, view)}
         right={<Timer deadline={deadline} clock={clock} />}
       />
       {stage === null ? null : <StageVote view={stage} players={players} />}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <Marker size={32} style={{ lineHeight: 1.15 }}>
-          Who&apos;s the imposter?
+          {t.imposter.vote.whoIsImposter}
         </Marker>
         <div style={{ fontSize: 19, lineHeight: 1.35 }}>
-          Pick one. You can&apos;t vote for yourself.
+          {t.imposter.vote.pickOne}
         </div>
       </div>
       <div
@@ -798,7 +822,7 @@ function VoteForm(props: SectionProps) {
         size="lg"
         fullWidth
         disabled={pick === null || sent}
-        disabledReason={pick === null ? "Pick someone first" : undefined}
+        disabledReason={pick === null ? t.imposter.vote.pickSomeoneFirst : undefined}
         onClick={() => {
           if (pick === null || sent) return;
           setSent(true);
@@ -806,7 +830,7 @@ function VoteForm(props: SectionProps) {
         }}
       >
         <Icon name="lock" size={22} color="var(--opg-paper)" />
-        <span>Lock in vote</span>
+        <span>{t.imposter.vote.lockInVote}</span>
       </Button>
     </>
   );
@@ -828,8 +852,9 @@ function lastChancePhase(props: SectionProps): ReactNode {
   );
 }
 
-function resultPhase(props: SectionProps): ReactNode {
-  return <PhoneResult {...props} progress={progressFor(props.view)} />;
+function ResultPhase(props: SectionProps): ReactNode {
+  const { t } = useLocale();
+  return <PhoneResult {...props} progress={progressFor(t, props.view)} />;
 }
 
 type PhaseComponent = (props: SectionProps) => ReactNode;
@@ -840,7 +865,7 @@ const PHONE_PHASES = {
   vote: VoteView,
   reveal: PhoneReveal,
   "last-chance": lastChancePhase,
-  result: resultPhase,
+  result: ResultPhase,
 } satisfies Record<ImposterPhase, PhaseComponent>;
 
 function renderPhase(props: SectionProps): ReactNode {

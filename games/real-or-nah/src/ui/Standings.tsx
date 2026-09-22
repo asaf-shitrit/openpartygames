@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import type { AvatarId, PlayerId, PlayerSummary } from "@opg/protocol";
 import { Avatar, CountUp, Marker, formatPoints, rankChanges, useFlipList } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import { avatarOf, nameOf } from "./common";
 
 export function previousTotal(
@@ -86,6 +87,7 @@ function StandingsRow({
   countLive,
   change,
 }: StandingsRowProps) {
+  const { t } = useLocale();
   const badge = rankBadge(change);
   return (
     <div
@@ -100,12 +102,12 @@ function StandingsRow({
         borderRadius: "var(--opg-radius-m)",
       }}
     >
-      <Avatar id={avatarId} size={56} alt={`${name}'s avatar`} />
+      <Avatar id={avatarId} size={56} alt={format(t.realOrNah.avatarAlt, { name })} />
       <div style={{ flexGrow: 1, fontSize: 34, fontWeight: 700 }}>{name}</div>
       {badge ? (
         <div style={{ fontSize: 30, fontWeight: 700 }}>{badge}</div>
       ) : null}
-      <div style={{ fontSize: 38, fontWeight: 700, minWidth: 150, textAlign: "right" }}>
+      <div style={{ fontSize: 38, fontWeight: 700, minWidth: 150, textAlign: "end" }}>
         {countReached ? (
           <CountUp from={from} to={to} live={countLive} />
         ) : (
@@ -125,6 +127,7 @@ export function Standings({
   countLive,
   reorderReached,
 }: StandingsProps) {
+  const { t } = useLocale();
   const beforeOrder = useMemo(
     () => standingsOrder(playerIds, totals, pointsThisFact, false),
     [playerIds, totals, pointsThisFact],
@@ -142,12 +145,12 @@ export function Standings({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Marker size={48}>Standings</Marker>
+      <Marker size={48}>{t.realOrNah.standingsLabel}</Marker>
       {order.map((id) => (
         <StandingsRow
           key={id}
           registerRef={register(id)}
-          name={nameOf(players, id)}
+          name={nameOf(players, id, t.common.someone)}
           avatarId={avatarOf(players, id)}
           from={previousTotal(totals, pointsThisFact, id)}
           to={totals[id] ?? 0}

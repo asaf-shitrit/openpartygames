@@ -17,6 +17,8 @@ import {
   useCue,
   useMoment,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { REVEAL_MS, type DoodleFooledTitle, type DoodleHostView } from "../state";
 import { avatarOf, drawingLabel, nameOf } from "./common";
 import { hostRevealBeats, titlesShown } from "./reveal-timeline";
@@ -33,35 +35,35 @@ const STAGE: CSSProperties = {
   minHeight: 0,
 };
 
-function authorName(players: PlayerSummary[], authorId: PlayerId | null): string {
-  return authorId === null ? "House title" : nameOf(players, authorId);
+function authorName(t: Dictionary, players: PlayerSummary[], authorId: PlayerId | null): string {
+  return authorId === null ? t.doodleBluff.houseTitle : nameOf(players, authorId, t.common.someone);
 }
 
-function FooledAvatars({ ids, players }: { ids: PlayerId[]; players: PlayerSummary[] }) {
+function FooledAvatars({ ids, players, t }: { ids: PlayerId[]; players: PlayerSummary[]; t: Dictionary }) {
   if (ids.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--opg-ink-secondary)", fontWeight: 700 }}>
         <Icon name="eye-off" size={22} color="var(--opg-ink-secondary)" />
-        Fooled nobody
+        {t.doodleBluff.fooledNobody}
       </div>
     );
   }
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       {ids.map((id) => (
-        <Avatar key={id} id={avatarOf(players, id)} size={40} alt={`${nameOf(players, id)}'s avatar`} />
+        <Avatar key={id} id={avatarOf(players, id)} size={40} alt={format(t.doodleBluff.avatarAlt, { name: nameOf(players, id, t.common.someone) })} />
       ))}
     </div>
   );
 }
 
-function TitleCard({ title, players }: { title: DoodleFooledTitle; players: PlayerSummary[] }) {
+function TitleCard({ title, players, t }: { title: DoodleFooledTitle; players: PlayerSummary[]; t: Dictionary }) {
   return (
     <Card variant="M" tilt={-1} style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10, width: 300 }}>
       <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.25 }}>{title.text}</div>
-      <FooledAvatars ids={title.fooledIds} players={players} />
+      <FooledAvatars ids={title.fooledIds} players={players} t={t} />
       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-        Written by {authorName(players, title.authorId)}
+        {format(t.doodleBluff.writtenBy, { name: authorName(t, players, title.authorId) })}
       </div>
       {title.points > 0 ? (
         <Marker size={22} color="var(--opg-marker)">
@@ -72,7 +74,7 @@ function TitleCard({ title, players }: { title: DoodleFooledTitle; players: Play
   );
 }
 
-function TitlesRow({ titles, shown, players }: { titles: DoodleFooledTitle[]; shown: number; players: PlayerSummary[] }) {
+function TitlesRow({ titles, shown, players, t }: { titles: DoodleFooledTitle[]; shown: number; players: PlayerSummary[]; t: Dictionary }) {
   const visible = titles.slice(0, shown);
   if (visible.length === 0) return null;
   return (
@@ -91,54 +93,58 @@ function TitlesRow({ titles, shown, players }: { titles: DoodleFooledTitle[]; sh
       }}
     >
       {visible.map((title) => (
-        <TitleCard key={title.optionId} title={title} players={players} />
+        <TitleCard key={title.optionId} title={title} players={players} t={t} />
       ))}
     </div>
   );
 }
 
-function FindersLine({ foundByIds, players }: { foundByIds: PlayerId[]; players: PlayerSummary[] }) {
+function FindersLine({ foundByIds, players, t }: { foundByIds: PlayerId[]; players: PlayerSummary[]; t: Dictionary }) {
   if (foundByIds.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--opg-ink-secondary)", fontWeight: 700 }}>
         <Icon name="eye-off" size={26} color="var(--opg-ink-secondary)" />
-        Nobody found it! Tricky one.
+        {t.doodleBluff.nobodyFoundItTricky}
       </div>
     );
   }
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
-      {foundByIds.map((id) => (
-        <div key={id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Avatar id={avatarOf(players, id)} size={40} alt={`${nameOf(players, id)}'s avatar`} />
-          <div style={{ fontWeight: 700 }}>{nameOf(players, id)}</div>
-        </div>
-      ))}
+      {foundByIds.map((id) => {
+        const name = nameOf(players, id, t.common.someone);
+        return (
+          <div key={id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Avatar id={avatarOf(players, id)} size={40} alt={format(t.doodleBluff.avatarAlt, { name })} />
+            <div style={{ fontWeight: 700 }}>{name}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function TruthSection({ view, players, shown }: { view: DoodleHostView; players: PlayerSummary[]; shown: boolean }) {
+function DrawnByLine({ reveal, players, t }: { reveal: NonNullable<DoodleHostView["reveal"]>; players: PlayerSummary[]; t: Dictionary }) {
+  const name = nameOf(players, reveal.artistId, t.common.someone);
+  const text =
+    reveal.artistPoints > 0
+      ? format(t.doodleBluff.drawnByWithPoints, { name, points: reveal.artistPoints.toLocaleString("en-US") })
+      : format(t.doodleBluff.drawnBy, { name });
+  return <div style={{ fontSize: 20, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{text}</div>;
+}
+
+function TruthSection({ view, players, shown, t }: { view: DoodleHostView; players: PlayerSummary[]; shown: boolean; t: Dictionary }) {
   const reveal = view.reveal;
   if (!shown || reveal === null) return null;
   return (
     <Card variant="L" tilt={-1} style={{ padding: "28px 32px", display: "flex", flexDirection: "column", gap: 16, alignSelf: "center", flexShrink: 0 }}>
       <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--opg-ink-secondary)" }}>
-        The real title
+        {t.doodleBluff.theRealTitle}
       </div>
       <Highlight style={{ padding: "0 12px" }}>
         <span style={{ fontSize: 44, fontWeight: 700 }}>{reveal.prompt}</span>
       </Highlight>
-      <FindersLine foundByIds={reveal.foundByIds} players={players} />
-      {reveal.artistPoints > 0 ? (
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-          Drawn by {nameOf(players, reveal.artistId)} — +{reveal.artistPoints.toLocaleString("en-US")}
-        </div>
-      ) : (
-        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-          Drawn by {nameOf(players, reveal.artistId)}
-        </div>
-      )}
+      <FindersLine foundByIds={reveal.foundByIds} players={players} t={t} />
+      <DrawnByLine reveal={reveal} players={players} t={t} />
     </Card>
   );
 }
@@ -152,6 +158,7 @@ export interface HostRevealProps {
 }
 
 export function HostReveal({ view, players, deadline, timerStartedAt, clock }: HostRevealProps) {
+  const { t } = useLocale();
   const reveal = view.reveal;
   const rootRef = useRef<HTMLDivElement>(null);
   const titleCount = reveal?.titles.length ?? 0;
@@ -170,12 +177,12 @@ export function HostReveal({ view, players, deadline, timerStartedAt, clock }: H
 
   return (
     <div ref={rootRef} style={STAGE}>
-      <Marker size={44}>Let&apos;s see who fooled who</Marker>
+      <Marker size={44}>{t.doodleBluff.letsSeeWhoFooledWho}</Marker>
       <Card style={{ padding: 12, alignSelf: "center", flexShrink: 0 }}>
-        <DoodleView doodle={reveal.doodle} label={drawingLabel(nameOf(players, reveal.artistId))} clock={clock} replay={{ startedAt: startedAt ?? clock.now() }} size={300} />
+        <DoodleView doodle={reveal.doodle} label={drawingLabel(t, nameOf(players, reveal.artistId, t.common.someone))} clock={clock} replay={{ startedAt: startedAt ?? clock.now() }} size={300} />
       </Card>
-      <TitlesRow titles={reveal.titles} shown={shownTitles} players={players} />
-      <TruthSection view={view} players={players} shown={truthShown} />
+      <TitlesRow titles={reveal.titles} shown={shownTitles} players={players} t={t} />
+      <TruthSection view={view} players={players} shown={truthShown} t={t} />
     </div>
   );
 }

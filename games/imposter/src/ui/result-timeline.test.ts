@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Beat, Moment } from "@opg/ui";
+import { en } from "@opg/i18n";
 import {
   RESULT_CANCELLED_MS,
   RESULT_CAUGHT_MS,
@@ -183,7 +184,7 @@ describe("personalResult", () => {
 
   it("stole the word", () => {
     expect(
-      personalResult({
+      personalResult(en, {
         ...base,
         isImposter: true,
         guessCorrect: true,
@@ -199,7 +200,7 @@ describe("personalResult", () => {
 
   it("caught, imposter, guessed wrong", () => {
     expect(
-      personalResult({ ...base, isImposter: true, guessCorrect: false }),
+      personalResult(en, { ...base, isImposter: true, guessCorrect: false }),
     ).toEqual({
       headline: "So close!",
       sub: "The word was GIRAFFE.",
@@ -210,7 +211,7 @@ describe("personalResult", () => {
 
   it("caught, crew, spotted the imposter, guess wrong", () => {
     expect(
-      personalResult({
+      personalResult(en, {
         ...base,
         votedImposter: true,
         guessCorrect: false,
@@ -225,7 +226,7 @@ describe("personalResult", () => {
   });
 
   it("caught, crew, guess right", () => {
-    expect(personalResult({ ...base, guessCorrect: true })).toEqual({
+    expect(personalResult(en, { ...base, guessCorrect: true })).toEqual({
       headline: "They stole it!",
       sub: "0 this word.",
       haptic: "soft",
@@ -234,7 +235,7 @@ describe("personalResult", () => {
   });
 
   it("caught without voting the imposter, guess wrong", () => {
-    expect(personalResult({ ...base, guessCorrect: false })).toEqual({
+    expect(personalResult(en, { ...base, guessCorrect: false })).toEqual({
       headline: "Caught without you",
       sub: "0 this word.",
       haptic: "soft",
@@ -244,7 +245,7 @@ describe("personalResult", () => {
 
   it("escaped, imposter", () => {
     expect(
-      personalResult({
+      personalResult(en, {
         ...base,
         path: "escaped",
         isImposter: true,
@@ -259,7 +260,7 @@ describe("personalResult", () => {
   });
 
   it("escaped, crew", () => {
-    expect(personalResult({ ...base, path: "escaped" })).toEqual({
+    expect(personalResult(en, { ...base, path: "escaped" })).toEqual({
       headline: "The imposter got away",
       sub: "0 this word.",
       haptic: "soft",
@@ -268,7 +269,7 @@ describe("personalResult", () => {
   });
 
   it("cancelled", () => {
-    expect(personalResult({ ...base, path: "cancelled" })).toEqual({
+    expect(personalResult(en, { ...base, path: "cancelled" })).toEqual({
       headline: "Word cancelled",
       sub: "No points this word.",
       haptic: "soft",
@@ -278,7 +279,7 @@ describe("personalResult", () => {
 
   it("trusts myPoints over the table amount when they differ", () => {
     expect(
-      personalResult({
+      personalResult(en, {
         ...base,
         isImposter: true,
         guessCorrect: true,

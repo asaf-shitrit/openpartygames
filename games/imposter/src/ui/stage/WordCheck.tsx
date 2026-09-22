@@ -3,6 +3,7 @@
 // every crew phone right now, so this phase is the sharp case for plan/0004-no-tv-mode.md §4:
 // a phase shows the stage OR the player's secret, never both. Word-check shows only the card.
 import type { CSSProperties } from "react";
+import { useLocale } from "@opg/i18n";
 
 const WRAP: CSSProperties = {
   boxSizing: "border-box",
@@ -33,6 +34,7 @@ function ThreeDots() {
 
 /** The stage region during word-check: empty on purpose. */
 export function StageWordCheck() {
+  const { t } = useLocale();
   return (
     <div style={WRAP}>
       <ThreeDots />
@@ -44,7 +46,7 @@ export function StageWordCheck() {
           lineHeight: 1.3,
         }}
       >
-        Nothing up here right now — everyone&apos;s peeking at their own word.
+        {t.imposter.wordCheck.stageEmpty}
       </div>
     </div>
   );

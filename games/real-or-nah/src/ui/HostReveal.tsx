@@ -18,6 +18,8 @@ import {
   useCue,
   useMoment,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { revealDurationMs, revealPlan } from "../reveal-plan";
 import type { RevealSegment } from "../reveal-plan";
 import {
@@ -104,25 +106,27 @@ function activeLieIndex(
   return index;
 }
 
-function IntroHeading({ live }: { live: boolean }) {
+function IntroHeading({ live, t }: { live: boolean; t: Dictionary }) {
   return (
     <FxIn live={live} preset="slideIn">
-      <Marker size={64}>Let&apos;s see who fooled who</Marker>
+      <Marker size={64}>{t.realOrNah.introHeading}</Marker>
     </FxIn>
   );
 }
 
 /** "House lie" for an authorless decoy, otherwise the writer's name. */
-function authorName(players: PlayerSummary[], authorId: PlayerId | null): string {
-  return authorId === null ? "House lie" : nameOf(players, authorId);
+function authorName(t: Dictionary, players: PlayerSummary[], authorId: PlayerId | null): string {
+  return authorId === null ? t.realOrNah.houseLie : nameOf(players, authorId, t.common.someone);
 }
 
 function DudCard({
   lie,
   players,
+  t,
 }: {
   lie: RonFooledLie;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   return (
     <Card
@@ -138,10 +142,10 @@ function DudCard({
     >
       <div style={{ fontSize: 30, fontWeight: 700 }}>{lie.text}</div>
       <Stamp size={28} tilt={-6}>
-        NAH
+        {t.realOrNah.nahStamp}
       </Stamp>
       <PersonTag
-        name={authorName(players, lie.authorId)}
+        name={authorName(t, players, lie.authorId)}
         avatar={avatarOf(players, lie.authorId)}
         avatarSize={44}
         fontSize={28}
@@ -155,11 +159,13 @@ function DudsRow({
   players,
   shown,
   live,
+  t,
 }: {
   reveal: RonReveal;
   players: PlayerSummary[];
   shown: boolean;
   live: boolean;
+  t: Dictionary;
 }) {
   const duds = reveal.lies.filter((lie) => lie.fooledIds.length === 0);
   if (!shown || duds.length === 0) return null;
@@ -171,11 +177,11 @@ function DudsRow({
     >
       <div style={{ display: "flex", flexWrap: "wrap", gap: 20 }}>
         {duds.map((lie) => (
-          <DudCard key={lie.optionId} lie={lie} players={players} />
+          <DudCard key={lie.optionId} lie={lie} players={players} t={t} />
         ))}
       </div>
       <div style={{ fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-        These fooled nobody
+        {t.realOrNah.noneFooled}
       </div>
     </FxIn>
   );
@@ -185,10 +191,12 @@ function FooledAvatars({
   lie,
   players,
   compact,
+  t,
 }: {
   lie: LieViewData;
   players: PlayerSummary[];
   compact: boolean;
+  t: Dictionary;
 }) {
   if (!lie.progress.fooledShown || lie.fooledIds.length === 0) return null;
   return (
@@ -198,7 +206,7 @@ function FooledAvatars({
           key={id}
           id={avatarOf(players, id)}
           size={compact ? 32 : 48}
-          alt={`${nameOf(players, id)}'s avatar`}
+          alt={format(t.realOrNah.avatarAlt, { name: nameOf(players, id, t.common.someone) })}
         />
       ))}
     </div>
@@ -211,23 +219,25 @@ function LieAuthorFooter({
   live,
   shakeRef,
   compact,
+  t,
 }: {
   lie: LieViewData;
   players: PlayerSummary[];
   live: boolean;
   shakeRef: RefObject<HTMLElement | null>;
   compact: boolean;
+  t: Dictionary;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
       <PersonTag
-        name={authorName(players, lie.authorId)}
+        name={authorName(t, players, lie.authorId)}
         avatar={avatarOf(players, lie.authorId)}
         avatarSize={compact ? 36 : 52}
         fontSize={compact ? 24 : 32}
       >
         <SlamStamp live={live} shake="small" shakeRef={shakeRef} size={compact ? 22 : 30}>
-          NAH
+          {t.realOrNah.nahStamp}
         </SlamStamp>
       </PersonTag>
       {lie.progress.pointsShown ? (
@@ -239,9 +249,9 @@ function LieAuthorFooter({
   );
 }
 
-function lieCalloutText(lie: LieViewData, voterCount: number): string | null {
+function lieCalloutText(t: Dictionary, lie: LieViewData, voterCount: number): string | null {
   if (!lie.progress.pointsShown) return null;
-  return callout(lie.fooledIds.length, voterCount);
+  return callout(t, lie.fooledIds.length, voterCount);
 }
 
 const LIE_CARD_TRANSITION =
@@ -268,7 +278,7 @@ function lieCardStyle(compact: boolean): CSSProperties {
 function LieCardCallout({ text }: { text: string | null }) {
   if (text === null) return null;
   return (
-    <div style={{ position: "absolute", top: -18, right: -18 }}>
+    <div style={{ position: "absolute", top: -18, insetInlineEnd: -18 }}>
       <Stamp size={22} tilt={8}>
         {text}
       </Stamp>
@@ -281,11 +291,13 @@ function LieCardAuthor({
   players,
   shakeRef,
   compact,
+  t,
 }: {
   lie: LieViewData;
   players: PlayerSummary[];
   shakeRef: RefObject<HTMLElement | null>;
   compact: boolean;
+  t: Dictionary;
 }) {
   if (!lie.progress.flipped) return null;
   return (
@@ -295,12 +307,13 @@ function LieCardAuthor({
       live={lie.progress.live.author}
       shakeRef={shakeRef}
       compact={compact}
+      t={t}
     />
   );
 }
 
 /** A lie whose author was kicked: `optionId` still holds its beat, with nothing to show. */
-function RemovedLieCard({ compact }: { compact: boolean }) {
+function RemovedLieCard({ compact, t }: { compact: boolean; t: Dictionary }) {
   return (
     <Card variant={compact ? "M" : "L"} tilt={compact ? 1 : -1} style={lieCardStyle(compact)}>
       <div
@@ -310,7 +323,7 @@ function RemovedLieCard({ compact }: { compact: boolean }) {
           color: "var(--opg-ink-secondary)",
         }}
       >
-        (removed)
+        {t.realOrNah.removedLie}
       </div>
     </Card>
   );
@@ -322,17 +335,19 @@ function LieCard({
   players,
   voterCount,
   shakeRef,
+  t,
 }: {
   lie: LieViewData;
   compact: boolean;
   players: PlayerSummary[];
   voterCount: number;
   shakeRef: RefObject<HTMLElement | null>;
+  t: Dictionary;
 }) {
   if (lie.removed) {
     return (
       <div style={{ position: "relative" }}>
-        <RemovedLieCard compact={compact} />
+        <RemovedLieCard compact={compact} t={t} />
       </div>
     );
   }
@@ -342,10 +357,10 @@ function LieCard({
         <div style={{ fontSize: compact ? 28 : 40, fontWeight: 700, lineHeight: 1.2 }}>
           {lie.text}
         </div>
-        <FooledAvatars lie={lie} players={players} compact={compact} />
-        <LieCardAuthor lie={lie} players={players} shakeRef={shakeRef} compact={compact} />
+        <FooledAvatars lie={lie} players={players} compact={compact} t={t} />
+        <LieCardAuthor lie={lie} players={players} shakeRef={shakeRef} compact={compact} t={t} />
       </Card>
-      <LieCardCallout text={lieCalloutText(lie, voterCount)} />
+      <LieCardCallout text={lieCalloutText(t, lie, voterCount)} />
     </div>
   );
 }
@@ -356,12 +371,14 @@ function LieStageSection({
   players,
   voterCount,
   shakeRef,
+  t,
 }: {
   lies: LieViewData[];
   truthShown: boolean;
   players: PlayerSummary[];
   voterCount: number;
   shakeRef: RefObject<HTMLElement | null>;
+  t: Dictionary;
 }) {
   const shown = lies.filter((l) => l.progress.shown);
   if (shown.length === 0) return null;
@@ -376,6 +393,7 @@ function LieStageSection({
           players={players}
           voterCount={voterCount}
           shakeRef={shakeRef}
+          t={t}
         />
       ))}
     </div>
@@ -385,15 +403,17 @@ function LieStageSection({
 function FindersRow({
   reveal,
   players,
+  t,
 }: {
   reveal: RonReveal;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   if (reveal.foundByIds.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
         <Icon name="eye-off" size={30} color="var(--opg-ink-secondary)" />
-        Nobody found it! Tricky one.
+        {t.realOrNah.nobodyFoundIt}
       </div>
     );
   }
@@ -403,7 +423,7 @@ function FindersRow({
         {reveal.foundByIds.map((id) => (
           <PersonTag
             key={id}
-            name={nameOf(players, id)}
+            name={nameOf(players, id, t.common.someone)}
             avatar={avatarOf(players, id)}
             avatarSize={56}
             fontSize={30}
@@ -411,7 +431,7 @@ function FindersRow({
         ))}
       </div>
       <Marker size={30} color="var(--opg-marker)">
-        +{POINTS_TRUTH.toLocaleString("en-US")} each
+        {format(t.realOrNah.pointsEach, { points: POINTS_TRUTH.toLocaleString("en-US") })}
       </Marker>
     </div>
   );
@@ -421,10 +441,12 @@ function TruthSection({
   progress,
   reveal,
   players,
+  t,
 }: {
   progress: RevealProgress;
   reveal: RonReveal;
   players: PlayerSummary[];
+  t: Dictionary;
 }) {
   if (!progress.truthShown) return null;
   return (
@@ -433,7 +455,7 @@ function TruthSection({
       tilt={-1}
       style={{ padding: "36px 40px", display: "flex", flexDirection: "column", gap: 20, alignSelf: "center" }}
     >
-      <div style={LABEL}>The truth</div>
+      <div style={LABEL}>{t.realOrNah.theTruthLabel}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <Highlight style={{ padding: "0 16px" }}>
           <span style={{ fontSize: 96, fontWeight: 700 }}>
@@ -442,16 +464,16 @@ function TruthSection({
         </Highlight>
         {progress.truthStamped ? (
           <SlamStamp live={progress.truthStampedLive} shake="small" size={52}>
-            REAL
+            {t.realOrNah.realStamp}
           </SlamStamp>
         ) : null}
       </div>
       {progress.truthFindersShown ? (
-        <FindersRow reveal={reveal} players={players} />
+        <FindersRow reveal={reveal} players={players} t={t} />
       ) : null}
       {progress.truthStamped ? (
         <div style={{ fontSize: 28, color: "var(--opg-ink-secondary)" }}>
-          Source: Wikipedia, &ldquo;{reveal.source.title}&rdquo;
+          {format(t.realOrNah.sourceWikipedia, { title: reveal.source.title })}
         </div>
       ) : null}
     </Card>
@@ -491,6 +513,7 @@ export interface HostRevealProps {
 
 export function HostReveal(props: HostRevealProps) {
   const { view, players } = props;
+  const { t } = useLocale();
   const reveal = view.reveal;
   const rootRef = useRef<HTMLDivElement>(null);
   // The plan is built from the frozen `planLies`, never live `fooledIds`, so a kick
@@ -520,7 +543,7 @@ export function HostReveal(props: HostRevealProps) {
 
   const lies = lieData(reveal, progress);
   const announcement = progress.truthStamped
-    ? `The real answer is ${reveal.answer}.`
+    ? format(t.realOrNah.truthAnnouncement, { answer: reveal.answer })
     : "";
 
   return (
@@ -529,12 +552,13 @@ export function HostReveal(props: HostRevealProps) {
         prompt={view.prompt}
         style={{ fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}
       />
-      <IntroHeading live={progress.introLive} />
+      <IntroHeading live={progress.introLive} t={t} />
       <DudsRow
         reveal={reveal}
         players={players}
         shown={progress.dudsShown}
         live={progress.dudsLive}
+        t={t}
       />
       <LieStageSection
         lies={lies}
@@ -542,8 +566,9 @@ export function HostReveal(props: HostRevealProps) {
         players={players}
         voterCount={view.playerIds.length}
         shakeRef={rootRef}
+        t={t}
       />
-      <TruthSection progress={progress} reveal={reveal} players={players} />
+      <TruthSection progress={progress} reveal={reveal} players={players} t={t} />
       <StandingsSection view={view} players={players} progress={progress} />
       <output aria-live="polite" style={HIDDEN}>
         {announcement}

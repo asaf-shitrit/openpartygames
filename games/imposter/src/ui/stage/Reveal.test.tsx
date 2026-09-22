@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import type { ImposterHostView, ImposterPlayerView } from "../../state";
 import { imposterPreviews, REVEAL_PREVIEW_START } from "../preview";
@@ -74,6 +75,7 @@ function setup(label: string, elapsedMs: number) {
       timerStartedAt={room.game?.timerStartedAt ?? null}
       clock={clock}
     />,
+    { wrapper: LocaleProvider },
   );
   return { advanceTo, rendered };
 }

@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@opg/i18n": "workspace:*",
     "@opg/protocol": "workspace:*",
     "@opg/sdk": "workspace:*",
     "@opg/ui": "workspace:*",

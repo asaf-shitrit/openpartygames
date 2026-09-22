@@ -20,6 +20,7 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
+import { format, useLocale } from "@opg/i18n";
 import { REVEAL_MS, type ImposterHostView, type ImposterPlayerView } from "../state";
 import {
   phoneRevealBeats,
@@ -43,7 +44,8 @@ function ResultCard({
   live: boolean;
   cardRef: RefObject<HTMLDivElement | null>;
 }) {
-  const imposter = nameOf(players, view.imposterId);
+  const { t } = useLocale();
+  const imposter = nameOf(players, view.imposterId, t.common.someone);
   return (
     <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
       <Card
@@ -89,7 +91,7 @@ function ResultCard({
           <Avatar
             id={avatarOf(players, view.imposterId)}
             size={120}
-            alt={`${imposter}'s avatar`}
+            alt={format(t.imposter.avatarAlt, { name: imposter })}
           />
           <Marker size={30}>{personal.headline}</Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
@@ -128,11 +130,11 @@ function StageArea({
 /** Controls region before the personal result lands: TV mode waits on the TV; a no-TV room
  * already shows the ceremony on its own stage above, so there is nothing extra to say here. */
 function Waiting({ noTv, suspense }: { noTv: boolean; suspense: boolean }) {
+  const { t } = useLocale();
   if (noTv) return null;
   return (
     <EyesOnTv
-      title="Eyes on the TV"
-      detail={suspense ? "Here it comes…" : "The votes are in…"}
+      detail={suspense ? t.imposter.reveal.hereItComes : t.imposter.reveal.votesAreInEllipsis}
       tempo={suspense ? "fast" : "slow"}
     />
   );
@@ -150,11 +152,12 @@ export interface PhoneRevealProps {
 }
 
 export function PhoneReveal(props: PhoneRevealProps) {
+  const { t } = useLocale();
   const { view, players, me, stage } = props;
   const caught = view.caught === true;
   const role = revealRole(view.imposterId, me?.id ?? "", view.myVote);
-  const imposter = nameOf(players, view.imposterId);
-  const personal = personalReveal(caught, role, imposter);
+  const imposter = nameOf(players, view.imposterId, t.common.someone);
+  const personal = personalReveal(t, caught, role, imposter);
   // No TV to follow in a no-TV room: the stage's verdict and this line land together.
   const beats = phoneRevealBeats(caught, personal.haptic, stage === null ? undefined : 0);
   const startedAt = anchorAt(props.timerStartedAt, props.deadline, REVEAL_MS);
@@ -172,8 +175,8 @@ export function PhoneReveal(props: PhoneRevealProps) {
   return (
     <>
       <PhoneStrip
-        gameName="Imposter"
-        progress="The votes are in"
+        gameName={t.imposter.title}
+        progress={t.imposter.progress.votesAreIn}
         right={<Timer deadline={props.deadline} clock={props.clock} />}
       />
       <StageArea

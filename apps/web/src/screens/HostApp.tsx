@@ -1,6 +1,8 @@
 // /host/<CODE> — the TV stage. Chooses a screen from phase/lobbyScreen.
 import { useEffect, useMemo, useRef } from "react";
 import type { HostRoomView, RoomPhase, RoomView } from "@opg/protocol";
+import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import {
   Card,
   Marker,
@@ -26,7 +28,15 @@ import { TvLobby } from "./TvLobby";
 import { TvReconnecting } from "./TvReconnecting";
 import { TvPage } from "./shared";
 
-function MessageScreen({ title, body }: { title: string; body: string }) {
+function MessageScreen({
+  title,
+  body,
+  t,
+}: {
+  title: string;
+  body: string;
+  t: Dictionary;
+}) {
   return (
     <TvPage>
       <TvHeader variant="brand" />
@@ -52,7 +62,7 @@ function MessageScreen({ title, body }: { title: string; body: string }) {
           <Marker size={76}>{title}</Marker>
           <div style={{ fontSize: 38, lineHeight: 1.35 }}>{body}</div>
           <Link to="/" style={{ fontSize: 30, fontWeight: 700 }}>
-            Back to the start screen
+            {t.status.backToStart}
           </Link>
         </Card>
       </div>
@@ -66,19 +76,22 @@ function GameStage({
   deadline,
   timerStartedAt,
   clock,
+  t,
 }: {
   view: HostRoomView;
   gameView: unknown;
   deadline: number | null;
   timerStartedAt: number | null;
   clock: ServerClock;
+  t: Dictionary;
 }) {
   const Ui = gameUiFor(view.game?.id ?? view.selectedGameId);
   if (!Ui)
     return (
       <MessageScreen
-        title="Game not found"
-        body="This room picked a game this screen does not know how to show."
+        title={t.status.gameNotFoundTitle}
+        body={t.status.gameNotFoundBody}
+        t={t}
       />
     );
   return (
@@ -92,9 +105,10 @@ function GameStage({
   );
 }
 
-function StartingScreen({ view }: { view: HostRoomView }) {
+function StartingScreen({ view, t }: { view: HostRoomView; t: Dictionary }) {
   const gameName =
-    view.games.find((g) => g.id === view.selectedGameId)?.name ?? "the game";
+    view.games.find((g) => g.id === view.selectedGameId)?.name ??
+    t.status.startingGameFallback;
   const reduced = useReducedMotion();
   const titleRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -123,10 +137,12 @@ function StartingScreen({ view }: { view: HostRoomView }) {
           }}
         >
           <div ref={titleRef}>
-            <Marker size={76}>{`Starting ${gameName}…`}</Marker>
+            <Marker size={76}>
+              {format(t.status.startingHeading, { game: gameName })}
+            </Marker>
           </div>
           <div style={{ fontSize: 38, lineHeight: 1.35 }}>
-            Get ready. The first round is coming up.
+            {t.status.startingBody}
           </div>
         </Card>
       </div>
@@ -175,12 +191,14 @@ function useScreenTransitionCue(key: string): void {
 function HostScreen({
   view,
   clock,
+  t,
 }: {
   view: HostRoomView;
   clock: ServerClock;
+  t: Dictionary;
 }) {
   if (view.phase !== "lobby") {
-    if (!view.game) return <StartingScreen view={view} />;
+    if (!view.game) return <StartingScreen view={view} t={t} />;
     return (
       <GameStage
         view={view}
@@ -188,6 +206,7 @@ function HostScreen({
         deadline={view.game.deadline}
         timerStartedAt={view.game.timerStartedAt}
         clock={clock}
+        t={t}
       />
     );
   }
@@ -197,9 +216,11 @@ function HostScreen({
 function HostStage({
   view,
   clock,
+  t,
 }: {
   view: HostRoomView;
   clock: ServerClock;
+  t: Dictionary;
 }) {
   useMusic(screenMusic(view));
   useStartStinger(view.phase);
@@ -207,15 +228,15 @@ function HostStage({
   useScreenTransitionCue(key);
   return (
     <PhaseEnter phaseKey={key}>
-      <HostScreen view={view} clock={clock} />
+      <HostScreen view={view} clock={clock} t={t} />
     </PhaseEnter>
   );
 }
 
-function connectingBody(status: RoomSocketStatus): string {
+function connectingBody(status: RoomSocketStatus, t: Dictionary): string {
   return status === "reconnecting"
-    ? "Reconnecting to the room."
-    : "Finding the room.";
+    ? t.status.connectingReconnecting
+    : t.status.connectingFinding;
 }
 
 /** True while a live view is on screen and the socket is reconnecting. */
@@ -250,6 +271,7 @@ function ownsRoom(
 }
 
 export function HostApp({ code }: { code: string }) {
+  const { t } = useLocale();
   const hostToken = useMemo(() => readHostToken(code), [code]);
 
   const socket = useRoomSocket({
@@ -267,8 +289,9 @@ export function HostApp({ code }: { code: string }) {
     return (
       <Stage>
         <MessageScreen
-          title="This room is hosted on another screen"
-          body="Open this room on the screen that created it, or start a new room here."
+          title={t.status.otherHostTitle}
+          body={t.status.otherHostBody}
+          t={t}
         />
       </Stage>
     );
@@ -278,8 +301,9 @@ export function HostApp({ code }: { code: string }) {
     return (
       <Stage>
         <MessageScreen
-          title="Connecting…"
-          body={connectingBody(socket.status)}
+          title={t.status.connectingTitle}
+          body={connectingBody(socket.status, t)}
+          t={t}
         />
       </Stage>
     );
@@ -287,7 +311,7 @@ export function HostApp({ code }: { code: string }) {
 
   return (
     <Stage>
-      <HostStage view={view} clock={clock} />
+      <HostStage view={view} clock={clock} t={t} />
       {isReconnecting(socket.status, view) ? <TvReconnecting /> : null}
     </Stage>
   );

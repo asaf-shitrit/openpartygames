@@ -17,6 +17,8 @@ import {
   Timer,
   useBuzz,
 } from "@opg/ui";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import {
   LIE_MAX_LENGTH,
   type RonAction,
@@ -41,12 +43,13 @@ function timedPhase(phase: RonPlayerView["phase"]): boolean {
 }
 
 export function Phone({ view, room, deadline, timerStartedAt, clock, send }: PhoneProps) {
+  const { t } = useLocale();
   const timed = timedPhase(view.phase);
   return (
     <PhoneScreen>
       <PhoneStrip
-        gameName="Real or Nah"
-        progress={`Fact ${view.factNumber} of ${view.factCount}`}
+        gameName={t.realOrNah.title}
+        progress={format(t.realOrNah.factOf, { number: view.factNumber, count: view.factCount })}
         right={
           <Timer
             deadline={deadline}
@@ -100,14 +103,8 @@ function PhoneBody({
   );
 }
 
-const LIE_ERRORS = {
-  truth: "That's the real answer! Write a lie instead.",
-  duplicate: "Someone already wrote that. Try another.",
-  invalid: "Keep it between 1 and 40 characters.",
-} satisfies Record<RonLieError, string>;
-
-function lieErrorText(error: RonLieError | null): string | undefined {
-  return error ? LIE_ERRORS[error] : undefined;
+function lieErrorText(t: Dictionary, error: RonLieError | null): string | undefined {
+  return error ? t.realOrNah.lieErrors[error] : undefined;
 }
 
 function PromptLine({
@@ -203,6 +200,7 @@ function WriteForm({
   view: RonPlayerView;
   send: (action: RonAction) => void;
 }) {
+  const { t } = useLocale();
   const [text, setText] = useState("");
   const ready = text.trim().length > 0;
   return (
@@ -217,14 +215,14 @@ function WriteForm({
         }}
       >
         <TextInput
-          label="Your lie"
+          label={t.realOrNah.yourLie}
           value={text}
           onChange={setText}
           maxLength={LIE_MAX_LENGTH}
-          placeholder="cane toads"
+          placeholder={t.realOrNah.liePlaceholder}
           autoComplete="off"
-          error={lieErrorText(view.lieError)}
-          hint="Make it believable. Don't write the real answer."
+          error={lieErrorText(t, view.lieError)}
+          hint={t.realOrNah.lieHint}
         />
         <Button
           fullWidth
@@ -233,7 +231,7 @@ function WriteForm({
             if (ready) send({ type: "lie", text: text.trim() });
           }}
         >
-          Submit lie
+          {t.realOrNah.submitLie}
           <Icon name="arrow-right" size={22} />
         </Button>
       </div>
@@ -241,7 +239,13 @@ function WriteForm({
   );
 }
 
+function waitingLabel(t: Dictionary, waiting: number): string {
+  if (waiting === 0) return t.realOrNah.everyoneIn;
+  return format(pickPluralByCount(waiting, t.realOrNah.waitingForMore), { count: waiting });
+}
+
 function LieLocked({ view }: { view: RonPlayerView }) {
+  const { t } = useLocale();
   const waiting = Math.max(0, view.playerCount - view.submittedCount);
   return (
     <>
@@ -259,11 +263,9 @@ function LieLocked({ view }: { view: RonPlayerView }) {
         }}
       >
         <Icon name="check" size={40} color="var(--opg-marker)" />
-        <Marker size={32}>Lie locked in</Marker>
+        <Marker size={32}>{t.realOrNah.lieLockedIn}</Marker>
         <div style={{ fontSize: 18, fontWeight: 700 }}>
-          {waiting > 0
-            ? `Waiting for ${waiting} more`
-            : "Everyone's in — get ready to vote"}
+          {waitingLabel(t, waiting)}
         </div>
       </Card>
     </>
@@ -310,13 +312,14 @@ function VoteForm({
   view: RonPlayerView;
   send: (action: RonAction) => void;
 }) {
+  const { t } = useLocale();
   const [selected, setSelected] = useState<string | null>(null);
   const options = view.options ?? [];
   const canLock = selected !== null;
   return (
     <>
       <PromptLine prompt={view.prompt} compact />
-      <Marker size={28}>Which one is real?</Marker>
+      <Marker size={28}>{t.realOrNah.whichIsReal}</Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {options.map((option) => (
           <VoteRow
@@ -337,7 +340,7 @@ function VoteForm({
           }}
         >
           <Icon name="check" size={22} />
-          Lock in
+          {t.realOrNah.lockIn}
         </Button>
       </div>
     </>
@@ -360,7 +363,9 @@ function voteRowStyle(mine: boolean, selected: boolean): CSSProperties {
   return {
     minHeight: 52,
     boxSizing: "border-box",
-    padding: selected || mine ? "0 12px 0 16px" : "0 16px",
+    paddingBlock: 0,
+    paddingInlineStart: 16,
+    paddingInlineEnd: selected || mine ? 12 : 16,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
@@ -374,7 +379,7 @@ function voteRowStyle(mine: boolean, selected: boolean): CSSProperties {
     fontSize: 20,
     fontWeight: 700,
     color: "var(--opg-ink)",
-    textAlign: "left",
+    textAlign: "start",
     cursor: mine ? "not-allowed" : "pointer",
   };
 }
@@ -390,6 +395,7 @@ function VoteRow({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <button
       type="button"
@@ -400,12 +406,12 @@ function VoteRow({
       style={voteRowStyle(mine, selected)}
     >
       <div style={{ opacity: mine ? 0.45 : 1 }}>{text}</div>
-      <RowHint mine={mine} selected={selected} />
+      <RowHint mine={mine} selected={selected} t={t} />
     </button>
   );
 }
 
-function RowHint({ mine, selected }: { mine: boolean; selected: boolean }) {
+function RowHint({ mine, selected, t }: { mine: boolean; selected: boolean; t: Dictionary }) {
   if (mine) {
     return (
       <div
@@ -419,7 +425,7 @@ function RowHint({ mine, selected }: { mine: boolean; selected: boolean }) {
         }}
       >
         <Icon name="pencil" size={18} color="var(--opg-ink-secondary)" />
-        <div>Your lie</div>
+        <div>{t.realOrNah.yourLie}</div>
       </div>
     );
   }
@@ -430,10 +436,11 @@ function RowHint({ mine, selected }: { mine: boolean; selected: boolean }) {
 }
 
 function VoteLocked({ view }: { view: RonPlayerView }) {
+  const { t } = useLocale();
   return (
     <>
       <PromptLine prompt={view.prompt} compact />
-      <Marker size={28}>Which one is real?</Marker>
+      <Marker size={28}>{t.realOrNah.whichIsReal}</Marker>
       <Card
         variant="M"
         style={{
@@ -446,9 +453,9 @@ function VoteLocked({ view }: { view: RonPlayerView }) {
         }}
       >
         <Icon name="check" size={40} color="var(--opg-marker)" />
-        <Marker size={32}>Vote locked in</Marker>
+        <Marker size={32}>{t.realOrNah.voteLockedIn}</Marker>
         <div style={{ fontSize: 18, fontWeight: 700 }}>
-          Hold tight for the reveal
+          {t.realOrNah.holdTight}
         </div>
       </Card>
     </>

@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { LocaleProvider } from "@opg/i18n";
 import { makeGame, makePlayer, makePlayerView } from "./fixtures/room";
 import { PhoneWaiting } from "./PhoneWaiting";
 
@@ -14,25 +15,30 @@ const LEE = makePlayer({
 
 function setup(patch: Parameters<typeof makePlayerView>[0] = {}) {
   render(
-    <PhoneWaiting
-      view={makePlayerView({
-        players: [ME, SAM, LEE],
-        you: "p1",
-        games: [makeGame()],
-        game: {
-          id: "imposter",
-          view: null,
-          stage: null,
-          deadline: null,
-          timerStartedAt: null,
-        },
-        ...patch,
-      })}
-    />,
+    <LocaleProvider>
+      <PhoneWaiting
+        view={makePlayerView({
+          players: [ME, SAM, LEE],
+          you: "p1",
+          games: [makeGame()],
+          game: {
+            id: "imposter",
+            view: null,
+            stage: null,
+            deadline: null,
+            timerStartedAt: null,
+          },
+          ...patch,
+        })}
+      />
+    </LocaleProvider>,
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+});
 
 describe("PhoneWaiting", () => {
   it("names the running game and greets the player", () => {
@@ -84,5 +90,16 @@ describe("PhoneWaiting", () => {
   it("hides the room code in a shared-screen room", () => {
     setup({ sharedScreen: true });
     expect(screen.queryByText("Room BKTZ")).toBeNull();
+  });
+
+  it("renders in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    setup();
+    expect(screen.getByText("נכנסתם, Priya!")).toBeTruthy();
+    expect(
+      screen.getByText("משחק כבר מתנהל. תצטרפו כשהבא יתחיל."),
+    ).toBeTruthy();
+    expect(screen.getByText("מי משחק (3)")).toBeTruthy();
+    expect(screen.getByText("Priya (אתם)")).toBeTruthy();
   });
 });

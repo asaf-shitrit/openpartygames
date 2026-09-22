@@ -9,6 +9,7 @@ export {
 } from "./locale";
 export type { Locale, Direction, PluralCategory, PluralForms } from "./locale";
 export { format } from "./format";
+export { placeFor } from "./place";
 export type { FormatParams } from "./format";
 export { en } from "./dictionary";
 export type { Dictionary } from "./dictionary";

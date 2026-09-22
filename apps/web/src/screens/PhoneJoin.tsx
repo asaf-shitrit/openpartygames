@@ -215,7 +215,6 @@ function JoinForm({
   onSubmit,
   t,
 }: JoinFormProps) {
-  const { dir } = useLocale();
   return (
     <Card
       variant="L"
@@ -244,7 +243,6 @@ function JoinForm({
           name="arrow-right"
           size={24}
           color="var(--opg-paper)"
-          style={dir === "rtl" ? { transform: "scaleX(-1)" } : undefined}
         />
       </Button>
     </Card>
