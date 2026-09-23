@@ -40,6 +40,49 @@ On phones alone:
 
 Want your own copy? [Run it locally](#run-it-locally) or [self-host it on Cloudflare](#self-host-on-cloudflare).
 
+## Design
+
+Every screen is designed before it's built. The designs live in [`design/`](design): one `.dc.html` file per screen, placed on pages by [`design/canvas.json`](design/canvas.json). The pictures below are drawn from those files. Click one to see it full size.
+
+![Setup: the TV landing, lobby and game picker, plus the phone join, doodle picker, lobby and VIP controls](design/previews/setup.jpg)
+
+<details>
+<summary><strong>Imposter</strong></summary>
+
+![Imposter on the TV and phones: check your phones, clue turns, voting, reveal, last chance and round result](design/previews/imposter.jpg)
+
+</details>
+
+<details>
+<summary><strong>Real or Nah</strong></summary>
+
+![Real or Nah on the TV and phones: write lies, vote and reveal](design/previews/real-or-nah.jpg)
+
+</details>
+
+<details>
+<summary><strong>Doodle Bluff</strong></summary>
+
+![Doodle Bluff on phones and the TV: draw, write a title, vote, reveal and the gallery](design/previews/doodle-bluff.jpg)
+
+</details>
+
+<details>
+<summary><strong>Phones alone</strong></summary>
+
+![Playing without a shared screen: start or join, the lobby, the VIP's game picker, Most Likely To and Imposter on phones only](design/previews/no-tv.jpg)
+
+</details>
+
+<details>
+<summary><strong>End of a game and system screens</strong></summary>
+
+![Final scores, the room-full screen, credits, waiting for the next game and reconnecting](design/previews/end-system.jpg)
+
+</details>
+
+After changing a design, run `node scripts/build-design-previews.mjs` to redraw the pictures, and commit them.
+
 ## Run it locally
 
 You need Node 24 or newer and pnpm.
@@ -156,7 +199,8 @@ packs/imposter/       word-pair packs (JSON)
 packs/real-or-nah/    fact packs (JSON)
 packs/most-likely-to/ superlative prompt packs (JSON)
 packs/doodle-bluff/   drawing-prompt packs (JSON)
-scripts/              pack validation, pack seed, pack submission, icons and share card
+design/               screen designs (.dc.html), their canvas layout and rendered previews
+scripts/              pack validation, pack seed, pack submission, icons, share card and design previews
 ```
 
 ## Quality gates

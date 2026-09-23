@@ -50,3 +50,17 @@ Run `pnpm check` before reporting done. Healthy output: packs validate with no e
 - Deploys restart Durable Objects: always persist the room snapshot after a change and let clients reconnect.
 - Keep WebSocket messages bounded: one view broadcast per change.
 - Commit messages must not attribute Claude.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues in `asaf-shitrit/openpartygames`, through the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
