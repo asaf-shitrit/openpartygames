@@ -17,6 +17,17 @@
 // any other non-Latin) pack content is not exercised by the layout suite at all today — a real
 // gap, but a different one (missing coverage, not a wrong proxy), and out of scope here: closing
 // it means giving each game a Hebrew fixture in its own preview.ts, which this task does not own.
+//
+// Imposter is measured word by word, every other game value by value — matching
+// scripts/content-stress.test.ts's own word/value split, for the same reason: imposter's
+// crew/decoy renders through fitTextSize (packages/ui/src/text-fit.ts), which sizes off the
+// single longest word in the text and nothing else, so a two-word pair like "flight attendant"
+// is only ever as dangerous as "attendant" alone. Comparing whole values here would make the
+// same mistake the character-count guard used to make: a longer compound value could look like
+// the worst case while the pack's actual longest single word — the one that actually decides
+// the size — went unmeasured. The other three games render fixed-size wrapped text with no
+// per-word sizer, so whatever the whole value renders as, nowrap, remains the right thing to
+// measure there.
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import fs from "node:fs";
@@ -53,6 +64,9 @@ interface GameContent {
   stress: string;
   /** The face STRESS_TEXT (and every field below) renders in on a real screen. */
   face: Face;
+  /** "word": measure the longest word only (what fitTextSize sizes from). "value": the whole
+   *  string, nowrap (what a fixed-size wrapped field renders as a unit). */
+  metric: "word" | "value";
   /** The strings in one item that a player actually reads. Ids and sources are not shown. */
   visibleTexts: (item: PackItem) => Array<string | undefined>;
 }
@@ -65,12 +79,14 @@ const GAMES: GameContent[] = [
     id: "imposter",
     stress: imposterStress,
     face: "marker",
+    metric: "word",
     visibleTexts: (item) => [item.crew, item.decoy],
   },
   {
     id: "real-or-nah",
     stress: realOrNahStress,
     face: "body",
+    metric: "value",
     visibleTexts: (item) => [
       item.prompt,
       item.answer,
@@ -82,18 +98,37 @@ const GAMES: GameContent[] = [
     id: "most-likely-to",
     stress: mostLikelyToStress,
     face: "body",
+    metric: "value",
     visibleTexts: (item) => [item.prompt],
   },
   {
     id: "doodle-bluff",
     stress: doodleBluffStress,
     face: "body",
+    metric: "value",
     visibleTexts: (item) => [item.prompt, ...(item.houseTitles ?? [])],
   },
 ];
 
+/** The longest whitespace-separated word in `text`, or `text` itself if there is no space. */
+function longestWord(text: string): string {
+  let longest = "";
+  for (const word of text.trim().split(/\s+/)) {
+    if (word.length > longest.length) longest = word;
+  }
+  return longest;
+}
+
+/** What a game's metric actually measures for one pack string: the value, or just its word. */
+function measuredText(text: string, game: GameContent): string {
+  return game.metric === "word" ? longestWord(text) : text;
+}
+
 interface Candidate {
+  /** The full pack value, for the failure message. */
   text: string;
+  /** What is actually rendered and measured: `text`, or its longest word. */
+  measured: string;
   file: string;
 }
 
@@ -116,7 +151,7 @@ function englishCandidates(game: GameContent): Candidate[] {
     for (const item of pack.items ?? []) {
       for (const text of game.visibleTexts(item)) {
         if (text === undefined || text === "") continue;
-        if (!seen.has(text)) seen.set(text, { text, file });
+        if (!seen.has(text)) seen.set(text, { text, measured: measuredText(text, game), file });
       }
     }
   }
@@ -184,19 +219,22 @@ test.describe("worst-case fixtures are at least as wide as the packs", () => {
         0,
       );
 
-      const texts = [game.stress, ...candidates.map((c) => c.text)];
+      const stressMeasured = measuredText(game.stress, game);
+      const texts = [stressMeasured, ...candidates.map((c) => c.measured)];
       const widths = await measureWidths(page, game.face, texts);
       const stressWidth = widths[0];
 
       const measured = candidates.map((candidate, i) => ({ candidate, width: widths[i + 1] }));
       // Non-empty: candidates.length was asserted above, and measured has the same length.
       const worst = measured.reduce((a, b) => (b.width > a.width ? b : a));
+      const what = game.metric === "word" ? `its longest word, "${worst.candidate.measured}", ` : "";
       expect(
         stressWidth,
-        `packs/${game.id}/${worst.candidate.file} ships "${worst.candidate.text}" at ` +
-          `${worst.width.toFixed(1)}px in the ${game.face} face, but STRESS_TEXT ("${game.stress}") ` +
-          `only renders ${stressWidth.toFixed(1)}px wide. Raise STRESS_TEXT in ` +
-          `games/${game.id}/src/ui/preview.ts, then rerun pnpm e2e:layout.`,
+        `packs/${game.id}/${worst.candidate.file} ships "${worst.candidate.text}" — ${what}` +
+          `renders ${worst.width.toFixed(1)}px in the ${game.face} face — but STRESS_TEXT ` +
+          `("${game.stress}") only renders ${stressWidth.toFixed(1)}px wide (as measured: ` +
+          `"${stressMeasured}"). Raise STRESS_TEXT in games/${game.id}/src/ui/preview.ts, then ` +
+          `rerun pnpm e2e:layout.`,
       ).toBeGreaterThanOrEqual(worst.width);
     });
   }

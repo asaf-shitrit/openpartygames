@@ -4,18 +4,24 @@
 // drawn with "zebra". A fixed font size is a bet that every word is short, and the bet loses
 // off the right edge of a phone. This sizes the text instead.
 //
-// The estimate: measured in a real browser, in the running app, against the exact Permanent
-// Marker font file this package ships (packages/ui's @fontsource/permanent-marker), by forcing
-// the face to finish loading and then comparing a span's rendered width to a canvas
-// `measureText` call using the same font string — the two agree, and so does the same file
-// loaded in isolation from a data URI, so this is the font's own metrics, not a measurement
-// artifact. Most English words run a glyph advance around 0.5-0.6 of the font size, but a word
-// concentrated in wide letters like m and w runs higher — real pack words already shipped in
-// packs/imposter measure "owl" 0.66 and "mop" 0.65; "mammogram" and "meowmeow" (not shipped,
-// but plausible) measure 0.69 and 0.70. All of those clear the old constant, 0.62, meaning it
-// could already undersize a container for a word on the shelf today, not just a hypothetical
-// one. The ratio below carries a further margin over the worst word found, so one a little more
-// concentrated than anything shipped today still fits.
+// The estimate: measured in a real browser, in the running app (inside `.opg-root`, on the
+// actual `.opg-marker` class), against the exact Permanent Marker font file this package ships
+// (packages/ui's @fontsource/permanent-marker), by explicitly calling `document.fonts.load(...)`
+// for that face at that size and awaiting it before measuring anything. That matters more than
+// it sounds: a probe measured before the face is loaded silently renders in the fallback font
+// instead, and the result looks exactly as stable and precise as a real measurement — nothing
+// about it looks wrong until someone re-checks with the face actually loaded. A span's rendered
+// width and a canvas `measureText` call agree on this, and so does the same font file loaded in
+// isolation on a blank page, PROVIDED that page also explicitly loads the face before measuring
+// (`document.fonts.ready` alone does not guarantee this: it resolves once every font the page
+// has already asked to load has settled, which is none, if nothing on the page has rendered a
+// glyph in that face yet). Most English words run a glyph advance around 0.5-0.6 of the font
+// size, but a word concentrated in wide letters like m and w runs higher — real pack words
+// already shipped in packs/imposter measure "owl" 0.66 and "mop" 0.65; "mammogram" and
+// "meowmeow" (not shipped, but plausible) measure 0.69 and 0.70. All of those clear the old
+// constant, 0.62, meaning it could already undersize a container for a word on the shelf today,
+// not just a hypothetical one. The ratio below carries a further margin over the worst word
+// found, so one a little more concentrated than anything shipped today still fits.
 // e2e/layout/text-fit-model.spec.ts holds this ratio against the real packs and the real
 // Permanent Marker font file in a browser (forcing the font to finish loading first, the same
 // way), since checking it needs both and this file stays dependency-free.

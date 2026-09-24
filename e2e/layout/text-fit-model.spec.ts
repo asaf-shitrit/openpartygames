@@ -35,7 +35,13 @@ interface PackFile {
   items?: PackItem[];
 }
 
-/** Every English crew/decoy word imposter packs ship: the only field fitTextSize sizes today. */
+/**
+ * Every individual word any English imposter pack ships in crew/decoy, split on whitespace.
+ * fitTextSize only ever measures one word at a time (it sizes off the longest word in the
+ * text, ignoring the rest), so a two-word value like "flight attendant" is really two
+ * candidates here, "flight" and "attendant" — not one 17-character string with a space in it,
+ * which would dilute the advance of whichever half is actually the wide one.
+ */
 function packWords(): string[] {
   const dir = path.join(rootDir, "packs", "imposter");
   const words = new Set<string>();
@@ -46,8 +52,10 @@ function packWords(): string[] {
     const pack: PackFile = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"));
     if (pack.language !== "en") continue;
     for (const item of pack.items ?? []) {
-      if (item.crew) words.add(item.crew);
-      if (item.decoy) words.add(item.decoy);
+      for (const value of [item.crew, item.decoy]) {
+        if (!value) continue;
+        for (const word of value.trim().split(/\s+/)) words.add(word);
+      }
     }
   }
   return [...words];
