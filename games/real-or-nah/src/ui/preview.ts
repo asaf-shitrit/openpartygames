@@ -464,9 +464,15 @@ function playerRoom(
 // whose names all sit at the protocol's limit. scripts/content-stress.test.ts fails when a
 // pack ships something longer, so new content re-arms these fixtures instead of slipping past.
 
-/** The longest prompt in any real-or-nah pack (starter-facts.json's shortest-war fact). */
+/**
+ * The widest prompt in any real-or-nah pack, in the body face it actually renders in
+ * (starter-facts.json's Google-naming fact: 91 characters, same as the shortest-war fact, but
+ * wider — it runs heavier on w and m). scripts/content-stress.test.ts holds this against the
+ * packs by character count as a cheap first check; e2e/layout/content-width.spec.ts holds it
+ * against the packs by rendered width, which is what actually decides whether it fits.
+ */
 export const STRESS_TEXT =
-  "The shortest war on record, fought between Britain and Zanzibar in 1896, lasted about ____.";
+  "Before it was called Google, Larry Page and Sergey Brin's search engine was nicknamed ____.";
 
 /** The longest truth answer in any real-or-nah pack. */
 const STRESS_ANSWER = "laser pointer";

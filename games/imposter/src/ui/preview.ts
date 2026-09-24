@@ -588,10 +588,19 @@ function playerRoom(
 // ships something longer, so new content re-arms these fixtures instead of slipping past.
 
 /**
- * The longest word in any imposter pack. Pairs swap sides, so either half can be the decoy.
- * `scripts/content-stress.test.ts` holds this against the packs themselves.
+ * The word fitTextSize (packages/ui/src/text-fit.ts) actually sizes from: crew/decoy renders
+ * through it, and it only ever looks at the longest single word in the text, so a two-word pair
+ * like "flight attendant" is really governed by "attendant" (9 characters) alone — the space and
+ * "flight" don't matter to it. "thunderstorm" is a single 12-character word already shipped in
+ * packs/imposter/nature-and-weather.json, longer than "attendant" and than every other word any
+ * imposter pack ships, so it's the fixture: no compound needed; this one word already is the
+ * worst case. `scripts/content-stress.test.ts` holds this against the packs by character count
+ * of the longest word (not the longest whole value — comparing whole values missed this one,
+ * since "flight attendant" is 17 characters end to end and looked worse than "thunderstorm"'s
+ * 12 even though its own longest word is shorter); `e2e/layout/content-width.spec.ts` holds it
+ * by rendered width in the real font.
  */
-export const STRESS_TEXT = "flight attendant";
+export const STRESS_TEXT = "thunderstorm";
 
 /** Eight players, the room ceiling, each named at NAME_MAX_LENGTH. */
 const STRESS_NAMES = [

@@ -20,7 +20,7 @@ describe("fitTextSize", () => {
   const opts = { max: 72, min: 24, widthPx: 240 };
 
   it("leaves short words at the full size", () => {
-    expect(fitTextSize("zebra", opts)).toBe(72);
+    expect(fitTextSize("cat", opts)).toBe(72);
   });
 
   it("shrinks a word that would not fit", () => {
