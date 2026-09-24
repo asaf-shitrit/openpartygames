@@ -2,16 +2,20 @@
 // shared stage on its own screen, read off `stage-*` testids instead of the TV.
 
 import { expect } from "@playwright/test";
+import { assertLayout } from "./layout-check";
 import type { Phone } from "./harness";
 
-/** Waits until every phone's vote form is ready for the round. */
+/** Waits until every phone's vote form is ready for the round, and checks the no-TV stage —
+ * carried on the same screen as the vote controls, so this is exactly where the stage could
+ * cover the tap targets beneath it. */
 async function expectVoteReady(phones: Phone[]): Promise<void> {
   await Promise.all(
-    phones.map((phone) =>
-      expect(
+    phones.map(async (phone) => {
+      await expect(
         phone.page.getByRole("button", { name: /Lock in vote/ }),
-      ).toBeVisible({ timeout: 45_000 }),
-    ),
+      ).toBeVisible({ timeout: 45_000 });
+      await assertLayout(phone.page, "phone", `no-tv vote phase (${phone.name})`);
+    }),
   );
 }
 
@@ -27,11 +31,13 @@ async function lockVotes(phones: Phone[]): Promise<void> {
 
 async function expectPersonalCards(phones: Phone[]): Promise<void> {
   await Promise.all(
-    phones.map((phone) =>
-      expect(phone.page.getByTestId("reveal-content")).toBeVisible({
+    phones.map(async (phone) => {
+      await expect(phone.page.getByTestId("reveal-content")).toBeVisible({
         timeout: 45_000,
-      }),
-    ),
+      });
+      // Stage and personal card stacked on one screen — the highest-risk overlap in no-TV mode.
+      await assertLayout(phone.page, "phone", `no-tv reveal phase (${phone.name})`);
+    }),
   );
 }
 
@@ -59,6 +65,7 @@ export async function expectNextRoundReady(phone: Phone): Promise<void> {
   await expect(
     phone.page.getByRole("button", { name: /Lock in vote/ }),
   ).toBeVisible({ timeout: 45_000 });
+  await assertLayout(phone.page, "phone", "no-tv next round ready");
 }
 
 /**
@@ -75,4 +82,7 @@ export async function expectSettledAfterReload(phone: Phone): Promise<void> {
     timeout: 15_000,
   });
   await expect(phone.page.getByText("Verdict incoming")).not.toBeVisible();
+  // Exactly the state a settled preview fixture cannot stand in for: a phone that just
+  // reconnected mid-reveal, with the stage and its own card both already up.
+  await assertLayout(phone.page, "phone", "no-tv settled after a mid-reveal reload");
 }

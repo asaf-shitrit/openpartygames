@@ -7,8 +7,9 @@
 // "reveal" and "gallery". The draw, title and vote phases all advance the moment every connected
 // player has acted (games/doodle-bluff/src/index.ts's advanceDrawIfReady / advanceTitleIfReady /
 // advanceVoteIfReady), so driving every phone keeps this from ever depending on a deadline.
-import { devices, expect, type Browser, type Page } from "@playwright/test";
-import { joinPhone, repeat, type Phone } from "./harness";
+import { expect, type Browser, type Page } from "@playwright/test";
+import { assertLayout } from "./layout-check";
+import { joinPhone, newPhonePage, repeat, type Phone } from "./harness";
 
 // shownCount(3 players) = min(2 * 3, TITLED_MAX) = 6 (games/doodle-bluff/src/state.ts)
 const ROUNDS_PER_GAME = 6;
@@ -44,6 +45,7 @@ async function nextDrawing(page: Page): Promise<void> {
 /** The artist's first drawing, made for real with the mouse; the second, squiggled. */
 async function drawForReal(page: Page): Promise<void> {
   await expect(activeCanvas(page)).toBeVisible({ timeout: 45_000 });
+  await assertLayout(page, "phone", "doodle-bluff drawing (artist)");
   await drawStroke(page);
   await page.getByRole("button", { name: "I'm done with this one" }).click();
   await nextDrawing(page);
@@ -53,6 +55,7 @@ async function drawForReal(page: Page): Promise<void> {
 /** Both of a phone's drawings, squiggled — the fast path most players take. */
 async function squiggleBoth(page: Page): Promise<void> {
   await expect(activeCanvas(page)).toBeVisible({ timeout: 45_000 });
+  await assertLayout(page, "phone", "doodle-bluff drawing (squiggle)");
   await squiggleActive(page);
   await nextDrawing(page);
   await squiggleActive(page);
@@ -61,6 +64,7 @@ async function squiggleBoth(page: Page): Promise<void> {
 /** Draws every drawing in the game: one for real, the rest as squiggles. */
 export async function playDoodleDraw(tv: Page, phones: Phone[]): Promise<void> {
   await expect(tv.getByText("Everyone is drawing")).toBeVisible({ timeout: 45_000 });
+  await assertLayout(tv, "tv", "doodle-bluff draw phase (tv)");
   const [artist, ...rest] = phones;
   if (artist === undefined) throw new Error("no phones to draw with");
   await drawForReal(artist.page);
@@ -72,6 +76,7 @@ async function titleIfNotArtist(phone: Phone): Promise<void> {
   await expect(
     phone.page.getByText("Give it a good lie").or(phone.page.getByText("Your drawing — sit tight")),
   ).toBeVisible({ timeout: 45_000 });
+  await assertLayout(phone.page, "phone", `doodle-bluff title phase (${phone.name})`);
   if (await phone.page.getByText("Your drawing — sit tight").isVisible()) return;
   await phone.page.getByLabel("Your title").fill(`lie from ${phone.name}`);
   await phone.page.getByRole("button", { name: "Submit title" }).click();
@@ -83,6 +88,7 @@ async function voteIfNotArtist(phone: Phone): Promise<void> {
       .getByText("Which title is real?")
       .or(phone.page.getByText("Your drawing — no peeking at your own title")),
   ).toBeVisible({ timeout: 45_000 });
+  await assertLayout(phone.page, "phone", `doodle-bluff vote phase (${phone.name})`);
   if (await phone.page.getByText("Your drawing — no peeking at your own title").isVisible()) return;
   await phone.page.locator("button[aria-pressed]").first().click();
   await phone.page.getByRole("button", { name: "Lock in" }).click();
@@ -92,10 +98,13 @@ async function voteIfNotArtist(phone: Phone): Promise<void> {
  * skips the reveal instead of waiting out its fixed 12s deadline. */
 async function playRound(tv: Page, phones: Phone[], vip: Phone): Promise<void> {
   await expect(tv.getByText("Who's written")).toBeVisible({ timeout: 45_000 });
+  await assertLayout(tv, "tv", "doodle-bluff title phase (tv)");
   await Promise.all(phones.map((phone) => titleIfNotArtist(phone)));
   await expect(tv.getByText("Which title is real?")).toBeVisible({ timeout: 45_000 });
+  await assertLayout(tv, "tv", "doodle-bluff vote phase (tv)");
   await Promise.all(phones.map((phone) => voteIfNotArtist(phone)));
   await expect(tv.getByText("Let's see who fooled who")).toBeVisible({ timeout: 45_000 });
+  await assertLayout(tv, "tv", "doodle-bluff reveal phase (tv)");
   await vip.page.getByRole("button", { name: "Skip this part" }).click();
 }
 
@@ -104,6 +113,7 @@ export async function playDoodleBluff(tv: Page, phones: Phone[], vip: Phone): Pr
   await playDoodleDraw(tv, phones);
   await repeat(ROUNDS_PER_GAME, () => playRound(tv, phones, vip));
   await expect(tv.getByText("The gallery — gone after tonight")).toBeVisible({ timeout: 45_000 });
+  await assertLayout(tv, "tv", "doodle-bluff gallery (tv)");
 }
 
 /** Draws one real stroke on the active pad, for a test that then reloads to prove the
@@ -122,8 +132,7 @@ export async function drawOneStroke(page: Page): Promise<void> {
  * survive the reload. Everything else — join, avatar pick, other actions — still round-trips.
  */
 async function joinDrawer(browser: Browser, code: string, name: string): Promise<Phone> {
-  const context = await browser.newContext({ ...devices["Pixel 5"] });
-  const page = await context.newPage();
+  const { context, page } = await newPhonePage(browser);
   await page.routeWebSocket(/\/ws\//, (ws) => {
     const server = ws.connectToServer();
     ws.onMessage((message) => {

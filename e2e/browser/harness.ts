@@ -8,11 +8,25 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
+import { INVARIANTS_PATH } from "./layout-check";
 
 export interface Phone {
   name: string;
   context: BrowserContext;
   page: Page;
+}
+
+/** A phone-shaped context: reduced motion (so an in-play layout check never lands mid
+ * transition, see layout-check.ts) and the layout checker injected on every navigation,
+ * including a later `page.reload()`, so a check right after a reload never needs the
+ * on-demand fallback in layout-check.ts's `ensureInjected`. */
+export async function newPhonePage(
+  browser: Browser,
+): Promise<{ context: BrowserContext; page: Page }> {
+  const context = await browser.newContext({ ...devices["Pixel 5"], reducedMotion: "reduce" });
+  await context.addInitScript({ path: INVARIANTS_PATH });
+  const page = await context.newPage();
+  return { context, page };
 }
 
 /** Desktop TV page, then "Start a room"; returns the new room code. */
@@ -31,8 +45,7 @@ export async function startRoomFromPhone(
   browser: Browser,
   name: string,
 ): Promise<{ code: string; starter: Phone }> {
-  const context = await browser.newContext({ ...devices["Pixel 5"] });
-  const page = await context.newPage();
+  const { context, page } = await newPhonePage(browser);
   await page.goto("/");
   await expect(page.getByText("Party games for")).toBeVisible();
   await page.getByRole("button", { name: /Start a room/ }).click();
@@ -60,8 +73,7 @@ export async function joinPhone(
   code: string,
   name: string,
 ): Promise<Phone> {
-  const context = await browser.newContext({ ...devices["Pixel 5"] });
-  const page = await context.newPage();
+  const { context, page } = await newPhonePage(browser);
   await page.goto(`/${code}`);
   await page.getByLabel("Your name").fill(name);
   await page.getByRole("button", { name: "Join" }).click();
