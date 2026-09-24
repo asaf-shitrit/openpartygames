@@ -12,6 +12,7 @@ import {
   Card,
   EyesOnTv,
   Marker,
+  PhoneScreen,
   reached,
   StickerBurst,
   useBeatEntries,
@@ -19,7 +20,7 @@ import {
   useMoment,
 } from "@opg/ui";
 import type { Beat, HapticName, Moment, ServerClock } from "@opg/ui";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useRef } from "react";
 import { format, placeFor, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -138,6 +139,10 @@ function AwardCallout({
         justifyContent: "center",
         gap: 12,
         textAlign: "center",
+        // The burst is anchored on this card (StickerBurst positions itself relative to the
+        // nearest positioned ancestor) and clipped to it, so it can't widen the page.
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       {live ? <StickerBurst live count={8} size={220} /> : null}
@@ -211,7 +216,10 @@ function CrownCallout({
         justifyContent: "center",
         gap: 14,
         textAlign: "center",
+        // The reduced-motion sticker burst is anchored and clipped to this card, or its
+        // stickers can extend past the phone's width and force the page to scroll sideways.
         position: "relative",
+        overflow: "hidden",
       }}
     >
       {amWinner ? <Confetti live={live} surface="phone" /> : null}
@@ -472,6 +480,47 @@ function isWinner(result: GameResultSummary | null, me: PlayerId): boolean {
   return (result.winnerIds ?? []).includes(me);
 }
 
+interface ResultContentArgs {
+  t: Dictionary;
+  view: PlayerRoomView;
+  me: PlayerId;
+  result: GameResultSummary | null;
+  stage: Stage;
+  ranked: RankedPlayer[];
+  awards: readonly Award[];
+  cardRef: RefObject<HTMLDivElement | null>;
+}
+
+/** The card body: game-over, or the beat the ceremony has reached, ranked by `stage`. */
+function ResultContent(args: ResultContentArgs): ReactNode {
+  const { t, view, me, result, stage, ranked, awards, cardRef } = args;
+  if (result === null) return <GameOverCard t={t} score={0} />;
+  if (!completedOf(result))
+    return <GameOverCard t={t} score={myScoreIn(ranked, me)} />;
+
+  const crownLine = crownCopy(
+    t,
+    (result.winnerIds ?? []).map((id) =>
+      findPlayerName(view, id, t.common.someone),
+    ),
+  );
+
+  return (
+    <div ref={cardRef} style={{ display: "flex", flexGrow: 1 }}>
+      {bodyFor({
+        t,
+        view,
+        me,
+        stage,
+        ranked,
+        awards,
+        crownLine,
+        gameId: result.gameId,
+      })}
+    </div>
+  );
+}
+
 export interface PhoneResultsProps {
   view: PlayerRoomView;
   clock: ServerClock;
@@ -508,29 +557,18 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
     );
   });
 
-  if (result === null) return <GameOverCard t={t} score={0} />;
-  if (!completedOf(result))
-    return <GameOverCard t={t} score={myScoreIn(ranked, me)} />;
-
-  const crownLine = crownCopy(
-    t,
-    (result.winnerIds ?? []).map((id) =>
-      findPlayerName(view, id, t.common.someone),
-    ),
-  );
-
   return (
-    <div ref={cardRef} style={{ display: "flex", flexGrow: 1 }}>
-      {bodyFor({
-        t,
-        view,
-        me,
-        stage,
-        ranked,
-        awards,
-        crownLine,
-        gameId: result.gameId,
-      })}
-    </div>
+    <PhoneScreen fit>
+      <ResultContent
+        t={t}
+        view={view}
+        me={me}
+        result={result}
+        stage={stage}
+        ranked={ranked}
+        awards={awards}
+        cardRef={cardRef}
+      />
+    </PhoneScreen>
   );
 }

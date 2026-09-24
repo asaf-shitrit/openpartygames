@@ -205,10 +205,16 @@ export function Confetti({
     // propsRef so a tweak never replays the burst mid-flight.
   }, [live, reduced]);
 
+  // StickerBurst's own default spread (360px across) fits a TV card comfortably but not a
+  // phone one — its stickers sit at a fixed offset from centre regardless of the card they
+  // land in, so on a phone they land past the card's edge, and the celebration is either
+  // cropped or, without cropping, wide enough to push the whole page into a sideways scroll.
+  const burstSize = surface === "tv" ? 360 : 160;
+
   if (!live) return null;
-  if (reduced) return <StickerBurst live count={10} />;
+  if (reduced) return <StickerBurst live count={10} size={burstSize} />;
   // No 2d context (an old or locked-down browser): keep the celebration with stickers.
-  if (unsupported) return <StickerBurst live count={10} />;
+  if (unsupported) return <StickerBurst live count={10} size={burstSize} />;
 
   return <canvas ref={canvasRef} aria-hidden="true" style={CANVAS_STYLE} />;
 }

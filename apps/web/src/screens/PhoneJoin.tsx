@@ -55,15 +55,21 @@ function BrandHeader({ t }: { t: Dictionary }) {
   );
 }
 
-/** The brand mark and the language choice share the top line. */
+/**
+ * The brand mark and the language choice share the top line, and wrap onto a second when they
+ * don't both fit — at 360px (the narrowest phone this app promises to hold) plus the room-code
+ * screen's Hebrew label, they didn't, and the language picker ran off the right edge.
+ */
 function ScreenHeader({ t }: { t: Dictionary }) {
   return (
     <div
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 12,
+        rowGap: 8,
+        columnGap: 12,
       }}
     >
       <BrandHeader t={t} />

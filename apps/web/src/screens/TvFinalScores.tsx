@@ -209,7 +209,8 @@ function ScoreRow({
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {player && player.crowns > 0 ? (
-          <Tally count={player.crowns} size={30} />
+          // Tally's "×N" text is 0.75 * size; 30 rendered it at 23px, under the TV's 28px floor.
+          <Tally count={player.crowns} size={38} />
         ) : null}
         {winner ? (
           <div

@@ -85,6 +85,20 @@ const CONTRAST_KNOWN_GAPS = {
   "doodle-bluff/25":
     "same cause as doodle-bluff/16 — its worst-case fixture is the same no-TV reveal layout, " +
     "text straight over the grid background with nothing solid behind it.",
+  "app/5":
+    "the app's own screens reaching this rule for the first time surfaced a systemic gap in " +
+    "the palette itself, not a per-screen bug: --opg-marker (#d7372b), the app's only red, " +
+    "used everywhere a warning or an error needs to read as one, measures 4.43:1 on " +
+    "--opg-paper and 4.29:1 on --opg-highlight-soft — both under the 4.5:1 floor for body " +
+    "text (it clears 4.5:1 only on plain white --opg-card, and clears the 3:1 large-text " +
+    "floor everywhere, which is why no heading in marker red has ever tripped this rule). " +
+    "This screen's 'plays on a shared screen' notice is one visible instance; a per-component " +
+    "recolour would just leave the next one uncaught. Darkening --opg-marker for body-sized " +
+    "text is a call for whoever owns the palette, weighed against the brand red it would " +
+    "shift everywhere else it appears.",
+  "app/7":
+    "same systemic --opg-marker-on-body-text gap as app/5, hit here by the VIP controls' " +
+    "own 'couldn't reach the room' error line — see app/5's note.",
 } satisfies Record<string, string>;
 
 function report(violations: Violation[]): string {

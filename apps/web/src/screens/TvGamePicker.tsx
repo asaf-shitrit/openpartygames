@@ -196,10 +196,15 @@ function PackRow({
       >
         {pack.name}
       </div>
-      <Chip height={42} fontSize={26}>
+      <Chip height={42} fontSize={28}>
         {ratingLabel(t, pack.rating)}
       </Chip>
-      <Switch checked={pack.enabled} size={42} label={`${pack.name} pack`} />
+      <Switch
+        checked={pack.enabled}
+        size={42}
+        labelFontSize={28}
+        label={`${pack.name} pack`}
+      />
     </div>
   );
 }

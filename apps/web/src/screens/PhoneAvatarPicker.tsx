@@ -89,7 +89,10 @@ function PickedArt({ id, t }: { id: AvatarId; t: Dictionary }) {
         style={{
           fontSize: 16,
           fontWeight: 700,
-          color: "var(--opg-marker)",
+          // The checkmark above already carries the marker red; on the tile's highlight
+          // background that red reads at 4.29:1 for text, under the 4.5:1 floor for body
+          // text, so the label itself uses the ink colour instead.
+          color: "var(--opg-ink)",
         }}
       >
         {t.avatarPicker.picked}
@@ -118,6 +121,11 @@ function PickTile({
       className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={() => onPick(id)}
       aria-pressed={picked}
+      // The tile's own name from content is an avatar SVG's aria-label, not a text node, so
+      // it never reaches the button's own text content — every screen reader in practice
+      // still announces it (aria-label on a nested role="img" contributes to name-from-content
+      // per the accessible-name spec), but say it here too, unambiguously.
+      aria-label={format(t.avatarPicker.chooseAlt, { id })}
       style={{
         position: "relative",
         height: 120,

@@ -16,19 +16,4 @@ body {
     linear-gradient(var(--opg-grid) 2px, transparent 2px),
     linear-gradient(90deg, var(--opg-grid) 2px, transparent 2px);
   background-size: 48px 48px;
-  /* PhoneVipControls' primary action is a sticky footer pinned to the viewport bottom
-   * (position: sticky; bottom: 0) so it is always reachable on a screen that scrolls. The
-   * page itself is the scroll container (PhoneScreen has no overflow of its own), and a
-   * sticky element does not reserve extra scroll room past the document's own end — so the
-   * last row of the player list (its "Kick" button) sat close enough to the footer that
-   * scrolling it "into view" (both the browser's own focus-scroll and this app's layout
-   * checks, e2e/layout/ and e2e/browser/layout-check.ts, use scrollIntoView) left it
-   * covered by the footer's opaque background instead of clearing it. scroll-padding-bottom
-   * is the standard fix: it tells scrollIntoView to leave this much room at the bottom, the
-   * same way a sticky header would ask for scroll-padding-top. Sized generously for the
-   * footer's tallest state (a two-line disabled reason plus the player-count hint, in the
-   * longest supported language) rather than measured exactly, since it only affects where
-   * scrolling stops, not layout.
-   */
-  scroll-padding-bottom: 160px;
 }

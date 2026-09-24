@@ -7,8 +7,9 @@ import { useEffect } from "react";
 import { Stage } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
 import { gameUiFor } from "../games";
+import { appScreenById } from "./app-screens";
 import { SCREENS, screenById, screenIdFromSearch, timingOf } from "./screens";
-import type { HostCase, PhoneCase, ScreenCase } from "./screens";
+import type { AppCase, HostCase, PhoneCase, ScreenCase } from "./screens";
 
 /** A game's screens, as the registry hands them over. */
 type RegisteredUi = NonNullable<ReturnType<typeof gameUiFor>>;
@@ -74,7 +75,16 @@ function PhoneScreenCase({ screen, Ui }: { screen: PhoneCase; Ui: RegisteredUi }
   );
 }
 
+/** Exported for its own test: the branch a real registry entry can never reach otherwise. */
+export function AppScreenView({ screen }: { screen: AppCase }) {
+  const render = appScreenById(screen.appId);
+  if (render === null) return <Missing text={`No app screen registered for ${screen.appId}`} />;
+  if (screen.surface === "host") return <Stage>{render()}</Stage>;
+  return render();
+}
+
 function ScreenView({ screen }: { screen: ScreenCase }) {
+  if (screen.kind === "app") return <AppScreenView screen={screen} />;
   const Ui = gameUiFor(screen.gameId);
   if (Ui === null) return <Missing text={`No UI registered for ${screen.gameId}`} />;
   if (screen.surface === "host") return <HostScreen screen={screen} Ui={Ui} />;
