@@ -386,14 +386,15 @@ function commonRoom(
   view: RonHostView | RonPlayerView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  players: PlayerSummary[] = PLAYERS,
 ) {
   return {
     code: "BKTZ",
     sharedScreen: true,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
-    players: PLAYERS,
-    vipId: MAYA,
+    players,
+    vipId: players[0]?.id ?? MAYA,
     locked: false,
     games: [
       {
@@ -428,24 +429,220 @@ function hostRoom(
   view: RonHostView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  players: PlayerSummary[] = PLAYERS,
 ): HostRoomView {
   return {
     role: "host",
-    ...commonRoom(view, deadline, timerStartedAt),
+    ...commonRoom(view, deadline, timerStartedAt, players),
   };
+}
+
+interface PlayerRoomCast {
+  you?: PlayerId;
+  players?: PlayerSummary[];
 }
 
 function playerRoom(
   view: RonPlayerView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  cast: PlayerRoomCast = {},
 ): PlayerRoomView {
+  const { you = DOV, players = PLAYERS } = cast;
   return {
     role: "player",
-    you: DOV,
-    ...commonRoom(view, deadline, timerStartedAt),
+    you,
+    ...commonRoom(view, deadline, timerStartedAt, players),
   };
 }
+
+// ---------- Worst case ----------
+//
+// The layout suite measures these, so they carry the most punishing content the game can
+// actually serve: the longest prompt any real-or-nah pack ships, a truth answer and house
+// decoy at their longest, a player-written lie at LIE_MAX_LENGTH, and a full room of players
+// whose names all sit at the protocol's limit. scripts/content-stress.test.ts fails when a
+// pack ships something longer, so new content re-arms these fixtures instead of slipping past.
+
+/** The longest prompt in any real-or-nah pack (starter-facts.json's shortest-war fact). */
+export const STRESS_TEXT =
+  "The shortest war on record, fought between Britain and Zanzibar in 1896, lasted about ____.";
+
+/** The longest truth answer in any real-or-nah pack. */
+const STRESS_ANSWER = "laser pointer";
+
+/** The longest decoy in any real-or-nah pack, used as an authorless house lie. */
+const STRESS_DECOY = "Great Wall of China";
+
+/** A player-written lie at LIE_MAX_LENGTH, the longest a player can submit. */
+const STRESS_LIE = "a completely made up story about ferrets";
+
+/** Eight players, the room ceiling, each named at NAME_MAX_LENGTH. */
+const STRESS_NAMES = [
+  "Wilhelmina A",
+  "Wilhelmina B",
+  "Wilhelmina C",
+  "Wilhelmina D",
+  "Wilhelmina E",
+  "Wilhelmina F",
+  "Wilhelmina G",
+  "Wilhelmina H",
+];
+
+const STRESS_AVATARS: AvatarId[] = [
+  "star",
+  "toast",
+  "drop",
+  "cloud",
+  "cat",
+  "mushroom",
+  "ghost",
+  "robot",
+];
+
+const STRESS_PLAYERS: PlayerSummary[] = STRESS_NAMES.map((name, index) =>
+  player(`stress-${index}`, name, STRESS_AVATARS[index] ?? "star", {
+    crowns: index % 3,
+    isVip: index === 0,
+  }),
+);
+
+const STRESS_IDS = STRESS_PLAYERS.map((each) => each.id);
+const STRESS_ME = "stress-1";
+
+const STRESS_TOTALS: Record<PlayerId, number> = Object.fromEntries(
+  STRESS_PLAYERS.map((each, index) => [each.id, 1500 - index * 100]),
+);
+
+const STRESS_HOST_BASE = {
+  factNumber: 2,
+  factCount: 6,
+  prompt: STRESS_TEXT,
+  playerIds: STRESS_IDS,
+};
+
+const STRESS_PLAYER_BASE = {
+  factNumber: 2,
+  factCount: 6,
+  prompt: STRESS_TEXT,
+  playerCount: STRESS_IDS.length,
+  totals: STRESS_TOTALS,
+};
+
+const stressHostWrite: RonHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "write",
+  submittedIds: STRESS_IDS.slice(0, 5),
+  votedIds: [],
+  totals: STRESS_TOTALS,
+  options: null,
+  reveal: null,
+  pointsThisFact: null,
+};
+
+const STRESS_HOST_OPTIONS: RonHostOption[] = [
+  { id: "o1", text: STRESS_DECOY },
+  { id: "o2", text: STRESS_ANSWER },
+  { id: "o3", text: STRESS_LIE },
+  { id: "o4", text: "cane toads" },
+];
+
+const stressHostVote: RonHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "vote",
+  submittedIds: STRESS_IDS,
+  votedIds: STRESS_IDS.slice(0, 6),
+  totals: STRESS_TOTALS,
+  options: STRESS_HOST_OPTIONS,
+  reveal: null,
+  pointsThisFact: null,
+};
+
+const STRESS_LIES: RonFooledLie[] = [
+  {
+    optionId: "o3",
+    text: STRESS_LIE,
+    authorId: STRESS_IDS[1] ?? null,
+    fooledIds: [STRESS_IDS[2] ?? "stress-2", STRESS_IDS[3] ?? "stress-3"],
+    points: 1000,
+  },
+  {
+    optionId: "o1",
+    text: STRESS_DECOY,
+    authorId: null,
+    fooledIds: [STRESS_IDS[4] ?? "stress-4"],
+    points: 0,
+  },
+  {
+    optionId: "o4",
+    text: "cane toads",
+    authorId: STRESS_IDS[5] ?? null,
+    fooledIds: [],
+    points: 0,
+  },
+];
+
+const STRESS_REVEAL: RonReveal = {
+  truthOptionId: "o2",
+  answer: STRESS_ANSWER,
+  source: { title: "Shortest war", url: "https://en.wikipedia.org/wiki/Anglo-Zanzibar_War" },
+  foundByIds: STRESS_IDS.slice(6),
+  lies: STRESS_LIES,
+};
+
+const stressHostReveal: RonHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "reveal",
+  submittedIds: STRESS_IDS,
+  votedIds: STRESS_IDS,
+  totals: STRESS_TOTALS,
+  options: STRESS_HOST_OPTIONS,
+  reveal: STRESS_REVEAL,
+  pointsThisFact: STRESS_TOTALS,
+};
+
+const stressPhoneWrite: RonPlayerView = {
+  ...STRESS_PLAYER_BASE,
+  phase: "write",
+  myLie: null,
+  lieError: null,
+  submittedCount: 5,
+  myPick: null,
+  options: null,
+  reveal: null,
+  myPoints: null,
+};
+
+const stressPhoneWriteLocked: RonPlayerView = {
+  ...stressPhoneWrite,
+  myLie: STRESS_LIE,
+};
+
+const STRESS_PLAYER_OPTIONS: RonPlayerOption[] = STRESS_HOST_OPTIONS.map((option) => ({
+  id: option.id,
+  text: option.text,
+  mine: option.id === "o3",
+}));
+
+const stressPhoneVote: RonPlayerView = {
+  ...STRESS_PLAYER_BASE,
+  phase: "vote",
+  myLie: STRESS_LIE,
+  lieError: null,
+  submittedCount: STRESS_IDS.length,
+  myPick: null,
+  options: STRESS_PLAYER_OPTIONS,
+  reveal: null,
+  myPoints: null,
+};
+
+const stressPhoneReveal: RonPlayerView = {
+  ...stressPhoneVote,
+  phase: "reveal",
+  myPick: "o1",
+  reveal: STRESS_REVEAL,
+  myPoints: 500,
+};
 
 export const realOrNahPreviews: Array<{
   label: string;
@@ -570,5 +767,59 @@ export const realOrNahPreviews: Array<{
       null,
       RON_REVEAL_PREVIEW_START,
     ),
+  },
+  {
+    label: "Phone: worst case, writing a lie (91-char prompt, 8 long names)",
+    surface: "phone",
+    view: stressPhoneWrite,
+    room: playerRoom(stressPhoneWrite, WRITE_DEADLINE, null, {
+      you: STRESS_ME,
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Phone: worst case, lie locked in (40-char lie)",
+    surface: "phone",
+    view: stressPhoneWriteLocked,
+    room: playerRoom(stressPhoneWriteLocked, WRITE_DEADLINE, null, {
+      you: STRESS_ME,
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Phone: worst case, voting (40-char lie, 19-char decoy, 8 long names)",
+    surface: "phone",
+    view: stressPhoneVote,
+    room: playerRoom(stressPhoneVote, VOTE_DEADLINE, null, {
+      you: STRESS_ME,
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Phone: worst case, reveal (91-char prompt, 13-char answer, 8 long names)",
+    surface: "phone",
+    view: stressPhoneReveal,
+    room: playerRoom(stressPhoneReveal, null, RON_REVEAL_PREVIEW_START, {
+      you: STRESS_ME,
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Host: worst case, write (91-char prompt, 8 long names)",
+    surface: "host",
+    view: stressHostWrite,
+    room: hostRoom(stressHostWrite, WRITE_DEADLINE, null, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, vote (40-char lie, 19-char decoy)",
+    surface: "host",
+    view: stressHostVote,
+    room: hostRoom(stressHostVote, VOTE_DEADLINE, null, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, reveal (40-char lie, 13-char answer, 8 long names)",
+    surface: "host",
+    view: stressHostReveal,
+    room: hostRoom(stressHostReveal, null, RON_REVEAL_PREVIEW_START, STRESS_PLAYERS),
   },
 ];

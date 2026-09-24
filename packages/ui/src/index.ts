@@ -193,3 +193,6 @@ export { DoodlePad } from "./doodle/DoodlePad";
 export type { DoodlePadProps } from "./doodle/DoodlePad";
 export { DoodleView } from "./doodle/DoodleView";
 export type { DoodleReplay, DoodleViewProps } from "./doodle/DoodleView";
+
+export { fitTextSize, longestWordLength, MARKER_ADVANCE } from "./text-fit";
+export type { FitOptions } from "./text-fit";

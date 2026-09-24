@@ -118,6 +118,9 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
               inset: 0,
               zIndex: 0,
               pointerEvents: "none",
+              // Confetti flies wider than the card. Without this the page itself grows with it
+              // and the phone scrolls sideways mid-celebration.
+              overflow: "hidden",
             }}
           >
             <Confetti live={live} surface="phone" />

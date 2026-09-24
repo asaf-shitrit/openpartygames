@@ -78,7 +78,7 @@ function VoteForm({ view, send, t }: { view: DoodlePlayerView; send: (action: Do
   return (
     <>
       <Marker size={26}>{t.doodleBluff.whichIsReal}</Marker>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.pickOneNotYourOwn}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.pickOneNotYourOwn}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {options.map((option) => (
           <VoteRow key={option.id} option={option} selected={selected === option.id} onSelect={() => setSelected(option.id)} />

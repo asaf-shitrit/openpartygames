@@ -520,19 +520,27 @@ const phoneResultEscapedCrew: ImposterPlayerView = {
   myPoints: 0,
 };
 
+interface RoomExtras {
+  timerStartedAt?: number | null;
+  /** The host view a no-TV phone stages alongside `view`; null for a shared-screen preview. */
+  stage?: ImposterHostView | null;
+  /** The room's cast, when it is not the usual six. */
+  players?: PlayerSummary[];
+}
+
 function commonRoom(
   view: ImposterHostView | ImposterPlayerView,
   deadline: number | null,
-  timerStartedAt: number | null = null,
-  stage: ImposterHostView | null = null,
+  extras: RoomExtras = {},
 ) {
+  const { timerStartedAt = null, stage = null, players = PLAYERS } = extras;
   return {
     code: "BKTZ",
     sharedScreen: stage === null,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
-    players: PLAYERS,
-    vipId: MAYA,
+    players,
+    vipId: players[0]?.id ?? MAYA,
     locked: false,
     games: [],
     selectedGameId: "imposter",
@@ -548,18 +556,15 @@ function hostRoom(
   view: ImposterHostView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  players: PlayerSummary[] = PLAYERS,
 ): HostRoomView {
   return {
     role: "host",
-    ...commonRoom(view, deadline, timerStartedAt),
+    ...commonRoom(view, deadline, { timerStartedAt, players }),
   };
 }
 
-interface PlayerRoomTiming {
-  timerStartedAt?: number | null;
-  /** The host view a no-TV phone stages alongside `view`; null for a shared-screen preview. */
-  stage?: ImposterHostView | null;
-}
+type PlayerRoomTiming = RoomExtras;
 
 function playerRoom(
   view: ImposterPlayerView,
@@ -567,13 +572,110 @@ function playerRoom(
   deadline: number | null,
   timing: PlayerRoomTiming = {},
 ): PlayerRoomView {
-  const { timerStartedAt = null, stage = null } = timing;
   return {
     role: "player",
     you,
-    ...commonRoom(view, deadline, timerStartedAt, stage),
+    ...commonRoom(view, deadline, timing),
   };
 }
+
+
+// ---------- Worst case ----------
+//
+// The layout suite measures these, so they carry the most punishing content the game can
+// actually serve: the longest word any imposter pack ships, and a full room of players whose
+// names all sit at the protocol's limit. scripts/content-stress.test.ts fails when a pack
+// ships something longer, so new content re-arms these fixtures instead of slipping past.
+
+/**
+ * The longest word in any imposter pack. Pairs swap sides, so either half can be the decoy.
+ * `scripts/content-stress.test.ts` holds this against the packs themselves.
+ */
+export const STRESS_TEXT = "flight attendant";
+
+/** Eight players, the room ceiling, each named at NAME_MAX_LENGTH. */
+const STRESS_NAMES = [
+  "Wilhelmina A",
+  "Wilhelmina B",
+  "Wilhelmina C",
+  "Wilhelmina D",
+  "Wilhelmina E",
+  "Wilhelmina F",
+  "Wilhelmina G",
+  "Wilhelmina H",
+];
+
+const STRESS_AVATARS: AvatarId[] = [
+  "star",
+  "toast",
+  "drop",
+  "cloud",
+  "cat",
+  "mushroom",
+  "ghost",
+  "robot",
+];
+
+const STRESS_PLAYERS: PlayerSummary[] = STRESS_NAMES.map((name, index) =>
+  player(`stress-${index}`, name, STRESS_AVATARS[index] ?? "star", {
+    crowns: index % 3,
+    isVip: index === 0,
+  }),
+);
+
+const STRESS_IDS: PlayerId[] = STRESS_PLAYERS.map((each) => each.id);
+const STRESS_TOTALS: Record<PlayerId, number> = Object.fromEntries(
+  STRESS_PLAYERS.map((each, index) => [each.id, 1500 - index * 100]),
+);
+const STRESS_SPEAKER = "stress-1";
+const STRESS_NEXT = "stress-2";
+
+const stressHostClues: ImposterHostView = {
+  ...hostClues,
+  playerIds: STRESS_IDS,
+  clueOrder: STRESS_IDS,
+  totals: STRESS_TOTALS,
+  currentSpeakerId: STRESS_SPEAKER,
+  doneSpeakerIds: ["stress-0"],
+};
+
+const stressHostVote: ImposterHostView = {
+  ...stressHostClues,
+  phase: "vote",
+  currentSpeakerId: null,
+  doneSpeakerIds: STRESS_IDS,
+  votedIds: ["stress-0", "stress-2", "stress-3"],
+};
+
+/** The screen from #24: the imposter reading a long decoy word on their own turn. */
+const stressPhoneImposterTurn: ImposterPlayerView = {
+  ...phoneYourTurn,
+  role: "imposter",
+  word: STRESS_TEXT,
+  clueOrder: STRESS_IDS,
+  voteCandidates: STRESS_IDS,
+  totals: STRESS_TOTALS,
+  currentSpeakerId: STRESS_SPEAKER,
+  nextSpeakerId: STRESS_NEXT,
+};
+
+const stressPhoneCrewCard: ImposterPlayerView = {
+  ...stressPhoneImposterTurn,
+  phase: "word-check",
+  role: "crew",
+  isMyTurn: false,
+  currentSpeakerId: null,
+  nextSpeakerId: null,
+};
+
+const stressPhoneVote: ImposterPlayerView = {
+  ...stressPhoneImposterTurn,
+  phase: "vote",
+  isMyTurn: false,
+  currentSpeakerId: null,
+  nextSpeakerId: null,
+  votedCount: 3,
+};
 
 export const imposterPreviews: Array<{
   label: string;
@@ -886,5 +988,41 @@ export const imposterPreviews: Array<{
       timerStartedAt: RESULT_PREVIEW_START,
       stage: hostResultCaughtNope,
     }),
+  },
+  {
+    label: "Phone: worst case, imposter turn (long word, 8 long names)",
+    surface: "phone",
+    view: stressPhoneImposterTurn,
+    room: playerRoom(stressPhoneImposterTurn, STRESS_SPEAKER, CLUES_DEADLINE, {
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Phone: worst case, crew card (long word, 8 long names)",
+    surface: "phone",
+    view: stressPhoneCrewCard,
+    room: playerRoom(stressPhoneCrewCard, STRESS_SPEAKER, WORD_CHECK_DEADLINE, {
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Phone: worst case, vote (8 long names)",
+    surface: "phone",
+    view: stressPhoneVote,
+    room: playerRoom(stressPhoneVote, STRESS_SPEAKER, VOTE_DEADLINE, {
+      players: STRESS_PLAYERS,
+    }),
+  },
+  {
+    label: "Host: worst case, clue turns (8 long names)",
+    surface: "host",
+    view: stressHostClues,
+    room: hostRoom(stressHostClues, CLUES_DEADLINE, null, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, voting (8 long names)",
+    surface: "host",
+    view: stressHostVote,
+    room: hostRoom(stressHostVote, VOTE_DEADLINE, null, STRESS_PLAYERS),
   },
 ];

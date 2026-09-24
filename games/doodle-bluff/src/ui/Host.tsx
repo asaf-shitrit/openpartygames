@@ -67,7 +67,7 @@ function PlayerTile({
     >
       <Avatar id={avatarOf(players, id)} size={72} alt={format(t.doodleBluff.avatarAlt, { name })} />
       <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>{name}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 24, fontWeight: 700, color: done ? undefined : "var(--opg-ink-secondary)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 28, fontWeight: 700, color: done ? undefined : "var(--opg-ink-secondary)" }}>
         <Icon name={done ? "check" : "pencil"} size={26} color={done ? "var(--opg-marker)" : "var(--opg-muted)"} />
         <div>{done ? doneLabel : workingLabel}</div>
       </div>

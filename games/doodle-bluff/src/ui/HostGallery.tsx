@@ -47,9 +47,9 @@ function GalleryTile({
         <DoodleView doodle={entry.doodle} label={drawingLabel(t, name)} clock={clock} size={220} style={{ alignSelf: "center" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar id={avatarOf(players, entry.artistId)} size={36} alt={format(t.doodleBluff.avatarAlt, { name })} />
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{name}</div>
+          <div style={{ fontWeight: 700, fontSize: 28 }}>{name}</div>
         </div>
-        <div style={{ fontWeight: 700, fontSize: 17, lineHeight: 1.25 }}>{entry.title}</div>
+        <div style={{ fontWeight: 700, fontSize: 28, lineHeight: 1.25 }}>{entry.title}</div>
         <ShownTag entry={entry} t={t} />
       </Card>
     </FxIn>
@@ -58,12 +58,12 @@ function GalleryTile({
 
 function ShownTag({ entry, t }: { entry: DoodleGalleryEntry; t: Dictionary }) {
   if (!entry.shown) {
-    return <div style={{ fontSize: 14, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.neverShown}</div>;
+    return <div style={{ fontSize: 28, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.neverShown}</div>;
   }
   const count = entry.foundByCount ?? 0;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-      <Icon name="check" size={16} color="var(--opg-marker)" />
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 28, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
+      <Icon name="check" size={28} color="var(--opg-marker)" />
       {format(pickPluralByCount(count, t.doodleBluff.foundByPlayers), { count })}
     </div>
   );

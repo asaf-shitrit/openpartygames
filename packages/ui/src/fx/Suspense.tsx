@@ -185,8 +185,10 @@ export function Suspense({
       <span
         style={{
           position: "absolute",
-          bottom: -22,
-          fontSize: 13,
+          bottom: -25,
+          // The phone floor. This label sits under a ring on a phone stage, and a caption
+          // nobody can read is the same as no caption.
+          fontSize: 16,
           fontWeight: 700,
           color: "var(--opg-ink-secondary)",
           whiteSpace: "nowrap",

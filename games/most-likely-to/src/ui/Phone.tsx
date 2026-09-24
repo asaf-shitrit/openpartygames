@@ -44,6 +44,28 @@ function progressFor(t: Dictionary, view: MltPlayerView): string {
     : t.mostLikelyTo.verdictProgress;
 }
 
+/**
+ * A shared-screen room fits the phone column to the screen, so this list is the one
+ * flexible region that gives up space and scrolls internally (basis 0, so it never sizes
+ * itself from its rows and pushes "Lock in vote" off the bottom edge). A no-TV room stacks
+ * the staged prompt above this same list, which is already more content than a shared-screen
+ * phone carries; forcing that combination into one screen-height would starve the list to a
+ * sliver (or, with an unbounded container, to nothing — flex-basis 0 has no free space to
+ * grow into when the column's height is auto). So a no-TV list takes its natural size and the
+ * whole screen scrolls instead.
+ */
+function voteListStyle(fits: boolean): CSSProperties {
+  return {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    padding: "4px 2px",
+    ...(fits
+      ? { flex: "1 1 0", minHeight: 0, overflowY: "auto" }
+      : { flexShrink: 0 }),
+  };
+}
+
 function voteRowStyle(index: number, selected: boolean): CSSProperties {
   return {
     minHeight: 66,
@@ -238,19 +260,7 @@ function VoteForm(props: SectionProps) {
         <PromptLine prompt={view.prompt} size={22} />
         <Timer deadline={deadline} clock={clock} style={{ marginTop: 4 }} />
       </div>
-      <div
-        style={{
-          // Basis 0, not auto: an auto basis sizes this list from its rows, so it never
-          // gives up space and "Lock in vote" ends up under the bottom edge of the phone.
-          flex: "1 1 0",
-          minHeight: 0,
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-          padding: "4px 2px",
-        }}
-      >
+      <div style={voteListStyle(stage === null)}>
         {view.voteCandidates.map((id, index) => (
           <VoteRow
             key={id}
@@ -341,7 +351,10 @@ export function Phone({
   stage,
 }: PhoneProps) {
   return (
-    <PhoneScreen fit={view.phase === "vote"}>
+    // A shared-screen room fits: header, prompt and list, action. A no-TV room adds the
+    // staged prompt/roll-call above that, which makes this screen genuinely long content —
+    // let it scroll instead of squeezing the candidate list into a sliver of leftover space.
+    <PhoneScreen fit={view.phase === "vote" && stage === null}>
       <PhaseEnter phaseKey={`${view.roundNumber}:${view.phase}`}>
         {renderPhase({
           view,

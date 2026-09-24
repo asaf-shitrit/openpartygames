@@ -42,6 +42,11 @@ const FACE_STYLE: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  // A face holds its own content. The front face is absolutely positioned, so without this
+  // anything too tall for the card is drawn over whatever follows it — on the Imposter clue
+  // screen that was the word panel's description landing on top of "Hide word" and "I'm done",
+  // where it swallowed the taps meant for them.
+  overflow: "hidden",
   background: "var(--opg-card)",
   border: "4px solid var(--opg-ink)",
   borderRadius: "var(--opg-radius-l)",
