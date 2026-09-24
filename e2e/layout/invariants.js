@@ -190,3 +190,237 @@ function collectViolations(limits) {
 }
 
 window.opgLayout = { collectViolations };
+
+// --- Accessibility invariants -----------------------------------------------------------
+//
+// These are checked separately from collectViolations, by a11y.spec.ts, at fewer sizes: they
+// do not depend on viewport width the way layout does, so running them at every phone size
+// would just repeat the same answer for more cost.
+
+/**
+ * Every id in aria-labelledby, joined. Empty if the attribute is absent, points at nothing, or
+ * every target is itself empty. @param {Element} el @returns {string}
+ */
+function resolveLabelledBy(el) {
+  const ids = (el.getAttribute("aria-labelledby") ?? "").trim();
+  if (ids === "") return "";
+  return ids
+    .split(/\s+/)
+    .map((id) => document.getElementById(id))
+    .filter((node) => node !== null)
+    .map((node) => (node.textContent ?? "").trim())
+    .filter((text) => text !== "")
+    .join(" ");
+}
+
+/** A <label for=id> naming el, or el's nearest wrapping <label>. @param {Element} el */
+function resolveAssociatedLabel(el) {
+  if (el.id) {
+    const target = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+    const text = (target?.textContent ?? "").trim();
+    if (text !== "") return text;
+  }
+  const wrapping = el.closest("label");
+  return (wrapping?.textContent ?? "").trim();
+}
+
+/**
+ * A form field's own name: an associated <label>, or a button-like input's value — the input
+ * itself never has text content to fall back on. @param {Element} el @returns {string}
+ */
+function fieldNameOf(el) {
+  const associated = resolveAssociatedLabel(el);
+  if (associated !== "") return associated;
+  const type = (el.getAttribute("type") ?? "text").toLowerCase();
+  if (el.tagName.toLowerCase() === "input" && ["button", "submit", "reset"].includes(type)) {
+    return (el.getAttribute("value") ?? "").trim();
+  }
+  return "";
+}
+
+/**
+ * The name a screen reader would announce for a control: aria-label, aria-labelledby, an
+ * associated <label> for a form field (or its value, for a button-like input), else the
+ * control's own text content. Empty when none of those give it one.
+ *
+ * @param {Element} el @returns {string}
+ */
+function accessibleNameOf(el) {
+  const ariaLabel = (el.getAttribute("aria-label") ?? "").trim();
+  if (ariaLabel !== "") return ariaLabel;
+  const labelledBy = resolveLabelledBy(el);
+  if (labelledBy !== "") return labelledBy;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return fieldNameOf(el);
+  return (el.textContent ?? "").trim();
+}
+
+/**
+ * A control with no accessible name is invisible to a screen reader: an icon-only button that
+ * relies on its shape to be understood by anyone not looking at it. This is a rule, not a
+ * preference, because there is no visual signal that catches the gap — the button looks fine.
+ *
+ * @param {HTMLElement} el @returns {Violation | null}
+ */
+function checkAccessibleName(el) {
+  if (accessibleNameOf(el) !== "") return null;
+  return violation(
+    "no-accessible-name",
+    el,
+    "no text, aria-label, aria-labelledby or associated <label>",
+  );
+}
+
+/** @returns {Violation[]} */
+function collectNameViolations() {
+  const elements = Array.from(document.body.querySelectorAll("*")).filter(visible);
+  const found = [];
+  for (const el of elements) {
+    if (!el.matches(INTERACTIVE)) continue;
+    const missing = checkAccessibleName(el);
+    if (missing) found.push(missing);
+  }
+  return found;
+}
+
+/** @typedef {{ r: number, g: number, b: number, a: number }} Rgba */
+
+/** @param {string} raw @returns {Rgba | null} */
+function parseColor(raw) {
+  const match = raw.match(/rgba?\(([^)]+)\)/);
+  if (!match) return null;
+  const parts = match[1].split(",").map((part) => Number.parseFloat(part));
+  const [r, g, b, a = 1] = parts;
+  if ([r, g, b, a].some((n) => Number.isNaN(n))) return null;
+  return { r, g, b, a };
+}
+
+/** @param {Rgba} fg @param {{r:number,g:number,b:number}} bg @returns {{r:number,g:number,b:number}} */
+function compositeOver(fg, bg) {
+  return {
+    r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a),
+    b: fg.b * fg.a + bg.b * (1 - fg.a),
+  };
+}
+
+/**
+ * The opaque colour actually painted behind an element, found by walking up to the nearest
+ * ancestor (self included) that paints anything, and compositing through any translucent
+ * layers behind it. Returns null when that nearest painted layer is an image or gradient (its
+ * pixels are not one colour) or when nothing opaque is ever found — the caller must skip
+ * rather than guess a background contrast cannot be checked against.
+ *
+ * @param {Element | null} el @returns {{r:number,g:number,b:number} | null}
+ */
+function resolveBackgroundColor(el) {
+  if (el === null) return null;
+  const style = getComputedStyle(el);
+  const hasImage = style.backgroundImage !== "none";
+  const bg = parseColor(style.backgroundColor);
+  const hasColor = bg !== null && bg.a > 0;
+  if (!hasImage && !hasColor) return resolveBackgroundColor(el.parentElement);
+  if (hasImage) return null;
+  if (bg.a >= 0.999) return { r: bg.r, g: bg.g, b: bg.b };
+  const behind = resolveBackgroundColor(el.parentElement);
+  if (behind === null) return null;
+  return compositeOver(bg, behind);
+}
+
+/** @param {number} channel 0-255 @returns {number} */
+function linearChannel(channel) {
+  const c = channel / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+/** @param {{r:number,g:number,b:number}} color @returns {number} */
+function relativeLuminance(color) {
+  return (
+    0.2126 * linearChannel(color.r) +
+    0.7152 * linearChannel(color.g) +
+    0.0722 * linearChannel(color.b)
+  );
+}
+
+/** @param {{r:number,g:number,b:number}} a @param {{r:number,g:number,b:number}} b @returns {number} */
+function contrastRatio(a, b) {
+  const l1 = relativeLuminance(a);
+  const l2 = relativeLuminance(b);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+/**
+ * WCAG's "large text": 24px regular weight, or 18.66px (14pt) at bold (700) or heavier. Large
+ * text needs less contrast to read, because its strokes are already thick enough to survive it.
+ *
+ * @param {number} fontSizePx @param {number} fontWeight @returns {boolean}
+ */
+function isLargeText(fontSizePx, fontWeight) {
+  if (fontSizePx >= 24) return true;
+  return fontWeight >= 700 && fontSizePx >= 18.66;
+}
+
+/**
+ * WCAG contrast for one element: 4.5:1 for body text, 3:1 for large text, against the colour
+ * actually painted behind it. The design already reasons about this — Doodle Bluff's marker
+ * inks were darkened until they cleared 3:1 on paper — but nothing before this enforced it, so
+ * a future ink or theme could quietly slip under the floor with nothing to catch it.
+ *
+ * Returns null for an element the rule does not apply to (no text of its own, or a colour
+ * format it cannot parse); otherwise an object saying whether the background could be resolved
+ * at all, and the violation, if any, once it could.
+ *
+ * @param {HTMLElement} el @returns {{ skipped: boolean, violation: Violation | null } | null}
+ */
+function evaluateContrast(el) {
+  if (directText(el) === "") return null;
+  const style = getComputedStyle(el);
+  const fg = parseColor(style.color);
+  if (fg === null) return null;
+  const bg = resolveBackgroundColor(el);
+  if (bg === null) return { skipped: true, violation: null };
+  const size = Number.parseFloat(style.fontSize);
+  const weight = Number.parseFloat(style.fontWeight) || 400;
+  const large = isLargeText(size, weight);
+  const threshold = large ? 3 : 4.5;
+  const fgColor = fg.a >= 0.999 ? fg : compositeOver(fg, bg);
+  const ratio = contrastRatio(fgColor, bg);
+  if (ratio + 0.005 >= threshold) return { skipped: false, violation: null };
+  return {
+    skipped: false,
+    violation: violation(
+      "low-contrast",
+      el,
+      `${ratio.toFixed(2)}:1, floor is ${threshold}:1 for ${large ? "large" : "body"} text`,
+    ),
+  };
+}
+
+/**
+ * Contrast can only be judged where the background resolves to one opaque colour; elsewhere
+ * this skips rather than guesses. `skipped` is returned alongside `checked` so a caller can
+ * assert skipping is not the whole page — a rule that silently skips everything is not a rule.
+ *
+ * @returns {{ violations: Violation[], checked: number, skipped: number }}
+ */
+function collectContrastViolations() {
+  const elements = Array.from(document.body.querySelectorAll("*")).filter(visible);
+  const violations = [];
+  let checked = 0;
+  let skipped = 0;
+  for (const el of elements) {
+    const result = evaluateContrast(el);
+    if (result === null) continue;
+    if (result.skipped) {
+      skipped += 1;
+      continue;
+    }
+    checked += 1;
+    if (result.violation) violations.push(result.violation);
+  }
+  return { violations, checked, skipped };
+}
+
+window.opgA11y = { collectNameViolations, collectContrastViolations };
