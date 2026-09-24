@@ -31,6 +31,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // The in-play layout checks (layout-check.ts) rely on this: it makes every CSS keyframe
+    // in the app collapse to near-zero duration and every JS-driven effect skip itself, the
+    // same way e2e/layout/ already renders its fixtures. Without it a check could fire mid
+    // phase-transition and report an overlap that is the animation playing, not a bug.
+    reducedMotion: "reduce",
   },
   // Two projects, not one. Everything short runs in parallel; the Imposter spec then runs
   // on its own. It plays six words of real ceremonies and is four minutes of the suite by
@@ -42,13 +47,20 @@ export default defineConfig({
     {
       name: "fast",
       testIgnore: /imposter\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"] },
+      // The TV page (this project's default `page`/`context` fixture — phones open their
+      // own Pixel 5 contexts explicitly in harness.ts and are unaffected) is the real
+      // 1920x1080 stage the design targets, same as e2e/layout/'s own TV viewport. Without
+      // this override, devices["Desktop Chrome"]'s own 1280x720 default shrinks the
+      // viewport the app shell's chrome (HostApp's room code / fullscreen / sound controls,
+      // which sit outside the scaled Stage) actually renders into, and an in-play layout
+      // check would report that mismatch as a real overflow.
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1920, height: 1080 } },
     },
     {
       name: "imposter",
       testMatch: /imposter\.spec\.ts/,
       dependencies: ["fast"],
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1920, height: 1080 } },
     },
   ],
 });

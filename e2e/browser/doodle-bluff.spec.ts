@@ -9,6 +9,7 @@ import {
   startRoom,
 } from "./harness";
 import { drawOneStroke, joinPhonesForReloadTest, playDoodleBluff } from "./doodle-bluff";
+import { assertLayout } from "./layout-check";
 
 test("three phones play a full Doodle Bluff game on the TV", async ({
   page,
@@ -63,6 +64,9 @@ test("a phone reloads mid-draw and its strokes survive", async ({
   await expect(
     drawer.page.getByRole("button", { name: "Undo" }),
   ).toBeEnabled({ timeout: 30_000 });
+  // The state a preview fixture cannot produce: a phone that has just come back from a
+  // reload, mid-draw, with its mirrored strokes restored — not a screen anyone mounts fresh.
+  await assertLayout(drawer.page, "phone", "doodle-bluff draw phase after a mid-draw reload");
 
   await Promise.all(phones.map((phone) => phone.context.close()));
 });

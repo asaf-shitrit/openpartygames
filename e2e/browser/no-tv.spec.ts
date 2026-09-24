@@ -13,6 +13,7 @@ import {
   expectSettledAfterReload,
   playOneRoundNoTv,
 } from "./no-tv";
+import { assertLayout } from "./layout-check";
 
 async function closePhones(phones: Phone[]): Promise<void> {
   await Promise.all(phones.map((phone) => phone.context.close()));
@@ -31,6 +32,8 @@ test("a phone starts a room and two more join by typing the code", async ({
   await expect(ben.page.getByText("You're in!")).toBeVisible();
   await expect(cleo.page.getByText("You're in!")).toBeVisible();
   await expect(starter.page.getByText("You're the VIP")).toBeVisible();
+  await assertLayout(starter.page, "phone", "no-tv lobby (VIP)");
+  await assertLayout(ben.page, "phone", "no-tv lobby (joined)");
 
   await closePhones([starter, ben, cleo]);
 });
@@ -121,6 +124,9 @@ test("Real or Nah shows disabled with its reason, read the same by every phone",
       expect(phone.page.getByText("Plays on a shared screen.")).toBeVisible(),
     ),
   );
+  await assertLayout(vip.page, "phone", "no-tv Real or Nah disabled (VIP)");
+  const other = others[0];
+  if (other) await assertLayout(other.page, "phone", "no-tv Real or Nah disabled (non-VIP)");
 
   await closePhones(phones);
 });
