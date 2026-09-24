@@ -40,18 +40,24 @@ const LIMITS = {
 export const INVARIANTS_PATH = fileURLToPath(new URL("../layout/invariants.js", import.meta.url));
 
 /**
- * A phase change plays `.opg-phase-enter` (packages/ui/src/styles.css): with the page's
- * `reducedMotion: "reduce"` context option (set in playwright.config.ts and harness.ts), its
- * animation-duration collapses to 0.001ms, same as every other CSS keyframe in the app, and
- * every JS-driven effect (FlipCard, Confetti, the reveal ring) reads the same
- * `prefers-reduced-motion` media feature and skips its animation outright. Nothing in the app
- * today uses the slower `.opg-motion-fade` exception (styles.css keeps that one running for
- * 200ms on purpose, for a case no current screen exercises), so there is no real transition
- * left to wait out. This is only a settle margin for the one animation frame it still takes a
- * collapsed-to-near-zero animation to apply its end state and for layout to reflow after that —
- * the same order of margin layout.spec.ts gives its own already-settled fixtures.
+ * How long to let the page settle before measuring.
+ *
+ * Most of the app's motion really is gone under the `reducedMotion: "reduce"` context option
+ * set in playwright.config.ts and harness.ts: every CSS keyframe collapses to 0.001ms and the
+ * JS-driven effects (Confetti, the reveal ring) skip themselves outright. FlipCard is the
+ * exception, and it is the one that matters here: reduced motion does not remove its flip, it
+ * swaps it for a 200ms opacity crossfade (CROSSFADE_DURATION_MS in packages/ui/src/fx/
+ * FlipCard.tsx). Measure inside that window and the card is painted by neither face, so a hit
+ * test at its centre falls through to an ancestor and reports the card as covered by its own
+ * wrapper — while a screenshot taken a moment later shows a perfectly normal screen, which is
+ * what makes this so confusing to chase.
+ *
+ * So this sits above that crossfade, not merely above the collapsed keyframes.
  */
-const SETTLE_MS = 80;
+const SETTLE_MS = 250;
+
+/** Time between the two scans, so a second opinion samples a different frame than the first. */
+const RESCAN_GAP_MS = 120;
 
 function report(violations: Violation[]): string {
   return violations
@@ -77,12 +83,41 @@ async function ensureInjected(page: Page): Promise<void> {
  *
  * `label` should say what phase/page this is, so a failure names the moment, not just the URL.
  */
-export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {
-  await page.waitForTimeout(SETTLE_MS);
-  await ensureInjected(page);
-  const violations = await page.evaluate(
+/** Identity of a violation across two scans: the same rule on the same element. Pixel figures
+ * in `detail` shift by a fraction between frames, so they are not part of it. */
+function identity(found: Violation): string {
+  return `${found.rule}|${found.path}`;
+}
+
+/**
+ * Scans, and if anything is wrong, scans again a moment later and keeps only what both saw.
+ *
+ * A live page is not a fixture: a phase can arrive while the scan walks the DOM, and a scan
+ * that trips over an element being replaced mid-walk reports a control as covered by whatever
+ * now sits at its centre. That is an artifact of measuring a moving page, not a bug a player
+ * could meet. A real layout bug is still there a moment later; a half-applied phase change is
+ * not — which is why the two scans are deliberately spaced rather than back to back.
+ *
+ * The second scan only runs when the first found something, so a clean page pays nothing.
+ */
+async function stableViolations(page: Page, surface: Surface): Promise<Violation[]> {
+  const first = await page.evaluate(
     (limits) => window.opgLayout?.collectViolations(limits) ?? [],
     LIMITS[surface],
   );
+  if (first.length === 0) return [];
+  await page.waitForTimeout(RESCAN_GAP_MS);
+  const second = await page.evaluate(
+    (limits) => window.opgLayout?.collectViolations(limits) ?? [],
+    LIMITS[surface],
+  );
+  const seenAgain = new Set(second.map(identity));
+  return first.filter((found) => seenAgain.has(identity(found)));
+}
+
+export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {
+  await page.waitForTimeout(SETTLE_MS);
+  await ensureInjected(page);
+  const violations = await stableViolations(page, surface);
   expect(violations, `${label}:\n${report(violations)}`).toEqual([]);
 }
