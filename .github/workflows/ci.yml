@@ -34,6 +34,31 @@ jobs:
       - run: pnpm crap
       - run: pnpm build
 
+  # Every game screen at three phone sizes and the TV, in English and Hebrew, held to the
+  # layout invariants. It needs no Worker and no D1, only Vite, so it runs on every push
+  # rather than only on pull requests: a screen a player cannot read or tap is a release
+  # blocker wherever it landed.
+  layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm e2e:layout
+      - name: Upload traces from failed layout tests
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: layout-test-results
+          path: test-results/
+          if-no-files-found: ignore
+
   # Full games against the real Worker, Room Durable Object and a local D1.
   # Pull requests only: a rebase merge puts the same tree on main, and the smoke
   # job below re-proves it boots rather than replaying seven minutes of browsers.
@@ -81,7 +106,7 @@ jobs:
   # Merging to main deploys straight to production once every check passes.
   # Forks without a CLOUDFLARE_ACCOUNT_ID repository variable skip this job.
   deploy:
-    needs: [check, smoke]
+    needs: [check, layout, smoke]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CLOUDFLARE_ACCOUNT_ID != ''
     runs-on: ubuntu-latest
     environment:

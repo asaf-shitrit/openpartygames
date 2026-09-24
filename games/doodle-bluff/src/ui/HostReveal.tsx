@@ -178,7 +178,7 @@ export function HostReveal({ view, players, deadline, timerStartedAt, clock }: H
   return (
     <div ref={rootRef} style={STAGE}>
       <Marker size={44}>{t.doodleBluff.letsSeeWhoFooledWho}</Marker>
-      <Card style={{ padding: 12, alignSelf: "center", flexShrink: 0 }}>
+      <Card style={{ padding: 8, alignSelf: "center", flexShrink: 0 }}>
         <DoodleView doodle={reveal.doodle} label={drawingLabel(t, nameOf(players, reveal.artistId, t.common.someone))} clock={clock} replay={{ startedAt: startedAt ?? clock.now() }} size={300} />
       </Card>
       <TitlesRow titles={reveal.titles} shown={shownTitles} players={players} t={t} />

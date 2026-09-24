@@ -33,7 +33,7 @@ function isNarrowTouch(): boolean {
   }
 }
 
-function DevPage({ mode }: { mode: "sounds" | "moments" }) {
+function DevPage({ mode }: { mode: "sounds" | "moments" | "screens" }) {
   if (DevRoute === null) return null;
   return (
     <Suspense fallback={null}>
@@ -52,6 +52,7 @@ function pageRoute(route: Route) {
   if (route.kind === "privacy") return <Privacy />;
   if (route.kind === "dev-sounds") return <DevPage mode="sounds" />;
   if (route.kind === "dev-moments") return <DevPage mode="moments" />;
+  if (route.kind === "dev-screens") return <DevPage mode="screens" />;
   return null;
 }
 

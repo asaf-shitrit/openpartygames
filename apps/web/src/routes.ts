@@ -9,6 +9,7 @@ export type Route =
   | { kind: "player"; code: string }
   | { kind: "dev-sounds" }
   | { kind: "dev-moments" }
+  | { kind: "dev-screens" }
   | { kind: "landing" };
 
 /** Which sound surface a route belongs to: TVs play sound, phones never do. */
@@ -35,6 +36,7 @@ function matchDev(segments: string[], dev: boolean): Route | null {
   if (segments.length !== 2 || first !== "dev") return null;
   if (second === "sounds") return { kind: "dev-sounds" };
   if (second === "moments") return { kind: "dev-moments" };
+  if (second === "screens") return { kind: "dev-screens" };
   return null;
 }
 

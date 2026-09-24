@@ -241,6 +241,121 @@ function playerRoom(
   return { role: "player", you, ...commonRoom(view, timing) };
 }
 
+// ---------- Worst case ----------
+//
+// The layout suite measures these, so they carry the most punishing content the game can
+// actually serve: the longest prompt any Most Likely To pack ships, and a full room of players
+// whose names all sit at the protocol's limit. The ballot and the reveal are lists of names, so
+// this matters most here. A guard test compares STRESS_TEXT against the packs so new content
+// re-arms this fixture instead of slipping past.
+
+/** The longest prompt in any Most Likely To pack (most-likely-friends.json). */
+export const STRESS_TEXT = "vanish from the group chat then flood it with memes";
+
+/** Eight players, the room ceiling, each named at NAME_MAX_LENGTH. */
+const STRESS_NAMES = [
+  "Wilhelmina A",
+  "Wilhelmina B",
+  "Wilhelmina C",
+  "Wilhelmina D",
+  "Wilhelmina E",
+  "Wilhelmina F",
+  "Wilhelmina G",
+  "Wilhelmina H",
+];
+
+const STRESS_AVATARS: AvatarId[] = [
+  "star",
+  "toast",
+  "drop",
+  "cloud",
+  "cat",
+  "mushroom",
+  "ghost",
+  "robot",
+];
+
+const STRESS_PLAYERS: PlayerSummary[] = STRESS_NAMES.map((name, index) =>
+  player(`stress-${index}`, name, STRESS_AVATARS[index] ?? "star", {
+    crowns: index % 3,
+    isVip: index === 0,
+  }),
+);
+
+const STRESS_IDS: PlayerId[] = STRESS_PLAYERS.map((each) => each.id);
+const STRESS_TOTALS: Record<PlayerId, number> = Object.fromEntries(
+  STRESS_PLAYERS.map((each, index) => [each.id, 2000 - index * 200]),
+);
+
+const STRESS_HOST_BASE = {
+  roundNumber: 7,
+  roundCount: 20,
+  prompt: STRESS_TEXT,
+  playerIds: STRESS_IDS,
+  totals: STRESS_TOTALS,
+};
+
+const stressHostVote: MltHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "vote",
+  votedIds: ["stress-0", "stress-2", "stress-3", "stress-6"],
+  reveal: null,
+  pointsThisRound: null,
+};
+
+/** Every player voted; the top pick took votes from most of the room. */
+const STRESS_REVEAL: MltReveal = {
+  playerIds: STRESS_IDS,
+  tally: {
+    "stress-1": ["stress-0", "stress-2", "stress-3", "stress-4", "stress-5"],
+    "stress-6": ["stress-1", "stress-7"],
+    "stress-0": ["stress-6"],
+  },
+  outcome: { kind: "picked", pickedId: "stress-1" },
+  matchedIds: ["stress-0", "stress-2", "stress-3", "stress-4", "stress-5"],
+};
+
+function stressPointsFor(reveal: MltReveal): Record<PlayerId, number> {
+  return Object.fromEntries(
+    STRESS_IDS.map((id) => [id, reveal.matchedIds.includes(id) ? 500 : 0]),
+  );
+}
+
+const stressHostReveal: MltHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "reveal",
+  votedIds: [],
+  reveal: STRESS_REVEAL,
+  pointsThisRound: stressPointsFor(STRESS_REVEAL),
+};
+
+const STRESS_PHONE_BASE = {
+  roundNumber: 7,
+  roundCount: 20,
+  prompt: STRESS_TEXT,
+  voteCandidates: STRESS_IDS,
+  playerCount: STRESS_IDS.length,
+  totals: STRESS_TOTALS,
+};
+
+const stressPhoneVoteSelecting: MltPlayerView = {
+  ...STRESS_PHONE_BASE,
+  phase: "vote",
+  myVote: null,
+  votedCount: 4,
+  reveal: null,
+  myPoints: null,
+};
+
+const stressPhoneReveal: MltPlayerView = {
+  ...STRESS_PHONE_BASE,
+  phase: "reveal",
+  myVote: "stress-1",
+  votedCount: 0,
+  reveal: STRESS_REVEAL,
+  myPoints: 500,
+};
+
 export interface MltPreview {
   label: string;
   surface: "host" | "phone";
@@ -360,5 +475,55 @@ export const mostLikelyToPreviews: MltPreview[] = [
       stage: hostReveal(PICKED_REVEAL),
     }),
     stage: hostReveal(PICKED_REVEAL),
+  },
+  {
+    label: "Host: worst case, vote (8 long names, longest prompt)",
+    surface: "host",
+    view: stressHostVote,
+    room: hostRoom(stressHostVote, VOTE_DEADLINE),
+  },
+  {
+    label: "Host: worst case, reveal (8 long names, longest prompt)",
+    surface: "host",
+    view: stressHostReveal,
+    room: hostRoom(stressHostReveal, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+  },
+  {
+    label: "Phone: worst case, ballot (8 long names, longest prompt)",
+    surface: "phone",
+    view: stressPhoneVoteSelecting,
+    room: playerRoom(stressPhoneVoteSelecting, "stress-1", {
+      deadline: VOTE_DEADLINE,
+    }),
+  },
+  {
+    label: "Phone: worst case, reveal matched (8 long names, longest prompt)",
+    surface: "phone",
+    view: stressPhoneReveal,
+    room: playerRoom(stressPhoneReveal, "stress-0", {
+      deadline: REVEAL_DEADLINE,
+      timerStartedAt: REVEAL_PREVIEW_START,
+    }),
+  },
+  {
+    label: "Phone (no-TV): worst case, ballot (8 long names, longest prompt)",
+    surface: "phone",
+    view: stressPhoneVoteSelecting,
+    room: playerRoom(stressPhoneVoteSelecting, "stress-1", {
+      deadline: VOTE_DEADLINE,
+      stage: stressHostVote,
+    }),
+    stage: stressHostVote,
+  },
+  {
+    label: "Phone (no-TV): worst case, reveal (8 long names, longest prompt)",
+    surface: "phone",
+    view: stressPhoneReveal,
+    room: playerRoom(stressPhoneReveal, "stress-0", {
+      deadline: REVEAL_DEADLINE,
+      timerStartedAt: REVEAL_PREVIEW_START,
+      stage: stressHostReveal,
+    }),
+    stage: stressHostReveal,
   },
 ];

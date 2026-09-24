@@ -239,7 +239,7 @@ function TurnStamp({ view }: { view: ImposterHostView }) {
       <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1 }}>
         {speakerTurnNumber(view)}
       </div>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>
+      <div style={{ fontSize: 28, fontWeight: 700 }}>
         {format(t.imposter.clues.turnOf, { count: view.clueOrder.length })}
       </div>
     </div>

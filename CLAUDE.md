@@ -9,6 +9,7 @@ Open-source Jackbox-style party games. Two ways to play: a host screen (TV/lapto
 - Lint: `pnpm lint` (Oxlint, type-aware, anti-slop plugin; warnings fail). One folder: `pnpm exec oxlint --type-aware --deny-warnings <dir>`
 - Typecheck: `pnpm typecheck` (every workspace; the worker runs `wrangler types` first)
 - Test: `pnpm test` (Vitest projects, one per workspace). One package: `cd <dir> && pnpm exec vitest run`
+- Layout invariants: `pnpm e2e:layout` (every game screen at three phone sizes and the TV, in English and Hebrew; needs `pnpm exec playwright install chromium` once). One screen: open `/dev/screens?id=<game>/<index>` under `pnpm dev`
 - CRAP gate: `pnpm crap` (threshold 8; runs coverage per package). One folder: `pnpm exec crap-typescript --format text --failures-only --threshold 8 <dir>`
 - Packs: `pnpm validate:packs`
 - Build web: `pnpm build`
@@ -35,6 +36,8 @@ Run `pnpm check` before reporting done. Healthy output: packs validate with no e
 - A player's view never contains another player's secrets.
 - Don't add or upgrade dependencies without asking.
 - Player-visible copy: short, warm, plain. Never color alone for meaning (pair with icon/text).
+- A screen a player cannot read or tap is a release blocker: nothing with words or a tap target may cross the screen edge, sit past the bottom of a screen that does not scroll, or be covered by anything else. `e2e/layout/` measures this in a real browser on every push; happy-dom reports every rect as zero, so no unit test can.
+- Each game's `preview.ts` carries worst-case fixtures: the longest content its packs ship, eight players, names at `NAME_MAX_LENGTH`. Add content longer than `STRESS_TEXT` and `scripts/content-stress.test.ts` fails until the fixture catches up.
 - Headings/stamps use Permanent Marker; everything else Atkinson Hyperlegible. TV text ≥ 28px at 1920×1080, phone text ≥ 16px, tap targets ≥ 44px.
 - Content packs: every fact cites a source URL; licenses CC0-1.0, CC-BY-4.0 or CC-BY-SA-4.0 only. No Jackbox names/text/art, no NonCommercial content.
 

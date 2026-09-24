@@ -142,6 +142,16 @@ describe("word screens", () => {
     expect(screen.getByText("GIRAFFE")).toBeTruthy();
   });
 
+  it("shows the word on a clue turn without repeating the word-check briefing", () => {
+    renderPhone("Phone: Dov your turn", mockSend());
+    // The word is the whole job of the peek card during clues.
+    expect(screen.getByText("GIRAFFE")).toBeTruthy();
+    // The briefing belongs to word-check: on a clue turn it is the paragraph that used to
+    // overflow the card and land on top of "Hide word" and "I'm done".
+    expect(screen.queryByText(/decoy from the same family/i)).toBeNull();
+    expect(submitButton("Hide word")).toBeTruthy();
+  });
+
   it("renders every phone preview", () => {
     const previews = phonePreviews();
     expect(previews.length).toBeGreaterThan(0);

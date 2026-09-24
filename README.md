@@ -214,6 +214,11 @@ Every change must pass `pnpm check`, which runs:
 - `pnpm crap` — CRAP score at most 8 per function
 - `pnpm build` — the web bundle
 
+Plus `pnpm e2e:layout`, which CI runs on every push: it renders every game screen from its
+previews at three phone sizes and on the 1920x1080 TV, in English and Hebrew, and fails if
+anything readable crosses the screen edge, an action sits where nobody can reach it, a control
+is covered, or text drops below the 16px phone / 28px TV floor.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md). Content packs can be submitted without touching git, through a GitHub issue form.

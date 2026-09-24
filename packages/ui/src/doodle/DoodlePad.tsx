@@ -102,7 +102,7 @@ export function DoodlePad({
           type="button"
           onClick={undo}
           disabled={strokeCount === 0}
-          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700 }}
+          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700, fontSize: 16 }}
         >
           {t.kit.doodle.undo}
         </button>
@@ -112,7 +112,7 @@ export function DoodlePad({
           onBlur={cancelClear}
           disabled={strokeCount === 0}
           aria-label={confirmingClear ? t.kit.doodle.confirmClear : t.kit.doodle.clear}
-          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700 }}
+          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700, fontSize: 16 }}
         >
           {confirmingClear ? t.kit.doodle.tapAgainToClear : t.kit.doodle.clear}
         </button>

@@ -13,6 +13,7 @@ import {
   Marker,
   PhaseEnter,
   PhoneScreen,
+  fitTextSize,
   PhoneStrip,
   PRESSABLE_CLASS,
   StickyNote,
@@ -362,14 +363,49 @@ function wordPanelCopy(t: Dictionary, isImposter: boolean): WordPanelCopy {
 
 /** The word-check card's face-up content. Only mounted once the card is flipped, so the
  * word never touches the DOM before that. */
-function WordPanel({ view }: { view: ImposterPlayerView }) {
+/**
+ * The width the word has on the narrowest phone we support: 360px of screen, less the phone
+ * column's 36px of padding, the card's 40px and the highlight's 20px. One size for every phone,
+ * taken from the tightest one, so a word that fits here fits everywhere.
+ */
+const WORD_WIDTH_PX = 264;
+
+/** Never shrink the word past this: below it, the word stops being the thing you look at. */
+const WORD_MIN_SIZE = 28;
+
+/** The clue screen's peek card shares its screen with a stage and an action. */
+const COMPACT_WORD_SIZE = 48;
+
+/** The biggest the word is allowed to be, before the word's own length is taken into account. */
+function wordCeiling(compact: boolean, isImposter: boolean): number {
+  if (compact) return COMPACT_WORD_SIZE;
+  // The imposter's decoy is the one thing on their card, so it gets the larger of the two.
+  return isImposter ? 72 : 56;
+}
+
+/**
+ * The word panel in two shapes. Full, on the word-check card, is the whole briefing: what this
+ * card is, the word, and what to do with it. Compact, on the clue screen, is the word and
+ * nothing else — the briefing was read a phase ago, and a clue turn only needs the word, which
+ * is also all the room a peek card beside a stage and an action has.
+ */
+function WordPanel({
+  view,
+  compact = false,
+}: {
+  view: ImposterPlayerView;
+  compact?: boolean;
+}) {
   const { t } = useLocale();
   const isImposter = view.role === "imposter";
   const { title, label, desc } = wordPanelCopy(t, isImposter);
+  const word = view.word ?? "—";
+  const maxWordSize = wordCeiling(compact, isImposter);
   return (
     <div
       style={{
         flexGrow: 1,
+        minHeight: 0,
         width: "100%",
         padding: "24px 20px",
         display: "flex",
@@ -378,7 +414,7 @@ function WordPanel({ view }: { view: ImposterPlayerView }) {
       }}
     >
       <Marker
-        size={27}
+        size={compact ? 22 : 27}
         color={isImposter ? "var(--opg-marker)" : undefined}
         style={{ transform: "rotate(-2deg)" }}
       >
@@ -387,12 +423,23 @@ function WordPanel({ view }: { view: ImposterPlayerView }) {
       <div style={{ marginTop: "auto", fontSize: 19, fontWeight: 700 }}>
         {label}
       </div>
-      <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-        <Marker size={isImposter ? 72 : 56}>{view.word ?? "—"}</Marker>
+      <Highlight style={{ alignSelf: "flex-start", maxWidth: "100%", padding: "0 10px" }}>
+        <Marker
+          size={fitTextSize(word, {
+            max: maxWordSize,
+            min: WORD_MIN_SIZE,
+            widthPx: WORD_WIDTH_PX,
+          })}
+          style={{ overflowWrap: "anywhere" }}
+        >
+          {word}
+        </Marker>
       </Highlight>
-      <div style={{ marginBottom: "auto", fontSize: 19, lineHeight: 1.4 }}>
-        {desc}
-      </div>
+      {compact ? null : (
+        <div style={{ marginBottom: "auto", fontSize: 19, lineHeight: 1.4 }}>
+          {desc}
+        </div>
+      )}
     </div>
   );
 }
@@ -523,9 +570,12 @@ function WordPeek({
           justifyContent: "center",
           gap: 10,
           padding: "20px 18px",
+          // The card holds its own content. Without this, a panel too tall for the card is
+          // drawn over the controls below it, where it swallows their taps.
+          overflow: "hidden",
         }}
       >
-        {hidden ? null : <WordPanel view={view} />}
+        {hidden ? null : <WordPanel view={view} compact />}
         {hidden ? (
           <div
             style={{
