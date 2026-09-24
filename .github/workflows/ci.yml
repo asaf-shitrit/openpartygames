@@ -40,7 +40,16 @@ jobs:
   # blocker wherever it landed.
   layout:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    # Sharded, because this suite grew from 572 checks to over 1500: every screen is now also
+    # measured behind the keyboard and behind the browser toolbar, in both locales. Run whole it
+    # takes about fifteen minutes, which is too slow to sit on every push; four shards bring it
+    # back to roughly four. `deploy` needs `layout`, and a matrix job is only satisfied when
+    # every shard is, so nothing ships on a partial pass.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v6
@@ -50,12 +59,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e:layout
+      - run: pnpm e2e:layout --shard=${{ matrix.shard }}/4
       - name: Upload traces from failed layout tests
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: layout-test-results
+          name: layout-test-results-shard-${{ matrix.shard }}
           path: test-results/
           if-no-files-found: ignore
 
@@ -65,7 +74,11 @@ jobs:
   e2e:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Forty-five, not thirty. Playing whole games is slow by nature — the Imposter spec alone
+    # carries a four-minute floor of real ceremonies — and every phase now also measures the
+    # screen's layout, which added minutes more. Runs land at 21-24 minutes, close enough to
+    # thirty that a loaded runner tipped one over and reported a timeout as a test failure.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v6
