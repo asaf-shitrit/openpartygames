@@ -6,7 +6,7 @@
 import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
-const PORT = 5174;
+const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 5174);
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -24,9 +24,10 @@ export default defineConfig({
     deviceScaleFactor: 1,
   },
   projects: [
-    { name: "en" },
+    { name: "en", testIgnore: "**/visual.spec.ts" },
     {
       name: "he",
+      testIgnore: "**/visual.spec.ts",
       use: {
         // The app reads its locale from storage, so the whole suite runs in Hebrew too:
         // different faces, different word lengths, right-to-left.
@@ -41,6 +42,13 @@ export default defineConfig({
         },
       },
     },
+    // The pixel-comparison suite (visual.spec.ts) is opt-in, not a third default project: a
+    // bare `pnpm e2e:layout` must keep passing with only en/he, on any platform, with no
+    // snapshots at all. e2e:visual sets OPG_VISUAL=1 to register this project and selects it
+    // with --project=visual; see visual.spec.ts for why and how to update a baseline.
+    ...(process.env.OPG_VISUAL === "1"
+      ? [{ name: "visual", testMatch: "**/visual.spec.ts" }]
+      : []),
   ],
   webServer: {
     command: `pnpm --filter @opg/web exec vite --port ${PORT} --strictPort`,

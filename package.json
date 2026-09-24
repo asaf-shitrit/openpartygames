@@ -22,6 +22,8 @@
     "e2e:api": "vitest run --config e2e/api/vitest.config.ts",
     "e2e:browser": "playwright test -c e2e/browser/playwright.config.ts",
     "e2e:layout": "playwright test -c e2e/layout/playwright.config.ts",
+    "e2e:visual": "OPG_VISUAL=1 playwright test -c e2e/layout/playwright.config.ts --project=visual",
+    "e2e:visual:update": "OPG_VISUAL=1 playwright test -c e2e/layout/playwright.config.ts --project=visual --update-snapshots",
     "e2e": "pnpm e2e:api && pnpm e2e:layout && pnpm e2e:browser"
   },
   "devDependencies": {
