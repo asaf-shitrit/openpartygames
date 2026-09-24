@@ -4,6 +4,17 @@
 // The layout suite measures those fixtures, so a pack that ships something longer would walk
 // straight past every layout invariant we have. This fails the moment that happens, and says
 // which pack did it, so the fixture is raised before the content ships.
+//
+// This holds the fixture to character count, not rendered width — layout does not actually
+// care about characters, it cares about pixels, and "washing machine" (15 characters) renders
+// wider than "flight attendant" (16) because w and m are wide letters. That gap is real: see
+// e2e/layout/content-width.spec.ts, which holds the same fixtures against the same packs by
+// rendered width, in the real fonts, in a browser (this Vitest project has no browser; happy-dom
+// reports every rect as zero, per CLAUDE.md, so it cannot measure width). This test stays
+// anyway, as a cheap first line of defence: it runs in `pnpm test`, with no browser and no dev
+// server, so a pack that grows past the fixture fails in seconds, long before anyone runs the
+// slower layout suite — character count is a close enough proxy to catch most growth
+// immediately, even though it is not the whole truth.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

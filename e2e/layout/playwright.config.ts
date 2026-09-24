@@ -6,7 +6,7 @@
 import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
-const PORT = 5174;
+const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 5174);
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({

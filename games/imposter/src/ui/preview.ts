@@ -588,10 +588,15 @@ function playerRoom(
 // ships something longer, so new content re-arms these fixtures instead of slipping past.
 
 /**
- * The longest word in any imposter pack. Pairs swap sides, so either half can be the decoy.
- * `scripts/content-stress.test.ts` holds this against the packs themselves.
+ * Wider, and no shorter, than anything any imposter pack actually ships. "washing machine" is
+ * the widest real pack word in the Permanent Marker face it renders in — wider than "flight
+ * attendant" despite being two characters shorter, because w and m are wide letters — but it is
+ * also one character short of "flight attendant"'s character count, and this fixture has to
+ * clear both a character-count check (`scripts/content-stress.test.ts`, which has no browser to
+ * measure width with) and a rendered-width check (`e2e/layout/content-width.spec.ts`, which
+ * does). The plural closes that one-character gap without narrowing it.
  */
-export const STRESS_TEXT = "flight attendant";
+export const STRESS_TEXT = "washing machines";
 
 /** Eight players, the room ceiling, each named at NAME_MAX_LENGTH. */
 const STRESS_NAMES = [
