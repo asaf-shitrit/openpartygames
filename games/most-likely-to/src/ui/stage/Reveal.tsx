@@ -186,7 +186,10 @@ function TallyRow({ id, meId, voters, order, drawn, highlighted, players, t }: T
           <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </>
       ) : (
-        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-muted)" }}>
+        // --opg-muted reads fine against a dashed border but is only 3.45:1 as body text —
+        // below the 4.5:1 floor for a 16px label. --opg-ink-secondary is the same "quieter
+        // than the headline" weight and clears it.
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
           {t.mostLikelyTo.zeroVotes}
         </div>
       )}

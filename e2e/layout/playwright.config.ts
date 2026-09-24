@@ -7,6 +7,9 @@ import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 5174);
+
+/** Suites that are projects of their own, so the default projects leave them alone. */
+const DEFAULT_SKIPS = ["**/a11y.spec.ts", "**/visual.spec.ts"];
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -24,10 +27,13 @@ export default defineConfig({
     deviceScaleFactor: 1,
   },
   projects: [
-    { name: "en", testIgnore: "**/visual.spec.ts" },
+    // en/he run every default spec: the layout invariants and the content-width, font-fallback
+    // and model checks beside them. They skip the two suites that are projects of their own —
+    // a11y (different sizes, different rules) and visual (opt-in, platform-specific baselines).
+    { name: "en", testIgnore: DEFAULT_SKIPS },
     {
       name: "he",
-      testIgnore: "**/visual.spec.ts",
+      testIgnore: DEFAULT_SKIPS,
       use: {
         // The app reads its locale from storage, so the whole suite runs in Hebrew too:
         // different faces, different word lengths, right-to-left.
@@ -42,10 +48,14 @@ export default defineConfig({
         },
       },
     },
-    // The pixel-comparison suite (visual.spec.ts) is opt-in, not a third default project: a
-    // bare `pnpm e2e:layout` must keep passing with only en/he, on any platform, with no
-    // snapshots at all. e2e:visual sets OPG_VISUAL=1 to register this project and selects it
-    // with --project=visual; see visual.spec.ts for why and how to update a baseline.
+    // Accessibility passes: 200% text, contrast and accessible names. Kept as their own
+    // project rather than folded into "en"/"he" because they check a different thing at a
+    // different (smaller) set of sizes — see a11y.spec.ts for what and why.
+    { name: "a11y", testMatch: /a11y\.spec\.ts$/ },
+    // The pixel-comparison suite (visual.spec.ts) is opt-in, not a default project: a bare
+    // `pnpm e2e:layout` must keep passing on any platform, with no snapshots at all. e2e:visual
+    // sets OPG_VISUAL=1 to register this project and selects it with --project=visual; see
+    // visual.spec.ts for why and how to update a baseline.
     ...(process.env.OPG_VISUAL === "1"
       ? [{ name: "visual", testMatch: "**/visual.spec.ts" }]
       : []),
