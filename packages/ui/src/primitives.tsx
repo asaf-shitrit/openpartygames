@@ -403,6 +403,13 @@ export interface SwitchProps {
   offLabel?: string;
   /** Track height; knob and width scale with it. */
   size?: number;
+  /**
+   * Size of the visible "On"/"Off" text. Defaults to the phone floor (16px+); a caller
+   * placing this on the TV surface must raise it to that surface's 28px floor itself, the
+   * same way every other TV label sizes its own text — the switch has no way to know which
+   * surface it is on.
+   */
+  labelFontSize?: number;
   disabled?: boolean;
   style?: CSSProperties;
 }
@@ -438,6 +445,7 @@ export function Switch({
   onLabel = "On",
   offLabel = "Off",
   size = 42,
+  labelFontSize = 18,
   disabled = false,
   style,
 }: SwitchProps) {
@@ -477,7 +485,7 @@ export function Switch({
           <span style={switchKnobStyle(checked, knob)} />
         </span>
       </button>
-      <span style={{ fontSize: 18, fontWeight: 700 }}>
+      <span style={{ fontSize: labelFontSize, fontWeight: 700 }}>
         {checked ? onLabel : offLabel}
       </span>
     </div>

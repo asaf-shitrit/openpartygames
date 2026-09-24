@@ -31,16 +31,34 @@ interface CaseBase {
 }
 
 export interface HostCase extends CaseBase {
+  kind: "game";
   surface: "host";
   room: HostRoomView;
 }
 
 export interface PhoneCase extends CaseBase {
+  kind: "game";
   surface: "phone";
   room: PlayerRoomView;
 }
 
-export type ScreenCase = HostCase | PhoneCase;
+/**
+ * A screen owned by the app shell rather than a game: the join flow, the lobby, the TV
+ * landing/credits/full-tonight pages, and so on. Its real component and fixture props live in
+ * `dev/app-screens.tsx`, which only the (React) gallery imports — this file stays plain data so
+ * `layout.spec.ts` can import it under Node with no React, no stylesheet and no asset in reach.
+ */
+export interface AppCase {
+  kind: "app";
+  id: string;
+  gameId: "app";
+  label: string;
+  surface: Surface;
+  /** Looked up in `dev/app-screens.tsx`'s registry. */
+  appId: string;
+}
+
+export type ScreenCase = HostCase | PhoneCase | AppCase;
 
 /** What a screen's game needs to render it: everything timed, and the no-TV stage. */
 export interface ScreenTiming {
@@ -69,10 +87,10 @@ export function timingOf(room: HostRoomView | PlayerRoomView): ScreenTiming {
 function caseOf(gameId: string, preview: PreviewEntry, index: number): ScreenCase | null {
   const base = { id: `${gameId}/${index}`, gameId, label: preview.label, view: preview.view };
   if (preview.surface === "host" && preview.room.role === "host") {
-    return { ...base, surface: "host", room: preview.room };
+    return { ...base, kind: "game", surface: "host", room: preview.room };
   }
   if (preview.surface === "phone" && preview.room.role === "player") {
-    return { ...base, surface: "phone", room: preview.room };
+    return { ...base, kind: "game", surface: "phone", room: preview.room };
   }
   return null;
 }
@@ -94,10 +112,99 @@ const SOURCES: Array<[string, readonly PreviewEntry[]]> = [
   ["doodle-bluff", doodleBluffPreviews],
 ];
 
-/** Every preview across every game, in registry order. */
-export const SCREENS: ScreenCase[] = SOURCES.flatMap(([gameId, previews]) =>
-  casesFor(gameId, previews),
-);
+interface AppScreenSpec {
+  /** Looked up in `dev/app-screens.tsx`'s registry — kept in step with it by a unit test. */
+  appId: string;
+  label: string;
+  surface: Surface;
+}
+
+/**
+ * Every screen the app shell owns, rather than a game: the join flow, the avatar picker, the
+ * lobby and its VIP controls, results, reconnecting/kicked, and the TV shell (landing, lobby,
+ * game picker, final scores, full-tonight, credits, reconnecting overlay). None of these were
+ * ever reached by the layout suite before — a preview fixture only ever covered a game's own
+ * Host/Phone screens — so this is where that gap closes.
+ */
+const APP_SCREENS: readonly AppScreenSpec[] = [
+  { appId: "join", label: "Phone: join a room", surface: "phone" },
+  {
+    appId: "join-worst",
+    label: "Phone: join, worst case (room-full error, name at NAME_MAX_LENGTH)",
+    surface: "phone",
+  },
+  { appId: "avatar-picker", label: "Phone: avatar picker", surface: "phone" },
+  {
+    appId: "avatar-picker-worst",
+    label: "Phone: avatar picker, worst case (8 players, long names, most avatars taken)",
+    surface: "phone",
+  },
+  { appId: "lobby", label: "Phone: lobby, shared screen", surface: "phone" },
+  {
+    appId: "lobby-worst",
+    label: "Phone: lobby, worst case (no shared screen, 8 long names)",
+    surface: "phone",
+  },
+  { appId: "vip-controls", label: "Phone: VIP controls", surface: "phone" },
+  {
+    appId: "vip-controls-worst",
+    label: "Phone: VIP controls, worst case (8 long names, every pack, an error)",
+    surface: "phone",
+  },
+  { appId: "results", label: "Phone: results, crown with awards", surface: "phone" },
+  {
+    appId: "results-worst",
+    label: "Phone: results, worst case (8 long names, 3 awards, a tie)",
+    surface: "phone",
+  },
+  { appId: "reconnecting", label: "Phone: reconnecting", surface: "phone" },
+  { appId: "kicked", label: "Phone: kicked from the room", surface: "phone" },
+  { appId: "waiting", label: "Phone: waiting for the next game", surface: "phone" },
+  {
+    appId: "waiting-worst",
+    label: "Phone: waiting, worst case (8 long names)",
+    surface: "phone",
+  },
+  { appId: "landing", label: "Phone: landing", surface: "phone" },
+  { appId: "tv-landing", label: "TV: landing", surface: "host" },
+  { appId: "tv-full-tonight", label: "TV: room limit reached tonight", surface: "host" },
+  { appId: "tv-lobby", label: "TV: lobby", surface: "host" },
+  {
+    appId: "tv-lobby-worst",
+    label: "TV: lobby, worst case (8 long names)",
+    surface: "host",
+  },
+  { appId: "tv-game-picker", label: "TV: game picker", surface: "host" },
+  {
+    appId: "tv-final-scores",
+    label: "TV: final scores, crown with awards",
+    surface: "host",
+  },
+  {
+    appId: "tv-final-scores-worst",
+    label: "TV: final scores, worst case (8 long names, 3 awards, a tie)",
+    surface: "host",
+  },
+  { appId: "tv-credits", label: "TV: credits", surface: "host" },
+  { appId: "tv-reconnecting", label: "TV: reconnecting overlay", surface: "host" },
+];
+
+function appCases(specs: readonly AppScreenSpec[]): AppCase[] {
+  return specs.map((spec, index) => ({
+    kind: "app",
+    id: `app/${index}`,
+    gameId: "app",
+    label: spec.label,
+    surface: spec.surface,
+    appId: spec.appId,
+  }));
+}
+
+/** Every game preview, plus every app-shell screen, in registry order. */
+export const SCREENS: ScreenCase[] = [
+  ...SOURCES.flatMap(([gameId, previews]) => casesFor(gameId, previews)),
+  ...appCases(APP_SCREENS),
+];
 
 export function screenById(id: string): ScreenCase | null {
   return SCREENS.find((screen) => screen.id === id) ?? null;

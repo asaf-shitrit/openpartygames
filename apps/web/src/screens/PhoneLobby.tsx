@@ -128,8 +128,25 @@ function isVipYou(vip: PlayerSummary | null, you: string): boolean {
 
 function YouCardTitle({ me, t }: { me: PlayerSummary | null; t: Dictionary }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        rowGap: 4,
+        columnGap: 10,
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 30,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          minWidth: 0,
+          overflowWrap: "break-word",
+        }}
+      >
         {me?.name ?? t.lobby.you}
       </div>
       {me && me.crowns > 0 ? <Tally count={me.crowns} size={28} /> : null}
@@ -166,6 +183,7 @@ function YouCard({
           flexDirection: "column",
           alignItems: "flex-start",
           gap: 8,
+          minWidth: 0,
         }}
       >
         <YouCardTitle me={me} t={t} />

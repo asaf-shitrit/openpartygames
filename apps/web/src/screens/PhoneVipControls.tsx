@@ -6,7 +6,8 @@ import type {
   PlayerRoomView,
   Rating,
 } from "@opg/protocol";
-import { useState } from "react";
+import type { RefObject } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   Avatar,
   Button,
@@ -33,6 +34,34 @@ export interface PhoneVipControlsProps {
   onSetSharedScreen: (sharedScreen: boolean) => void;
   onKick: (playerId: string) => void;
   onStartGame: () => void;
+}
+
+/**
+ * Reserves room for the sticky start-button footer at the bottom of the document's own scroll
+ * box, via `scroll-padding-bottom` — the CSS property built for exactly this: without it, a
+ * player scrolled toward the last row (the browser brings a focused or tapped control to the
+ * *nearest* edge of the viewport, not past it) lands with that row flush against the bottom
+ * edge, which is precisely where the sticky footer paints once it engages. Tracked live, not a
+ * fixed guess, because the footer's own height moves with the error line, the disabled reason
+ * and locale word-wrap. Scoped to this screen's lifetime: cleared on unmount so it never leaks
+ * onto a screen with no sticky footer of its own.
+ */
+function useReservedScrollBottom(): RefObject<HTMLDivElement | null> {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const root = document.documentElement;
+    if (!el) return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) root.style.scrollPaddingBottom = `${entry.contentRect.height}px`;
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.scrollPaddingBottom = "";
+    };
+  }, []);
+  return ref;
 }
 
 function ratingLabel(t: Dictionary, rating: Rating): string {
@@ -190,7 +219,10 @@ function GameButton({
               gap: 2,
               fontSize: 16,
               fontWeight: 700,
-              color: "var(--opg-marker)",
+              // The checkmark carries the marker red; on this tile's highlight background
+              // that red reads at 4.29:1 for text, under the 4.5:1 floor for body text, so
+              // the label itself uses the ink colour instead.
+              color: "var(--opg-ink)",
             }}
           >
             <Icon name="check" size={22} color="var(--opg-marker)" />
@@ -558,6 +590,7 @@ function StartButton({
   activeCount,
   error,
   onStartGame,
+  footerRef,
 }: {
   t: Dictionary;
   selectedGame: GameSummary | null;
@@ -567,9 +600,11 @@ function StartButton({
   activeCount: number;
   error: string | null;
   onStartGame: () => void;
+  footerRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
+      ref={footerRef}
       style={{
         marginTop: "auto",
         // The picker, the packs and the player list together run well past a phone
@@ -793,6 +828,7 @@ export function PhoneVipControls({
   onStartGame,
 }: PhoneVipControlsProps) {
   const { t } = useLocale();
+  const footerRef = useReservedScrollBottom();
   const selectedGame =
     view.games.find((g) => g.id === view.selectedGameId) ?? null;
   const activePlayers = view.players.filter((p) => !p.waitingForNextGame);
@@ -845,6 +881,7 @@ export function PhoneVipControls({
         activeCount={activePlayers.length}
         error={error}
         onStartGame={onStartGame}
+        footerRef={footerRef}
       />
     </PhoneScreen>
   );
