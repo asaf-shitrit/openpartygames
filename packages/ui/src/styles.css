@@ -15,6 +15,15 @@
   --opg-paper: #fbf8f1;
   --opg-card: #ffffff;
   --opg-marker: #d7372b;
+  /*
+   * The same red, darkened until running text clears WCAG AA. #d7372b measures 4.43:1 on paper
+   * and 4.29:1 on the soft highlight — fine for a heading or a stamp, which need 3:1, and short
+   * of the 4.5:1 that body text needs. Rather than darken the brand red everywhere (it is also
+   * the marker ink, the check icons, the focus ring and the borders, all of which clear their
+   * own floor), text below 18.66px bold or 24px regular uses this one: 5.04:1 on paper, 4.88:1
+   * on the highlight. intent/0001-platform-mvp.md commits to WCAG 2.2 AA contrast on phones.
+   */
+  --opg-marker-text: #c73328;
   --opg-highlight: #ffe45c;
   --opg-highlight-soft: #fff6bf;
   --opg-tape: rgba(255, 228, 92, 0.8);
