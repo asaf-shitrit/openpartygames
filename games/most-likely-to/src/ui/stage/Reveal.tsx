@@ -179,7 +179,7 @@ function TallyRow({ id, meId, voters, order, drawn, highlighted, players, t }: T
         size={32}
         alt={format(t.mostLikelyTo.avatarAlt, { name })}
       />
-      <div style={{ flexGrow: 1, fontSize: 17, fontWeight: 700 }}>{label}</div>
+      <div style={{ flexGrow: 1, minWidth: 0, fontSize: 17, fontWeight: 700 }}>{label}</div>
       {shown > 0 ? (
         <>
           <TallyScratch count={voters.length} drawn={shown} size={26} />
