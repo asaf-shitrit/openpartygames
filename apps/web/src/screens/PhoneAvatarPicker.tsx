@@ -55,7 +55,16 @@ function TakenTile({
       <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>
         {t.avatarPicker.taken}
       </div>
-      <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 700,
+          lineHeight: 1.15,
+          maxWidth: "100%",
+          overflowWrap: "anywhere",
+          textAlign: "center",
+        }}
+      >
         {owner}
       </div>
     </div>

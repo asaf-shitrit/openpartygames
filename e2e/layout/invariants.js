@@ -45,15 +45,50 @@ function violation(rule, el, detail) {
   return { rule, detail, path: pathOf(el), text: textOf(el) };
 }
 
+/**
+ * `clip: rect(0, 0, 0, 0)` and `clip-path: inset(50%)` are the two standard ways to clip a
+ * label down to no area at all. Either one paints nothing, whatever its box measures.
+ *
+ * @param {CSSStyleDeclaration} style @returns {boolean}
+ */
+function clipsAwayEverything(style) {
+  const rect = /^rect\((-?[\d.]+)px,?\s*(-?[\d.]+)px,?\s*(-?[\d.]+)px,?\s*(-?[\d.]+)px\)$/.exec(
+    style.clip.trim(),
+  );
+  if (rect !== null) {
+    const [top, right, bottom, left] = rect.slice(1).map(Number);
+    return right - left <= 0 || bottom - top <= 0;
+  }
+  const inset = /^inset\(\s*([\d.]+)%/.exec(style.clipPath);
+  return inset !== null && Number(inset[1]) >= 50;
+}
+
+/**
+ * The visually-hidden idiom: a box pulled out of flow and clipped away, that a screen reader
+ * reads and nobody sees. Recognised first by the clip that hides it, because that is the part
+ * a real element cannot have by accident — and because size is the one signal zoom destroys.
+ * getBoundingClientRect reports viewport pixels, so a one-pixel label measures 2px at 200% and
+ * 4px at 400%; clientWidth and clientHeight stay in layout pixels at any zoom, which is why the
+ * fallback below asks them instead of the rect.
+ *
+ * @param {HTMLElement} el @param {CSSStyleDeclaration} style @returns {boolean}
+ */
+function screenReaderOnly(el, style) {
+  if (style.position !== "absolute" && style.position !== "fixed") return false;
+  if (clipsAwayEverything(style)) return true;
+  const clipped = style.clipPath !== "none" || (style.clip !== "auto" && style.clip !== "");
+  if (!clipped && style.overflow !== "hidden") return false;
+  return el.clientWidth <= 4 && el.clientHeight <= 4;
+}
+
 /** @param {HTMLElement} el @returns {boolean} */
 function visible(el) {
   const style = getComputedStyle(el);
   if (style.visibility === "hidden" || style.display === "none") return false;
   if (Number(style.opacity) < 0.05) return false;
+  if (screenReaderOnly(el, style)) return false;
   const rect = el.getBoundingClientRect();
-  // A box this small is the visually-hidden idiom: read aloud by a screen reader, seen by
-  // nobody. Measuring it as text would report every accessible label as clipped.
-  return rect.width > 2 && rect.height > 2;
+  return rect.width > 0 && rect.height > 0;
 }
 
 /** Text this element renders itself, rather than through a child. @param {Element} el */
@@ -99,16 +134,49 @@ function checkHorizontal(el) {
  *
  * @param {HTMLElement} el @returns {Violation | null}
  */
+/**
+ * The widest right edge of any text this element actually renders, relative to its own box. A
+ * box's scrollWidth counts everything inside it, decoration included, and this design hangs
+ * decoration past its edges on purpose — tilted stickers, a celebration burst — behind an
+ * `overflow: hidden` that exists precisely to contain them. Measuring that as clipped text
+ * reports a card as broken for doing the thing it was built to do.
+ *
+ * @param {HTMLElement} el @returns {number}
+ */
+function textRightEdge(el) {
+  const left = el.getBoundingClientRect().left;
+  let widest = 0;
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walk.nextNode(); node !== null; node = walk.nextNode()) {
+    if ((node.textContent ?? "").trim() === "") continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const rect of range.getClientRects()) {
+      widest = Math.max(widest, rect.right - left);
+    }
+  }
+  return widest;
+}
+
+/** @param {HTMLElement} el @returns {Violation | null} */
 function checkClipped(el) {
   if (el.clientWidth === 0) return null;
   const overflowX = getComputedStyle(el).overflowX;
   if (overflowX === "visible" || overflowX === "auto" || overflowX === "scroll") return null;
   if (el.scrollWidth <= el.clientWidth + EPS) return null;
   if (textOf(el) === "") return null;
+  // Both sides of this comparison have to be measured the same way. Text rects and the box's
+  // own rect are viewport pixels, which double at 200% zoom; clientWidth is layout pixels,
+  // which do not. Asking whether zoomed text outruns an unzoomed box calls every wide card
+  // clipped the moment somebody zooms — and a tilted one worst of all, because a rotation
+  // widens the bounding box without moving a single word.
+  const box = el.getBoundingClientRect();
+  const textEdge = textRightEdge(el);
+  if (textEdge <= box.width + EPS) return null;
   return violation(
     "text-clipped",
     el,
-    `${el.scrollWidth}px of content clipped to ${el.clientWidth}px`,
+    `text reaches ${Math.round(textEdge)}px in a ${Math.round(box.width)}px box`,
   );
 }
 
@@ -133,21 +201,50 @@ function checkTapTarget(el, limits) {
   );
 }
 
-/** After scrolling to it, an action must actually be on the screen. @param {HTMLElement} el */
+/** The part of an element's box that is actually on the screen. @param {DOMRect} rect */
+function visiblePart(rect) {
+  const top = Math.max(rect.top, 0);
+  const bottom = Math.min(rect.bottom, window.innerHeight);
+  const left = Math.max(rect.left, 0);
+  const right = Math.min(rect.right, window.innerWidth);
+  return { top, bottom, left, right, height: bottom - top, width: right - left };
+}
+
+/**
+ * After scrolling to it, enough of an action has to be on the screen to see and touch.
+ *
+ * Not "entirely on the screen": at 200% text a card can be taller than the phone, and a player
+ * scrolls through it the way they scroll through anything long. What makes an action
+ * unreachable is having nothing of it to tap — the failure this rule was written for, where a
+ * screen that does not scroll leaves its button below the bottom edge.
+ *
+ * @param {HTMLElement} el @returns {Violation | null}
+ */
 function checkReachable(el) {
   const rect = el.getBoundingClientRect();
-  if (rect.bottom <= window.innerHeight + EPS && rect.top >= -EPS) return null;
+  const seen = visiblePart(rect);
+  const enoughHigh = Math.min(44, rect.height);
+  const enoughWide = Math.min(44, rect.width);
+  if (seen.height >= enoughHigh - EPS && seen.width >= enoughWide - EPS) return null;
   return violation(
     "unreachable",
     el,
-    `sits at ${Math.round(rect.top)}..${Math.round(rect.bottom)}px in a ${window.innerHeight}px screen that will not scroll to it`,
+    `sits at ${Math.round(rect.top)}..${Math.round(rect.bottom)}px in a ${window.innerHeight}px screen, leaving ${Math.round(Math.max(seen.height, 0))}px of it to tap`,
   );
 }
 
 /** Whatever is on top at a control's centre has to be that control. @param {HTMLElement} el */
 function checkCovered(el) {
   const rect = el.getBoundingClientRect();
-  const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  // The middle of what is on the screen, not the middle of the element: an element taller than
+  // the phone has its geometric centre somewhere off the edge, where hit-testing asks about a
+  // point the player cannot touch anyway.
+  const seen = visiblePart(rect);
+  if (seen.height <= 0 || seen.width <= 0) return null;
+  const top = document.elementFromPoint(
+    (seen.left + seen.right) / 2,
+    (seen.top + seen.bottom) / 2,
+  );
   if (top === null) return violation("covered", el, "nothing hit-tests at its centre");
   if (top === el || el.contains(top)) return null;
   return violation("covered", el, `${pathOf(top)} is on top at its centre`);

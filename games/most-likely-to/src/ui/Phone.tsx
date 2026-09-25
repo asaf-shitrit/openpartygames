@@ -128,7 +128,7 @@ function VoteRow({
         size={48}
         alt={format(t.mostLikelyTo.avatarAlt, { name })}
       />
-      <div style={{ flexGrow: 1, fontSize: 21, fontWeight: 700 }}>
+      <div style={{ flexGrow: 1, minWidth: 0, fontSize: 21, fontWeight: 700 }}>
         {label}
       </div>
       <VotePickMark selected={selected} t={t} />

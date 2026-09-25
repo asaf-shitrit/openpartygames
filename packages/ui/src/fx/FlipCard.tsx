@@ -8,7 +8,13 @@ import { PRESSABLE_CLASS } from "../primitives";
 const DEFAULT_HOLD_MS = 400;
 const FLIP_DURATION_MS = 420;
 const CROSSFADE_DURATION_MS = 220;
-const MIN_HEIGHT = 300;
+/**
+ * The height a flipping card asks for — as much as it can have, not more than there is. A flat
+ * 300px is a floor the card cannot go under even on a screen that has less than 300px left for
+ * it, which is what happens at 200% text on a phone screen that clamps to its viewport: the
+ * card keeps its floor and the controls under it are pushed off the bottom instead.
+ */
+const MIN_HEIGHT = "min(300px, 100%)";
 
 export interface FlipCardProps {
   /** Content on the back (shown face down). */

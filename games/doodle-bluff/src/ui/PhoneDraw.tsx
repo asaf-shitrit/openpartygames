@@ -233,8 +233,21 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Marker size={24}>{progressLabel(t, activeIndex, prompts.length)}</Marker>
+      {/* Label at one end, button at the other — until the two together are wider than the
+          phone, which is what zooming to 200% does to them. Wrapping drops the button to its
+          own line rather than off the edge; at normal size they still share one. */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <Marker size={24} style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+          {progressLabel(t, activeIndex, prompts.length)}
+        </Marker>
         {prompts.length > 1 ? (
           <button
             type="button"

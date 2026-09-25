@@ -52,6 +52,8 @@ function WaitingPlayerCard({
         gap: 4,
         padding: "10px 6px 8px",
         borderWidth: 3,
+        minWidth: 0,
+        maxWidth: "100%",
       }}
     >
       <Avatar id={player.avatar} size={48} />
@@ -61,6 +63,8 @@ function WaitingPlayerCard({
           fontWeight: 700,
           textAlign: "center",
           lineHeight: 1.15,
+          maxWidth: "100%",
+          overflowWrap: "anywhere",
         }}
       >
         {player.name}
@@ -107,8 +111,15 @@ function WaitingHeader({
         marginTop: 8,
       }}
     >
-      <Highlight style={{ padding: "0 10px" }}>
-        <Marker size={38} style={{ lineHeight: 1.15 }}>
+      <Highlight style={{ padding: "0 10px", maxWidth: "100%" }}>
+        <Marker
+          size={38}
+          style={{
+            lineHeight: 1.15,
+            maxWidth: "100%",
+            overflowWrap: "anywhere",
+          }}
+        >
           {format(t.status.youreIn, { name })}
         </Marker>
       </Highlight>

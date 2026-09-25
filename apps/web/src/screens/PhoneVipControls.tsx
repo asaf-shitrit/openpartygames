@@ -37,31 +37,51 @@ export interface PhoneVipControlsProps {
 }
 
 /**
- * Reserves room for the sticky start-button footer at the bottom of the document's own scroll
- * box, via `scroll-padding-bottom` — the CSS property built for exactly this: without it, a
- * player scrolled toward the last row (the browser brings a focused or tapped control to the
- * *nearest* edge of the viewport, not past it) lands with that row flush against the bottom
- * edge, which is precisely where the sticky footer paints once it engages. Tracked live, not a
- * fixed guess, because the footer's own height moves with the error line, the disabled reason
- * and locale word-wrap. Scoped to this screen's lifetime: cleared on unmount so it never leaks
- * onto a screen with no sticky footer of its own.
+ * How much of the screen a pinned footer may take before pinning it stops being a kindness.
+ * Measured against the rendered viewport, so enlarged text counts: at 200% a three-line error
+ * above an XL button fills better than three quarters of a phone, and a player picking a game
+ * underneath would be choosing it through a letterbox.
  */
-function useReservedScrollBottom(): RefObject<HTMLDivElement | null> {
+const MAX_PINNED_SHARE = 1 / 3;
+
+/**
+ * Keeps the start-button footer honest about riding the bottom of the viewport.
+ *
+ * While it is pinned it reserves its own room at the bottom of the document's scroll box via
+ * `scroll-padding-bottom` — the CSS property built for exactly this: without it, a player
+ * scrolled toward the last row (the browser brings a focused or tapped control to the *nearest*
+ * edge of the viewport, not past it) lands with that row flush against the bottom edge, which is
+ * precisely where the footer paints. Tracked live, not a fixed guess, because the footer's
+ * height moves with the error line, the disabled reason and locale word-wrap — and it is that
+ * same measurement that decides whether it should be pinned at all. Scoped to this screen's
+ * lifetime: cleared on unmount so it never leaks onto a screen with no footer of its own.
+ */
+function useStickyFooter() {
   const ref = useRef<HTMLDivElement>(null);
+  const [pinned, setPinned] = useState(true);
   useLayoutEffect(() => {
     const el = ref.current;
     const root = document.documentElement;
     if (!el) return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) root.style.scrollPaddingBottom = `${entry.contentRect.height}px`;
-    });
+    const measure = () => {
+      // Two different measurements on purpose: the share is in rendered pixels, the same space
+      // the viewport is measured in, so text zoom shows up in it. scroll-padding is a CSS
+      // length, so it takes the layout height, which zoom leaves alone.
+      const fits = el.getBoundingClientRect().height <= window.innerHeight * MAX_PINNED_SHARE;
+      setPinned(fits);
+      root.style.scrollPaddingBottom = fits ? `${el.clientHeight}px` : "";
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
+    window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();
+      window.removeEventListener("resize", measure);
       root.style.scrollPaddingBottom = "";
     };
   }, []);
-  return ref;
+  return { ref, pinned };
 }
 
 function ratingLabel(t: Dictionary, rating: Rating): string {
@@ -110,9 +130,25 @@ function PlayerRow({
   onKick: (id: string) => void;
 }) {
   return (
-    <div style={{ height: 50, display: "flex", alignItems: "center", gap: 10 }}>
+    <div
+      style={{
+        minHeight: 50,
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
       <Avatar id={player.avatar} size={36} />
-      <div style={{ flexGrow: 1, fontSize: 19, fontWeight: 700 }}>
+      <div
+        style={{
+          flexGrow: 1,
+          minWidth: 0,
+          fontSize: 19,
+          fontWeight: 700,
+          overflowWrap: "break-word",
+        }}
+      >
         {player.name}
         {player.isVip ? t.picker.vipSuffix : ""}
       </div>
@@ -304,8 +340,9 @@ function PackRow({
   return (
     <div
       style={{
-        height: 46,
+        minHeight: 46,
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 10,
         borderBottom: last ? undefined : "2px dashed var(--opg-muted)",
@@ -314,8 +351,10 @@ function PackRow({
       <div
         style={{
           flexGrow: 1,
+          minWidth: 0,
           fontSize: 17,
           fontWeight: 700,
+          overflowWrap: "break-word",
           color: pack.enabled ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
         }}
       >
@@ -324,7 +363,7 @@ function PackRow({
       <Chip
         height={28}
         fontSize={16}
-        style={{ padding: "0 8px", borderWidth: 2 }}
+        style={{ padding: "0 8px", borderWidth: 2, flexShrink: 0 }}
       >
         {ratingLabel(t, pack.rating)}
       </Chip>
@@ -333,6 +372,7 @@ function PackRow({
         size={30}
         label={`${pack.name} pack`}
         onChange={(enabled) => onSetPack(pack.id, enabled)}
+        style={{ flexShrink: 0 }}
       />
     </div>
   );
@@ -423,16 +463,24 @@ function SharedScreenToggle({
         gap: 10,
       }}
     >
-      <Icon name="monitor" size={26} />
+      <Icon name="monitor" size={26} style={{ flexShrink: 0 }} />
       <div
         style={{
           flexGrow: 1,
+          minWidth: 0,
           display: "flex",
           flexDirection: "column",
           gap: 2,
         }}
       >
-        <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
+        <div
+          style={{
+            fontSize: 19,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            overflowWrap: "break-word",
+          }}
+        >
           {t.picker.addSharedScreen}
         </div>
         <div
@@ -440,6 +488,7 @@ function SharedScreenToggle({
             fontSize: 16,
             lineHeight: 1.25,
             color: "var(--opg-ink-secondary)",
+            overflowWrap: "break-word",
           }}
         >
           {sharedScreenHint(t, sharedScreen, blockedNames)}
@@ -450,6 +499,7 @@ function SharedScreenToggle({
         size={30}
         label={t.picker.addSharedScreen}
         onChange={onSetSharedScreen}
+        style={{ flexShrink: 0 }}
       />
     </Card>
   );
@@ -474,16 +524,24 @@ function LockCard({
         gap: 10,
       }}
     >
-      <Icon name="lock" size={26} />
+      <Icon name="lock" size={26} style={{ flexShrink: 0 }} />
       <div
         style={{
           flexGrow: 1,
+          minWidth: 0,
           display: "flex",
           flexDirection: "column",
           gap: 2,
         }}
       >
-        <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.2 }}>
+        <div
+          style={{
+            fontSize: 19,
+            fontWeight: 700,
+            lineHeight: 1.2,
+            overflowWrap: "break-word",
+          }}
+        >
           {t.picker.lockRoom}
         </div>
         <div
@@ -491,6 +549,7 @@ function LockCard({
             fontSize: 16,
             lineHeight: 1.25,
             color: "var(--opg-ink-secondary)",
+            overflowWrap: "break-word",
           }}
         >
           {t.picker.lockRoomHint}
@@ -501,6 +560,7 @@ function LockCard({
         size={30}
         label={t.picker.lockRoom}
         onChange={(value) => onSetLocked(value)}
+        style={{ flexShrink: 0 }}
       />
     </Card>
   );
@@ -591,6 +651,7 @@ function StartButton({
   error,
   onStartGame,
   footerRef,
+  pinned,
 }: {
   t: Dictionary;
   selectedGame: GameSummary | null;
@@ -601,6 +662,7 @@ function StartButton({
   error: string | null;
   onStartGame: () => void;
   footerRef: RefObject<HTMLDivElement | null>;
+  pinned: boolean;
 }) {
   return (
     <div
@@ -609,8 +671,10 @@ function StartButton({
         marginTop: "auto",
         // The picker, the packs and the player list together run well past a phone
         // screen, so the primary action rides the bottom of the viewport instead of
-        // sitting at the end of the scroll where it cannot be reached.
-        position: "sticky",
+        // sitting at the end of the scroll where it cannot be reached — until it grows
+        // large enough that riding there would hide the list it belongs to, and then it
+        // takes its place at the end of the scroll after all.
+        position: pinned ? "sticky" : "static",
         bottom: 0,
         display: "flex",
         flexDirection: "column",
@@ -828,7 +892,7 @@ export function PhoneVipControls({
   onStartGame,
 }: PhoneVipControlsProps) {
   const { t } = useLocale();
-  const footerRef = useReservedScrollBottom();
+  const { ref: footerRef, pinned: footerPinned } = useStickyFooter();
   const selectedGame =
     view.games.find((g) => g.id === view.selectedGameId) ?? null;
   const activePlayers = view.players.filter((p) => !p.waitingForNextGame);
@@ -882,6 +946,7 @@ export function PhoneVipControls({
         error={error}
         onStartGame={onStartGame}
         footerRef={footerRef}
+        pinned={footerPinned}
       />
     </PhoneScreen>
   );

@@ -47,8 +47,15 @@ export function PhoneReconnecting({
             strokeLinejoin="round"
           />
         </svg>
-        <Highlight style={{ padding: "0 10px" }}>
-          <Marker size={40} style={{ lineHeight: 1.15 }}>
+        <Highlight style={{ padding: "0 10px", maxWidth: "100%" }}>
+          <Marker
+            size={40}
+            style={{
+              lineHeight: 1.15,
+              maxWidth: "100%",
+              overflowWrap: "anywhere",
+            }}
+          >
             {t.status.phoneReconnectingHeading}
           </Marker>
         </Highlight>

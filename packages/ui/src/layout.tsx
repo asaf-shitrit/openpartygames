@@ -71,6 +71,12 @@ export function PhoneScreen({ children, style, fit = false }: PhoneScreenProps) 
       style={{
         minHeight: "100dvh",
         height: fit ? "100dvh" : undefined,
+        // A clamped screen works by having a flexible middle that gives up space. At 200% text
+        // there comes a point where the middle has nothing left to give, and then the choice is
+        // between an action pushed off the bottom edge and a column that scrolls. Scrolling
+        // wins: the action is still reachable. At any normal size the content fits and this
+        // never engages.
+        overflowY: fit ? "auto" : undefined,
         width: "100%",
         maxWidth: 480,
         margin: "0 auto",

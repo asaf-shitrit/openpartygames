@@ -31,6 +31,7 @@ function BrandHeader({ t }: { t: Dictionary }) {
         alignSelf: "flex-start",
         position: "relative",
         padding: "0 6px",
+        maxWidth: "100%",
       }}
     >
       <div
@@ -47,7 +48,12 @@ function BrandHeader({ t }: { t: Dictionary }) {
       />
       <div
         className="opg-marker"
-        style={{ position: "relative", fontSize: 24, lineHeight: 1.2 }}
+        style={{
+          position: "relative",
+          fontSize: 24,
+          lineHeight: 1.2,
+          overflowWrap: "anywhere",
+        }}
       >
         {t.join.brand}
       </div>
@@ -232,7 +238,11 @@ function JoinForm({
         gap: 18,
       }}
     >
-      <Tape left={110} top={-20} width={150} height={40} rotate={-3} />
+      {/* Percentage offsets, not the fixed pixels a tape sticker usually gets: at 200% zoom
+          a fixed left+width pushed this past the phone's edge (the card itself reflows to
+          the zoomed viewport just fine; a pixel offset on top of it does not), so it's
+          pinned to the card's own width instead — same spot, any width. */}
+      <Tape left="30%" top={-20} width="42%" height={40} rotate={-3} />
       <Marker size={40}>{t.join.heading}</Marker>
       <CodeField code={code} onChange={onCodeChange} t={t} />
       <TextInput
