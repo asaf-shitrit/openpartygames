@@ -46,14 +46,30 @@ function violation(rule, el, detail) {
 }
 
 /** @param {HTMLElement} el @returns {boolean} */
+/**
+ * The visually-hidden idiom: a clipped one-pixel box, pulled out of flow, that a screen reader
+ * reads and nobody sees. Recognised by what it *is* rather than by how small it measures — at
+ * 200% zoom that one pixel renders as two, and a size threshold alone then starts reporting
+ * every accessible label in the app as clipped text.
+ *
+ * @param {HTMLElement} el @param {CSSStyleDeclaration} style @returns {boolean}
+ */
+function screenReaderOnly(el, style) {
+  if (style.position !== "absolute" && style.position !== "fixed") return false;
+  const clipped = style.clipPath !== "none" || (style.clip !== "auto" && style.clip !== "");
+  if (!clipped && style.overflow !== "hidden") return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width <= 4 && rect.height <= 4;
+}
+
+/** @param {HTMLElement} el @returns {boolean} */
 function visible(el) {
   const style = getComputedStyle(el);
   if (style.visibility === "hidden" || style.display === "none") return false;
   if (Number(style.opacity) < 0.05) return false;
+  if (screenReaderOnly(el, style)) return false;
   const rect = el.getBoundingClientRect();
-  // A box this small is the visually-hidden idiom: read aloud by a screen reader, seen by
-  // nobody. Measuring it as text would report every accessible label as clipped.
-  return rect.width > 2 && rect.height > 2;
+  return rect.width > 0 && rect.height > 0;
 }
 
 /** Text this element renders itself, rather than through a child. @param {Element} el */
@@ -99,16 +115,43 @@ function checkHorizontal(el) {
  *
  * @param {HTMLElement} el @returns {Violation | null}
  */
+/**
+ * The widest right edge of any text this element actually renders, relative to its own box. A
+ * box's scrollWidth counts everything inside it, decoration included, and this design hangs
+ * decoration past its edges on purpose — tilted stickers, a celebration burst — behind an
+ * `overflow: hidden` that exists precisely to contain them. Measuring that as clipped text
+ * reports a card as broken for doing the thing it was built to do.
+ *
+ * @param {HTMLElement} el @returns {number}
+ */
+function textRightEdge(el) {
+  const left = el.getBoundingClientRect().left;
+  let widest = 0;
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let node = walk.nextNode(); node !== null; node = walk.nextNode()) {
+    if ((node.textContent ?? "").trim() === "") continue;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const rect of range.getClientRects()) {
+      widest = Math.max(widest, rect.right - left);
+    }
+  }
+  return widest;
+}
+
+/** @param {HTMLElement} el @returns {Violation | null} */
 function checkClipped(el) {
   if (el.clientWidth === 0) return null;
   const overflowX = getComputedStyle(el).overflowX;
   if (overflowX === "visible" || overflowX === "auto" || overflowX === "scroll") return null;
   if (el.scrollWidth <= el.clientWidth + EPS) return null;
   if (textOf(el) === "") return null;
+  const textEdge = textRightEdge(el);
+  if (textEdge <= el.clientWidth + EPS) return null;
   return violation(
     "text-clipped",
     el,
-    `${el.scrollWidth}px of content clipped to ${el.clientWidth}px`,
+    `text reaches ${Math.round(textEdge)}px in a ${el.clientWidth}px box`,
   );
 }
 
