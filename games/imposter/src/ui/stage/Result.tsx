@@ -235,7 +235,7 @@ const STANDINGS_ROW: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 12,
-  height: 42,
+  minHeight: 42,
 };
 
 interface StandingsRowProps {
@@ -262,7 +262,7 @@ function StandingsRow({ id, rank, players, me, from, to, live }: StandingsRowPro
         size={32}
         alt={format(t.imposter.avatarAlt, { name })}
       />
-      <div style={{ flexGrow: 1, fontSize: 17, fontWeight: 700 }}>{label}</div>
+      <div style={{ flexGrow: 1, minWidth: 0, fontSize: 17, fontWeight: 700 }}>{label}</div>
       <CountUp from={from} to={to} live={live} style={{ fontSize: 18, fontWeight: 700 }} />
     </div>
   );
