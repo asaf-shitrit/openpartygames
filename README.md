@@ -232,11 +232,11 @@ project holds itself to, from [intent/0001-platform-mvp.md](intent/0001-platform
   screen that does not scroll.
 - **Reduced motion is respected**, and every audio cue has a visual equivalent.
 
-Two honest gaps, both tracked rather than implied:
+- **Text survives 200% zoom on phones.** Every phone screen is measured again with the text
+  doubled, in both languages, and has to keep its words on the screen and its buttons tappable.
 
-- **Text at 200% zoom does not hold on phones yet.** Type is sized in raw pixels and most rows
-  neither wrap nor shrink, so doubling the text overflows many screens. The check exists and is
-  skipped until the repair lands: [#31](https://github.com/asaf-shitrit/openpartygames/issues/31).
+One honest boundary, recorded rather than implied:
+
 - **The host screen is out of scope for zoom.** It is a fixed 1920x1080 canvas scaled to a TV
   across the room, not a page anyone sets their own text size on.
 

@@ -56,6 +56,8 @@ function PlayerCell({
         padding: "6px 4px",
         background: isYou ? "var(--opg-highlight-soft)" : undefined,
         borderRadius: "var(--opg-radius-m)",
+        minWidth: 0,
+        maxWidth: "100%",
       }}
     >
       <Avatar id={player.avatar} size={52} />
@@ -65,13 +67,23 @@ function PlayerCell({
           fontWeight: 700,
           textAlign: "center",
           lineHeight: 1.15,
+          maxWidth: "100%",
+          overflowWrap: "anywhere",
         }}
       >
         {player.name}
         {isYou ? t.lobby.youSuffix : ""}
       </div>
       <div
-        style={{ height: 22, display: "flex", alignItems: "center", gap: 3 }}
+        style={{
+          minHeight: 22,
+          maxWidth: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: 3,
+        }}
       >
         <PlayerBadge player={player} t={t} />
       </div>
@@ -92,8 +104,9 @@ function ChangeDoodleButton({
       className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onChangeAvatar}
       style={{
-        height: 48,
-        padding: "0 14px",
+        minHeight: 48,
+        maxWidth: "100%",
+        padding: "8px 14px",
         display: "flex",
         alignItems: "center",
         gap: 8,
@@ -104,8 +117,10 @@ function ChangeDoodleButton({
         fontWeight: 700,
       }}
     >
-      <Icon name="pencil" size={20} />
-      <span>{t.lobby.changeDoodle}</span>
+      <Icon name="pencil" size={20} style={{ flexShrink: 0 }} />
+      <span style={{ minWidth: 0, overflowWrap: "break-word" }}>
+        {t.lobby.changeDoodle}
+      </span>
     </button>
   );
 }
@@ -136,6 +151,7 @@ function YouCardTitle({ me, t }: { me: PlayerSummary | null; t: Dictionary }) {
         rowGap: 4,
         columnGap: 10,
         minWidth: 0,
+        maxWidth: "100%",
       }}
     >
       <div
@@ -171,6 +187,10 @@ function YouCard({
         marginTop: 6,
         padding: 18,
         display: "flex",
+        // The doodle keeps its size — it is the player's own face, and shrinking it is not an
+        // option — so when the row runs out of room the name and its crowns take the next line
+        // rather than a 30px-wide sliver of this one. At phone sizes they still share a line.
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 16,
       }}
@@ -402,7 +422,11 @@ function LobbyBody({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        // Three across on a phone, but chosen from the width rather than fixed at three: a
+        // column narrower than this can't hold an avatar beside a name and a crown tally, and
+        // at 200% zoom a third of the screen is exactly that. 100px keeps three columns at
+        // every phone width the suite measures, and gives them up rather than overflow.
+        gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
         gap: 10,
       }}
     >

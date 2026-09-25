@@ -146,9 +146,23 @@ function AwardCallout({
       }}
     >
       {live ? <StickerBurst live count={8} size={220} /> : null}
-      <Marker size={26}>{copy?.title ?? t.results.gotAward}</Marker>
+      <Marker
+        size={26}
+        style={{ maxWidth: "100%", overflowWrap: "break-word" }}
+      >
+        {copy?.title ?? t.results.gotAward}
+      </Marker>
       {copy ? (
-        <div style={{ fontSize: 18, fontWeight: 700 }}>{copy.detail}</div>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            maxWidth: "100%",
+            overflowWrap: "break-word",
+          }}
+        >
+          {copy.detail}
+        </div>
       ) : null}
     </Card>
   );
@@ -224,11 +238,23 @@ function CrownCallout({
     >
       {amWinner ? <Confetti live={live} surface="phone" /> : null}
       <Crown size={amWinner ? 130 : 60} />
-      <Marker size={amWinner ? 34 : 26}>
+      <Marker
+        size={amWinner ? 34 : 26}
+        style={{ maxWidth: "100%", overflowWrap: "break-word" }}
+      >
         {crownHeadline(t, amWinner, crownLine)}
       </Marker>
       {finishedText === null ? null : (
-        <div style={{ fontSize: 18, fontWeight: 700 }}>{finishedText}</div>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            maxWidth: "100%",
+            overflowWrap: "break-word",
+          }}
+        >
+          {finishedText}
+        </div>
       )}
     </Card>
   );

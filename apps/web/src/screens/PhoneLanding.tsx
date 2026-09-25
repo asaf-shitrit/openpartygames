@@ -13,6 +13,7 @@ function BrandHeader({ brand }: { brand: string }) {
         alignSelf: "flex-start",
         position: "relative",
         padding: "0 6px",
+        maxWidth: "100%",
       }}
     >
       <div
@@ -30,7 +31,12 @@ function BrandHeader({ brand }: { brand: string }) {
       />
       <div
         className="opg-marker"
-        style={{ position: "relative", fontSize: 24, lineHeight: 1.2 }}
+        style={{
+          position: "relative",
+          fontSize: 24,
+          lineHeight: 1.2,
+          overflowWrap: "anywhere",
+        }}
       >
         {brand}
       </div>

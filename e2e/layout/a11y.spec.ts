@@ -5,10 +5,8 @@
 // English only — a missing aria-label or a failing ratio is failing or not regardless of which
 // language sits next to it.
 //
-// A third pass, text at 200%, is written below (it reuses the layout invariants themselves,
-// zoomed) but test.describe.skip'd: it works and finds real, systemic overflow, but fixing it
-// is a repair across shared components or a design call about the TV surface, not something to
-// guess at here. See the comment above that block.
+// A third pass, text at 200%, reuses the layout invariants themselves, zoomed. It ran parked
+// behind describe.skip while the repair it asked for was made (issue #31); it is live now.
 //
 // pnpm e2e:layout runs this project alongside "en" and "he"; OPG_LAYOUT_PORT picks the port.
 import { expect, test } from "@playwright/test";
@@ -140,11 +138,18 @@ for (const viewport of ZOOM_VIEWPORTS) {
   const screens = SCREENS.filter((screen) => screen.surface === viewport.surface);
   if (screens.length === 0) continue;
 
-  // NOT DONE — the check works and finds real breakage, and the repair has not been made yet.
-  // At 200% zoom most phone screens overflow sideways or push a control past the bottom,
-  // because almost none of the app's flex rows wrap or shrink and every size in the app is a
-  // raw pixel number. Fixing that is a wrapping pass through the shared components in
-  // packages/ui/src, tracked in issue #31; un-skip this the day that lands, not before.
+  // What this pass is worth, and where it stops.
+  //
+  // `document.documentElement.style.zoom` reproduces the part of browser zoom that breaks
+  // layouts — every box and font doubles while the screen does not — but it is not the whole of
+  // it, and the difference matters to anyone fixing a failure here. Under a real browser zoom
+  // the CSS viewport itself shrinks, so media queries fire and `vh` tracks it. Under this one
+  // they do not: `matchMedia("(max-height: 600px)")` is false at 200% and `100vh` doubles along
+  // with everything else (measured, not assumed). A repair keyed to a media query therefore
+  // fixes the product and leaves this pass red, which reads like a broken fix. Reach instead
+  // for what is true in both worlds — wrapping, minimum rather than fixed sizes, `min-width: 0`
+  // — or measure the viewport in JS, where `getBoundingClientRect` and `window.innerHeight` are
+  // in the same (zoomed) space and a ratio between them means the same thing either way.
   //
   // The TV is deliberately not among the viewports above. The host stage is a fixed 1920x1080
   // canvas scaled to whatever screen it is cast to, shown across a room, and driven by nobody's

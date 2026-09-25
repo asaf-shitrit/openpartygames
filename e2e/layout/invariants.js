@@ -45,21 +45,40 @@ function violation(rule, el, detail) {
   return { rule, detail, path: pathOf(el), text: textOf(el) };
 }
 
-/** @param {HTMLElement} el @returns {boolean} */
 /**
- * The visually-hidden idiom: a clipped one-pixel box, pulled out of flow, that a screen reader
- * reads and nobody sees. Recognised by what it *is* rather than by how small it measures — at
- * 200% zoom that one pixel renders as two, and a size threshold alone then starts reporting
- * every accessible label in the app as clipped text.
+ * `clip: rect(0, 0, 0, 0)` and `clip-path: inset(50%)` are the two standard ways to clip a
+ * label down to no area at all. Either one paints nothing, whatever its box measures.
+ *
+ * @param {CSSStyleDeclaration} style @returns {boolean}
+ */
+function clipsAwayEverything(style) {
+  const rect = /^rect\((-?[\d.]+)px,?\s*(-?[\d.]+)px,?\s*(-?[\d.]+)px,?\s*(-?[\d.]+)px\)$/.exec(
+    style.clip.trim(),
+  );
+  if (rect !== null) {
+    const [top, right, bottom, left] = rect.slice(1).map(Number);
+    return right - left <= 0 || bottom - top <= 0;
+  }
+  const inset = /^inset\(\s*([\d.]+)%/.exec(style.clipPath);
+  return inset !== null && Number(inset[1]) >= 50;
+}
+
+/**
+ * The visually-hidden idiom: a box pulled out of flow and clipped away, that a screen reader
+ * reads and nobody sees. Recognised first by the clip that hides it, because that is the part
+ * a real element cannot have by accident — and because size is the one signal zoom destroys.
+ * getBoundingClientRect reports viewport pixels, so a one-pixel label measures 2px at 200% and
+ * 4px at 400%; clientWidth and clientHeight stay in layout pixels at any zoom, which is why the
+ * fallback below asks them instead of the rect.
  *
  * @param {HTMLElement} el @param {CSSStyleDeclaration} style @returns {boolean}
  */
 function screenReaderOnly(el, style) {
   if (style.position !== "absolute" && style.position !== "fixed") return false;
+  if (clipsAwayEverything(style)) return true;
   const clipped = style.clipPath !== "none" || (style.clip !== "auto" && style.clip !== "");
   if (!clipped && style.overflow !== "hidden") return false;
-  const rect = el.getBoundingClientRect();
-  return rect.width <= 4 && rect.height <= 4;
+  return el.clientWidth <= 4 && el.clientHeight <= 4;
 }
 
 /** @param {HTMLElement} el @returns {boolean} */
@@ -146,12 +165,18 @@ function checkClipped(el) {
   if (overflowX === "visible" || overflowX === "auto" || overflowX === "scroll") return null;
   if (el.scrollWidth <= el.clientWidth + EPS) return null;
   if (textOf(el) === "") return null;
+  // Both sides of this comparison have to be measured the same way. Text rects and the box's
+  // own rect are viewport pixels, which double at 200% zoom; clientWidth is layout pixels,
+  // which do not. Asking whether zoomed text outruns an unzoomed box calls every wide card
+  // clipped the moment somebody zooms — and a tilted one worst of all, because a rotation
+  // widens the bounding box without moving a single word.
+  const box = el.getBoundingClientRect();
   const textEdge = textRightEdge(el);
-  if (textEdge <= el.clientWidth + EPS) return null;
+  if (textEdge <= box.width + EPS) return null;
   return violation(
     "text-clipped",
     el,
-    `text reaches ${Math.round(textEdge)}px in a ${el.clientWidth}px box`,
+    `text reaches ${Math.round(textEdge)}px in a ${Math.round(box.width)}px box`,
   );
 }
 
