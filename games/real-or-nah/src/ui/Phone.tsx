@@ -367,6 +367,7 @@ function voteRowStyle(mine: boolean, selected: boolean): CSSProperties {
     paddingInlineStart: 16,
     paddingInlineEnd: selected || mine ? 12 : 16,
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
@@ -405,7 +406,7 @@ function VoteRow({
       onClick={mine ? undefined : onSelect}
       style={voteRowStyle(mine, selected)}
     >
-      <div style={{ opacity: mine ? 0.45 : 1 }}>{text}</div>
+      <div style={{ minWidth: 0, opacity: mine ? 0.45 : 1 }}>{text}</div>
       <RowHint mine={mine} selected={selected} t={t} />
     </button>
   );
