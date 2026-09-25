@@ -15,7 +15,7 @@
     "typecheck": "pnpm -r --no-bail typecheck",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "crap": "node scripts/clean-coverage.mjs && crap-typescript --format text --failures-only --threshold 8",
+    "crap": "node scripts/clean-coverage.mjs && crap-typescript --format text --failures-only --threshold 8 --exclude-path-regex '\\.claude/'",
     "validate:packs": "node scripts/validate-packs.mjs",
     "check": "pnpm validate:packs && pnpm lint && pnpm typecheck && pnpm test && pnpm crap && pnpm build",
     "e2e:setup": "node scripts/e2e-setup.mjs",

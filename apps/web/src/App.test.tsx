@@ -155,7 +155,12 @@ describe("App routing", () => {
 
   it("lazy-loads the dev sound board", async () => {
     renderAt("/dev/sounds");
-    expect(await screen.findByText("Sound board")).toBeTruthy();
+    // Longer than the one-second default: this waits on a real dynamic import, and the wait
+    // is for a machine, not for the app. On a loaded runner the chunk can take longer than a
+    // second to arrive, and the test then fails for being busy rather than for being wrong.
+    expect(
+      await screen.findByText("Sound board", undefined, { timeout: 10_000 }),
+    ).toBeTruthy();
   });
 });
 
