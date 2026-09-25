@@ -163,7 +163,10 @@ export function DoodleView({
         ref={canvasRef}
         aria-hidden="true"
         className={className}
-        style={{ width: size, height: size, ...style }}
+        // Fluid, not fixed: `size` is the size it would like, and the aspect ratio keeps it
+        // square when the space is narrower — at 200% text a fixed 220px canvas is 440px wide
+        // on a 390px phone. sizeCanvas already re-fits the backing store on resize.
+        style={{ width: `min(${size}px, 100%)`, aspectRatio: "1 / 1", height: "auto", ...style }}
       />
       <span style={SR_ONLY}>{label}</span>
     </>

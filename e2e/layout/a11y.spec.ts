@@ -152,7 +152,7 @@ for (const viewport of ZOOM_VIEWPORTS) {
   // 1.4.4 does not apply to it. That is a decision, recorded here and in the README, not an
   // omission: intent/0001-platform-mvp.md commits to AA contrast on phones, and this is the
   // boundary of that commitment.
-  test.describe.skip(`text at 200% — ${viewport.name}`, () => {
+  test.describe(`text at 200% — ${viewport.name}`, () => {
     for (const locale of ["en", "he"] as const) {
       for (const screen of screens) {
         test(`${screen.id} "${screen.label}" (${locale})`, async ({ page }) => {

@@ -79,6 +79,28 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * A long word breaks rather than leaving the screen. Type here is sized in pixels, so at 200%
+ * text every word doubles while the screen does not, and a word with nowhere to break — a room
+ * code, a player's name, a pack word like "thunderstorm" — otherwise runs off the right edge
+ * where nothing scrolls sideways to reach it. A broken word is awkward; an invisible one is
+ * unplayable.
+ */
+.opg-root {
+  overflow-wrap: break-word;
+}
+
+/*
+ * Nothing drawn is allowed to be wider than the space it has. Sizes here are written in
+ * pixels, so at 200% text every one of them doubles while the screen does not; a picture is
+ * the one thing that can always give way, because it has no words to reflow.
+ */
+.opg-root img,
+.opg-root svg,
+.opg-root canvas {
+  max-width: 100%;
+}
+
 .opg-marker {
   font-family: var(--opg-font-marker);
   font-weight: 400;

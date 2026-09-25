@@ -167,6 +167,7 @@ export function Highlight({
       style={{
         position: "relative",
         display: "inline-block",
+        maxWidth: "100%",
         padding: "0 12px",
         ...style,
       }}
@@ -289,7 +290,9 @@ function buttonStyle(
   fullWidth: boolean,
 ): CSSProperties {
   return {
-    height: dims.height,
+    // A minimum, not a fixed height: at 200% text a fixed box keeps its size while the words
+    // inside it double, and the label spills out of its own button.
+    minHeight: dims.height,
     padding: dims.padding,
     display: "flex",
     alignItems: "center",
@@ -378,7 +381,8 @@ export function Chip({
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        height,
+        minHeight: height,
+        maxWidth: "100%",
         padding: `0 ${Math.round(height * 0.45)}px`,
         background: "var(--opg-card)",
         border: "4px solid var(--opg-ink)",
@@ -511,7 +515,7 @@ export interface TextInputProps {
 }
 
 const INPUT_STYLE: CSSProperties = {
-  height: 60,
+  minHeight: 60,
   padding: "0 18px",
   background: "var(--opg-card)",
   border: "4px solid var(--opg-ink)",
