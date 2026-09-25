@@ -33,6 +33,7 @@ const LABEL: CSSProperties = {
 
 const ROW: CSSProperties = {
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
   justifyContent: "space-between",
   gap: 8,

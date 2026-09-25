@@ -25,12 +25,13 @@ function buildPersonal(t: Dictionary, view: DoodlePlayerView): PersonalReveal {
 
 function ResultCard({ personal, live, total, t }: { personal: PersonalReveal; live: boolean; total: number; t: Dictionary }) {
   return (
-    <div style={{ flexGrow: 1, display: "flex" }}>
+    <div style={{ flexGrow: 1, minWidth: 0, display: "flex" }}>
       <Card
         variant="L"
         tilt={-1}
         style={{
           flexGrow: 1,
+          minWidth: 0,
           padding: "28px 22px",
           display: "flex",
           flexDirection: "column",
@@ -42,7 +43,17 @@ function ResultCard({ personal, live, total, t }: { personal: PersonalReveal; li
         }}
       >
         {personal.celebrate ? (
-          <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: "none",
+              // Stickers fly wider than the card. Without this the page itself grows with
+              // them and the phone scrolls sideways mid-celebration.
+              overflow: "hidden",
+            }}
+          >
             <StickerBurst live={live} count={14} size={340} />
           </div>
         ) : null}
@@ -58,10 +69,12 @@ function ResultCard({ personal, live, total, t }: { personal: PersonalReveal; li
 
 function Waiting({ suspense, t }: { suspense: boolean; t: Dictionary }) {
   return (
-    <EyesOnTv
-      detail={suspense ? t.doodleBluff.hereItComes : t.doodleBluff.votesAreIn}
-      tempo={suspense ? "fast" : "slow"}
-    />
+    <div style={{ minWidth: 0, width: "100%" }}>
+      <EyesOnTv
+        detail={suspense ? t.doodleBluff.hereItComes : t.doodleBluff.votesAreIn}
+        tempo={suspense ? "fast" : "slow"}
+      />
+    </div>
   );
 }
 
@@ -112,7 +125,7 @@ function TvFollowingReveal({
   });
 
   return (
-    <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
+    <div ref={cardRef} style={{ flexGrow: 1, minWidth: 0, display: "flex" }}>
       {personalReached ? (
         <ResultCard personal={personal} live={moment.live} total={view.totals[me] ?? 0} t={t} />
       ) : (

@@ -248,14 +248,21 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
       <div
         style={{
           display: "flex",
+          flexWrap: "wrap",
           alignItems: "baseline",
           gap: 8,
           fontSize: 19,
         }}
       >
         <div style={{ fontWeight: 400 }}>{t.imposter.lastChance.decoyWas}</div>
-        <Highlight style={{ padding: "0 6px" }}>
-          <strong style={{ fontWeight: 700, letterSpacing: "0.04em" }}>
+        <Highlight style={{ maxWidth: "100%", padding: "0 6px" }}>
+          <strong
+            style={{
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              overflowWrap: "anywhere",
+            }}
+          >
             {view.decoyWord ?? "—"}
           </strong>
         </Highlight>

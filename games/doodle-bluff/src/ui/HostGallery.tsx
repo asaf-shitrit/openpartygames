@@ -19,7 +19,11 @@ export function cascadeDelayMs(index: number): number {
 
 const GRID: CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+  // min(280px, 100%) instead of a bare 280px: the column is still 280px whenever the grid has
+  // room for it (unchanged at 100%), but can shrink to the grid's own width instead of forcing
+  // a horizontal scroll once the viewport itself is narrower than that, which is what a phone
+  // at 200% zoom becomes -- the grid wraps into more, narrower rows rather than overflowing.
+  gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))",
   gap: 24,
   overflowY: "auto",
 };
@@ -47,7 +51,7 @@ function GalleryTile({
         <DoodleView doodle={entry.doodle} label={drawingLabel(t, name)} clock={clock} size={220} style={{ alignSelf: "center" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <Avatar id={avatarOf(players, entry.artistId)} size={36} alt={format(t.doodleBluff.avatarAlt, { name })} />
-          <div style={{ fontWeight: 700, fontSize: 28 }}>{name}</div>
+          <div style={{ flexGrow: 1, minWidth: 0, fontWeight: 700, fontSize: 28 }}>{name}</div>
         </div>
         <div style={{ fontWeight: 700, fontSize: 28, lineHeight: 1.25 }}>{entry.title}</div>
         <ShownTag entry={entry} t={t} />

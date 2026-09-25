@@ -93,12 +93,13 @@ interface ResultCardProps {
 function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
   const { t } = useLocale();
   return (
-    <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
+    <div ref={cardRef} style={{ flexGrow: 1, minWidth: 0, display: "flex" }}>
       <Card
         variant="L"
         tilt={-1}
         style={{
           flexGrow: 1,
+          minWidth: 0,
           padding: "28px 22px",
           display: "flex",
           flexDirection: "column",
@@ -149,8 +150,10 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
               }}
             >
               <div style={{ fontSize: 17 }}>{t.imposter.result.crewWordWas}</div>
-              <Highlight style={{ padding: "0 10px" }}>
-                <Marker size={32}>{crewWord}</Marker>
+              <Highlight style={{ maxWidth: "100%", padding: "0 10px" }}>
+                <Marker size={32} style={{ overflowWrap: "anywhere" }}>
+                  {crewWord}
+                </Marker>
               </Highlight>
             </div>
           )}

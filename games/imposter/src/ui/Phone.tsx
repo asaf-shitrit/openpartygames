@@ -209,7 +209,7 @@ function HideButton({
       className={`opg-reset ${PRESSABLE_CLASS}`}
       onClick={onToggle}
       style={{
-        height: dims.height,
+        minHeight: dims.height,
         padding: dims.padding,
         display: "flex",
         alignItems: "center",
@@ -511,7 +511,7 @@ function WordCard(props: SectionProps) {
       <ClueBanner view={view} players={players} me={me} />
       <div
         ref={wrapRef}
-        style={{ flexGrow: 1, display: "flex", marginTop: 8 }}
+        style={{ flex: "1 1 0", minHeight: 0, display: "flex", marginTop: 8 }}
       >
         <FlipCard
           label={t.imposter.wordPanel.secretCard}
@@ -679,8 +679,8 @@ function YourTurn(props: SectionProps) {
 
 function voteRowStyle(index: number, selected: boolean): CSSProperties {
   return {
-    height: 66,
-    paddingBlock: 0,
+    minHeight: 66,
+    paddingBlock: 8,
     paddingInlineStart: 12,
     paddingInlineEnd: selected ? 14 : 16,
     display: "flex",
@@ -737,7 +737,7 @@ function VoteRow({
         size={48}
         alt={format(t.imposter.avatarAlt, { name: nameOf(players, id, t.common.someone) })}
       />
-      <div style={{ flexGrow: 1, fontSize: 21, fontWeight: 700 }}>
+      <div style={{ flexGrow: 1, minWidth: 0, fontSize: 21, fontWeight: 700 }}>
         {nameOf(players, id, t.common.someone)}
       </div>
       <VotePickMark selected={selected} />
