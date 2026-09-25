@@ -176,21 +176,50 @@ function checkTapTarget(el, limits) {
   );
 }
 
-/** After scrolling to it, an action must actually be on the screen. @param {HTMLElement} el */
+/** The part of an element's box that is actually on the screen. @param {DOMRect} rect */
+function visiblePart(rect) {
+  const top = Math.max(rect.top, 0);
+  const bottom = Math.min(rect.bottom, window.innerHeight);
+  const left = Math.max(rect.left, 0);
+  const right = Math.min(rect.right, window.innerWidth);
+  return { top, bottom, left, right, height: bottom - top, width: right - left };
+}
+
+/**
+ * After scrolling to it, enough of an action has to be on the screen to see and touch.
+ *
+ * Not "entirely on the screen": at 200% text a card can be taller than the phone, and a player
+ * scrolls through it the way they scroll through anything long. What makes an action
+ * unreachable is having nothing of it to tap — the failure this rule was written for, where a
+ * screen that does not scroll leaves its button below the bottom edge.
+ *
+ * @param {HTMLElement} el @returns {Violation | null}
+ */
 function checkReachable(el) {
   const rect = el.getBoundingClientRect();
-  if (rect.bottom <= window.innerHeight + EPS && rect.top >= -EPS) return null;
+  const seen = visiblePart(rect);
+  const enoughHigh = Math.min(44, rect.height);
+  const enoughWide = Math.min(44, rect.width);
+  if (seen.height >= enoughHigh - EPS && seen.width >= enoughWide - EPS) return null;
   return violation(
     "unreachable",
     el,
-    `sits at ${Math.round(rect.top)}..${Math.round(rect.bottom)}px in a ${window.innerHeight}px screen that will not scroll to it`,
+    `sits at ${Math.round(rect.top)}..${Math.round(rect.bottom)}px in a ${window.innerHeight}px screen, leaving ${Math.round(Math.max(seen.height, 0))}px of it to tap`,
   );
 }
 
 /** Whatever is on top at a control's centre has to be that control. @param {HTMLElement} el */
 function checkCovered(el) {
   const rect = el.getBoundingClientRect();
-  const top = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  // The middle of what is on the screen, not the middle of the element: an element taller than
+  // the phone has its geometric centre somewhere off the edge, where hit-testing asks about a
+  // point the player cannot touch anyway.
+  const seen = visiblePart(rect);
+  if (seen.height <= 0 || seen.width <= 0) return null;
+  const top = document.elementFromPoint(
+    (seen.left + seen.right) / 2,
+    (seen.top + seen.bottom) / 2,
+  );
   if (top === null) return violation("covered", el, "nothing hit-tests at its centre");
   if (top === el || el.contains(top)) return null;
   return violation("covered", el, `${pathOf(top)} is on top at its centre`);

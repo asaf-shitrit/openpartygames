@@ -92,7 +92,16 @@ export function DoodlePalette({ inks, inkNames, selected, onSelect, name }: Dood
     <div
       role="radiogroup"
       aria-label={t.kit.doodle.penColorGroup}
-      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        // Wraps onto a second line rather than running off the edge: the swatches are a fixed
+        // size on purpose (they are tap targets), so at 200% text the row is the thing that
+        // has to give. At any normal size they still sit on one line.
+        flexWrap: "wrap",
+        gap: 8,
+      }}
     >
       {inks.map((ink, index) => (
         <Swatch

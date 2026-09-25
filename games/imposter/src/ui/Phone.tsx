@@ -541,8 +541,15 @@ function WordCard(props: SectionProps) {
  * with slack — the button is not.
  */
 const FILL_COLUMN: CSSProperties = {
-  flex: "1 1 0",
-  minHeight: 0,
+  // Basis auto, not 0: the card takes the space it is given and gives space back when the
+  // screen is tight, but it starts from the height its own content needs. With a basis of 0 it
+  // is squeezed to whatever is left over — at 200% text that was 34px, and the "Hide word"
+  // button inside it then painted straight over "I'm done" on the row below.
+  flex: "1 1 auto",
+  // Shrinks, but never below what it needs to draw itself. A plain 0 lets this column be
+  // squeezed to a sliver while the card and button inside keep their size and paint over the
+  // row below — which is what "Hide word" did to "I'm done" at 200% text.
+  minHeight: "min-content",
   display: "flex",
   flexDirection: "column",
   gap: 8,
