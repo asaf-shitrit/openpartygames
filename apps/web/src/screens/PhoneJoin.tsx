@@ -182,7 +182,7 @@ interface JoinErrorResult {
 function ErrorLine({ error }: { error: JoinErrorResult }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <div style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker)" }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker-text)" }}>
         {error.message}
       </div>
       {error.hint ? (

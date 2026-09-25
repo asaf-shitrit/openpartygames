@@ -10,3 +10,6 @@ coverage/
 .vitest/
 test-results/
 playwright-report/
+
+# Scratch worktrees an agent checks out while working on a branch.
+.claude/worktrees/

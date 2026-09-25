@@ -5,6 +5,10 @@ import type { Dictionary } from "@opg/i18n";
 // award ever refers to a colour, so a player who cannot distinguish these loses nothing.
 export const DOODLE_INKS = [
   "#2B2B2B",
+  // Deliberately still the original marker red, not --opg-marker-text: this is a drawing
+  // colour, it clears the 3:1 floor a graphic needs, and every drawing already stored replays
+  // by its stored hex. Aligning the two would split old and new drawings across two reds for
+  // no legibility gain.
   "#D7372B",
   "#2F6FB5",
   "#1E8449",

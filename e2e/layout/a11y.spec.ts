@@ -62,6 +62,9 @@ const VIEWPORTS: Viewport[] = [
   { name: "tv", width: 1920, height: 1080, surface: "host", limits: TV_LIMITS },
 ];
 
+/** The zoom pass walks phones only — see the note beside the pass itself for why not the TV. */
+const ZOOM_VIEWPORTS: Viewport[] = VIEWPORTS.filter((viewport) => viewport.surface === "phone");
+
 const MIN_ELEMENTS = 10;
 
 const INVARIANTS_PATH = fileURLToPath(new URL("./invariants.js", import.meta.url));
@@ -133,20 +136,22 @@ async function openScreen(
   expect(rendered, `${screen.id} did not come up`).toBeGreaterThanOrEqual(MIN_ELEMENTS);
 }
 
-for (const viewport of VIEWPORTS) {
+for (const viewport of ZOOM_VIEWPORTS) {
   const screens = SCREENS.filter((screen) => screen.surface === viewport.surface);
   if (screens.length === 0) continue;
 
-  // NOT DONE — parked pending a design decision, not merged as a passing gate. The check
-  // itself works (it reuses the same collectViolations the "en"/"he" project already trusts)
-  // and it finds real breakage: with the page zoomed to 200%, most screens overflow
-  // sideways or push a control past the bottom, because almost none of the app's flex rows
-  // wrap or shrink, and the TV surface is a full-bleed 1920x1080 canvas that was never meant
-  // to survive being rendered at double size in the same viewport. Turning this on for real
-  // needs either a wrapping pass through the shared flex rows in packages/ui/src (a repair)
-  // or a product call that the host stage is a shared, presentation-only surface nobody
-  // personally zooms and so is out of scope for 1.4.4 (a design decision) — both belong to
-  // whoever picks this back up, not guessed at here. Un-skip once one of those lands.
+  // NOT DONE — the check works and finds real breakage, and the repair has not been made yet.
+  // At 200% zoom most phone screens overflow sideways or push a control past the bottom,
+  // because almost none of the app's flex rows wrap or shrink and every size in the app is a
+  // raw pixel number. Fixing that is a wrapping pass through the shared components in
+  // packages/ui/src, tracked in issue #31; un-skip this the day that lands, not before.
+  //
+  // The TV is deliberately not among the viewports above. The host stage is a fixed 1920x1080
+  // canvas scaled to whatever screen it is cast to, shown across a room, and driven by nobody's
+  // personal browser settings — it is a presentation surface, not a page someone zooms, so
+  // 1.4.4 does not apply to it. That is a decision, recorded here and in the README, not an
+  // omission: intent/0001-platform-mvp.md commits to AA contrast on phones, and this is the
+  // boundary of that commitment.
   test.describe.skip(`text at 200% — ${viewport.name}`, () => {
     for (const locale of ["en", "he"] as const) {
       for (const screen of screens) {

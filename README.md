@@ -219,6 +219,27 @@ previews at three phone sizes and on the 1920x1080 TV, in English and Hebrew, an
 anything readable crosses the screen edge, an action sits where nobody can reach it, a control
 is covered, or text drops below the 16px phone / 28px TV floor.
 
+## Accessibility
+
+Everyone plays from the phone in their pocket, so the phone is where the bar is set. What the
+project holds itself to, from [intent/0001-platform-mvp.md](intent/0001-platform-mvp.md):
+
+- **WCAG 2.2 AA contrast on phones.** Running text meets 4.5:1, large text and graphics 3:1.
+  The layout suite measures it on every screen, in both languages, on every push.
+- **Nothing is said with colour alone.** A colour always arrives with an icon or with words.
+- **Large text on the host screen**, at least 28px at 1920x1080, and at least 16px on phones.
+- **Tap targets of at least 44px**, with nothing covering them and nothing past the fold on a
+  screen that does not scroll.
+- **Reduced motion is respected**, and every audio cue has a visual equivalent.
+
+Two honest gaps, both tracked rather than implied:
+
+- **Text at 200% zoom does not hold on phones yet.** Type is sized in raw pixels and most rows
+  neither wrap nor shrink, so doubling the text overflows many screens. The check exists and is
+  skipped until the repair lands: [#31](https://github.com/asaf-shitrit/openpartygames/issues/31).
+- **The host screen is out of scope for zoom.** It is a fixed 1920x1080 canvas scaled to a TV
+  across the room, not a page anyone sets their own text size on.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md). Content packs can be submitted without touching git, through a GitHub issue form.

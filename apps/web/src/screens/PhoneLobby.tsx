@@ -27,7 +27,7 @@ function PlayerBadge({ player, t }: { player: PlayerSummary; t: Dictionary }) {
     return (
       <div
         className="opg-marker"
-        style={{ fontSize: 17, lineHeight: 1, color: "var(--opg-marker)" }}
+        style={{ fontSize: 17, lineHeight: 1, color: "var(--opg-marker-text)" }}
       >
         {t.lobby.vip}
       </div>
@@ -273,7 +273,8 @@ function BlockedReason({ t }: { t: Dictionary }) {
         style={{
           fontSize: 18,
           fontWeight: 700,
-          color: "var(--opg-marker)",
+          // 18px bold is just under WCAG's 18.66px "large text", so this is body text.
+          color: "var(--opg-marker-text)",
           lineHeight: 1.3,
         }}
       >

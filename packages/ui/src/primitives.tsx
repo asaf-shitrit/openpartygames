@@ -549,7 +549,7 @@ function FieldMessage({ error, hint }: { error?: string; hint?: string }) {
   if (error) {
     return (
       <span
-        style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker)" }}
+        style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker-text)" }}
       >
         {error}
       </span>
