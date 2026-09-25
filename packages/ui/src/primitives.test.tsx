@@ -255,7 +255,11 @@ describe("Button", () => {
     const btn = screen.getByRole("button", { name: "Go" });
     expect(btn.style.width).toBe("100%");
     expect(btn.style.fontSize).toBe("44px");
-    expect(btn.style.height).toBe("96px");
+    // A floor, not a fixed height: the size preset says how small the button may be, and it
+    // grows when the words inside it do — a player reading at 200% gets a taller button, not
+    // a label spilling out of a box that refused to move.
+    expect(btn.style.minHeight).toBe("96px");
+    expect(btn.style.height).toBe("");
   });
 
   it("forwards className, aria-label and style", () => {
@@ -282,7 +286,10 @@ describe("Chip", () => {
   it("renders with the default height and padding", () => {
     const { container } = render(<Chip>tag</Chip>);
     const el = firstChild(container);
-    expect(el.style.height).toBe("48px");
+    // The height a chip asks for is its minimum; doubled text makes it taller rather than
+    // pushing the words out of it.
+    expect(el.style.minHeight).toBe("48px");
+    expect(el.style.height).toBe("");
     expect(el.style.padding).toBe("0px 22px");
     expect(el.style.fontSize).toBe("18px");
   });
@@ -294,7 +301,7 @@ describe("Chip", () => {
       </Chip>,
     );
     const el = firstChild(container);
-    expect(el.style.height).toBe("100px");
+    expect(el.style.minHeight).toBe("100px");
     expect(el.style.padding).toBe("0px 45px");
   });
 });
