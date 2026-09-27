@@ -9,7 +9,11 @@ import { fileURLToPath } from "node:url";
 const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 5174);
 
 /** Suites that are projects of their own, so the default projects leave them alone. */
-const DEFAULT_SKIPS = ["**/a11y.spec.ts", "**/visual.spec.ts"];
+const DEFAULT_SKIPS = [
+  "**/a11y.spec.ts",
+  "**/visual.spec.ts",
+  "**/distinct-previews.spec.ts",
+];
 const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
@@ -52,6 +56,11 @@ export default defineConfig({
     // project rather than folded into "en"/"he" because they check a different thing at a
     // different (smaller) set of sizes — see a11y.spec.ts for what and why.
     { name: "a11y", testMatch: /a11y\.spec\.ts$/ },
+    // Asks whether each preview renders the screen it claims, rather than whether that screen
+    // is laid out correctly. Its own project for the same reason a11y is: it walks every
+    // preview once at one size, and running it per locale would ask the same question twice —
+    // two fixtures that collide in English collide in Hebrew as well.
+    { name: "previews", testMatch: /distinct-previews\.spec\.ts$/ },
     // The pixel-comparison suite (visual.spec.ts) is opt-in, not a default project: a bare
     // `pnpm e2e:layout` must keep passing on any platform, with no snapshots at all. e2e:visual
     // sets OPG_VISUAL=1 to register this project and selects it with --project=visual; see

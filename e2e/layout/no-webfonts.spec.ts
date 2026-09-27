@@ -15,6 +15,7 @@
 // job is "does the fallback stack, not the screen, hold up" — one phone size next to the TV is
 // enough to prove that without paying for it twice.
 import { expect, test } from "@playwright/test";
+import { expectScreenUp } from "./screen-ready";
 import { fileURLToPath } from "node:url";
 import { SCREENS } from "../../apps/web/src/dev/screens";
 import type { ScreenCase } from "../../apps/web/src/dev/screens";
@@ -53,7 +54,6 @@ const VIEWPORTS: Viewport[] = [
   { name: "tv", width: 1920, height: 1080, surface: "host", limits: TV_LIMITS },
 ];
 
-const MIN_ELEMENTS = 10;
 const INVARIANTS_PATH = fileURLToPath(new URL("./invariants.js", import.meta.url));
 const FONT_FILE = /\.(woff2?|ttf|otf)(\?.*)?$/i;
 const GOOGLE_FONTS = /fonts\.(googleapis|gstatic)\.com/;
@@ -86,8 +86,7 @@ for (const viewport of VIEWPORTS) {
         await page.evaluate(() => document.fonts.ready);
         await page.waitForTimeout(60);
 
-        const rendered = await page.evaluate(() => document.querySelectorAll("#root *").length);
-        expect(rendered, `${screen.id} did not come up`).toBeGreaterThanOrEqual(MIN_ELEMENTS);
+        await expectScreenUp(page, screen.id);
 
         const violations = await page.evaluate(
           (limits) => window.opgLayout.collectViolations(limits),

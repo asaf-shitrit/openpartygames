@@ -133,6 +133,11 @@ const APP_SCREENS: readonly AppScreenSpec[] = [
     label: "Phone: join, worst case (room-full error, name at NAME_MAX_LENGTH)",
     surface: "phone",
   },
+  {
+    appId: "join-not-found",
+    label: "Phone: join, room not found (error plus the sounds-alike hint)",
+    surface: "phone",
+  },
   { appId: "avatar-picker", label: "Phone: avatar picker", surface: "phone" },
   {
     appId: "avatar-picker-worst",
@@ -157,8 +162,38 @@ const APP_SCREENS: readonly AppScreenSpec[] = [
     label: "Phone: results, worst case (8 long names, 3 awards, a tie)",
     surface: "phone",
   },
+  {
+    appId: "results-worst-no-tv",
+    label: "Phone: results, worst case with no TV (standings on the phone, 3 awards, a tie)",
+    surface: "phone",
+  },
+  {
+    appId: "results-vip-no-tv",
+    label: "Phone: results as the VIP with no TV (standings plus the next-round bar)",
+    surface: "phone",
+  },
   { appId: "reconnecting", label: "Phone: reconnecting", surface: "phone" },
   { appId: "kicked", label: "Phone: kicked from the room", surface: "phone" },
+  {
+    appId: "kicked-worst",
+    label: "Phone: kicked, worst case (kicker name at NAME_MAX_LENGTH)",
+    surface: "phone",
+  },
+  {
+    appId: "starting",
+    label: "Phone: the game is starting (longest game name)",
+    surface: "phone",
+  },
+  {
+    appId: "lobby-away",
+    label: "Phone: lobby with three phones away (8 long names)",
+    surface: "phone",
+  },
+  {
+    appId: "waiting-away",
+    label: "Phone: waiting with three phones away (8 long names)",
+    surface: "phone",
+  },
   { appId: "waiting", label: "Phone: waiting for the next game", surface: "phone" },
   {
     appId: "waiting-worst",

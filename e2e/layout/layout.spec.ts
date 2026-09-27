@@ -4,6 +4,7 @@
 // itself: a new preview is a new case, and a screen with no preview is a gap to close. Each
 // screen is its own test, so a failure names the screen and the size it broke at.
 import { expect, test } from "@playwright/test";
+import { expectScreenUp } from "./screen-ready";
 import type { Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { SCREENS } from "../../apps/web/src/dev/screens";
@@ -34,6 +35,8 @@ interface Viewport {
 declare global {
   interface Window {
     opgLayout: { collectViolations: (limits: Limits) => Violation[] };
+    /** TV only, and so a surface of its own — see the note beside it in invariants.js. */
+    opgStage: { collectStageViolations: () => Violation[] };
   }
 }
 
@@ -57,8 +60,6 @@ const VIEWPORTS: Viewport[] = [
   { name: "tv", width: 1920, height: 1080, surface: "host", limits: TV_LIMITS },
 ];
 
-/** Below this the page is a fallback or an error, not a screen, so measuring it proves nothing. */
-const MIN_ELEMENTS = 10;
 
 const INVARIANTS_PATH = fileURLToPath(new URL("./invariants.js", import.meta.url));
 
@@ -99,12 +100,30 @@ async function loadScreen(
   // Motion is reduced in the config; this is the last frame settling.
   await page.waitForTimeout(60);
 
-  const rendered = await page.evaluate(() => document.querySelectorAll("#root *").length);
-  expect(rendered, `${screen.id} did not come up`).toBeGreaterThanOrEqual(MIN_ELEMENTS);
+  await expectScreenUp(page, screen.id);
 }
 
 async function violationsOf(page: Page, limits: Limits): Promise<Violation[]> {
   return page.evaluate((theLimits) => window.opgLayout.collectViolations(theLimits), limits);
+}
+
+/**
+ * Everything wrong with the screen as it stands, including — on the TV only — anything pushed
+ * below the stage's bottom edge. The phones are left out of that rule on purpose: a phone
+ * column that runs long scrolls, and the stage cannot.
+ *
+ * The stage rule is measured first, and that ordering is load-bearing. collectViolations
+ * scrolls each interactive element into view before judging it, and `overflow: hidden` boxes
+ * are still scrollable programmatically, so one scrollIntoView inside the stage would shift
+ * every rect the stage rule reads and quietly turn a real overflow into a clean run. Reading
+ * the untouched page first means no measurement depends on what another one did to it.
+ */
+async function allViolationsOf(page: Page, viewport: Viewport): Promise<Violation[]> {
+  const offstage =
+    viewport.surface === "host"
+      ? await page.evaluate(() => window.opgStage.collectStageViolations())
+      : [];
+  return [...offstage, ...(await violationsOf(page, viewport.limits))];
 }
 
 for (const gameId of GAME_IDS) {
@@ -118,7 +137,7 @@ for (const gameId of GAME_IDS) {
       for (const screen of screens) {
         test(`${screen.id} "${screen.label}"`, async ({ page }) => {
           await loadScreen(page, screen, viewport.width, viewport.height);
-          const violations = await violationsOf(page, viewport.limits);
+          const violations = await allViolationsOf(page, viewport);
           expect(violations, `${screen.id} at ${viewport.name}:\n${report(violations)}`).toEqual([]);
         });
       }

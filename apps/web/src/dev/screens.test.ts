@@ -177,3 +177,41 @@ describe("timingOf", () => {
     expect(timingOf(untimed).anchor).toBe(phoneScreen.room.serverNow);
   });
 });
+
+/**
+ * Previews allowed to pin the gallery's clock to their phase start, each with the reason. Empty
+ * on purpose: nothing has needed it yet, and an entry should have to argue for itself.
+ */
+const FROZEN_CLOCK_ALLOWED: Record<string, string> = {};
+
+describe("no preview freezes its own ceremony", () => {
+  /**
+   * The gallery renders a screen at one fixed instant so a measurement cannot race a ticking
+   * timer, and `timingOf` picks that instant as `timerStartedAt ?? serverNow`. A timed screen
+   * resolves its own first beat the same way — `anchorAt` (packages/ui/src/moment/timeline.ts)
+   * returns `timerStartedAt` when it is set, and `deadline - durationMs` when it is not.
+   *
+   * So a fixture that sets `timerStartedAt` makes those two values identical, `elapsed` comes
+   * out as exactly 0, and the screen renders its intro beat no matter what the label promises.
+   * That is not a subtle failure mode: it hid 25 previews across four games, including every
+   * personal reveal card and both worst cases in two of them, and the layout suite happily
+   * measured the same placeholder over and over for all of them.
+   *
+   * `distinct-previews.spec.ts` catches the version of this where two frozen previews collide,
+   * but four previews each frozen on a *different* intro beat sail through it. This asks about
+   * the cause instead of one of its symptoms, needs no browser, and cannot be fooled.
+   *
+   * Leaving `timerStartedAt` null costs nothing: `deadline` alone still drives the countdown,
+   * and the beat anchor falls back to `deadline - durationMs`, which is the real phase start.
+   */
+  it("no game preview sets timerStartedAt", () => {
+    // The listed entries are the failure message: each is `id "label"`, which is what a reader
+    // needs to find the fixture. The why is in the describe comment above, because vitest's
+    // `expect` takes no message argument.
+    const frozen = gameScreens
+      .filter((screen) => FROZEN_CLOCK_ALLOWED[screen.id] === undefined)
+      .filter((screen) => (screen.room.game?.timerStartedAt ?? null) !== null)
+      .map((screen) => `${screen.id} "${screen.label}" freezes its ceremony at elapsed 0`);
+    expect(frozen).toEqual([]);
+  });
+});
