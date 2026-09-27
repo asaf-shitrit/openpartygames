@@ -1,6 +1,7 @@
 // WebSocket room connection: hello/join, reconnect backoff, ping, latest view.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
+import { ERROR_CODES } from "@opg/protocol";
 import type {
   ClientMessage,
   ErrorCode,
@@ -48,23 +49,21 @@ export interface RoomSocket {
 const PING_MS = 25_000;
 const BACKOFF_START_MS = 500;
 const BACKOFF_MAX_MS = 5_000;
+/**
+ * How long a tap made while the socket was down is still worth delivering. A party game moves
+ * on: a vote replayed into the round after next is worse than one quietly dropped, and the
+ * reconnect backoff caps at 5s, so anything older than this was lost to a real outage rather
+ * than to the blip a backgrounded tab causes.
+ */
+const PENDING_TTL_MS = 10_000;
 
-const ERROR_CODES = [
-  "bad-message",
-  "room-not-found",
-  "room-full",
-  "room-locked",
-  "name-invalid",
-  "name-taken",
-  "avatar-taken",
-  "not-joined",
-  "not-vip",
-  "not-enough-players",
-  "game-in-progress",
-  "invalid-action",
-  "host-token-invalid",
-  "rate-limited",
-] as const satisfies readonly ErrorCode[];
+/**
+ * The error codes an error frame may carry, taken straight from the protocol rather than
+ * re-listed here. A copy that drifts fails silently and badly: an unknown code makes the whole
+ * frame fail to parse, so the phone shows nothing at all — not even the server's English prose.
+ * `no-language-packs` went its entire life like that, with translated copy already written for
+ * it, because the old list was only checked as a subset. There is now one list, in @opg/protocol.
+ */
 
 const serverMessageSchema = z.union([
   z.object({ t: z.literal("welcome"), role: z.literal("host") }),
@@ -134,6 +133,12 @@ interface ConnectionEvents {
   onPlayer: (playerId: PlayerId) => void;
 }
 
+/** A message the socket could not carry, held until the next socket opens or it goes stale. */
+interface PendingMessage {
+  data: string;
+  expiresAt: number;
+}
+
 interface ConnectionState {
   code: string;
   role: "host" | "player";
@@ -148,6 +153,8 @@ interface ConnectionState {
   backoff: number;
   stopped: boolean;
   kicked: boolean;
+  /** One slot per kind of tap, keyed by `pendingKey`. Bounded by the kinds that exist. */
+  pending: Map<string, PendingMessage>;
 }
 
 export interface RoomConnection {
@@ -163,13 +170,58 @@ function clearTimers(state: ConnectionState): void {
   state.pingTimer = null;
 }
 
-function sendRaw(state: ConnectionState, data: string): void {
+/** Writes to the socket when it is open. False means the frame did not go out. */
+function sendRaw(state: ConnectionState, data: string): boolean {
   const ws = state.ws;
-  if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  ws.send(data);
+  return true;
+}
+
+/** The discriminant every game's action carries; see each game's `actionSchema`. */
+const actionKindSchema = z.object({ type: z.string() });
+
+/**
+ * What a buffered tap supersedes. One slot per kind, so a player who changes their pick three
+ * times during a blip lands one pick rather than a replayed backlog of three. Game actions key
+ * on their own discriminant, so a lie and the vote that follows it do not overwrite each other.
+ */
+function pendingKey(message: ClientMessage): string {
+  if (message.t !== "game-action") return message.t;
+  const kind = actionKindSchema.safeParse(message.action);
+  return kind.success ? `game-action:${kind.data.type}` : "game-action";
+}
+
+/**
+ * Holds a tap the closed socket could not carry. Dropping it is what a player feels as a tap
+ * that did nothing: no error, no retry, just a vote that never counted. The reconnect overlay
+ * promises the taps are safe, and this is what makes that true.
+ */
+function bufferMessage(
+  state: ConnectionState,
+  message: ClientMessage,
+  data: string,
+): void {
+  state.pending.set(pendingKey(message), {
+    data,
+    expiresAt: Date.now() + PENDING_TTL_MS,
+  });
+}
+
+/** Sends what the gap held back, oldest first, minus anything the round has outlived. */
+function flushPending(state: ConnectionState): void {
+  const held = [...state.pending.values()];
+  state.pending.clear();
+  const now = Date.now();
+  for (const item of held) {
+    if (item.expiresAt > now) sendRaw(state, item.data);
+  }
 }
 
 function sendMessage(state: ConnectionState, message: ClientMessage): void {
-  sendRaw(state, JSON.stringify(message));
+  const data = JSON.stringify(message);
+  if (sendRaw(state, data)) return;
+  bufferMessage(state, message, data);
 }
 
 function handleOpen(state: ConnectionState): void {
@@ -188,6 +240,8 @@ function handleOpen(state: ConnectionState): void {
   } else if (state.name) {
     sendMessage(state, { t: "join", name: state.name });
   }
+  // After the hello, so the room knows who is speaking before the held taps arrive.
+  flushPending(state);
   state.pingTimer = window.setInterval(() => sendRaw(state, "ping"), PING_MS);
 }
 
@@ -265,6 +319,7 @@ function openSocket(state: ConnectionState): void {
 
 function stopConnection(state: ConnectionState): void {
   state.stopped = true;
+  state.pending.clear();
   clearTimers(state);
   if (state.detach) {
     state.detach();
@@ -297,16 +352,19 @@ export function connectRoom(params: {
     backoff: BACKOFF_START_MS,
     stopped: false,
     kicked: false,
+    pending: new Map(),
   };
   openSocket(state);
   return {
     send: (message) => sendMessage(state, message),
     join: (name) => {
+      // The name is what the next socket joins with (see handleOpen), so a join that lands in
+      // a gap needs no buffer of its own — buffering it would join twice on the way back.
       state.name = name;
       const token = state.token;
-      sendMessage(
+      sendRaw(
         state,
-        token ? { t: "join", name, token } : { t: "join", name },
+        JSON.stringify(token ? { t: "join", name, token } : { t: "join", name }),
       );
     },
     stop: () => stopConnection(state),

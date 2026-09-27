@@ -163,8 +163,9 @@ describe("PlayerApp", () => {
     expect(screen.queryByText("You're the VIP")).toBeNull();
   });
 
-  it("shows results above the VIP controls for the VIP, who can still pick", () => {
+  it("gives the VIP the finale, with the next game one tap away", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    const user = userEvent.setup();
     render(
       <LocaleProvider>
         <PlayerApp code="BKTZ" />
@@ -189,8 +190,44 @@ describe("PlayerApp", () => {
         }),
       }),
     );
+    // The VIP played too: the ceremony is theirs, and the picker is not stacked under it.
     expect(screen.getByText(/finished/)).toBeTruthy();
+    expect(screen.queryByText("You're the VIP")).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: /pick the next game/i }),
+    );
     expect(screen.getByText("You're the VIP")).toBeTruthy();
+    expect(screen.queryByText(/finished/)).toBeNull();
+  });
+
+  it("lets the crown ceremony finish before the doodle picker opens", () => {
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          ...lobbyWithVipElsewhere(),
+          lobbyScreen: "results",
+          lastResult: {
+            gameId: "imposter",
+            scores: { p1: 10, p2: 4 },
+            winnerIds: ["p1"],
+            completed: true,
+            finishedAt: 0,
+            awards: [],
+          },
+        }),
+      }),
+    );
+    // This phone has never picked a doodle — it joined mid-game — but the crown goes first.
+    expect(screen.queryByText("Pick your doodle")).toBeNull();
+    expect(screen.getByText(/finished/)).toBeTruthy();
   });
 
   it("shows the waiting screen for a player joining mid-game", () => {
@@ -287,7 +324,7 @@ describe("PlayerApp", () => {
     expect(screen.getByText(/went to war against/)).toBeTruthy();
   });
 
-  it("shows the reconnecting overlay when the socket drops with a seat", () => {
+  it("keeps the game mounted through a blip and says so in a banner", () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(
       <LocaleProvider>
@@ -295,8 +332,27 @@ describe("PlayerApp", () => {
       </LocaleProvider>,
     );
     const socket = joinPlayer();
-    act(() => socket.receive({ t: "state", view: makePlayerView() }));
+    const preview = realOrNahPreviews.find((p) => p.surface === "phone");
+    if (!preview) throw new Error("missing phone preview");
+    act(() => socket.receive({ t: "state", view: preview.room }));
+    const claim = screen.getByText(/went to war against/);
+
     act(() => socket.serverClose());
+
+    expect(screen.getByText("Reconnecting… your taps are saved.")).toBeTruthy();
+    // The very same node, not a remount. Every draft on a phone — a vote picked but not
+    // sent, a half-typed guess — is local state that an unmount would take with it.
+    expect(claim.isConnected).toBe(true);
+  });
+
+  it("shows the whole reconnect screen when the drop comes before any view", () => {
+    localStorage.setItem("opg:player:BKTZ", "tok");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    act(() => lastSocket().serverClose());
     expect(screen.getByText("Reconnecting…")).toBeTruthy();
   });
 
@@ -369,7 +425,7 @@ describe("PlayerApp", () => {
     expect(screen.getByText("That room is full.")).toBeTruthy();
   });
 
-  it("falls back to the server message for an unmapped error code", () => {
+  it("translates a code the server only describes in English", () => {
     render(
       <LocaleProvider>
         <PlayerApp code="BKTZ" />
@@ -380,10 +436,13 @@ describe("PlayerApp", () => {
     act(() =>
       socket.receive({ t: "error", code: "bad-message", message: "Huh?" }),
     );
-    expect(screen.getByText("Huh?")).toBeTruthy();
+    expect(
+      screen.getByText("This phone and the room lost step. Reload the page."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Huh?")).toBeNull();
   });
 
-  it("shows generic copy when the server sends no error message", () => {
+  it("has copy for a code the server sends with no message at all", () => {
     render(
       <LocaleProvider>
         <PlayerApp code="BKTZ" />
@@ -394,7 +453,37 @@ describe("PlayerApp", () => {
     act(() =>
       socket.receive({ t: "error", code: "rate-limited", message: "" }),
     );
-    expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();
+    expect(screen.getByText("Slow down a moment, then try again.")).toBeTruthy();
+  });
+
+  it("shows a code the frame parser used to drop on the floor", () => {
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    // "no-language-packs" was missing from the socket's code list, so the whole frame failed
+    // to parse and the phone showed nothing at all.
+    act(() =>
+      socket.receive({ t: "error", code: "no-language-packs", message: "" }),
+    );
+    expect(screen.getByText(/plays in another language/)).toBeTruthy();
+  });
+
+  it("shows the newest codes the protocol added", () => {
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    act(() =>
+      socket.receive({ t: "error", code: "start-failed", message: "" }),
+    );
+    expect(screen.getByText("That game couldn't start. Try again.")).toBeTruthy();
   });
 
   it("gives the VIP in-game controls that skip and end the game", async () => {
@@ -498,6 +587,161 @@ describe("PlayerApp", () => {
       }),
     );
     expect(screen.getByText("You're in, Priya!")).toBeTruthy();
+  });
+
+  it("tells a phone its own game is starting, not that one is already running", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({ t: "state", view: makePlayerView({ phase: "starting" }) }),
+    );
+    expect(screen.getByText("Starting Imposter…")).toBeTruthy();
+    expect(screen.queryByText(/already running/)).toBeNull();
+  });
+
+  it("keeps the waiting copy for a phone that joined during the start", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          phase: "starting",
+          players: [makePlayer({ id: "p1", waitingForNextGame: true })],
+        }),
+      }),
+    );
+    expect(screen.getByText(/already running/)).toBeTruthy();
+  });
+
+  it("clears 'not enough players' once the players arrive", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({ t: "state", view: makePlayerView({ vipId: "p1" }) }),
+    );
+    act(() =>
+      socket.receive({ t: "error", code: "not-enough-players", message: "" }),
+    );
+    expect(screen.getByText("Not enough players yet.")).toBeTruthy();
+
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          vipId: "p1",
+          players: [
+            makePlayer({ id: "p1" }),
+            makePlayer({ id: "p2", name: "Sam" }),
+            makePlayer({ id: "p3", name: "Ada" }),
+          ],
+        }),
+      }),
+    );
+    expect(screen.queryByText("Not enough players yet.")).toBeNull();
+  });
+
+  it("leaves an error up while it is still true", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({ t: "state", view: makePlayerView({ vipId: "p1" }) }),
+    );
+    act(() =>
+      socket.receive({ t: "error", code: "not-enough-players", message: "" }),
+    );
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          vipId: "p1",
+          players: [makePlayer({ id: "p1" }), makePlayer({ id: "p2", name: "Sam" })],
+        }),
+      }),
+    );
+    // Two of the three the game needs: the complaint has not been answered yet.
+    expect(screen.getByText("Not enough players yet.")).toBeTruthy();
+  });
+
+  it("counts a disconnected phone the way the server does when clearing the error", () => {
+    sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = joinPlayer();
+    act(() =>
+      socket.receive({ t: "state", view: makePlayerView({ vipId: "p1" }) }),
+    );
+    act(() =>
+      socket.receive({ t: "error", code: "players-away", message: "" }),
+    );
+    expect(screen.getByText(/Some players are away/)).toBeTruthy();
+
+    act(() =>
+      socket.receive({
+        t: "state",
+        view: makePlayerView({
+          vipId: "p1",
+          players: [
+            makePlayer({ id: "p1" }),
+            makePlayer({ id: "p2", name: "Sam" }),
+            makePlayer({ id: "p3", name: "Ada", connected: false }),
+          ],
+        }),
+      }),
+    );
+    expect(screen.getByText(/Some players are away/)).toBeTruthy();
+  });
+
+  it("treats a retried join as in flight and drops the last complaint", async () => {
+    stubRoomInfo();
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+
+    const nameField = screen.getByLabelText("Your name");
+    await user.type(nameField, "Priya");
+    await user.click(screen.getByRole("button", { name: /join/i }));
+    act(() =>
+      socket.receive({ t: "error", code: "name-taken", message: "taken" }),
+    );
+    expect(screen.getByText("That name is taken. Try another.")).toBeTruthy();
+
+    await user.clear(nameField);
+    await user.type(nameField, "Ada");
+    await user.click(screen.getByRole("button", { name: /join/i }));
+    await waitFor(() =>
+      expect(socket.sent).toContain(JSON.stringify({ t: "join", name: "Ada" })),
+    );
+    expect(screen.queryByText("That name is taken. Try another.")).toBeNull();
+    expect(screen.getByText("Joining…")).toBeTruthy();
   });
 
   it("keeps the screen awake once this phone has joined", () => {

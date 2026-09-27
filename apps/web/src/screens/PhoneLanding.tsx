@@ -131,7 +131,10 @@ function StartSection({ busy, error, onStart, t }: StartSectionProps) {
           style={{
             fontSize: 16,
             fontWeight: 700,
-            color: "var(--opg-marker)",
+            // 16px bold is body text, under WCAG's 18.66px bold "large text" floor, so
+            // this uses the darkened --opg-marker-text (5.04:1 on paper) rather than the
+            // brand --opg-marker (4.43:1, under the 4.5:1 body-text floor) — see styles.css.
+            color: "var(--opg-marker-text)",
             textAlign: "center",
           }}
         >

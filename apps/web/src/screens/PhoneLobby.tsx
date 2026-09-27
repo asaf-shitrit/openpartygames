@@ -22,6 +22,31 @@ export interface PhoneLobbyProps {
   onLeave?: () => void;
 }
 
+/**
+ * A phone that has dropped off the room. The server starts and advances a game on the players
+ * it can still reach, so a roster that shows eight names while the room waits on six is a
+ * roster that lies. The word carries it — the faded doodle alone would be colour doing the
+ * telling — and it sits beside the VIP mark rather than replacing it, because a VIP who has
+ * gone quiet is the thing the room most needs to know.
+ */
+function AwayBadge({ t }: { t: Dictionary }) {
+  return (
+    <span
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        lineHeight: 1.15,
+        padding: "0 6px",
+        color: "var(--opg-ink-secondary)",
+        border: "2px dashed var(--opg-muted)",
+        borderRadius: "var(--opg-radius-button)",
+      }}
+    >
+      {t.status.away}
+    </span>
+  );
+}
+
 function PlayerBadge({ player, t }: { player: PlayerSummary; t: Dictionary }) {
   if (player.isVip) {
     return (
@@ -60,7 +85,7 @@ function PlayerCell({
         maxWidth: "100%",
       }}
     >
-      <Avatar id={player.avatar} size={52} />
+      <Avatar id={player.avatar} size={52} faded={!player.connected} />
       <div
         style={{
           fontSize: 17,
@@ -85,6 +110,7 @@ function PlayerCell({
           gap: 3,
         }}
       >
+        {player.connected ? null : <AwayBadge t={t} />}
         <PlayerBadge player={player} t={t} />
       </div>
     </div>
@@ -127,6 +153,11 @@ function ChangeDoodleButton({
 
 function findMe(view: PlayerRoomView): PlayerSummary | null {
   return view.players.find((p) => p.id === view.you) ?? null;
+}
+
+/** "Who's here" means who the room can still reach — the count the server plays by. */
+function connectedCount(players: readonly PlayerSummary[]): number {
+  return players.filter((p) => p.connected).length;
 }
 
 function findVip(view: PlayerRoomView): PlayerSummary | null {
@@ -475,7 +506,7 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
       )}
 
       <Marker size={28} style={{ lineHeight: 1.15 }}>
-        {format(t.lobby.whosHere, { count: view.players.length })}
+        {format(t.lobby.whosHere, { count: connectedCount(view.players) })}
       </Marker>
 
       <LobbyBody players={view.players} you={view.you} t={t} />

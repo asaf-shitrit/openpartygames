@@ -31,6 +31,16 @@ test("the VIP skips a phase and ends the game for everyone", async ({
   await expect(
     page.locator(".opg-marker").filter({ hasText: "Final scores" }),
   ).toBeVisible();
+
+  // This asserted that the VIP was back on their controls the instant the game ended. That was
+  // true because the finale and the controls rendered as siblings on one 200dvh column, so
+  // "You're the VIP" was on the page — below the fold, under a page seam a phone cannot show.
+  // The finale now owns the screen until the VIP taps out of it, which is the whole point: the
+  // picker used to race ahead and land on top of the crown. So the way back is a tap, and this
+  // walks it rather than asserting the state that tap exists to reach.
+  await vip.page
+    .getByRole("button", { name: "Pick the next game" })
+    .click();
   await expect(vip.page.getByText("You're the VIP")).toBeVisible();
 
   await Promise.all(phones.map((phone) => phone.context.close()));

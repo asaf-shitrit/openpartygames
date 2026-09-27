@@ -56,7 +56,7 @@ function WaitingPlayerCard({
         maxWidth: "100%",
       }}
     >
-      <Avatar id={player.avatar} size={48} />
+      <Avatar id={player.avatar} size={48} faded={!player.connected} />
       <div
         style={{
           fontSize: 17,
@@ -70,12 +70,38 @@ function WaitingPlayerCard({
         {player.name}
         {isYou ? t.status.youSuffix : ""}
       </div>
+      {/* Same dashed tag the lobby roster uses, so "away" reads the same wherever a phone
+          drops off. The word does the work; the faded doodle only seconds it. */}
+      {player.connected ? null : (
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            lineHeight: 1.15,
+            padding: "0 6px",
+            color: "var(--opg-ink-secondary)",
+            border: "2px dashed var(--opg-muted)",
+            borderRadius: "var(--opg-radius-button)",
+          }}
+        >
+          {t.status.away}
+        </div>
+      )}
     </Card>
   );
 }
 
 function findMe(view: PlayerRoomView): PlayerSummary | null {
   return view.players.find((p) => p.id === view.you) ?? null;
+}
+
+/**
+ * The count is who is playing, not who has a seat: a phone that has dropped off is marked away
+ * in the grid below and left out of this number, the way the server leaves it out of the count
+ * that starts and advances a game.
+ */
+function connectedCount(players: readonly PlayerSummary[]): number {
+  return players.filter((p) => p.connected).length;
 }
 
 function meName(me: PlayerSummary | null, t: Dictionary): string {
@@ -147,7 +173,7 @@ function PlayersSection({
       }}
     >
       <div style={{ fontSize: 19, fontWeight: 700 }}>
-        {format(t.status.whosPlaying, { count: players.length })}
+        {format(t.status.whosPlaying, { count: connectedCount(players) })}
       </div>
       <div
         style={{
