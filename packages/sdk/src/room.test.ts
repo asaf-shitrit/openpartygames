@@ -18,8 +18,14 @@ import type {
   GameContent,
   PackMeta,
   RoomCore,
+  RoomEffect,
 } from "./types";
-import { createRoom, restoreRoom, sanitizeAwards } from "./room";
+import {
+  createRoom,
+  restoreRoom,
+  sanitizeAwards,
+  START_TIMEOUT_MS,
+} from "./room";
 
 const tapWithAwards = {
   ...tapGame,
@@ -170,6 +176,12 @@ function hasLoadContent(effects: readonly { type: string }[]): boolean {
   return effects.some((e) => e.type === "load-content");
 }
 
+type NotifyError = Extract<RoomEffect, { type: "notify-error" }>;
+
+function noticesOf(effects: readonly RoomEffect[]): NotifyError[] {
+  return effects.filter((e): e is NotifyError => e.type === "notify-error");
+}
+
 function join(room: RoomCore, name: string, now: number): PlayerWelcome {
   return welcomeOf(
     room.handle({ kind: "anonymous" }, { t: "join", name }, now).reply,
@@ -190,6 +202,11 @@ function vip(_room: RoomCore, playerId: PlayerId): Caller {
 
 function idsOf(players: readonly PlayerWelcome[]): PlayerId[] {
   return players.map((p) => p.playerId);
+}
+
+/** Rebuilds a room from its own snapshot, the way a restarted Durable Object would. */
+function restoreStarting(h: Harness): RoomCore {
+  return restoreRoom(h.room.snapshot(), [tapGame], () => "r1");
 }
 
 /** Pick the tap game as the VIP and kick off content loading. Leaves the room in "starting". */
@@ -877,6 +894,7 @@ describe("content loading", () => {
     const res = h.room.beginGame(EMPTY_CONTENT, 0);
     expect(h.room.hostView(0).phase).toBe("lobby");
     expect(res.changed).toBe(true);
+    expect(noticesOf(res.effects)[0]?.code).toBe("start-failed");
   });
 
   it("abortStart returns to the lobby", () => {
@@ -887,6 +905,20 @@ describe("content loading", () => {
     expect(h.room.hostView(0).phase).toBe("lobby");
     expect(h.room.nextDeadline()).toBeNull();
   });
+
+  it("tells the VIP, and only the VIP, why everyone bounced back", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    h.room.handle(vip(h.room, at(players, 0).playerId), { t: "start-game" }, 0);
+
+    const notices = noticesOf(h.room.abortStart(0).effects);
+
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.code).toBe("start-failed");
+    expect(notices[0]?.playerIds).toEqual([at(players, 0).playerId]);
+    expect(notices[0]?.message.length).toBeGreaterThan(0);
+  });
+
 
   it("ignores content that mismatches the pending game's kind", () => {
     const h = makeRoom({ packs: [PACK_FAMILY] });
@@ -907,6 +939,175 @@ describe("content loading", () => {
     };
     h.room.beginGame(facts, 0);
     expect(h.room.hostView(0).phase).toBe("lobby");
+  });
+});
+
+/**
+ * The window between "the VIP tapped Start" and "the content arrived" is the only time the
+ * room accepts no commands at all, and the load that ends it lives outside the engine. These
+ * cover what happens when it never ends: a deploy restarting the Durable Object, a load that
+ * hangs, a snapshot written by a build that did not record when the start began.
+ */
+describe("a start that never finished", () => {
+  interface Starting {
+    h: Harness;
+    ids: PlayerId[];
+    vipId: PlayerId;
+  }
+
+  /** Leaves the room in "starting" at t=0, with the content load still outstanding. */
+  function startingRoom(): Starting {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    const vipId = at(players, 0).playerId;
+    h.room.handle(vip(h.room, vipId), { t: "start-game" }, 0);
+    expect(h.room.hostView(0).phase).toBe("starting");
+    return { h, ids: idsOf(players), vipId };
+  }
+
+  it("arms a deadline the alarm can fire on", () => {
+    const { h } = startingRoom();
+    expect(h.room.nextDeadline()).toBe(START_TIMEOUT_MS);
+  });
+
+  it("carries when the start began through a snapshot", () => {
+    const { h } = startingRoom();
+    const restored = restoreStarting(h);
+    expect(restored.hostView(0).phase).toBe("starting");
+    expect(restored.nextDeadline()).toBe(START_TIMEOUT_MS);
+  });
+
+  it("re-issues the content load for a room restored mid-start", () => {
+    const { h } = startingRoom();
+    const restored = restoreStarting(h);
+
+    const res = restored.resumeStart(1_000);
+
+    expect(res.effects).toContainEqual({
+      type: "load-content",
+      kind: "word-pairs" satisfies ContentKind,
+      packIds: [PACK_FAMILY.id],
+    });
+    restored.beginGame(CONTENT, 1_000);
+    expect(restored.hostView(1_000).phase).toBe("in-game");
+  });
+
+  it("does nothing for a room that is not starting one", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+
+    const res = h.room.resumeStart(0);
+
+    expect(res.effects).toEqual([]);
+    expect(res.changed).toBe(false);
+  });
+
+  it("gives up rather than restart a load that is already out of time", () => {
+    const { h, vipId } = startingRoom();
+    const restored = restoreStarting(h);
+
+    const res = restored.resumeStart(START_TIMEOUT_MS + 1);
+
+    expect(hasLoadContent(res.effects)).toBe(false);
+    expect(restored.hostView(0).phase).toBe("lobby");
+    expect(noticesOf(res.effects)[0]).toMatchObject({
+      code: "start-failed",
+      playerIds: [vipId],
+    });
+  });
+
+  it("gives up when the game the start named is gone", () => {
+    const { h } = startingRoom();
+    const restored = restoreRoom(h.room.snapshot(), [], () => "r1");
+
+    restored.resumeStart(1_000);
+
+    expect(restored.hostView(1_000).phase).toBe("lobby");
+  });
+
+  it("gives up when no pack is enabled any more", () => {
+    const { h } = startingRoom();
+    const restored = restoreStarting(h);
+    restored.setPackCatalog([], 1_000);
+
+    const res = restored.resumeStart(1_000);
+
+    expect(hasLoadContent(res.effects)).toBe(false);
+    expect(restored.hostView(1_000).phase).toBe("lobby");
+  });
+
+  it("says nothing when the restored room has no VIP left to tell", () => {
+    const { h } = startingRoom();
+    const data = JSON.parse(h.room.snapshot().data);
+    data.vipId = null;
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+
+    const res = restored.resumeStart(START_TIMEOUT_MS + 1);
+
+    expect(restored.hostView(0).phase).toBe("lobby");
+    expect(noticesOf(res.effects)).toEqual([]);
+  });
+
+  it("treats a snapshot written before the start clock existed as overdue", () => {
+    const { h } = startingRoom();
+    const data = JSON.parse(h.room.snapshot().data);
+    delete data.pending.startedAt;
+    const restored = restoreRoom(
+      { version: 1, data: JSON.stringify(data) },
+      [tapGame],
+      () => "r1",
+    );
+
+    expect(restored.nextDeadline()).toBe(0);
+    restored.resumeStart(1_000);
+    expect(restored.hostView(1_000).phase).toBe("lobby");
+  });
+
+  it("leaves a start alone while it is still inside its window", () => {
+    const { h } = startingRoom();
+    h.room.tick(START_TIMEOUT_MS - 1);
+    expect(h.room.hostView(START_TIMEOUT_MS - 1).phase).toBe("starting");
+  });
+
+  it("is returned to the lobby by the tick once the window expires", () => {
+    const { h, vipId } = startingRoom();
+
+    const res = h.room.tick(START_TIMEOUT_MS);
+
+    expect(h.room.hostView(START_TIMEOUT_MS).phase).toBe("lobby");
+    expect(res.changed).toBe(true);
+    expect(noticesOf(res.effects)[0]).toMatchObject({
+      code: "start-failed",
+      playerIds: [vipId],
+    });
+    expect(h.room.nextDeadline()).toBeNull();
+  });
+
+  it("lets the VIP start again after a start expires", () => {
+    const { h, vipId } = startingRoom();
+    h.room.tick(START_TIMEOUT_MS);
+
+    const res = h.room.handle(
+      vip(h.room, vipId),
+      { t: "start-game" },
+      START_TIMEOUT_MS,
+    );
+
+    expect(hasLoadContent(res.effects)).toBe(true);
+    expect(h.room.hostView(START_TIMEOUT_MS).phase).toBe("starting");
+  });
+
+  it("is reclaimed by the idle sweep once nobody is left and the window has passed", () => {
+    const { h, ids } = startingRoom();
+    for (const id of ids) h.room.setConnected(id, false, 0);
+
+    // Still inside the window: the start may yet land, so the room is not up for collection.
+    expect(h.room.isIdleSince(START_TIMEOUT_MS - 1, 1)).toBe(false);
+    expect(h.room.isIdleSince(START_TIMEOUT_MS, 1)).toBe(true);
   });
 });
 
@@ -1124,7 +1325,42 @@ describe("waiting players", () => {
       { t: "start-game" },
       0,
     );
+    // Three names are on the VIP's screen, so "find more players" would be a lie.
+    expect(errorCode(res.reply)).toBe("players-away");
+    expect(h.room.hostView(0).phase).toBe("lobby");
+  });
+
+  it("asks for more players only when the room really is short of them", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "start-game" },
+      0,
+    );
     expect(errorCode(res.reply)).toBe("not-enough-players");
+  });
+
+  it("clears the waiting flag when an aborted start drops back to the lobby", () => {
+    const h = makeRoom({ packs: [PACK_FAMILY] });
+    const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
+    h.room.handle(vip(h.room, at(players, 0).playerId), { t: "start-game" }, 0);
+    const late = join(h.room, "Late", 0);
+    expect(
+      h.room.hostView(0).players.find((p) => p.id === late.playerId)
+        ?.waitingForNextGame,
+    ).toBe(true);
+
+    h.room.abortStart(0);
+
+    // The game never began, so the lobby they land back in is one they can play from.
+    expect(
+      h.room.hostView(0).players.find((p) => p.id === late.playerId)
+        ?.waitingForNextGame,
+    ).toBe(false);
+    h.room.handle(vip(h.room, at(players, 0).playerId), { t: "start-game" }, 0);
+    h.room.beginGame(CONTENT, 0);
+    expect(h.room.playerView(late.playerId, 0).game?.view).not.toBeNull();
   });
 });
 

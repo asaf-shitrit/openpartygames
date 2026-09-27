@@ -7,12 +7,16 @@ export const status = {
   gameFallback: "Game",
   playerFallback: "player",
   inProgress: "In progress",
+  /** Beside a player whose phone has dropped off; always paired with a faded doodle, never colour alone. */
+  away: "Away",
+  nextRound: "Pick the next game",
   removedHeading: "You were removed",
   removedByNamed: "{name}, the VIP removed you from the room.",
   removedByAnon: "The VIP removed you from the room.",
   joinNewRoom: "Join a new room",
   phoneReconnectingHeading: "Reconnecting…",
   phoneReconnectingBody: "Your seat and score are safe. Hang on a sec.",
+  reconnectingBanner: "Reconnecting… your taps are saved.",
   reconnectingStuckHint: "Still stuck after 30 seconds? Reload the page.",
   reload: "Reload",
   youFallback: "You",
@@ -48,4 +52,18 @@ export const status = {
   connectingTitle: "Connecting…",
   connectingReconnecting: "Reconnecting to the room.",
   connectingFinding: "Finding the room.",
+  // The other half of the ErrorCode copy. `common` holds seven of the seventeen codes as errorX
+  // keys; these ten had no translation at all, so a Hebrew player read the server's raw English.
+  // They belong beside their siblings in `common` — this is the file the fix could reach, and
+  // gathering all seventeen into one home is a tidy-up worth doing later.
+  errorRoomNotFound: "No room with that code. Check the letters.",
+  errorNotJoined: "You're not in this room yet. Join again.",
+  errorNotVip: "Only the VIP can do that.",
+  errorAvatarTaken: "Someone just took that doodle. Pick another.",
+  errorGameInProgress: "A game is already running. You'll join the next one.",
+  errorBadMessage: "This phone and the room lost step. Reload the page.",
+  errorHostTokenInvalid: "This room is hosted on another screen.",
+  errorRateLimited: "Slow down a moment, then try again.",
+  errorPlayersAway: "Some players are away. Wait for their phones to come back.",
+  errorStartFailed: "That game couldn't start. Try again.",
 };

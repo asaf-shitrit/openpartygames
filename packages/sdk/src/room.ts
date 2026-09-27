@@ -43,6 +43,14 @@ import { createRng, restoreRng } from "./rng";
 const VIP_GRACE_MS = 60_000;
 const MAX_TICK_ITERATIONS = 50;
 
+/**
+ * How long a start may sit in "starting" before the room gives up on it. The phase exists
+ * only while the adapter fetches content, which is one D1 read, so anything past this is a
+ * start that will never arrive — most often because a deploy restarted the Durable Object
+ * and took the in-flight load with it.
+ */
+export const START_TIMEOUT_MS = 15_000;
+
 interface PlayerRecord {
   id: PlayerId;
   token: string;
@@ -69,6 +77,12 @@ interface GameRuntime {
 interface PendingStart {
   gameId: string;
   playerIds: PlayerId[];
+  /**
+   * Epoch ms the VIP tapped Start, which anchors START_TIMEOUT_MS. Optional because
+   * snapshots written before this field existed lack it; such a start can only be one
+   * that was already stranded, so `startDeadline` treats a missing value as overdue.
+   */
+  startedAt?: number;
 }
 
 /**
@@ -494,7 +508,7 @@ class RoomImpl implements RoomCore {
       content.kind !== def.contentKind ||
       content.items.length === 0
     ) {
-      this.abortStartNow(now, out);
+      this.abortStartNow(out);
       return result(out);
     }
     const playerIds = this.pending.playerIds.filter(
@@ -521,21 +535,54 @@ class RoomImpl implements RoomCore {
 
   abortStart(now: number): HandleResult {
     const out = newOut();
-    this.abortStartNow(now, out);
+    this.abortStartNow(out);
     this.syncEmpty(now, out);
     return result(out);
   }
 
-  private abortStartNow(now: number, out: Out): void {
+  resumeStart(now: number): HandleResult {
+    const out = newOut();
+    const pending = this.startingPending();
+    if (!pending) return result(out);
+    const def = this.gameDef(pending.gameId);
+    const packIds = def ? this.enabledPackIds(def.contentKind) : [];
+    // Never restart a doomed load: one already out of time, or one whose game or packs
+    // are not in this build's catalog any more.
+    if (this.startExpired(now) || !def || packIds.length === 0) {
+      this.abortStartNow(out);
+      return result(out);
+    }
+    out.effects.push({ type: "load-content", kind: def.contentKind, packIds });
+    return result(out);
+  }
+
+  /**
+   * Returns everyone to the lobby and tells the VIP why. The abort is never a reply to a
+   * command — the content load failed, or its window ran out, behind everyone's back — so
+   * the explanation travels as an effect rather than in `out.reply`, which only the sender
+   * of the current message would ever see.
+   */
+  private abortStartNow(out: Out): void {
     if (this.phase !== "starting") return;
     this.phase = "lobby";
     this.pending = null;
+    // Anyone who joined during the start was marked as waiting for the next game. The game
+    // never began, so the lobby they land back in is one they can play from.
+    for (const p of this.players) p.waitingForNextGame = false;
+    if (this.vipId !== null) {
+      out.effects.push({
+        type: "notify-error",
+        playerIds: [this.vipId],
+        code: "start-failed",
+        message: "That game could not start. Try again.",
+      });
+    }
     out.changed = true;
-    void now;
   }
 
   tick(now: number): HandleResult {
     const out = newOut();
+    this.expireStart(now, out);
     for (let i = 0; i < MAX_TICK_ITERATIONS; i++) {
       if (!this.applyDeadline(now, out)) break;
     }
@@ -543,6 +590,36 @@ class RoomImpl implements RoomCore {
     this.ensureVip(now, out);
     this.syncEmpty(now, out);
     return result(out);
+  }
+
+  /**
+   * When the content never came. No command is accepted in "starting" and no game clock is
+   * running, so nothing but this can move the room on; without it a restart during the start
+   * window leaves every phone on "a game is already running" until the room is swept away.
+   */
+  private expireStart(now: number, out: Out): void {
+    if (this.startExpired(now)) this.abortStartNow(out);
+  }
+
+  /** The start waiting on its content, or null when the room is not starting one. */
+  private startingPending(): PendingStart | null {
+    return this.phase === "starting" ? this.pending : null;
+  }
+
+  /** Epoch ms this start gives up at, or null when the room is not starting one. */
+  private startDeadline(): number | null {
+    const pending = this.startingPending();
+    if (!pending) return null;
+    // A start with no recorded beginning predates that field, so it is already stranded:
+    // the epoch is the earliest "overdue" this can say without inventing a clock reading.
+    if (pending.startedAt === undefined) return 0;
+    return pending.startedAt + START_TIMEOUT_MS;
+  }
+
+  /** True once a start has been pending for longer than any real content load could take. */
+  private startExpired(now: number): boolean {
+    const deadline = this.startDeadline();
+    return deadline !== null && now >= deadline;
   }
 
   /** Applies one due deadline; returns false once nothing more is due (or the game finished). */
@@ -621,7 +698,14 @@ class RoomImpl implements RoomCore {
     const deadlines: number[] = [];
     this.collectGameDeadline(deadlines);
     this.collectVipDeadline(deadlines);
+    this.collectStartDeadline(deadlines);
     return deadlines.length > 0 ? Math.min(...deadlines) : null;
+  }
+
+  /** A starting room needs an alarm too, or nothing would ever notice the start died. */
+  private collectStartDeadline(deadlines: number[]): void {
+    const deadline = this.startDeadline();
+    if (deadline !== null) deadlines.push(deadline);
   }
 
   private collectGameDeadline(deadlines: number[]): void {
@@ -683,9 +767,18 @@ class RoomImpl implements RoomCore {
 
   isIdleSince(now: number, idleMs: number): boolean {
     if (this.hasConnection()) return false;
-    if (this.phase !== "lobby") return false;
+    if (!this.reclaimable(now)) return false;
     const since = this.emptySince ?? now;
     return now - since >= idleMs;
+  }
+
+  /**
+   * A lobby can always be reclaimed. So can a room past its start window: the start will
+   * never complete, and every command is gated on some other phase, so an abandoned one
+   * would otherwise sit in storage forever. A running game is never reclaimed.
+   */
+  private reclaimable(now: number): boolean {
+    return this.phase === "lobby" || this.startExpired(now);
   }
 
   // ---------- message handlers ----------
@@ -970,7 +1063,26 @@ class RoomImpl implements RoomCore {
     this.fail(out, "invalid-action", "Turn on a pack to start.");
   }
 
-  private onStartGame(caller: Caller, _now: number, out: Out): void {
+  /**
+   * Too few players to start. Separates "this room is short of people" from "the people
+   * are here but their phones are not", because only the first one is fixed by inviting
+   * someone: the second is fixed by waiting, and telling the VIP to find more players
+   * when five names are on their screen is simply untrue.
+   */
+  private failRoster(def: AnyGame, out: Out): void {
+    const seated = this.players.filter((p) => !p.waitingForNextGame).length;
+    if (seated >= def.minPlayers) {
+      this.fail(
+        out,
+        "players-away",
+        "Some players are offline. Wait for them to come back.",
+      );
+      return;
+    }
+    this.fail(out, "not-enough-players", "You need more players to start.");
+  }
+
+  private onStartGame(caller: Caller, now: number, out: Out): void {
     if (!this.requireVip(caller, out)) return;
     if (this.phase !== "lobby") {
       this.fail(out, "invalid-action", "That is not available right now.");
@@ -986,7 +1098,7 @@ class RoomImpl implements RoomCore {
       (p) => p.connected && !p.waitingForNextGame,
     );
     if (ready.length < def.minPlayers) {
-      this.fail(out, "not-enough-players", "You need more players to start.");
+      this.failRoster(def, out);
       return;
     }
     const packIds = this.enabledPackIds(def.contentKind);
@@ -1003,6 +1115,7 @@ class RoomImpl implements RoomCore {
       playerIds: this.players
         .filter((p) => !p.waitingForNextGame)
         .map((p) => p.id),
+      startedAt: now,
     };
     out.effects.push({ type: "load-content", kind: def.contentKind, packIds });
     out.changed = true;

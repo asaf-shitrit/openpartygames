@@ -23,4 +23,5 @@ export const results: Dictionary["results"] = {
   thirdPlaceLabel: "מקום שלישי",
   secondPlaceLabel: "מקום שני",
   picksNextGame: "בוחר/ת את המשחק הבא מהטלפון שלו/ה",
+  waitingOnVip: "מחכים ל{vip} שיבחר/תבחר את המשחק הבא",
 };

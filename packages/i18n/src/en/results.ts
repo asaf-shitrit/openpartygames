@@ -21,6 +21,7 @@ export const results = {
   thirdPlaceLabel: "3rd place",
   secondPlaceLabel: "2nd place",
   picksNextGame: "picks the next game from their phone",
+  waitingOnVip: "Waiting on {vip} to pick the next game",
   // Only ever needed up to 8, the highest maxPlayers any game declares. `other` is a
   // best-effort fallback if that ever grows.
 };

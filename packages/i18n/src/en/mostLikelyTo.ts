@@ -6,6 +6,7 @@ export const mostLikelyTo = {
   thinking: "Thinking…",
   votedOfTotalTv: "{voted} of {total} voted",
   votedSoFar: "Voted so far ({voted} of {total})",
+  stillVotingAlt: "Still voting: {name}",
   voteForAnyone: "Vote for anyone, even yourself",
   voteProgress: "Vote",
   verdictProgress: "Here comes the verdict",

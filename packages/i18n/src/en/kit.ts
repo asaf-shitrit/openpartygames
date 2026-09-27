@@ -19,6 +19,12 @@ export const kit = {
     room: "Eyes on the room",
   },
   playerAvatarAlt: "{name}'s avatar",
+  /**
+   * Tally renders "×N" for sighted players; this is the same count read aloud. `two` is here
+   * for Hebrew's dual, which needs its own form — English just repeats `other`, the same way
+   * `doodle.strokes` below does.
+   */
+  crowns: { one: "1 crown", two: "{count} crowns", other: "{count} crowns" },
   doodle: {
     undo: "Undo",
     clear: "Clear",

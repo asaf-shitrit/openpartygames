@@ -191,6 +191,11 @@ export class FakeContent implements ContentSource {
   loadCalls = 0;
   catalogFails = false;
   contentFails = false;
+  /**
+   * Runs while the load is still outstanding, which is the only moment the room is saved
+   * as "starting". Tests use it to photograph that snapshot, the one a deploy would restore.
+   */
+  onLoad: (() => void) | null = null;
 
   async listPacks(): Promise<PackMeta[]> {
     if (this.catalogFails) throw new Error("catalog unavailable");
@@ -199,6 +204,7 @@ export class FakeContent implements ContentSource {
 
   async loadContent(kind: ContentKind): Promise<GameContent> {
     this.loadCalls += 1;
+    this.onLoad?.();
     if (this.contentFails) throw new Error("content unavailable");
     return mergeContent(kind, [{ kind: "word-pairs", items: this.wordPairs }]);
   }

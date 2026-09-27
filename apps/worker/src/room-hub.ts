@@ -111,12 +111,19 @@ export function roomCodeFromPath(pathname: string): string | null {
 export class RoomHub {
   private readonly options: HubOptions;
   private room: RoomCore | null;
+  /**
+   * False only for a room rebuilt from storage, until `resumeIfNeeded` has run. A restored
+   * room may have been saved mid-start, with the content load that would have finished it
+   * lost along with the instance that was running it.
+   */
+  private resumed: boolean;
 
   constructor(options: HubOptions, snapshot?: RoomSnapshot) {
     this.options = options;
     this.room = snapshot
       ? restoreRoom(snapshot, options.games, options.newToken)
       : null;
+    this.resumed = snapshot === undefined;
   }
 
   /** True when this room owns the code, so the adapter can 404 every other socket. */
@@ -185,6 +192,7 @@ export class RoomHub {
 
   /** Handles one raw socket frame. */
   async message(socket: HubSocket, raw: string | ArrayBuffer): Promise<void> {
+    await this.resumeIfNeeded();
     const parsed = parseClientMessage(raw);
     if (!parsed) {
       socket.send(BAD_MESSAGE);
@@ -206,6 +214,7 @@ export class RoomHub {
 
   /** A socket closed or errored. */
   async close(socket: HubSocket): Promise<void> {
+    await this.resumeIfNeeded();
     const room = this.room;
     if (!room) return;
     const caller = socket.caller();
@@ -222,6 +231,7 @@ export class RoomHub {
 
   /** Deadline tick: run the game clock, then delete an idle room. */
   async alarm(): Promise<void> {
+    await this.resumeIfNeeded();
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
@@ -234,6 +244,21 @@ export class RoomHub {
   }
 
   // ---------- internals ----------
+
+  /**
+   * Picks up a start that a restart interrupted, on whatever wakes this instance first.
+   * The flag flips before the await so two concurrent entry points cannot both re-issue
+   * the load, and a room that was not starting simply produces nothing to apply.
+   */
+  private async resumeIfNeeded(): Promise<void> {
+    if (this.resumed) return;
+    this.resumed = true;
+    const room = this.room;
+    if (!room) return;
+    const result = room.resumeStart(this.options.now());
+    if (!result.changed && result.effects.length === 0) return;
+    await this.apply(result);
+  }
 
   private async loadPacks(): Promise<PackMeta[]> {
     try {
@@ -256,8 +281,13 @@ export class RoomHub {
   /**
    * Persist when the room changed, reply to the caller, then either rebroadcast
    * every socket's view (a real change) or send just the caller's own view when
-   * a no-op reply carries a welcome (a reconnect promoting the socket). Then run
-   * effects and re-arm the alarm.
+   * a no-op reply carries a welcome (a reconnect promoting the socket). Then re-arm
+   * the alarm and run effects.
+   *
+   * The alarm is armed before the effects run, not after: "load-content" is an await on
+   * the outside world, and a start whose snapshot is already saved as "starting" must have
+   * a wake-up booked before that await, or an instance that dies inside it leaves a room
+   * no alarm will ever visit.
    */
   private async apply(result: HandleResult, socket?: HubSocket): Promise<void> {
     const room = this.room;
@@ -265,8 +295,8 @@ export class RoomHub {
     if (result.changed) await this.options.storage.put(room.snapshot());
     if (socket) for (const reply of result.reply) socket.send(reply);
     this.notify(result, socket);
-    await this.runEffects(result.effects);
     await this.armAlarm();
+    await this.runEffects(result.effects);
   }
 
   /** Broadcasts on a real change; otherwise sends only a welcomed caller its own view. */
@@ -344,6 +374,14 @@ export class RoomHub {
         this.disconnectPlayer(effect.playerId);
         return;
       }
+      case "notify-error": {
+        this.sendToPlayers(effect.playerIds, {
+          t: "error",
+          code: effect.code,
+          message: effect.message,
+        });
+        return;
+      }
       case "game-finished": {
         await this.options.stats.record({
           gameId: effect.gameId,
@@ -354,6 +392,16 @@ export class RoomHub {
         });
         return;
       }
+    }
+  }
+
+  /** Sends one message to every socket of the named players; a player with none is skipped. */
+  private sendToPlayers(playerIds: string[], message: ServerMessage): void {
+    const wanted = new Set(playerIds);
+    for (const socket of this.options.sockets.all()) {
+      const caller = socket.caller();
+      if (caller.kind !== "player" || !wanted.has(caller.playerId)) continue;
+      socket.send(message);
     }
   }
 
