@@ -7,6 +7,7 @@ import type {
   AvatarId,
   ClientMessage,
   ContentLanguage,
+  ErrorCode,
   HostRoomView,
   PlayerId,
   PlayerRoomView,
@@ -195,6 +196,13 @@ export type RoomEffect =
   | { type: "load-content"; kind: ContentKind; packIds: string[] }
   /** Adapter must close every socket attached to this player. */
   | { type: "disconnect-player"; playerId: PlayerId }
+  /**
+   * Adapter must send this error to every socket of these players. `HandleResult.reply`
+   * only reaches whoever sent the current message, so anything the room decides on its
+   * own — a start that timed out, content that failed to load — has no caller to answer
+   * and must address its audience explicitly.
+   */
+  | { type: "notify-error"; playerIds: PlayerId[]; code: ErrorCode; message: string }
   /** For anonymous match stats. */
   | { type: "game-finished"; gameId: string; playerCount: number; durationMs: number; completed: boolean };
 
@@ -222,6 +230,13 @@ export interface RoomCore {
   beginGame(content: GameContent, now: number): HandleResult;
   /** Content failed to load: return to lobby. */
   abortStart(now: number): HandleResult;
+  /**
+   * Called once on a restored room. A "load-content" effect lives only in the adapter's
+   * memory, so a restart between the snapshot and the content arriving leaves the room
+   * saved as "starting" with nothing in flight. This re-issues the effect, or gives up
+   * and returns to the lobby when the start window has already passed.
+   */
+  resumeStart(now: number): HandleResult;
   /** Process any deadlines at or before now. */
   tick(now: number): HandleResult;
   setConnected(playerId: PlayerId, connected: boolean, now: number): HandleResult;
@@ -231,7 +246,10 @@ export interface RoomCore {
   playerView(playerId: PlayerId, now: number): PlayerRoomView;
   playerIds(): PlayerId[];
   snapshot(): RoomSnapshot;
-  /** No host or player connected since the given time and no game running. */
+  /**
+   * No host or player connected since the given time, and nothing left that could still
+   * move on its own: the room is in the lobby, or stuck in a start whose window has passed.
+   */
   isIdleSince(now: number, idleMs: number): boolean;
 }
 

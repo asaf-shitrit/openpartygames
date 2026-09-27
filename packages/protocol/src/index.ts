@@ -187,22 +187,42 @@ export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
 // ---------- Server -> client ----------
 
-export type ErrorCode =
-  | "bad-message"
-  | "room-not-found"
-  | "room-full"
-  | "room-locked"
-  | "name-invalid"
-  | "name-taken"
-  | "avatar-taken"
-  | "not-joined"
-  | "not-vip"
-  | "not-enough-players"
-  | "no-language-packs"
-  | "game-in-progress"
-  | "invalid-action"
-  | "host-token-invalid"
-  | "rate-limited";
+/**
+ * Every error an error frame may carry, as runtime values rather than a bare type union.
+ *
+ * A union alone cannot be iterated, so each consumer ended up hand-copying the list, and a copy
+ * that drifts fails quietly in the worst possible way: the client parses error frames against
+ * its own list, so a code missing there makes the whole frame fail to parse and the phone shows
+ * *nothing* — not even the server's English prose. `no-language-packs` went its entire life like
+ * that, with translated copy already written for it, because a subset check (`satisfies
+ * readonly ErrorCode[]`) cannot see an omission. Deriving the type from this array means there
+ * is one list, and a new code is available to every consumer the moment it is added here.
+ */
+export const ERROR_CODES = [
+  "bad-message",
+  "room-not-found",
+  "room-full",
+  "room-locked",
+  "name-invalid",
+  "name-taken",
+  "avatar-taken",
+  "not-joined",
+  "not-vip",
+  "not-enough-players",
+  // Enough people are in the room; too few of them are connected right now.
+  "players-away",
+  "no-language-packs",
+  "game-in-progress",
+  "invalid-action",
+  "host-token-invalid",
+  "rate-limited",
+  // The start did not survive: content failed to load, came back empty, or the start window
+  // expired (a Durable Object restart drops the load that is in flight). The room is back in
+  // the lobby and the VIP can tap Start again.
+  "start-failed",
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export type ServerMessage =
   | { t: "welcome"; role: "host" }

@@ -24,6 +24,9 @@ export const picker = {
   you: "You",
   kick: "Kick",
   kickAriaLabel: "Kick {name}",
+  kickConfirm: "Remove {name} from the room?",
+  kickConfirmYes: "Yes, remove",
+  cancel: "Cancel",
   pickGameFirst: "Pick a game first",
   gameNeedsSharedScreen:
     "{game} plays on a shared screen. Turn that on to start it.",
@@ -31,6 +34,7 @@ export const picker = {
   turnOnPack: "Turn on at least one pack",
   startGame: "Start game",
   startNamedGame: "Start {game}",
+  startingGame: "Starting…",
   playerRangeHere: "{min}–{max} players · {count} here",
   yourRoomCode: "Your room code",
   shareTitle: "Join my game",
@@ -42,9 +46,12 @@ export const picker = {
   theVip: "The VIP",
   vipControlsAriaLabel: "VIP controls",
   skipThisPart: "Skip this part",
+  skippingThisPart: "Skipping…",
   endGame: "End game",
   endGameConfirm: "End the game for everyone? Scores so far won't earn a crown.",
   yesEndIt: "Yes, end it",
   keepPlaying: "Keep playing",
+  /** A pack switch's accessible name; the only thing a screen reader gets for that row. */
+  packAccessibleName: "{pack} pack",
   playerCount: { one: "1 player", other: "{count} players" },
 };

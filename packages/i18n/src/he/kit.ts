@@ -20,6 +20,7 @@ export const kit: Dictionary["kit"] = {
     room: "תסתכלו על החדר",
   },
   playerAvatarAlt: "האווטאר של {name}",
+  crowns: { one: "כתר אחד", two: "שני כתרים", other: "{count} כתרים" },
   doodle: {
     undo: "בטלו",
     clear: "נקו",

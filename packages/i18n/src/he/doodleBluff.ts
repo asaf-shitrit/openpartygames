@@ -7,6 +7,7 @@ export const doodleBluff: Dictionary["doodleBluff"] = {
   progressRound: "ציור {round} מתוך {count}",
   everyoneIsDrawing: "כולם מציירים",
   bothDone: "שני הציורים מוכנים",
+  drawnOfTotal: "{drawn} מתוך {total} סיימו",
   drawingOfTotal: "ציור {current} מתוך {total}",
   whosWritten: "מי כתב/ה",
   writtenOfEligible: "{written} מתוך {eligible} כתבו כותרת",

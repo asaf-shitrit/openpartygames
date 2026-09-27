@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import type { ServerMessage } from "@opg/protocol";
+import { START_TIMEOUT_MS, type RoomSnapshot } from "@opg/sdk";
 import {
   accept,
   connectHost,
@@ -38,6 +40,25 @@ function openedSocket(): OpenedSocket {
     response: new Response("upgraded", { status: 200 }),
     socket: new FakeSocket(),
   };
+}
+
+/** The snapshot as it stands while the content load is still outstanding. */
+async function snapshotMidStart(lobby: Lobby): Promise<RoomSnapshot> {
+  let captured: RoomSnapshot | undefined;
+  lobby.content.onLoad = (): void => {
+    captured = lobby.storage.stored;
+  };
+  await send(lobby.hub, lobby.ada, { t: "start-game" });
+  if (!captured) throw new Error("the content load never ran");
+  expect(storedRoom(captured)?.phase).toBe("starting");
+  return captured;
+}
+
+/** The "that game could not start" notices one socket was sent. */
+function startFailures(socket: FakeSocket): ServerMessage[] {
+  return socket.sent.filter(
+    (m) => m.t === "error" && m.code === "start-failed",
+  );
 }
 
 describe("RoomHub.init", () => {
@@ -460,6 +481,82 @@ describe("RoomHub.alarm", () => {
     expect(lobby.storage.deletions).toBe(1);
     expect(lobby.storage.stored).toBeUndefined();
     expect(stranger.closed).toEqual({ code: 1000, reason: "idle" });
+  });
+});
+
+/**
+ * A deploy restarts every Durable Object. If it lands between the snapshot that says
+ * "starting" and the content arriving, the load is gone and nothing in the room's own
+ * state can finish or cancel the start, so the hub has to pick it up on the way back.
+ */
+describe("RoomHub interrupted start", () => {
+  it("books the wake-up before it waits on the content", async () => {
+    const lobby = await makeLobby();
+    let armed: number | undefined;
+    lobby.content.onLoad = (): void => {
+      armed = lobby.storage.alarms.at(-1);
+    };
+
+    await send(lobby.hub, lobby.ada, { t: "start-game" });
+
+    expect(armed).toBe(lobby.clock.now() + START_TIMEOUT_MS);
+  });
+
+  it("finishes a start the restart interrupted", async () => {
+    const midStart = await snapshotMidStart(await makeLobby());
+    const restored = makeHub(midStart);
+
+    await restored.hub.alarm();
+
+    expect(restored.content.loadCalls).toBe(1);
+    expect(storedRoom(restored.storage.stored)?.phase).toBe("in-game");
+  });
+
+  it("resumes only once, however many events wake the room", async () => {
+    const midStart = await snapshotMidStart(await makeLobby());
+    const restored = makeHub(midStart);
+    const socket = accept(restored);
+
+    await send(restored.hub, socket, { t: "join", name: "Di" });
+    await restored.hub.alarm();
+
+    expect(restored.content.loadCalls).toBe(1);
+  });
+
+  it("returns a room whose start outlived its window to the lobby", async () => {
+    const midStart = await snapshotMidStart(await makeLobby());
+    const restored = makeHub(midStart);
+    restored.clock.advance(START_TIMEOUT_MS + 1);
+
+    await restored.hub.alarm();
+
+    expect(restored.content.loadCalls).toBe(0);
+    expect(storedRoom(restored.storage.stored)?.phase).toBe("lobby");
+  });
+
+  it("leaves a room that was never starting alone", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+
+    await restored.hub.alarm();
+
+    expect(restored.content.loadCalls).toBe(0);
+    expect(storedRoom(restored.storage.stored)?.phase).toBe("lobby");
+  });
+
+  it("tells the VIP, and nobody else, when the content fails to load", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const lobby = await makeLobby();
+    lobby.content.contentFails = true;
+
+    await send(lobby.hub, lobby.ada, { t: "start-game" });
+
+    expect(startFailures(lobby.ada)).toHaveLength(1);
+    expect(startFailures(lobby.bo)).toHaveLength(0);
+    expect(startFailures(lobby.host)).toHaveLength(0);
+    error.mockRestore();
   });
 });
 

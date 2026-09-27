@@ -5,6 +5,7 @@ export const doodleBluff = {
   progressRound: "Drawing {round} of {count}",
   everyoneIsDrawing: "Everyone is drawing",
   bothDone: "Both done",
+  drawnOfTotal: "{drawn} of {total} finished",
   drawingOfTotal: "Drawing {current} of {total}",
   whosWritten: "Who's written",
   writtenOfEligible: "{written} of {eligible} have written a title",

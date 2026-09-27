@@ -8,6 +8,7 @@ export const mostLikelyTo: Dictionary["mostLikelyTo"] = {
   thinking: "חושב/ת…",
   votedOfTotalTv: "{voted} מתוך {total} הצביעו",
   votedSoFar: "הצביעו עד כה ({voted} מתוך {total})",
+  stillVotingAlt: "עדיין מצביע/ה: {name}",
   voteForAnyone: "הצביעו על כל אחד, גם על עצמכם",
   voteProgress: "הצבעה",
   verdictProgress: "התוצאה בדרך",

@@ -6,5 +6,5 @@ export type * from "./types";
 //   normalizeAnswer(text: string): string   (lowercase, trim, strip punctuation and leading a/an/the, collapse spaces)
 export { dedupeContent, mergeContent } from "./content";
 export { createRng, restoreRng } from "./rng";
-export { createRoom, restoreRoom } from "./room";
+export { createRoom, restoreRoom, START_TIMEOUT_MS } from "./room";
 export { normalizeAnswer } from "./text";
