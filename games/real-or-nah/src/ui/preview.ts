@@ -7,14 +7,15 @@ import type {
   PlayerSummary,
 } from "@opg/protocol";
 import type { Fact } from "@opg/sdk";
-import { RON_REVEAL } from "../reveal-plan";
-import type {
-  RonFooledLie,
-  RonHostOption,
-  RonHostView,
-  RonPlayerOption,
-  RonPlayerView,
-  RonReveal,
+import { RON_REVEAL, revealDurationMs } from "../reveal-plan";
+import {
+  planLiesOf,
+  type RonFooledLie,
+  type RonHostOption,
+  type RonHostView,
+  type RonPlayerOption,
+  type RonPlayerView,
+  type RonReveal,
 } from "../types";
 
 const SERVER_NOW = 1735689600000;
@@ -22,10 +23,29 @@ const WRITE_DEADLINE = SERVER_NOW + 38000;
 const VOTE_DEADLINE = SERVER_NOW + 19000;
 
 /**
- * Anchor for every settled reveal fixture: far enough in the past that any reveal
- * (up to the 30s cap) lands fully played out, with no live beats and no cues.
+ * The instant every reveal fixture is defined to have started. `HostReveal.test.tsx` and
+ * `PhoneReveal.test.tsx` mount the component directly (bypassing the dev gallery) and drive
+ * it with a clock of `RON_REVEAL_PREVIEW_START + elapsedMs`, so every reveal fixture's own
+ * `startedAt` — computed by `revealDeadlineFor` below — has to resolve back to exactly this
+ * value for that elapsed-since-start math to hold across every fixture, whatever its own
+ * duration. Its distance from `SERVER_NOW` has no meaning on its own; only `revealDeadlineFor`
+ * and `revealPreviewNow` (below) care about it, and both route through it deliberately.
  */
 export const RON_REVEAL_PREVIEW_START = SERVER_NOW - RON_REVEAL.capMs - 500;
+
+/**
+ * The `deadline` a reveal fixture needs so that `anchorAt` (in `@opg/ui`) resolves its own
+ * `startedAt` to exactly `RON_REVEAL_PREVIEW_START` — never `timerStartedAt` itself: the dev
+ * gallery freezes its clock at `timerStartedAt ?? serverNow` (`apps/web/src/dev/screens.ts`),
+ * so a fixture that set `timerStartedAt` directly would freeze the gallery's clock and the
+ * reveal's own beat-anchor to that same instant, always landing on elapsed 0 — the intro beat,
+ * forever, never the settled state the label promises. Passing only a `deadline` keeps them
+ * apart: `timerStartedAt` stays null, so `anchorAt` falls back to `deadline - duration` for its
+ * own start time, landing on `RON_REVEAL_PREVIEW_START` regardless of this reveal's `duration`.
+ */
+function revealDeadlineFor(reveal: RonReveal): number {
+  return RON_REVEAL_PREVIEW_START + revealDurationMs({ lies: planLiesOf(reveal) });
+}
 
 const MAYA = "maya";
 const DOV = "dov";
@@ -218,10 +238,16 @@ const REVEAL_DOV_WAS_FOOLED: RonReveal = {
   lies: LIES.map((lie) => (lie.authorId === DOV ? asDud(lie) : lie)),
 };
 
-/** Dov's lie fooled two people; Dov himself neither found the truth nor was fooled. */
+/**
+ * Dov's lie fooled two people; Dov himself neither found the truth nor was fooled. The base
+ * `REVEAL` already has Dov authoring a fooling lie, but it *also* has Dov fooled by Maya's
+ * "dingoes" (his own vote landed there) — the generic "Phone: reveal" preview covers that
+ * combination already, so this fixture turns "dingoes" into a dud to isolate the
+ * author-fooled-people card on its own, without a second, unrelated fooled-by card on top.
+ */
 const REVEAL_DOV_AUTHORED_FOOLING: RonReveal = {
   ...REVEAL,
-  foundByIds: [MAYA, LEO],
+  lies: LIES.map((lie) => (lie.optionId === "o6" ? asDud(lie) : lie)),
 };
 
 const HOST_BASE = {
@@ -382,12 +408,19 @@ const phoneRevealAuthoredFooling: RonPlayerView = {
   myPoints: 1000,
 };
 
+interface CommonRoomOptions {
+  players?: PlayerSummary[];
+  /** Overridden only by a reveal preview — see `hostRevealRoom`'s comment for why. */
+  serverNow?: number;
+}
+
 function commonRoom(
   view: RonHostView | RonPlayerView,
   deadline: number | null,
   timerStartedAt: number | null = null,
-  players: PlayerSummary[] = PLAYERS,
+  options: CommonRoomOptions = {},
 ) {
+  const { players = PLAYERS, serverNow = SERVER_NOW } = options;
   return {
     code: "BKTZ",
     sharedScreen: true,
@@ -420,7 +453,7 @@ function commonRoom(
     ],
     lastResult: null,
     game: { id: "real-or-nah", view, stage: null, deadline, timerStartedAt },
-    serverNow: SERVER_NOW,
+    serverNow,
     contentLanguage: "en" as const,
   };
 }
@@ -433,7 +466,36 @@ function hostRoom(
 ): HostRoomView {
   return {
     role: "host",
-    ...commonRoom(view, deadline, timerStartedAt, players),
+    ...commonRoom(view, deadline, timerStartedAt, { players }),
+  };
+}
+
+/**
+ * A reveal room for the dev gallery, which freezes its clock at the room's own `serverNow`
+ * (see `apps/web/src/dev/screens.ts`'s `timingOf`). Landing that frozen clock just before
+ * standings — rather than the fully-played-out instant `revealDeadlineFor`'s `deadline`
+ * reproduces for `HostReveal.test.tsx`/`PhoneReveal.test.tsx` — is what keeps these previews
+ * distinct from each other: several of them (a house lie, all-duds, two-foolers, a kick) share
+ * the same `totals`, so once standings land they all render the identical standings screen,
+ * and `distinct-previews.spec.ts` catches that collapse. Pre-standings, each still shows the
+ * duds/lies/truth its own label promises.
+ */
+function revealPreviewNow(reveal: RonReveal): number {
+  const duration = revealDurationMs({ lies: planLiesOf(reveal) });
+  return RON_REVEAL_PREVIEW_START + duration - RON_REVEAL.standingsMs - 250;
+}
+
+function hostRevealRoom(
+  view: RonHostView,
+  reveal: RonReveal,
+  players: PlayerSummary[] = PLAYERS,
+): HostRoomView {
+  return {
+    role: "host",
+    ...commonRoom(view, revealDeadlineFor(reveal), null, {
+      players,
+      serverNow: revealPreviewNow(reveal),
+    }),
   };
 }
 
@@ -452,7 +514,24 @@ function playerRoom(
   return {
     role: "player",
     you,
-    ...commonRoom(view, deadline, timerStartedAt, players),
+    ...commonRoom(view, deadline, timerStartedAt, { players }),
+  };
+}
+
+/** The phone counterpart of `hostRevealRoom` — see its comment for why `serverNow` moves. */
+function playerRevealRoom(
+  view: RonPlayerView,
+  reveal: RonReveal,
+  cast: PlayerRoomCast = {},
+): PlayerRoomView {
+  const { you = DOV, players = PLAYERS } = cast;
+  return {
+    role: "player",
+    you,
+    ...commonRoom(view, revealDeadlineFor(reveal), null, {
+      players,
+      serverNow: revealPreviewNow(reveal),
+    }),
   };
 }
 
@@ -672,31 +751,31 @@ export const realOrNahPreviews: Array<{
     label: "Host: reveal, 3 foolers",
     surface: "host",
     view: hostReveal,
-    room: hostRoom(hostReveal, null, RON_REVEAL_PREVIEW_START),
+    room: hostRevealRoom(hostReveal, REVEAL),
   },
   {
     label: "Host: reveal with a house lie",
     surface: "host",
     view: hostRevealHouse,
-    room: hostRoom(hostRevealHouse, null, RON_REVEAL_PREVIEW_START),
+    room: hostRevealRoom(hostRevealHouse, REVEAL_WITH_HOUSE_LIE),
   },
   {
     label: "Host: reveal, 0 foolers (duds only)",
     surface: "host",
     view: hostRevealAllDuds,
-    room: hostRoom(hostRevealAllDuds, null, RON_REVEAL_PREVIEW_START),
+    room: hostRevealRoom(hostRevealAllDuds, REVEAL_ALL_DUDS),
   },
   {
     label: "Host: reveal, 2 foolers plus a dud",
     surface: "host",
     view: hostRevealTwoFoolers,
-    room: hostRoom(hostRevealTwoFoolers, null, RON_REVEAL_PREVIEW_START),
+    room: hostRevealRoom(hostRevealTwoFoolers, REVEAL_TWO_FOOLERS),
   },
   {
     label: "Host: reveal after a kick",
     surface: "host",
     view: hostRevealAfterKick,
-    room: hostRoom(hostRevealAfterKick, null, RON_REVEAL_PREVIEW_START),
+    room: hostRevealRoom(hostRevealAfterKick, REVEAL_AFTER_KICK),
   },
   {
     label: "Phone: Dov writing",
@@ -744,35 +823,31 @@ export const realOrNahPreviews: Array<{
     label: "Phone: reveal",
     surface: "phone",
     view: phoneReveal,
-    room: playerRoom(phoneReveal, null, RON_REVEAL_PREVIEW_START),
+    room: playerRevealRoom(phoneReveal, REVEAL),
   },
   {
     label: "Phone: Dov found the truth",
     surface: "phone",
     view: phoneRevealFound,
-    room: playerRoom(phoneRevealFound, null, RON_REVEAL_PREVIEW_START),
+    room: playerRevealRoom(phoneRevealFound, REVEAL_DOV_FOUND),
   },
   {
     label: "Phone: Dov missed a round",
     surface: "phone",
     view: phoneRevealNoLie,
-    room: playerRoom(phoneRevealNoLie, null, RON_REVEAL_PREVIEW_START),
+    room: playerRevealRoom(phoneRevealNoLie, REVEAL_DOV_MISSED),
   },
   {
     label: "Phone: Dov was fooled",
     surface: "phone",
     view: phoneRevealWasFooled,
-    room: playerRoom(phoneRevealWasFooled, null, RON_REVEAL_PREVIEW_START),
+    room: playerRevealRoom(phoneRevealWasFooled, REVEAL_DOV_WAS_FOOLED),
   },
   {
     label: "Phone: Dov's lie fooled people",
     surface: "phone",
     view: phoneRevealAuthoredFooling,
-    room: playerRoom(
-      phoneRevealAuthoredFooling,
-      null,
-      RON_REVEAL_PREVIEW_START,
-    ),
+    room: playerRevealRoom(phoneRevealAuthoredFooling, REVEAL_DOV_AUTHORED_FOOLING),
   },
   {
     label: "Phone: worst case, writing a lie (91-char prompt, 8 long names)",
@@ -805,7 +880,7 @@ export const realOrNahPreviews: Array<{
     label: "Phone: worst case, reveal (91-char prompt, 13-char answer, 8 long names)",
     surface: "phone",
     view: stressPhoneReveal,
-    room: playerRoom(stressPhoneReveal, null, RON_REVEAL_PREVIEW_START, {
+    room: playerRevealRoom(stressPhoneReveal, STRESS_REVEAL, {
       you: STRESS_ME,
       players: STRESS_PLAYERS,
     }),
@@ -826,6 +901,6 @@ export const realOrNahPreviews: Array<{
     label: "Host: worst case, reveal (40-char lie, 13-char answer, 8 long names)",
     surface: "host",
     view: stressHostReveal,
-    room: hostRoom(stressHostReveal, null, RON_REVEAL_PREVIEW_START, STRESS_PLAYERS),
+    room: hostRevealRoom(stressHostReveal, STRESS_REVEAL, STRESS_PLAYERS),
   },
 ];

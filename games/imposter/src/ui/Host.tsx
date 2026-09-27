@@ -292,23 +292,55 @@ function SpeakerCard({ view, players }: SectionProps) {
   );
 }
 
+/** Beyond six players the full-size clue order list no longer fits under the 1080px TV
+ * ceiling (measured: an eighth row and its badges ran 13-14px past the bottom edge). Compact
+ * mirrors the ratio of the full sizes rather than inventing new ones, so it reads as the same
+ * list, just denser -- and every size it lands on stays at or above the 28px TV floor. */
+const CLUE_ORDER_COMPACT_THRESHOLD = 6;
+const CLUE_ROW_HEIGHT = 88;
+const CLUE_ROW_HEIGHT_SPEAKING = 96;
+const CLUE_ROW_HEIGHT_COMPACT = 62;
+const CLUE_ROW_HEIGHT_SPEAKING_COMPACT = 70;
+const CLUE_AVATAR_SIZE = 68;
+const CLUE_AVATAR_SIZE_COMPACT = 48;
+const CLUE_MARK_CIRCLE_SIZE = 48;
+const CLUE_MARK_CIRCLE_SIZE_COMPACT = 38;
+const CLUE_NAME_SIZE = 38;
+const CLUE_NAME_SIZE_COMPACT = 29;
+const CLUE_STATUS_SIZE = 30;
+const CLUE_STATUS_SIZE_COMPACT = 28;
+const CLUE_SPEAKING_MARKER_SIZE = 34;
+const CLUE_SPEAKING_MARKER_SIZE_COMPACT = 28;
+const CLUE_MARK_ICON_SIZE = 40;
+const CLUE_MARK_ICON_SIZE_COMPACT = 30;
+const CLUE_ORDER_HEADING_SIZE = 56;
+const CLUE_ORDER_HEADING_SIZE_COMPACT = 42;
+const CLUE_ORDER_GAP = 16;
+const CLUE_ORDER_GAP_COMPACT = 10;
+const CLUE_ORDER_PADDING = "36px 40px 40px";
+const CLUE_ORDER_PADDING_COMPACT = "26px 32px 28px";
+
 function ClueMark({
   done,
   speaking,
   index,
+  compact,
 }: {
   done: boolean;
   speaking: boolean;
   index: number;
+  compact: boolean;
 }) {
-  if (done) return <Icon name="check" size={40} color="var(--opg-marker)" />;
+  const iconSize = compact ? CLUE_MARK_ICON_SIZE_COMPACT : CLUE_MARK_ICON_SIZE;
+  if (done) return <Icon name="check" size={iconSize} color="var(--opg-marker)" />;
   if (speaking)
-    return <Icon name="arrow-right" size={42} color="var(--opg-marker)" />;
+    return <Icon name="arrow-right" size={iconSize + 2} color="var(--opg-marker)" />;
+  const circle = compact ? CLUE_MARK_CIRCLE_SIZE_COMPACT : CLUE_MARK_CIRCLE_SIZE;
   return (
     <div
       style={{
-        width: 48,
-        height: 48,
+        width: circle,
+        height: circle,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -327,21 +359,47 @@ function ClueStatus({
   done,
   speaking,
   upNext,
+  compact,
 }: {
   done: boolean;
   speaking: boolean;
   upNext: boolean;
+  compact: boolean;
 }) {
   const { t } = useLocale();
-  if (done) return <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.done}</div>;
+  const statusSize = compact ? CLUE_STATUS_SIZE_COMPACT : CLUE_STATUS_SIZE;
+  if (done) return <div style={{ fontSize: statusSize, ...SECONDARY }}>{t.imposter.clues.done}</div>;
   if (speaking)
     return (
-      <Marker size={34} color="var(--opg-marker)" style={{ lineHeight: 1 }}>
+      <Marker
+        size={compact ? CLUE_SPEAKING_MARKER_SIZE_COMPACT : CLUE_SPEAKING_MARKER_SIZE}
+        color="var(--opg-marker)"
+        style={{ lineHeight: 1 }}
+      >
         {t.imposter.clues.speaking}
       </Marker>
     );
-  if (upNext) return <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.upNext}</div>;
+  if (upNext) return <div style={{ fontSize: statusSize, ...SECONDARY }}>{t.imposter.clues.upNext}</div>;
   return null;
+}
+
+/** The row's own height: full size or compact, and taller still while its player is speaking. */
+function clueRowHeight(speaking: boolean, compact: boolean): number {
+  if (speaking) return compact ? CLUE_ROW_HEIGHT_SPEAKING_COMPACT : CLUE_ROW_HEIGHT_SPEAKING;
+  return compact ? CLUE_ROW_HEIGHT_COMPACT : CLUE_ROW_HEIGHT;
+}
+
+function clueRowStyle(speaking: boolean, compact: boolean): CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: compact ? 14 : 18,
+    height: clueRowHeight(speaking, compact),
+    padding: compact ? "0 14px" : "0 18px",
+    background: speaking ? "var(--opg-highlight-soft)" : undefined,
+    border: speaking ? "4px solid var(--opg-ink)" : undefined,
+    borderRadius: speaking ? "var(--opg-radius-button)" : undefined,
+  };
 }
 
 function ClueRow({
@@ -351,6 +409,7 @@ function ClueRow({
   players,
   speakerId,
   nextId,
+  compact,
 }: {
   id: PlayerId;
   index: number;
@@ -358,43 +417,40 @@ function ClueRow({
   players: PlayerSummary[];
   speakerId: PlayerId | null;
   nextId: PlayerId | null;
+  compact: boolean;
 }) {
   const { t } = useLocale();
   const done = list.doneSpeakerIds.includes(id);
   const speaking = id === speakerId;
+  const markSlot = compact ? CLUE_MARK_CIRCLE_SIZE_COMPACT : CLUE_MARK_CIRCLE_SIZE;
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 18,
-        height: speaking ? 96 : 88,
-        padding: "0 18px",
-        background: speaking ? "var(--opg-highlight-soft)" : undefined,
-        border: speaking ? "4px solid var(--opg-ink)" : undefined,
-        borderRadius: speaking ? "var(--opg-radius-button)" : undefined,
-      }}
-    >
+    <div style={clueRowStyle(speaking, compact)}>
       <div
         style={{
-          width: 48,
-          height: 48,
+          width: markSlot,
+          height: markSlot,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <ClueMark done={done} speaking={speaking} index={index} />
+        <ClueMark done={done} speaking={speaking} index={index} compact={compact} />
       </div>
       <Avatar
         id={avatarOf(players, id)}
-        size={68}
+        size={compact ? CLUE_AVATAR_SIZE_COMPACT : CLUE_AVATAR_SIZE}
         alt={avatarLabel(t, players, id)}
       />
-      <div style={{ flexGrow: 1, fontSize: 38, fontWeight: 700 }}>
+      <div
+        style={{
+          flexGrow: 1,
+          fontSize: compact ? CLUE_NAME_SIZE_COMPACT : CLUE_NAME_SIZE,
+          fontWeight: 700,
+        }}
+      >
         {nameOf(t, players, id)}
       </div>
-      <ClueStatus done={done} speaking={speaking} upNext={id === nextId} />
+      <ClueStatus done={done} speaking={speaking} upNext={id === nextId} compact={compact} />
     </div>
   );
 }
@@ -404,17 +460,21 @@ function ClueOrderList({ view, players }: SectionProps) {
   const speakerId = view.currentSpeakerId;
   const index = speakerId ? view.clueOrder.indexOf(speakerId) : -1;
   const nextId = index >= 0 ? (view.clueOrder[index + 1] ?? null) : null;
+  const compact = view.clueOrder.length > CLUE_ORDER_COMPACT_THRESHOLD;
   return (
     <Card
       variant="Malt"
       style={{
-        padding: "36px 40px 40px",
+        padding: compact ? CLUE_ORDER_PADDING_COMPACT : CLUE_ORDER_PADDING,
         display: "flex",
         flexDirection: "column",
-        gap: 16,
+        gap: compact ? CLUE_ORDER_GAP_COMPACT : CLUE_ORDER_GAP,
       }}
     >
-      <Marker size={56} style={{ marginBottom: 4 }}>
+      <Marker
+        size={compact ? CLUE_ORDER_HEADING_SIZE_COMPACT : CLUE_ORDER_HEADING_SIZE}
+        style={{ marginBottom: 4 }}
+      >
         {t.imposter.clues.orderLabel}
       </Marker>
       {view.clueOrder.map((id, rowIndex) => (
@@ -426,6 +486,7 @@ function ClueOrderList({ view, players }: SectionProps) {
           players={players}
           speakerId={speakerId}
           nextId={nextId}
+          compact={compact}
         />
       ))}
     </Card>

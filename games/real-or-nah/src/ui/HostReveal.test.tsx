@@ -112,18 +112,18 @@ describe("HostReveal, staged from the start", () => {
 });
 
 describe("HostReveal, mounted late", () => {
-  it("renders the settled end state with no cues", () => {
+  it("renders the settled end state (standings, having retired the lies and truth) with no cues", () => {
     vi.useFakeTimers();
     const { engine } = setup("Host: reveal, 3 foolers", 21999);
 
-    expect(screen.getByText("These fooled nobody")).toBeTruthy();
-    expect(screen.getByText("emus")).toBeTruthy();
-    expect(screen.getByText("REAL")).toBeTruthy();
     expect(screen.getByText("Standings")).toBeTruthy();
+    expect(screen.queryByText("These fooled nobody")).toBeNull();
+    expect(screen.queryByText("emus")).toBeNull();
+    expect(screen.queryByText("REAL")).toBeNull();
     expect(engine.cues).toEqual([]);
   });
 
-  it("states the truth for screen readers once it is stamped", () => {
+  it("states the truth for screen readers once it is stamped, even once standings have taken the stage", () => {
     vi.useFakeTimers();
     setup("Host: reveal, 3 foolers", 21999);
     expect(screen.getByRole("status").textContent).toBe(
@@ -135,21 +135,38 @@ describe("HostReveal, mounted late", () => {
 describe("HostReveal, a lie's author was kicked mid-reveal", () => {
   it("renders the beat as a removed card instead of crashing", () => {
     vi.useFakeTimers();
-    setup("Host: reveal after a kick", 29999);
+    // Mid-reveal, once the removed lie's own beat has fired but before standings take
+    // the stage (see the "settled" test below for that swap).
+    setup("Host: reveal after a kick", 5000);
     expect(screen.getByText("(removed)")).toBeTruthy();
+  });
+
+  it("swaps to standings once they land, instead of piling up under the removed card", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal after a kick", 29999);
+    expect(screen.queryByText("(removed)")).toBeNull();
     expect(screen.getByText("Standings")).toBeTruthy();
   });
 });
 
 describe("HostReveal, Hebrew locale", () => {
-  it("renders the settled reveal in Hebrew", () => {
+  it("renders the settled facts (duds, truth) in Hebrew", () => {
     vi.useFakeTimers();
     window.localStorage.setItem("opg:locale", "he");
-    setup("Host: reveal, 3 foolers", 21999);
+    // Before standings take the stage: the truth is stamped and its finders are in
+    // (see the English timeline in "staged from the start" above for the beat math).
+    setup("Host: reveal, 3 foolers", 17000);
     expect(screen.getByText("בואו נראה מי רימה את מי")).toBeTruthy();
     expect(screen.getByText("אלה לא רימו אף אחד")).toBeTruthy();
     expect(screen.getByText("האמת")).toBeTruthy();
     expect(screen.getByText("אמת")).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
+  });
+
+  it("renders the standings in Hebrew once they take the stage", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    setup("Host: reveal, 3 foolers", 21999);
     expect(screen.getByText("הדירוג")).toBeTruthy();
     window.localStorage.removeItem("opg:locale");
   });
@@ -158,13 +175,14 @@ describe("HostReveal, Hebrew locale", () => {
 describe("HostReveal, other lie counts", () => {
   it("skips the duds row when nobody wrote a dud lie", () => {
     vi.useFakeTimers();
-    setup("Host: reveal, 2 foolers plus a dud", 21999);
+    // Mid-reveal, well before standings retire the duds/lies/truth stack.
+    setup("Host: reveal, 2 foolers plus a dud", 5000);
     expect(screen.getByText("These fooled nobody")).toBeTruthy();
   });
 
   it("never shows the duds row for an all-duds reveal", () => {
     vi.useFakeTimers();
-    setup("Host: reveal, 0 foolers (duds only)", 21999);
+    setup("Host: reveal, 0 foolers (duds only)", 5000);
     expect(screen.getByText("These fooled nobody")).toBeTruthy();
     expect(screen.queryByText("Fooled everyone!")).toBeNull();
   });
@@ -176,7 +194,8 @@ describe("HostReveal, other lie counts", () => {
       ...view,
       reveal: view.reveal ? { ...view.reveal, foundByIds: [] } : null,
     };
-    const clock: ServerClock = { now: () => RON_REVEAL_PREVIEW_START + 21999 };
+    // Before standings retire the truth section; see the beat math above.
+    const clock: ServerClock = { now: () => RON_REVEAL_PREVIEW_START + 17000 };
     render(
       <LocaleProvider>
         <HostReveal

@@ -27,13 +27,32 @@ const RESULT_DEADLINE = SERVER_NOW + 7000;
 /** A reveal already at its 11s mark, so previews and tests render the settled end state. */
 export const REVEAL_PREVIEW_START = SERVER_NOW - 11000;
 
-/** A last-chance already 10s into its 15s countdown, mid-typing. */
-const LAST_CHANCE_MID_START = SERVER_NOW - 10000;
-const LAST_CHANCE_MID_DEADLINE = LAST_CHANCE_MID_START + 15000;
+/**
+ * A last-chance with only 5 seconds left. No `timerStartedAt`: `HostLastChance` has no beat
+ * ceremony of its own (no `useMoment`), but its `Timer` still computes an elapsed fraction from
+ * `startedAt`, and the dev gallery freezes `now` at `timerStartedAt` when one is set -- so a
+ * `timerStartedAt` here would pin `now` to the same instant `Timer` treats as the countdown's
+ * start, always showing the full 15 seconds left (`0:15`) instead of the near-the-end state this
+ * fixture is for, whatever the deadline said. Passing only a closer deadline keeps `now` at the
+ * room's own clock instead, so the countdown text actually reads down.
+ */
+const LAST_CHANCE_TYPING_DEADLINE = SERVER_NOW + 5000;
 
 /** A result already past its settle beat, so previews and tests render the settled end state. */
 export const RESULT_PREVIEW_START = SERVER_NOW - 12000;
+/**
+ * `deadline - RESULT_CAUGHT_MS` (14000) reproduces `RESULT_PREVIEW_START` exactly, so a caught
+ * result fixture that passes only this deadline (no `timerStartedAt`) still anchors its beats
+ * there -- see the note on the "Host: reveal" family for why the frozen dev-gallery clock needs
+ * that indirection instead of a `timerStartedAt` set directly.
+ */
 const RESULT_PREVIEW_DEADLINE = SERVER_NOW + 2000;
+/**
+ * The escaped path is shorter (`RESULT_ESCAPED_MS`, 9000), so it needs its own deadline to land
+ * on the same `RESULT_PREVIEW_START` anchor: `deadline - 9000 = RESULT_PREVIEW_START` gives
+ * `SERVER_NOW - 3000`.
+ */
+const RESULT_PREVIEW_DEADLINE_ESCAPED = SERVER_NOW - 3000;
 
 function player(
   id: PlayerId,
@@ -210,13 +229,36 @@ const hostRevealNoVotes: ImposterHostView = {
   caught: false,
 };
 
+/**
+ * A unanimous vote for `hostResult`, distinct from `hostReveal`'s own `TALLY` (Leo votes Dov
+ * there): once both settle to their real end state (see the note on `RESULT_PREVIEW_DEADLINE`),
+ * a caught-and-missed result that inherits the exact same tally, crew word, guess and points as
+ * `hostResultCaughtNope` below is pixel-identical to it, and `distinct-previews.spec.ts` catches
+ * it -- two labels, the same screen. Every crew member spotting Priya collapses the "spotted"
+ * reason into one row instead of splitting Leo off into his own "voted Dov" row.
+ */
+const RESULT_TALLY = {
+  [PRIYA]: [MAYA, DOV, SAM, NOA, LEO],
+} satisfies Record<PlayerId, PlayerId[]>;
+
+/** Matches `RESULT_TALLY`: every crew member spotted Priya and shares the vote bonus. */
+const POINTS_THIS_WORD_RESULT = {
+  [MAYA]: 500,
+  [DOV]: 500,
+  [SAM]: 500,
+  [NOA]: 500,
+  [PRIYA]: 0,
+  [LEO]: 500,
+} satisfies Record<PlayerId, number>;
+
 const hostResult: ImposterHostView = {
   ...hostReveal,
   phase: "result",
+  tally: RESULT_TALLY,
   crewWord: CREW_WORD,
   guess: "horse",
   guessCorrect: false,
-  pointsThisWord: POINTS_THIS_WORD,
+  pointsThisWord: POINTS_THIS_WORD_RESULT,
 };
 
 /** Priya was caught and missed the guess, a settled render for the result moment. */
@@ -710,29 +752,38 @@ export const imposterPreviews: Array<{
     view: hostVote,
     room: hostRoom(hostVote, VOTE_DEADLINE),
   },
+  // No `timerStartedAt` on any of these four: the dev gallery freezes its clock at
+  // `timerStartedAt ?? serverNow` (apps/web/src/dev/screens.ts), and the reveal's own beat
+  // anchor (`anchorAt`) prefers that same `timerStartedAt` when one is given. Setting it
+  // directly pins both to the same instant, so `elapsed` is always 0 -- the intro beat,
+  // forever, whatever the fixture claims to show. Passing only `REVEAL_DEADLINE` lets the
+  // anchor fall back to `deadline - REVEAL_MS`, which still equals `REVEAL_PREVIEW_START`
+  // (REVEAL_DEADLINE is `SERVER_NOW + 1000`), but the frozen clock now reads `serverNow`
+  // instead -- 11s apart from the anchor, so these four actually land on the settled verdict
+  // their labels promise instead of the teaser that plays before it.
   {
     label: "Host: reveal",
     surface: "host",
     view: hostReveal,
-    room: hostRoom(hostReveal, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(hostReveal, REVEAL_DEADLINE),
   },
   {
     label: "Host: reveal wrong",
     surface: "host",
     view: hostRevealWrong,
-    room: hostRoom(hostRevealWrong, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(hostRevealWrong, REVEAL_DEADLINE),
   },
   {
     label: "Host: reveal tie",
     surface: "host",
     view: hostRevealTie,
-    room: hostRoom(hostRevealTie, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(hostRevealTie, REVEAL_DEADLINE),
   },
   {
     label: "Host: reveal no votes",
     surface: "host",
     view: hostRevealNoVotes,
-    room: hostRoom(hostRevealNoVotes, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(hostRevealNoVotes, REVEAL_DEADLINE),
   },
   {
     label: "Host: last chance",
@@ -744,47 +795,37 @@ export const imposterPreviews: Array<{
     label: "Host: last chance typing",
     surface: "host",
     view: hostLastChance,
-    room: hostRoom(
-      hostLastChance,
-      LAST_CHANCE_MID_DEADLINE,
-      LAST_CHANCE_MID_START,
-    ),
+    room: hostRoom(hostLastChance, LAST_CHANCE_TYPING_DEADLINE),
   },
+  // No `timerStartedAt` on any of these four -- same freeze as the reveal family above.
+  // `RESULT_PREVIEW_DEADLINE - RESULT_CAUGHT_MS` reproduces `RESULT_PREVIEW_START` for the
+  // caught path exactly, same as it always did for the "settled" trio; using it for the plain
+  // "Host: result" too (in place of `RESULT_DEADLINE`, which only ever mattered for the
+  // Timer's own countdown display, not for the beat anchor) lands it on the same fully-settled
+  // state instead of stopping partway through at the "count" beat.
   {
     label: "Host: result",
     surface: "host",
     view: hostResult,
-    room: hostRoom(hostResult, RESULT_DEADLINE, RESULT_PREVIEW_START),
+    room: hostRoom(hostResult, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Host: result caught nope",
     surface: "host",
     view: hostResultCaughtNope,
-    room: hostRoom(
-      hostResultCaughtNope,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: hostRoom(hostResultCaughtNope, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Host: result caught got it",
     surface: "host",
     view: hostResultCaughtGotIt,
-    room: hostRoom(
-      hostResultCaughtGotIt,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: hostRoom(hostResultCaughtGotIt, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Host: result escaped",
     surface: "host",
     view: hostResultEscaped,
-    room: hostRoom(
-      hostResultEscaped,
-      RESULT_PREVIEW_DEADLINE,
-      RESULT_PREVIEW_START,
-    ),
+    room: hostRoom(hostResultEscaped, RESULT_PREVIEW_DEADLINE_ESCAPED),
   },
   {
     label: "Phone: Maya crew card",
@@ -816,19 +857,21 @@ export const imposterPreviews: Array<{
     view: phoneVoteLocked,
     room: playerRoom(phoneVoteLocked, DOV, VOTE_DEADLINE),
   },
+  // No `timerStartedAt` here either -- see the comment on the Host reveal family above. These
+  // two used to freeze on the intro beat and render "The votes are in… 0:12 Eyes on the TV",
+  // identical to "Priya reveal caught"/"Priya reveal free" below; dropping it lands each on the
+  // personal beat its own label names.
   {
     label: "Phone: Dov reveal",
     surface: "phone",
     view: phoneReveal,
-    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, { timerStartedAt: REVEAL_PREVIEW_START }),
+    room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE),
   },
   {
     label: "Phone: Leo reveal",
     surface: "phone",
     view: phoneLeoReveal,
-    room: playerRoom(phoneLeoReveal, LEO, REVEAL_DEADLINE, {
-      timerStartedAt: REVEAL_PREVIEW_START,
-    }),
+    room: playerRoom(phoneLeoReveal, LEO, REVEAL_DEADLINE),
   },
   {
     label: "Phone: Priya last chance",
@@ -858,17 +901,13 @@ export const imposterPreviews: Array<{
     label: "Phone: Priya reveal caught",
     surface: "phone",
     view: phoneImposterReveal,
-    room: playerRoom(phoneImposterReveal, PRIYA, REVEAL_DEADLINE, {
-      timerStartedAt: REVEAL_PREVIEW_START,
-    }),
+    room: playerRoom(phoneImposterReveal, PRIYA, REVEAL_DEADLINE),
   },
   {
     label: "Phone: Priya reveal free",
     surface: "phone",
     view: phoneImposterRevealFree,
-    room: playerRoom(phoneImposterRevealFree, PRIYA, REVEAL_DEADLINE, {
-      timerStartedAt: REVEAL_PREVIEW_START,
-    }),
+    room: playerRoom(phoneImposterRevealFree, PRIYA, REVEAL_DEADLINE),
   },
   {
     label: "Phone: Priya result",
@@ -882,53 +921,46 @@ export const imposterPreviews: Array<{
     view: phoneResult,
     room: playerRoom(phoneResult, DOV, RESULT_DEADLINE),
   },
+  // No `timerStartedAt` on any of these six -- same freeze as the reveal family above, this
+  // time on the result ceremony. `RESULT_PREVIEW_DEADLINE` (`SERVER_NOW + 2000`) minus each
+  // path's own duration reproduces `RESULT_PREVIEW_START` for the caught pair (14s duration)
+  // and lands past the escaped path's own settle beat at 5.5s (9s duration - 2s = 7s elapsed),
+  // so every one of these six lands on the settled result its label promises.
   {
     label: "Phone: Priya result stole",
     surface: "phone",
     view: phoneResultStole,
-    room: playerRoom(phoneResultStole, PRIYA, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultStole, PRIYA, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Phone: Priya result nope",
     surface: "phone",
     view: phoneResultNope,
-    room: playerRoom(phoneResultNope, PRIYA, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultNope, PRIYA, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Phone: Dov result spotted",
     surface: "phone",
     view: phoneResultSpotted,
-    room: playerRoom(phoneResultSpotted, DOV, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultSpotted, DOV, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Phone: Leo result missed",
     surface: "phone",
     view: phoneResultMissed,
-    room: playerRoom(phoneResultMissed, LEO, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultMissed, LEO, RESULT_PREVIEW_DEADLINE),
   },
   {
     label: "Phone: Priya result escaped",
     surface: "phone",
     view: phoneResultEscapedImposter,
-    room: playerRoom(phoneResultEscapedImposter, PRIYA, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultEscapedImposter, PRIYA, RESULT_PREVIEW_DEADLINE_ESCAPED),
   },
   {
     label: "Phone: Dov result escaped",
     surface: "phone",
     view: phoneResultEscapedCrew,
-    room: playerRoom(phoneResultEscapedCrew, DOV, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
-    }),
+    room: playerRoom(phoneResultEscapedCrew, DOV, RESULT_PREVIEW_DEADLINE_ESCAPED),
   },
   {
     label: "Phone (no-TV): Maya crew card",
@@ -964,12 +996,14 @@ export const imposterPreviews: Array<{
     view: phoneVoteLocked,
     room: playerRoom(phoneVoteLocked, DOV, VOTE_DEADLINE, { stage: hostVote }),
   },
+  // No `timerStartedAt` -- same freeze as the reveal family above. This is the one screen the
+  // layout suite has to exercise the no-TV stage's own decoy-word reveal and voter avatars on;
+  // frozen at the intro beat, it never rendered either.
   {
     label: "Phone (no-TV): Dov reveal settled",
     surface: "phone",
     view: phoneReveal,
     room: playerRoom(phoneReveal, DOV, REVEAL_DEADLINE, {
-      timerStartedAt: REVEAL_PREVIEW_START,
       stage: hostReveal,
     }),
   },
@@ -989,12 +1023,12 @@ export const imposterPreviews: Array<{
       stage: hostLastChance,
     }),
   },
+  // No `timerStartedAt` -- same freeze as the result family above.
   {
     label: "Phone (no-TV): Dov result settled",
     surface: "phone",
     view: phoneResult,
     room: playerRoom(phoneResult, DOV, RESULT_PREVIEW_DEADLINE, {
-      timerStartedAt: RESULT_PREVIEW_START,
       stage: hostResultCaughtNope,
     }),
   },

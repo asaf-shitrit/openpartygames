@@ -66,6 +66,16 @@ describe("Host phases", () => {
     expect(screen.queryByRole("timer")).toBeNull();
   });
 
+  it("clues packs the order list down when the room is full, so an eighth row still fits", () => {
+    renderHost("Host: worst case, clue turns (8 long names)");
+    expect(screen.getByText("Wilhelmina H").style.fontSize).toBe("29px");
+  });
+
+  it("clues keeps the full-size order list under six players", () => {
+    renderHost("Host: clues");
+    expect(screen.getByText("Dov").style.fontSize).toBe("38px");
+  });
+
   it("vote counts how many players voted", () => {
     renderHost("Host: vote");
     expect(screen.getByText("5 of 6 voted")).toBeTruthy();

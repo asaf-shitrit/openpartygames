@@ -66,13 +66,20 @@ function ResultCard({
         {personal.celebrate ? (
           <div
             data-testid="reveal-burst"
-            // Decorative only. It covers the whole card, so without this it swallows taps
-            // on anything underneath for as long as the celebration runs.
+            // Decorative only, so without `pointerEvents: none` it would swallow taps on
+            // anything underneath for as long as the celebration runs. `overflow: hidden`
+            // matters too: the burst's golden-angle fan (packages/ui/src/fx/StickerBurst.tsx)
+            // places stickers by a fixed `size`, not a share of the card's own width, so on
+            // the narrowest phones this card is narrower than the burst it hosts. Without a
+            // clip at the card's own edge, the widest stickers ride past it onto the page and
+            // the page itself starts scrolling sideways — this box exists to be that clip.
             style={{
               position: "absolute",
               inset: 0,
               zIndex: 0,
               pointerEvents: "none",
+              overflow: "hidden",
+              borderRadius: "inherit",
             }}
           >
             <StickerBurst live={live} count={14} size={340} />

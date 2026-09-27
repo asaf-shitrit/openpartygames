@@ -32,8 +32,18 @@ test("a phone reloads mid-game and rejoins with its seat", async ({
   });
 
   await playOneFact(page, phones);
-  await expect(page.getByText("The truth")).toBeVisible();
-  await expect(page.getByText("Cleo", { exact: true }).first()).toBeVisible();
+  // `playOneFact` already walks the reveal and ends on the standings, and the reveal now swaps
+  // the duds/lies/truth stack out for them rather than stacking both — the TV stage does not
+  // scroll, and the room has read the facts by the time the scores land. So the post-condition
+  // here is the settled scoreboard, not the truth card that came before it.
+  //
+  // It also names the phone that actually reloaded. This asserted a third player's name, which
+  // would have passed just as well if Ben's seat had been lost — the one thing the test exists
+  // to prove.
+  await expect(page.getByText("Standings")).toBeVisible();
+  await expect(
+    page.getByText(reloaded.name, { exact: true }).first(),
+  ).toBeVisible();
 
   await Promise.all(phones.map((phone) => phone.context.close()));
 });

@@ -53,6 +53,11 @@ function disabled(element: HTMLElement): boolean {
 }
 
 describe("Phone write phase", () => {
+  it("shows the countdown timer while the phase is timed", () => {
+    renderPhone("Phone: Dov writing");
+    expect(screen.getByRole("timer")).toBeTruthy();
+  });
+
   it("submits the lie once the player types one", async () => {
     const send = vi.fn<(action: RonAction) => void>();
     renderPhone("Phone: Dov writing", send);
@@ -150,7 +155,7 @@ describe("Phone vote phase", () => {
         <Phone
           view={second.view}
           room={second.room}
-          deadline={null}
+          deadline={second.room.game?.deadline ?? null}
           timerStartedAt={second.room.game?.timerStartedAt ?? null}
           clock={clock}
           send={vi.fn<(action: RonAction) => void>()}
@@ -170,6 +175,11 @@ describe("Phone reveal phase", () => {
     expect(screen.getByText("You fooled Sam and Noa!")).toBeTruthy();
     expect(screen.getByText("+1,000")).toBeTruthy();
     expect(screen.getByText("The truth: emus")).toBeTruthy();
+  });
+
+  it("hides the countdown timer instead of showing a stuck 0:00", () => {
+    renderPhone("Phone: reveal");
+    expect(screen.queryByRole("timer")).toBeNull();
   });
 
   it("celebrates finding the truth", () => {

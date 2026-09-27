@@ -6,7 +6,7 @@ import type { ServerClock } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
 import type { RonHostView } from "../types";
 import { Host } from "./Host";
-import { realOrNahPreviews } from "./preview";
+import { RON_REVEAL_PREVIEW_START, realOrNahPreviews } from "./preview";
 
 afterEach(cleanup);
 
@@ -26,9 +26,15 @@ function hostSample(label: string): HostSample {
   return entry;
 }
 
-function renderHost(label: string) {
+/**
+ * `now` defaults to the room's own clock, which for a reveal preview lands well past
+ * standings (see `RON_REVEAL_PREVIEW_START` in preview.ts) — the truly settled state,
+ * where standings have retired the duds/lies/truth stack. Pass an explicit `now` (an
+ * offset from `RON_REVEAL_PREVIEW_START`) to catch a reveal mid-flight instead.
+ */
+function renderHost(label: string, now?: number) {
   const { view, room } = hostSample(label);
-  const clock: ServerClock = { now: () => room.serverNow };
+  const clock: ServerClock = { now: () => now ?? room.serverNow };
   return render(
     <LocaleProvider>
       <Host
@@ -90,7 +96,11 @@ describe("Host vote phase", () => {
 });
 
 describe("Host reveal phase", () => {
-  it("stamps the truth REAL and every lie NAH, settled by default", () => {
+  it("stamps the truth REAL and every lie NAH, settled by default (before standings take over)", () => {
+    // The preview fixture's own clock now lands just before standings by default — see
+    // `revealPreviewNow` in preview.ts — so every distinguishing reveal preview (this one
+    // included) stays visibly different from the others instead of all collapsing into the
+    // same later standings screen.
     const { view } = hostSample("Host: reveal, 3 foolers");
     renderHost("Host: reveal, 3 foolers");
     expect(screen.getByText("Let's see who fooled who")).toBeTruthy();
@@ -101,11 +111,21 @@ describe("Host reveal phase", () => {
       view.reveal?.lies.length ?? 0,
     );
     expect(screen.getByText("+1,000 each")).toBeTruthy();
+    expect(screen.queryByText("Standings")).toBeNull();
+  });
+
+  it("swaps to standings once they land, retiring the lies and the truth", () => {
+    renderHost("Host: reveal, 3 foolers", RON_REVEAL_PREVIEW_START + 21999);
     expect(screen.getByText("Standings")).toBeTruthy();
+    expect(screen.queryByText("Let's see who fooled who")).toBeNull();
+    expect(screen.queryByText("The truth")).toBeNull();
   });
 
   it("labels a house lie instead of a player name", () => {
-    renderHost("Host: reveal with a house lie");
+    // Past every lie's flip beat but before standings; see reveal-plan.ts for the
+    // per-lie segment math (4 foolers here, so a wider lie budget than the 3-fooler
+    // fixture above).
+    renderHost("Host: reveal with a house lie", RON_REVEAL_PREVIEW_START + 16500);
     expect(screen.getByText("House lie")).toBeTruthy();
     expect(screen.getByText("a surprisingly large lizard")).toBeTruthy();
     expect(screen.getAllByText("NAH")).toHaveLength(7);
@@ -114,7 +134,7 @@ describe("Host reveal phase", () => {
   it("wraps the phase in the enter animation and swaps content on a phase change", () => {
     const first = hostSample("Host: vote");
     const second = hostSample("Host: reveal, 3 foolers");
-    const clock: ServerClock = { now: () => first.room.serverNow };
+    const voteClock: ServerClock = { now: () => first.room.serverNow };
     const { container, rerender } = render(
       <LocaleProvider>
         <Host
@@ -122,7 +142,7 @@ describe("Host reveal phase", () => {
           room={first.room}
           deadline={null}
           timerStartedAt={null}
-          clock={clock}
+          clock={voteClock}
         />
       </LocaleProvider>,
     );
@@ -130,14 +150,16 @@ describe("Host reveal phase", () => {
     expect(wrapper).toBeTruthy();
     expect(wrapper?.textContent).toContain("Which one is real?");
 
+    // Mid-reveal, so the truth section is on stage rather than standings.
+    const revealClock: ServerClock = { now: () => RON_REVEAL_PREVIEW_START + 17000 };
     rerender(
       <LocaleProvider>
         <Host
           view={second.view}
           room={second.room}
-          deadline={null}
+          deadline={second.room.game?.deadline ?? null}
           timerStartedAt={second.room.game?.timerStartedAt ?? null}
-          clock={clock}
+          clock={revealClock}
         />
       </LocaleProvider>,
     );

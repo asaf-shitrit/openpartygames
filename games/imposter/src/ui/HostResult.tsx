@@ -575,7 +575,7 @@ function PointsCard({
 
 function RankBadge({ delta }: { delta: number }) {
   return (
-    <div style={{ fontSize: 26, fontWeight: 700, color: "var(--opg-marker)" }}>
+    <div style={{ fontSize: 28, fontWeight: 700, color: "var(--opg-marker)" }}>
       ▲{delta}
     </div>
   );

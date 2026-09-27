@@ -43,13 +43,18 @@ import {
 import type { ScratchMark } from "./reveal-timeline";
 
 const TILTS = [-1.5, 1, -1, 1.5, -1, 2];
+// A tie or no-votes outcome stacks every reserved section -- caption, centered verdict, tile
+// row, footer and next note -- and at 44px this column ran 39px past the stage's 1080px floor
+// once the sticky note actually rendered (previously invisible: the dev-gallery fixtures that
+// exercise this were frozen on the intro beat until the note itself was fixed to unfreeze). 36px
+// still reads as generous next to the tile row's own internal spacing and closes the gap.
 const ROOT: CSSProperties = {
   position: "relative",
   flexGrow: 1,
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
-  gap: 44,
+  gap: 8,
 };
 const CAPTION: CSSProperties = {
   fontSize: 44,
@@ -736,6 +741,16 @@ interface RevealStageProps {
   shakeRef: RefObject<HTMLElement | null>;
 }
 
+/** Only a tie or a no-votes outcome ever has centered verdict text (see `centeredText`); a
+ * caught or wrong accusation never does, for the whole life of this reveal. Reserving
+ * `VERDICT_RESERVED_HEIGHT` for a box that can never show anything on those two outcomes was
+ * costing every reveal 132px of TV height it never needed, which is exactly what pushed the
+ * "next" sticky note 39-40px past the stage's bottom edge once the note itself finally
+ * rendered. */
+function canCenterVerdict(outcome: RevealOutcome): boolean {
+  return outcome.kind === "tie" || outcome.kind === "no-votes";
+}
+
 function RevealStage(props: RevealStageProps) {
   const { t } = useLocale();
   const { view, players, plan, stage, verdict, shakeRef } = props;
@@ -745,11 +760,13 @@ function RevealStage(props: RevealStageProps) {
         <Marker size={96}>{t.imposter.reveal.votesAreIn}</Marker>
       </FxIn>
       <Caption suspense={stage.suspense} />
-      <CenteredVerdict
-        verdict={verdict}
-        live={stage.verdictLive}
-        shakeRef={shakeRef}
-      />
+      {canCenterVerdict(plan.outcome) ? (
+        <CenteredVerdict
+          verdict={verdict}
+          live={stage.verdictLive}
+          shakeRef={shakeRef}
+        />
+      ) : null}
       <RevealTileRow
         view={view}
         plan={plan}

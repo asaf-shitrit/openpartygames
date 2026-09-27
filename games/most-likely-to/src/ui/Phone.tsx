@@ -257,7 +257,9 @@ function VoteForm(props: SectionProps) {
       <Strip progress={progressFor(t, view)} t={t} />
       {stage !== null ? <StageVote view={stage} players={players} /> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <PromptLine prompt={view.prompt} size={22} />
+        {/* The stage above already carries the prompt in a no-TV room — repeating it here
+            would be the same sentence twice on the screen with the least room to spare. */}
+        {stage === null ? <PromptLine prompt={view.prompt} size={22} /> : null}
         <Timer deadline={deadline} clock={clock} style={{ marginTop: 4 }} />
       </div>
       <div style={voteListStyle(stage === null)}>
