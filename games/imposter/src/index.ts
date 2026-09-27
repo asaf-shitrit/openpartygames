@@ -587,8 +587,17 @@ export function onPlayerRemoved(
 
   const word = state.words[state.wordIndex];
   const imposterRemoved = word !== undefined && word.imposterId === playerId;
-  const midWord = state.phase !== "result" && !state.finished;
-  if (imposterRemoved && midWord) return cancelWord(base, ctx);
+  if (imposterRemoved && state.phase !== "result" && !state.finished) {
+    // Before the verdict is public there is no word left to play: no imposter, nothing to
+    // catch, nobody has been told anything yet.
+    if (!isCeremony(state.phase)) return cancelWord(base, ctx);
+    // After it, the room has already watched the imposter be caught or get away, and the
+    // crew's votes have already earned whatever they earned. Cancelling here would take
+    // back points the players had been shown — so the word is resolved instead. All that is
+    // actually missing is the last guess, and a guess that never arrives is a wrong one,
+    // which is exactly what `resolveLastChance` means by a missing guess.
+    return resolveLastChance(base, ctx);
+  }
   return continueAfterRemoval(base, state, playerId, ctx);
 }
 

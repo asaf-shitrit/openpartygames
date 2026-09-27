@@ -91,21 +91,48 @@ export interface WordOutcome {
  * Caught with a right guess -> imposter +1000. Caught with a wrong/missing guess ->
  * every imposter voter +500.
  */
+/** One entry per player currently on the roster, all on zero. */
+function zeroPoints(playerIds: readonly PlayerId[]) {
+  const points: Record<PlayerId, number> = {};
+  for (const id of playerIds) points[id] = 0;
+  return points;
+}
+
+/** True when the word went the imposter's way: never caught, or caught but guessed right. */
+function imposterWon(outcome: WordOutcome): boolean {
+  return outcome.caught !== true || outcome.guessCorrect === true;
+}
+
+/**
+ * Awards, but only to someone still in the room.
+ *
+ * `points` starts as one entry per current player, so an id missing from it is one the room
+ * has already removed — and writing to it would put that player back into `scores`. That is
+ * reachable for the imposter as well as for a voter: a word can now be resolved after the
+ * imposter has been kicked, rather than cancelled.
+ */
+function award(
+  points: Record<PlayerId, number>,
+  id: PlayerId,
+  amount: number,
+): void {
+  if (points[id] === undefined) return;
+  points[id] = amount;
+}
+
 export function scoreWord(
   word: ImposterWord,
   outcome: WordOutcome,
   tally: Record<PlayerId, PlayerId[]>,
   playerIds: readonly PlayerId[],
 ) {
-  const points: Record<PlayerId, number> = {};
-  for (const id of playerIds) points[id] = 0;
-  if (outcome.caught !== true || outcome.guessCorrect === true) {
-    points[word.imposterId] = POINTS_PER_WORD;
+  const points = zeroPoints(playerIds);
+  if (imposterWon(outcome)) {
+    award(points, word.imposterId, POINTS_PER_WORD);
     return points;
   }
   for (const voter of tally[word.imposterId] ?? []) {
-    if (points[voter] === undefined) continue;
-    points[voter] = POINTS_PER_CORRECT_VOTE;
+    award(points, voter, POINTS_PER_CORRECT_VOTE);
   }
   return points;
 }
