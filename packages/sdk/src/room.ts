@@ -941,11 +941,18 @@ class RoomImpl implements RoomCore {
     this.setPackEnabled(packId, enabled, out);
   }
 
+  /**
+   * Asked of the language-filtered catalog, not the whole one. Every other path — the lobby
+   * view, the pack list, the content a start actually loads — goes through `packsInLanguage`,
+   * so checking only `kind` here let a VIP in a Hebrew room enable an English pack's id by
+   * sending it directly. Nothing downstream ever showed or loaded it, which is exactly what
+   * makes it worth closing now: the flag sat in `packEnabled` as a fact about the room that no
+   * other code agreed with, waiting for the first path that read it without filtering.
+   */
   private packFitsSelectedGame(packId: string): boolean {
-    const pack = this.packCatalog.find((p) => p.id === packId);
-    if (!pack) return false;
     const kind = this.selectedGame()?.contentKind;
-    return kind !== undefined && pack.kind === kind;
+    if (kind === undefined) return false;
+    return this.packsInLanguage(kind).some((p) => p.id === packId);
   }
 
   private setPackEnabled(packId: string, enabled: boolean, out: Out): void {

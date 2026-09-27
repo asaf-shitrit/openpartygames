@@ -540,6 +540,25 @@ describe("picking a game and packs", () => {
     expect(h.room.hostView(0).packs.map((p) => p.id)).toEqual([PACK_FAMILY.id]);
   });
 
+  it("refuses to enable a pack outside the room's content language", () => {
+    const h = makeRoom({
+      packs: [PACK_FAMILY, PACK_FAMILY_HE],
+      contentLanguage: "he",
+    });
+    const players = joinMany(h.room, ["Maya", "Leo"], 0);
+    const res = h.room.handle(
+      vip(h.room, at(players, 0).playerId),
+      { t: "set-pack", packId: PACK_FAMILY.id, enabled: true },
+      0,
+    );
+    // The English pack is not in this room's catalog as far as every other path is concerned,
+    // so accepting its id here would record a fact about the room nothing else agrees with.
+    expect(errorCode(res.reply)).toBe("invalid-action");
+    expect(h.room.hostView(0).packs.map((p) => p.id)).toEqual([
+      PACK_FAMILY_HE.id,
+    ]);
+  });
+
   it("never shows a pack outside the room's content language", () => {
     const h = makeRoom({
       packs: [PACK_FAMILY, PACK_FAMILY_HE],
