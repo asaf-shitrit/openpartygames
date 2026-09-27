@@ -195,7 +195,13 @@ interface JoinErrorResult {
 
 function ErrorLine({ error }: { error: JoinErrorResult }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    // `role="alert"` because this is the answer to something the player just did. It renders
+    // only when there is an error, and an alert added to the page is announced as it arrives —
+    // otherwise a player who submits and hears nothing has no way to know the code was wrong.
+    <div
+      role="alert"
+      style={{ display: "flex", flexDirection: "column", gap: 4 }}
+    >
       <div style={{ fontSize: 17, fontWeight: 700, color: "var(--opg-marker-text)" }}>
         {error.message}
       </div>

@@ -160,6 +160,21 @@ describe("PhoneJoin", () => {
     ).toBeTruthy();
   });
 
+  it("announces the error, so a player who submits is told why nothing happened", () => {
+    render(
+      <LocaleProvider>
+        <PhoneJoin
+          error="That room code doesn't exist."
+          onJoin={vi.fn<(code: string, name: string) => void>()}
+        />
+      </LocaleProvider>,
+    );
+    // Focus stays on the button they pressed, so without a live region the failure is silent.
+    expect(screen.getByRole("alert").textContent).toContain(
+      "That room code doesn't exist.",
+    );
+  });
+
   it("shows an error passed by the parent", () => {
     render(
       <LocaleProvider>
