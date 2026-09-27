@@ -159,6 +159,17 @@ describe("PhoneVipControls", () => {
     expect(screen.getByRole("button", { name: "Kick Sam" })).toBeTruthy();
   });
 
+  it("puts focus on cancel when the kick confirm opens", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Kick Sam" }));
+    // Cancel, not "Yes, remove": the Enter that opened this step can still be held, and an
+    // auto-repeat onto a focused destructive button would remove the player with no second
+    // decision. Landing anywhere is also better than <body>, which is where focus went before.
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Cancel" }),
+    );
+  });
+
   it("sends kick for another player once the removal is confirmed", async () => {
     const { handlers, user } = setup();
     await user.click(screen.getByRole("button", { name: "Kick Sam" }));

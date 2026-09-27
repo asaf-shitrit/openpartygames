@@ -2,6 +2,7 @@ import { Button } from "@opg/ui";
 import { useState } from "react";
 import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { useFocusOnStepChange } from "./confirm-focus";
 
 export interface VipGameBarProps {
   /**
@@ -47,6 +48,7 @@ export function VipGameBar({ settledBy, onSkip, onEnd }: VipGameBarProps) {
   const { t } = useLocale();
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [skipping, triggerSkip] = usePendingUntil(settledBy, onSkip);
+  const setStep = useFocusOnStepChange(confirmingEnd);
   return (
     <section
       className="opg-root"
@@ -64,23 +66,35 @@ export function VipGameBar({ settledBy, onSkip, onEnd }: VipGameBarProps) {
       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
         {t.picker.youreVip}
       </div>
-      {confirmingEnd ? (
-        <EndConfirm
-          t={t}
-          settledBy={settledBy}
-          onEnd={onEnd}
-          onCancel={() => setConfirmingEnd(false)}
-        />
-      ) : (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          <Button variant="secondary" onClick={triggerSkip} disabled={skipping}>
-            {skipping ? t.picker.skippingThisPart : t.picker.skipThisPart}
-          </Button>
-          <Button variant="secondary" onClick={() => setConfirmingEnd(true)}>
-            {t.picker.endGame}
-          </Button>
-        </div>
-      )}
+      {/*
+        Holds a ref across the swap without adding a box. Opening the confirm puts focus on
+        "keep playing", the safe choice; closing it puts focus back on "end game", the control
+        that opened it. Without this the pressed button is unmounted and focus falls to
+        `<body>`.
+      */}
+      <span ref={setStep} style={{ display: "contents" }}>
+        {confirmingEnd ? (
+          <EndConfirm
+            t={t}
+            settledBy={settledBy}
+            onEnd={onEnd}
+            onCancel={() => setConfirmingEnd(false)}
+          />
+        ) : (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <Button
+              variant="secondary"
+              onClick={triggerSkip}
+              disabled={skipping}
+            >
+              {skipping ? t.picker.skippingThisPart : t.picker.skipThisPart}
+            </Button>
+            <Button variant="secondary" onClick={() => setConfirmingEnd(true)}>
+              {t.picker.endGame}
+            </Button>
+          </div>
+        )}
+      </span>
     </section>
   );
 }
