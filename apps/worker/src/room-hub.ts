@@ -19,6 +19,7 @@ import {
   type RoomEffect,
   type RoomSnapshot,
 } from "@opg/sdk";
+import { newBudget, spend, type Budget } from "./message-budget";
 import type { MatchStats } from "./stats";
 
 /** Snapshot key inside Durable Object storage. */
@@ -40,6 +41,11 @@ const NO_ROOM: ServerMessage = {
   t: "error",
   code: "room-not-found",
   message: "This room is gone.",
+};
+const RATE_LIMITED: ServerMessage = {
+  t: "error",
+  code: "rate-limited",
+  message: "Slow down a moment.",
 };
 
 /** One accepted socket. The Durable Object adapter wraps Cloudflare's WebSocket in this. */
@@ -117,6 +123,12 @@ export class RoomHub {
    * lost along with the instance that was running it.
    */
   private resumed: boolean;
+  /**
+   * One frame budget per live socket. Keyed by the socket object, so a socket restored after
+   * hibernation starts fresh — that costs an attacker a reconnect, which the join route already
+   * rate limits, and costs an honest player nothing.
+   */
+  private readonly budgets: Map<HubSocket, Budget>;
 
   constructor(options: HubOptions, snapshot?: RoomSnapshot) {
     this.options = options;
@@ -124,6 +136,7 @@ export class RoomHub {
       ? restoreRoom(snapshot, options.games, options.newToken)
       : null;
     this.resumed = snapshot === undefined;
+    this.budgets = new Map();
   }
 
   /** True when this room owns the code, so the adapter can 404 every other socket. */
@@ -190,9 +203,26 @@ export class RoomHub {
     };
   }
 
+  /**
+   * Charges one frame to this socket's budget.
+   *
+   * Frames are spent before anything else looks at them: a change costs a storage write and a
+   * broadcast to the whole room, so an unthrottled sender multiplies its own rate by the size
+   * of the party. The budget is generous next to real play — a Doodle Bluff pad sends one frame
+   * per finished stroke — and stingy next to a script.
+   */
+  private affords(socket: HubSocket, now: number): boolean {
+    const budget = this.budgets.get(socket) ?? newBudget(now);
+    const result = spend(budget, now);
+    this.budgets.set(socket, result.budget);
+    if (result.warn) socket.send(RATE_LIMITED);
+    return result.allowed;
+  }
+
   /** Handles one raw socket frame. */
   async message(socket: HubSocket, raw: string | ArrayBuffer): Promise<void> {
     await this.resumeIfNeeded();
+    if (!this.affords(socket, this.options.now())) return;
     const parsed = parseClientMessage(raw);
     if (!parsed) {
       socket.send(BAD_MESSAGE);
@@ -215,6 +245,8 @@ export class RoomHub {
   /** A socket closed or errored. */
   async close(socket: HubSocket): Promise<void> {
     await this.resumeIfNeeded();
+    // A closed socket can never spend again, and the map must not outlive the party.
+    this.budgets.delete(socket);
     const room = this.room;
     if (!room) return;
     const caller = socket.caller();
