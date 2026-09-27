@@ -335,6 +335,43 @@ function actImposter(view: ImposterHostView, lobby: Lobby): void {
 }
 
 /** Drives an imposter game to its results screen, one state change per step. */
+interface FinishedRound {
+  roster: string[];
+  vipId: string | null;
+  winners: string[];
+  finishedAt: number;
+  scored: string[];
+}
+
+/** The parts of a settled results screen a later round must not quietly change. */
+function finishedRound(view: HostRoomView, gameId: string): FinishedRound {
+  const result = view.lastResult;
+  expect(view.lobbyScreen).toBe("results");
+  expect(result?.gameId).toBe(gameId);
+  expect((result?.winnerIds ?? []).length).toBeGreaterThan(0);
+  return {
+    roster: view.players.map((player) => player.id),
+    vipId: view.vipId,
+    winners: result?.winnerIds ?? [],
+    finishedAt: result?.finishedAt ?? 0,
+    scored: Object.keys(result?.scores ?? {}),
+  };
+}
+
+function totalCrowns(view: HostRoomView): number {
+  return view.players.reduce((total, player) => total + player.crowns, 0);
+}
+
+/** What the VIP does from a finale: tap through to the picker and choose again. */
+async function pickAgain(lobby: Lobby, gameId: string): Promise<void> {
+  vipOf(lobby).send({ t: "pick-game", gameId });
+  await lobby.host.waitFor(
+    (client) => hostViewOf(client).lobbyScreen === "pick",
+    WAIT_MS,
+    "back to the picker after the finale",
+  );
+}
+
 async function playImposter(lobby: Lobby, step = 0): Promise<void> {
   if (step > MAX_STEPS)
     throw new Error("imposter game exceeded its step budget");
@@ -900,6 +937,34 @@ describe("api e2e", () => {
     expect(view.lobbyScreen).toBe("results");
     expect(view.lastResult?.gameId).toBe("real-or-nah");
     expect((view.lastResult?.winnerIds ?? []).length).toBeGreaterThan(0);
+
+    await closeAll(lobby);
+  });
+
+  it("plays a second game in the same room, carrying the roster and the crowns", async () => {
+    // Nothing else in the suite gets this far. Every other game test plays one game and stops
+    // at its results screen, so everything that has to survive into a second round — the
+    // roster, the VIP, accumulated crowns, and the previous result being replaced rather than
+    // lingering — was untested.
+    const lobby = await makeLobby(3);
+    await playImposter(lobby);
+    const first = finishedRound(hostViewOf(lobby.host), "imposter");
+
+    await pickAgain(lobby, "real-or-nah");
+    await playRealOrNah(lobby);
+    const after = hostViewOf(lobby.host);
+    const second = finishedRound(after, "real-or-nah");
+
+    expect(after.players.map((player) => player.id)).toEqual(first.roster);
+    expect(after.vipId).toBe(first.vipId);
+    // The result is the new game's, not the old one left standing.
+    expect(second.finishedAt).toBeGreaterThan(first.finishedAt);
+    // Crowns are the room's running total across games, so they add up rather than reset or
+    // double-count. This is the assertion that would catch a second game awarding the first
+    // game's winners again, or wiping what they already had.
+    expect(totalCrowns(after)).toBe(first.winners.length + second.winners.length);
+    // And the new result scores only people who are still in the room.
+    expect(second.scored.filter((id) => !first.roster.includes(id))).toEqual([]);
 
     await closeAll(lobby);
   });
