@@ -108,6 +108,25 @@ describe("guideSections", () => {
 });
 
 describe("ShowOnTvGuide", () => {
+  /**
+   * Asserted as "showModal was called" rather than by driving Tab to the last control and
+   * checking where focus lands: focus containment is a top-layer behaviour of the real browser,
+   * and happy-dom does not reproduce it, so a Tab-based test would pass here whether or not the
+   * dialog were modal. The call is the one part of this that is ours rather than the platform's.
+   */
+  it("opens as a modal, so the page behind it cannot be tabbed into", () => {
+    const showModal = vi.spyOn(HTMLDialogElement.prototype, "showModal");
+    renderGuide({
+      device: "mac",
+      host: "openpartygames.org",
+      onClose: () => {},
+    });
+
+    expect(showModal).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog").getAttribute("open")).not.toBeNull();
+    showModal.mockRestore();
+  });
+
   it("names the dialog for screen readers", () => {
     renderGuide({ device: "mac", host: "openpartygames.org", onClose: () => {} });
     expect(

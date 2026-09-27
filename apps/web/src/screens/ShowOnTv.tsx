@@ -260,8 +260,21 @@ export function ShowOnTvGuide({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const sections = guideSections(device, host, t.landing);
 
+  /**
+   * `showModal()`, not an `open` attribute. Only the modal form puts the dialog in the top
+   * layer, makes the rest of the page inert and holds Tab inside it. Rendered declaratively
+   * `open`, a `<dialog>` is an ordinary block element: focus went in on mount and Escape closed
+   * it, but Tab from the last control walked straight out into the TV screen the guide is
+   * supposed to be covering.
+   */
   useEffect(() => {
-    dialogRef.current?.querySelector("button")?.focus();
+    const dialog = dialogRef.current;
+    if (!dialog) return undefined;
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector("button")?.focus();
+    return () => {
+      if (dialog.open) dialog.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -275,7 +288,6 @@ export function ShowOnTvGuide({
   return (
     <dialog
       ref={dialogRef}
-      open
       aria-labelledby="show-on-tv-title"
       style={DIALOG_STYLE}
     >
