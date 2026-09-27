@@ -90,7 +90,11 @@ describe("LinedCard", () => {
     const el = firstChild(container);
     expect(el.className).toContain("opg-lined");
     expect(el.style.transform).toBe("rotate(1deg)");
-    expect(el.style.paddingLeft).toBe("56px");
+    // This asserted `paddingLeft`. The gutter exists to clear the red margin rule, and that
+    // rule now follows the card's own text direction — so the gutter has to as well, or in
+    // Hebrew they end up on opposite sides with the text running through the rule.
+    expect(el.style.paddingInlineStart).toBe("56px");
+    expect(el.style.paddingLeft).toBe("");
   });
 
   it("merges an extra className", () => {

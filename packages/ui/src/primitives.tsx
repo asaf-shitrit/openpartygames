@@ -97,7 +97,10 @@ export function LinedCard({
         position: "relative",
         border: "4px solid var(--opg-ink)",
         borderRadius: "var(--opg-radius-m)",
-        paddingLeft: 56,
+        // Logical, not physical: this gap exists to clear the margin rule `.opg-lined`
+        // paints, and that rule follows the card's own text direction. A physical left
+        // padding puts the gap on the opposite side from the rule in Hebrew.
+        paddingInlineStart: 56,
         transform: `rotate(${tilt}deg)`,
         ...style,
       }}

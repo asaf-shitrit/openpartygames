@@ -123,7 +123,12 @@ function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps)
           <Marker size={64}>{t.realOrNah.writeHeading}</Marker>
           <LinedCard
             tilt={-1}
-            style={{ marginTop: 12, padding: "62px 64px 62px 92px" }}
+            style={{
+              marginTop: 12,
+              paddingBlock: "62px",
+              paddingInlineEnd: 64,
+              paddingInlineStart: 92,
+            }}
           >
             <PromptText
               prompt={view.prompt}
