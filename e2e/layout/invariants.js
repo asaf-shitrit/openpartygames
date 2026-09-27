@@ -339,18 +339,113 @@ function collectStageViolations() {
   return elements.map((el) => checkBelowStage(el, frame)).filter((each) => each !== null);
 }
 
-/** A screen that scrolls sideways is broken outright. @returns {Violation[]} */
+/**
+ * The child whose clipping makes the page stop scrolling sideways, or null if none does.
+ *
+ * Measured by clipping rather than by reading rectangles, because the interesting case is the
+ * one rectangles cannot see: a rotated card, a box-shadow, a pseudo-element or a fixed-size
+ * burst paints outside a box that is itself exactly where it should be. `getBoundingClientRect`
+ * reports the box, not the ink, so `offscreen-x` stays silent and the only symptom is the page
+ * width. Clipping asks the question directly — does the overflow go away without this subtree?
+ *
+ * @param {Element} parent @param {number} limit @returns {Element | null}
+ */
+function clippingCulprit(parent, limit) {
+  // Deliberately not filtered by `visible`: a wrapper whose only child is absolutely
+  // positioned has no height of its own, and skipping it strands the walk one level above
+  // the element actually doing the damage. Clipping is its own filter — an element that is
+  // not rendered cannot be what settles the overflow.
+  for (const child of Array.from(parent.children)) {
+    const before = child.style.overflow;
+    child.style.overflow = "hidden";
+    const settled = document.documentElement.scrollWidth <= limit;
+    child.style.overflow = before;
+    if (settled) return child;
+  }
+  return null;
+}
+
+/**
+ * How far outside the screen a box reaches, on whichever side it leaves by. Both sides are
+ * measured, because which one overflows depends on the writing direction: the same design
+ * hangs off the right in English and off the left in Hebrew.
+ *
+ * @param {DOMRect} rect @param {number} limit @returns {number}
+ */
+function overshoot(rect, limit) {
+  return Math.max(rect.right - limit, -EPS - rect.left);
+}
+
+/**
+ * The child of `parent` reaching furthest outside the screen, or null if none does.
+ *
+ * @param {Element} parent @param {number} limit @returns {Element | null}
+ */
+function childFurthestOutside(parent, limit) {
+  let worst = null;
+  let furthest = 0;
+  for (const child of Array.from(parent.children)) {
+    const out = overshoot(child.getBoundingClientRect(), limit);
+    if (out > furthest) {
+      furthest = out;
+      worst = child;
+    }
+  }
+  return worst;
+}
+
+/**
+ * Walks down to the element responsible for the overflow.
+ *
+ * The descent finds the deepest subtree whose clipping settles the page — which is the
+ * culprit's PARENT, not the culprit: `overflow: hidden` clips an element's children and never
+ * itself, so the offending box can never be identified by clipping it. The last step therefore
+ * looks inside that parent for the child actually crossing the edge.
+ *
+ * When no child crosses it, the parent is the answer: the overflow is paint with no box behind
+ * it — a pseudo-element, a shadow — and the element that owns the paint is as close as this
+ * can get.
+ *
+ * @param {number} limit @returns {Element | null}
+ */
+function blameForWidth(limit) {
+  let node = document.body;
+  for (let depth = 0; depth < 20; depth += 1) {
+    const child = clippingCulprit(node, limit);
+    if (!child) break;
+    node = child;
+  }
+  if (node === document.body) return null;
+  return childFurthestOutside(node, limit) ?? node;
+}
+
+/**
+ * A screen that scrolls sideways is broken outright.
+ *
+ * The rule used to report `html` and the two widths, which says that something overflowed but
+ * not what — fine when `offscreen-x` fires on the same element and names it, useless in the
+ * paint-overflow case where this rule fires alone. It now names the subtree responsible.
+ *
+ * One limit worth knowing, measured rather than assumed: `scrollWidth` only grows toward the
+ * INLINE-END side. A box 300px past the left edge of an LTR page, or past the right edge of an
+ * RTL one, leaves `scrollWidth` at the viewport width — the browser clips it instead of making
+ * it scrollable. So this rule cannot see inline-start overflow in either direction. Words that
+ * go that way are still caught, by `offscreen-x`'s `rect.left < -EPS` branch; what escapes both
+ * is wordless decoration hanging off the inline-start edge, which is clipped and therefore
+ * invisible rather than unreachable.
+ *
+ * @returns {Violation[]}
+ */
 function checkPageWidth() {
   const doc = document.documentElement;
-  if (doc.scrollWidth <= window.innerWidth + EPS) return [];
-  return [
-    {
-      rule: "page-scrolls-sideways",
-      detail: `${doc.scrollWidth}px of page in a ${window.innerWidth}px screen`,
-      path: "html",
-      text: "",
-    },
-  ];
+  const limit = window.innerWidth + EPS;
+  if (doc.scrollWidth <= limit) return [];
+  const width = `${doc.scrollWidth}px of page in a ${window.innerWidth}px screen`;
+  const culprit = blameForWidth(limit);
+  if (!culprit) {
+    return [{ rule: "page-scrolls-sideways", detail: `${width}; no single subtree accounts for it`, path: "html", text: "" }];
+  }
+  return [violation("page-scrolls-sideways", culprit, `${width}; clipping this element settles it`)];
 }
 
 /** @param {Limits} limits @returns {Violation[]} */
