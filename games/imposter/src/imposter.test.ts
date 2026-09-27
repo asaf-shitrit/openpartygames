@@ -26,6 +26,7 @@ import {
   type ImposterWord,
 } from "./index";
 import { buildHostView, buildPlayerView } from "./views";
+import { POINTS_PER_CORRECT_VOTE } from "./state";
 
 const PAIRS: WordPairContent["items"] = [
   { crew: "apple", decoy: "apricot" },
@@ -1172,6 +1173,70 @@ describe("ceremony freeze", () => {
     expect(frozen.tally).toEqual(before.tally);
     expect(frozen.revealPlayerIds).toEqual(before.revealPlayerIds);
     expect(after.caught).toBe(state.caught);
+  });
+
+  it("keeps the caught verdict and the crew's points when the imposter is kicked mid-reveal", () => {
+    const c = makeCtx({ n: 4, seed: 71 });
+    let state = toVotePhase(setup(c), c);
+    const imp = imposterOf(state);
+    const crew = crewIds(state.playerIds, imp);
+    for (const [voter, target] of Object.entries(votesCaught(state))) {
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    if (state.phase === "vote") state = onDeadline(state, c);
+    expect(state.phase).toBe("reveal");
+    expect(state.caught).toBe(true);
+
+    // The room has already been shown "caught". Kicking the imposter now used to cancel the
+    // word outright, taking back the 500 each the crew had just earned for voting correctly.
+    const after = onPlayerRemoved(state, imp, c);
+
+    expect(after.phase).toBe("result");
+    expect(after.caught).toBe(true);
+    for (const id of crew) {
+      expect(after.scores[id]).toBe(POINTS_PER_CORRECT_VOTE);
+    }
+    expect(after.scores[imp]).toBeUndefined();
+  });
+
+  it("resolves the word when the imposter is kicked during their last chance", () => {
+    const c = makeCtx({ n: 4, seed: 72 });
+    let state = toVotePhase(setup(c), c);
+    const imp = imposterOf(state);
+    const crew = crewIds(state.playerIds, imp);
+    for (const [voter, target] of Object.entries(votesCaught(state))) {
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    if (state.phase === "vote") state = onDeadline(state, c);
+    state = onDeadline(state, c);
+    expect(state.phase).toBe("last-chance");
+
+    // There is nobody left to make the guess, and a guess that never arrives is a wrong one.
+    const after = onPlayerRemoved(state, imp, c);
+
+    expect(after.phase).toBe("result");
+    expect(after.caught).toBe(true);
+    for (const id of crew) {
+      expect(after.scores[id]).toBe(POINTS_PER_CORRECT_VOTE);
+    }
+  });
+
+  it("does not award a kicked imposter the word they were about to win", () => {
+    const c = makeCtx({ n: 4, seed: 73 });
+    let state = toVotePhase(setup(c), c);
+    const imp = imposterOf(state);
+    for (const [voter, target] of Object.entries(votesNotCaught(state))) {
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    if (state.phase === "vote") state = onDeadline(state, c);
+    expect(state.caught).toBe(false);
+
+    const after = onPlayerRemoved(state, imp, c);
+
+    // Resolving the word must not put a removed player back into the scoreboard.
+    expect(after.phase).toBe("result");
+    expect(after.scores[imp]).toBeUndefined();
+    expect(after.playerIds).not.toContain(imp);
   });
 
   it("re-picks the imposter of a later word when they are kicked before it starts", () => {
