@@ -133,7 +133,12 @@ function PromptLine({
   return (
     <LinedCard
       tilt={1}
-      style={{ marginTop: 6, padding: "18px 18px 20px 56px" }}
+      style={{
+        marginTop: 6,
+        paddingBlock: "18px 20px",
+        paddingInlineEnd: 18,
+        paddingInlineStart: 56,
+      }}
     >
       <PromptText
         prompt={prompt}

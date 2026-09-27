@@ -228,7 +228,9 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
       style={{
         flexGrow: 1,
         marginTop: 8,
-        padding: "24px 20px 24px 56px",
+        paddingBlock: "24px",
+        paddingInlineEnd: 20,
+        paddingInlineStart: 56,
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",

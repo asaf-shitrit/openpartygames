@@ -69,12 +69,17 @@ function voteListStyle(fits: boolean): CSSProperties {
 function voteRowStyle(index: number, selected: boolean): CSSProperties {
   return {
     minHeight: 66,
-    padding: selected ? "0 14px 0 12px" : "0 16px 0 12px",
+    // Logical: the two ends differ because the pick mark sits at the trailing edge, and in
+    // Hebrew that edge is the physical left. Written physically, the row read left-aligned
+    // with its mark gutter on the wrong side.
+    paddingBlock: 0,
+    paddingInlineStart: 12,
+    paddingInlineEnd: selected ? 14 : 16,
     display: "flex",
     alignItems: "center",
     gap: 14,
     width: "100%",
-    textAlign: "left",
+    textAlign: "start",
     color: "var(--opg-ink)",
     background: selected ? "var(--opg-highlight-soft)" : "var(--opg-card)",
     border: selected

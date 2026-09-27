@@ -214,25 +214,41 @@ a.opg-link:hover {
 }
 
 .opg-lined {
+  position: relative;
   background-color: var(--opg-card);
-  background-image:
-    linear-gradient(
-      90deg,
-      transparent 38px,
-      var(--opg-rule-red) 38px,
-      var(--opg-rule-red) 42px,
-      transparent 42px
-    ),
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 37px,
-      var(--opg-rule-blue) 37px,
-      var(--opg-rule-blue) 39px
-    );
-  background-position:
-    0 0,
-    0 0;
+  /* Only the blue rules are a background: they run horizontally, so direction cannot affect
+     them. The red margin rule is painted by ::before below. */
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 37px,
+    var(--opg-rule-blue) 37px,
+    var(--opg-rule-blue) 39px
+  );
+  background-position: 0 0;
+}
+
+/*
+ * The margin rule, as an element rather than a gradient.
+ *
+ * A gradient takes an angle, not a logical direction, so as a background it stayed on the
+ * physical left in Hebrew while the text moved to the right — the index-card motif reversed,
+ * with the rule on the far side from where the eye starts reading.
+ *
+ * `inset-inline-start` resolves against this element's own direction, which is the same thing
+ * `padding-inline-start` resolves against. That pairing is the point: an earlier attempt
+ * flipped the gradient with a `[dir="rtl"] .opg-lined` selector, which keys off an ANCESTOR's
+ * direction, and the two can disagree — leaving the rule on one side and the gutter that
+ * clears it on the other, with the text running straight through it.
+ */
+.opg-lined::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 38px;
+  width: 4px;
+  background: var(--opg-rule-red);
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
