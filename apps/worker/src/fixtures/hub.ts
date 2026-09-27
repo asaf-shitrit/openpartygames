@@ -158,6 +158,8 @@ export class FakeStorage implements HubStorage {
   stored: RoomSnapshot | undefined;
   readonly alarms: number[] = [];
   deletions = 0;
+  /** Counted, not just kept: a write per frame is the cost a flood is trying to run up. */
+  writes = 0;
 
   constructor(stored?: RoomSnapshot) {
     this.stored = stored;
@@ -169,6 +171,7 @@ export class FakeStorage implements HubStorage {
 
   async put(snapshot: RoomSnapshot): Promise<void> {
     this.stored = snapshot;
+    this.writes += 1;
   }
 
   async deleteAll(): Promise<void> {

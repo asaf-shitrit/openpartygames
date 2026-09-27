@@ -15,6 +15,7 @@ import {
   welcomedToken,
   type HubHarness,
 } from "./fixtures/hub";
+import { BURST, REFILL_PER_SECOND } from "./message-budget";
 import { IDLE_MS, type OpenedSocket } from "./room-hub";
 
 interface Lobby extends HubHarness {
@@ -578,5 +579,88 @@ describe("RoomHub restore", () => {
     });
     expect(restored.hub.accepts("BCDF")).toBe(true);
     expect(await restored.hub.init("BCDF", "host-token")).toBe(false);
+  });
+});
+
+/** Error codes a socket has been sent, oldest first. */
+function errorsIn(socket: FakeSocket): string[] {
+  return socket.sent
+    .filter((message) => message.t === "error")
+    .map((message) => message.code);
+}
+
+/** Alternates a player's avatar `count` times: every frame is a real change to the room. */
+async function flood(lobby: Lobby, count: number): Promise<void> {
+  await Array.from({ length: count }).reduce(
+    async (previous, _unused, index) => {
+      await previous;
+      await send(lobby.hub, lobby.ada, {
+        t: "set-avatar",
+        avatar: index % 2 === 0 ? "star" : "sun",
+      });
+    },
+    Promise.resolve(),
+  );
+}
+
+describe("RoomHub message budget", () => {
+  it("lets ordinary play through untouched", async () => {
+    const lobby = await makeLobby();
+    const before = lobby.storage.writes;
+    // Well inside the burst: a Doodle Bluff pad sends one frame per finished stroke, so this is
+    // already busier than a fast drawer.
+    await flood(lobby, 20);
+
+    expect(lobby.storage.writes).toBe(before + 20);
+    expect(errorsIn(lobby.ada)).toEqual([]);
+  });
+
+  it("stops a flood from writing and broadcasting once per frame", async () => {
+    const lobby = await makeLobby();
+    const before = lobby.storage.writes;
+    const seenByBo = lobby.bo.sent.length;
+
+    await flood(lobby, BURST + 200);
+
+    // The budget, not the flood, decides how much work the room does.
+    expect(lobby.storage.writes - before).toBeLessThanOrEqual(BURST);
+    expect(lobby.bo.sent.length - seenByBo).toBeLessThanOrEqual(BURST);
+    expect(errorsIn(lobby.ada)).toContain("rate-limited");
+  });
+
+  it("tells the sender once, not once per refused frame", async () => {
+    const lobby = await makeLobby();
+    await flood(lobby, BURST + 200);
+    // A reply per refused frame would be its own amplification.
+    expect(errorsIn(lobby.ada).filter((c) => c === "rate-limited")).toHaveLength(
+      1,
+    );
+  });
+
+  it("lets the socket play on once it has earned frames back", async () => {
+    const lobby = await makeLobby();
+    await flood(lobby, BURST + 50);
+    lobby.ada.sent.length = 0;
+
+    // A second of silence buys exactly a second's worth of frames: all of them land, and the
+    // one after them does not. Counted in refusals rather than in writes, because `set-avatar`
+    // only writes when the avatar actually changes and a repeated value is a legitimate no-op.
+    lobby.clock.advance(1000);
+    await flood(lobby, REFILL_PER_SECOND);
+    expect(errorsIn(lobby.ada)).toEqual([]);
+
+    await flood(lobby, 1);
+    expect(errorsIn(lobby.ada)).toEqual(["rate-limited"]);
+  });
+
+  it("charges each socket on its own, so one flooder cannot mute the room", async () => {
+    const lobby = await makeLobby();
+    await flood(lobby, BURST + 200);
+    const before = lobby.storage.writes;
+
+    await send(lobby.hub, lobby.bo, { t: "set-avatar", avatar: "cloud" });
+
+    expect(lobby.storage.writes).toBe(before + 1);
+    expect(errorsIn(lobby.bo)).toEqual([]);
   });
 });
