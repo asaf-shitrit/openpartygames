@@ -213,6 +213,15 @@ describe("Button", () => {
     expect(btn.getAttribute("style")).toContain("var(--opg-card)");
   });
 
+  it("renders the danger variant in the AA-safe marker red", () => {
+    render(<Button variant="danger">Kick</Button>);
+    const btn = screen.getByRole("button", { name: "Kick" });
+    // The button's own label is text sitting on this fill, so it needs the 4.5:1
+    // body-text floor --opg-marker-text clears rather than the 4.43:1 brand red.
+    expect(btn.getAttribute("style")).toContain("var(--opg-marker-text)");
+    expect(btn.getAttribute("style")).toContain("var(--opg-paper)");
+  });
+
   it("fires onClick when enabled", async () => {
     const onClick = vi.fn<() => void>();
     render(<Button onClick={onClick}>Go</Button>);

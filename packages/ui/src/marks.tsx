@@ -1,5 +1,6 @@
 // Crown doodle + Tally (crown with a "×N" marker count).
 import type { CSSProperties } from "react";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
 
 export interface CrownProps {
     /** Width in px; height scales proportionally (40 x 34 doodle). */
@@ -36,6 +37,9 @@ export interface TallyProps {
 
 /** Doodle crown + marker "×N" — crowns earned for the room session. */
 export function Tally({ count, size = 40, style }: TallyProps) {
+    // The "×N" is aria-hidden because "×3" is not a sentence; this is the count a screen
+    // reader actually gets, so it has to come from the dictionary like any other copy.
+    const { t } = useLocale();
     return (
         <div
             style={{ display: "flex", alignItems: "center", gap: 6, ...style }}
@@ -58,7 +62,7 @@ export function Tally({ count, size = 40, style }: TallyProps) {
                     whiteSpace: "nowrap",
                 }}
             >
-                {count} {count === 1 ? "crown" : "crowns"}
+                {format(pickPluralByCount(count, t.kit.crowns), { count })}
             </span>
         </div>
     );

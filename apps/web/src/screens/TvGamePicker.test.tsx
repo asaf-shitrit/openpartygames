@@ -58,6 +58,7 @@ class FakeEngine implements SoundEngine {
 const IMPOSTER = makeGame({ id: "imposter", name: "Imposter" });
 const DRAW = makeGame({ id: "draw", name: "Draw It" });
 const CHARADES = makeGame({ id: "charades", name: "Charades" });
+const BLUFF = makeGame({ id: "bluff", name: "Doodle Bluff" });
 
 function switchState(name: string): string | null {
   return screen.getByRole("switch", { name }).getAttribute("aria-checked");
@@ -142,6 +143,20 @@ describe("TvGamePicker", () => {
     expect(switchState("School pack")).toBe("false");
   });
 
+  it("shows the pack switches as read-only, not a control the TV can flip", () => {
+    // The VIP's phone owns this setting; the TV only mirrors it. A host clicking from a
+    // laptop trackpad must not be able to toggle a pack from here.
+    renderLocalized(
+      <TvGamePicker
+        view={makeHostView({
+          packs: [makePack({ id: "animals", name: "Animals", enabled: true })],
+        })}
+      />,
+    );
+    const toggle = screen.getByRole("switch", { name: "Animals pack" });
+    expect(toggle.hasAttribute("disabled")).toBe(true);
+  });
+
   it("counts the players who are still playing", () => {
     renderLocalized(
       <TvGamePicker
@@ -196,6 +211,28 @@ describe("TvGamePicker", () => {
     expect(screen.getByText("Charades")).toBeTruthy();
     expect(screen.getAllByText("Picked").length).toBe(1);
     expect(screen.getByText("Charades packs")).toBeTruthy();
+  });
+
+  it("keeps a fourth game in the same row instead of wrapping it off the card grid", () => {
+    // Four games is today's whole roster (imposter, real-or-nah, most-likely-to,
+    // doodle-bluff): the card grid must give each one a column in a single row rather
+    // than wrapping a card into a second row the stage has no room for underneath.
+    const { container } = renderLocalized(
+      <TvGamePicker
+        view={makeHostView({
+          games: [IMPOSTER, DRAW, CHARADES, BLUFF],
+          selectedGameId: "bluff",
+        })}
+      />,
+    );
+    expect(screen.getByText("Imposter")).toBeTruthy();
+    expect(screen.getByText("Draw It")).toBeTruthy();
+    expect(screen.getByText("Charades")).toBeTruthy();
+    expect(screen.getByText("Doodle Bluff")).toBeTruthy();
+    const cardGrid = [...container.querySelectorAll<HTMLElement>("div")].find(
+      (el) => el.style.gridTemplateColumns.includes("repeat("),
+    );
+    expect(cardGrid?.style.gridTemplateColumns).toBe("repeat(4, minmax(0, 1fr))");
   });
 
   it("pops and tapes the newly picked card when the pick changes live", () => {

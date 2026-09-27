@@ -93,14 +93,22 @@ function LandingHero({
   );
 }
 
+/*
+ * Stacking the roster in a single column made each new game push the how-to-play steps and
+ * footer further down, and once there were four they went past the stage's bottom edge
+ * entirely (the TV stage does not scroll). Two columns keep the showcase's height bounded by
+ * ceil(games.length / 2) rows instead of games.length rows, so it holds under 1080px with the
+ * roadmap's next few games too. `wide` (one or two games) keeps the original single-column
+ * story-card look, since the grid only earns its keep once there is a second row to save.
+ */
 function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }) {
-  const compact = LANDING_GAMES.length > 2;
+  const wide = LANDING_GAMES.length <= 2;
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: compact ? 16 : 28,
+        display: "grid",
+        gridTemplateColumns: wide ? "1fr" : "repeat(2, minmax(0, 1fr))",
+        gap: wide ? 28 : 16,
       }}
     >
       {LANDING_GAMES.map((game, index) => (
@@ -109,10 +117,10 @@ function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }
           variant={index === 0 ? "L" : "Malt"}
           tilt={index === 0 ? -1.5 : 1}
           style={{
-            padding: compact ? "16px 24px" : "24px 32px",
+            padding: wide ? "24px 32px" : "18px 22px",
             display: "flex",
             flexDirection: "column",
-            gap: compact ? 6 : 10,
+            gap: wide ? 10 : 6,
           }}
         >
           {index === 0 ? (
@@ -126,10 +134,10 @@ function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }
               gap: 16,
             }}
           >
-            <Marker size={compact ? 42 : 56}>{game.name}</Marker>
-            <Avatar id={game.avatar} size={compact ? 52 : 76} />
+            <Marker size={wide ? 56 : 38}>{game.name}</Marker>
+            <Avatar id={game.avatar} size={wide ? 76 : 48} />
           </div>
-          <div style={{ fontSize: compact ? 28 : 30, lineHeight: 1.3 }}>
+          <div style={{ fontSize: wide ? 30 : 28, lineHeight: 1.3 }}>
             {game.blurb}
           </div>
           <div
