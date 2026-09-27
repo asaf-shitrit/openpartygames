@@ -269,9 +269,11 @@ const BUTTON_SIZES = {
   { height: number; padding: string; fontSize: number }
 >;
 
+export type ButtonVariant = "primary" | "secondary" | "danger";
+
 export interface ButtonProps {
   children: ReactNode;
-  variant?: "primary" | "secondary";
+  variant?: ButtonVariant;
   size?: ButtonSize;
   disabled?: boolean;
   /** Shown as small text under the button when it is disabled (never color alone). */
@@ -283,12 +285,25 @@ export interface ButtonProps {
   "aria-label"?: string;
 }
 
+/**
+ * Background/text pair per variant. Danger reuses --opg-marker-text (5.04:1 on paper,
+ * the same darkened red the body-text sites in styles.css use) rather than the brand
+ * --opg-marker (4.43:1) — as a fill it carries the button's own label text, which needs
+ * the 4.5:1 body-text floor the brand red misses.
+ */
+const BUTTON_VARIANT_COLORS = {
+  primary: { background: "var(--opg-ink)", color: "var(--opg-paper)" },
+  secondary: { background: "var(--opg-card)", color: "var(--opg-ink)" },
+  danger: { background: "var(--opg-marker-text)", color: "var(--opg-paper)" },
+} satisfies Record<ButtonVariant, { background: string; color: string }>;
+
 function buttonStyle(
   dims: (typeof BUTTON_SIZES)[ButtonSize],
-  primary: boolean,
+  variant: ButtonVariant,
   disabled: boolean,
   fullWidth: boolean,
 ): CSSProperties {
+  const colors = BUTTON_VARIANT_COLORS[variant];
   return {
     // A minimum, not a fixed height: at 200% text a fixed box keeps its size while the words
     // inside it double, and the label spills out of its own button.
@@ -298,8 +313,8 @@ function buttonStyle(
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    background: primary ? "var(--opg-ink)" : "var(--opg-card)",
-    color: primary ? "var(--opg-paper)" : "var(--opg-ink)",
+    background: colors.background,
+    color: colors.color,
     border: "4px solid var(--opg-ink)",
     borderRadius: "var(--opg-radius-button)",
     fontFamily: "var(--opg-font-body)",
@@ -324,7 +339,6 @@ export function Button({
   "aria-label": ariaLabel,
 }: ButtonProps) {
   const dims = BUTTON_SIZES[size];
-  const primary = variant === "primary";
   return (
     <span
       style={{
@@ -342,7 +356,7 @@ export function Button({
         aria-disabled={disabled || undefined}
         disabled={disabled}
         onClick={disabled ? undefined : onClick}
-        style={{ ...buttonStyle(dims, primary, disabled, fullWidth), ...style }}
+        style={{ ...buttonStyle(dims, variant, disabled, fullWidth), ...style }}
       >
         {children}
       </button>

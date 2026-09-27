@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { en, format, he, placeFor } from "@opg/i18n";
-import { crownCopy, finaleBeats, rankPlayers } from "./finale-timeline";
+import {
+  crownCopy,
+  finaleBeats,
+  participantIds,
+  rankPlayers,
+} from "./finale-timeline";
 
 describe("finaleBeats", () => {
   it("lays out the wrap, awards, crown-intro, third, second and crown beats", () => {
@@ -107,6 +112,23 @@ describe("rankPlayers", () => {
 
   it("defaults a missing score to 0", () => {
     expect(rankPlayers({}, ["p1"])).toEqual([{ id: "p1", score: 0, rank: 1 }]);
+  });
+});
+
+describe("participantIds", () => {
+  it("keeps only the ids that have a score entry", () => {
+    expect(participantIds({ p1: 10, p2: 5 }, ["p1", "p2", "p3"])).toEqual([
+      "p1",
+      "p2",
+    ]);
+  });
+
+  it("keeps a player scored 0, since they still have an entry", () => {
+    expect(participantIds({ p1: 0 }, ["p1", "p2"])).toEqual(["p1"]);
+  });
+
+  it("returns nothing when nobody in order has a score", () => {
+    expect(participantIds({}, ["p1", "p2"])).toEqual([]);
   });
 });
 

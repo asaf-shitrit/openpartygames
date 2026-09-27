@@ -92,6 +92,19 @@ export function finaleBeats(input: FinaleBeatsInput): Beat[] {
   return beats;
 }
 
+/**
+ * The ids in `order` that `scores` actually carries. A room can hold players who joined
+ * mid-game, or between games, and never played this round — `lastResult.scores` is keyed by
+ * exactly the participants, so filtering to that key set (rather than defaulting a missing
+ * score to 0) keeps a bystander out of the ranking instead of announcing them in last place.
+ */
+export function participantIds(
+  scores: Readonly<Record<PlayerId, number>>,
+  order: readonly PlayerId[],
+): PlayerId[] {
+  return order.filter((id) => id in scores);
+}
+
 export interface RankedPlayer {
   id: PlayerId;
   score: number;

@@ -43,6 +43,7 @@ import {
   crownCopy,
   crownCueId,
   finaleBeats,
+  participantIds,
   rankPlayers,
   topRank,
 } from "./finale-timeline";
@@ -872,9 +873,13 @@ export function TvFinalScores({
 }: TvFinalScoresProps) {
   const { t } = useLocale();
   const result = view.lastResult;
+  const scores = scoresOf(result);
   const ranked = rankPlayers(
-    scoresOf(result),
-    view.players.map((player) => player.id),
+    scores,
+    participantIds(
+      scores,
+      view.players.map((player) => player.id),
+    ),
   );
   const awards = awardsOf(result);
   const beats = finaleBeats({

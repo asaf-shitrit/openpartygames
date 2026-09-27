@@ -133,14 +133,41 @@ const BASE_VIEW: RoomViewBase = {
   contentLanguage: "en",
 };
 
+/**
+ * `vipId` for a patched view: whatever the caller asked for, else the player the caller marked
+ * `isVip`, else the base roster's.
+ *
+ * Swapping in a different roster and forgetting to move the VIP with it leaves `vipId` naming
+ * nobody, and every screen that names the VIP silently prints a fallback instead. That shipped
+ * in the dev gallery twice — a lobby reading "The VIP is the VIP and picks the game", and a
+ * results screen reading "Waiting on Someone" — both of which look like product bugs in a
+ * screenshot. Deriving it from the roster the caller actually passed makes the pair impossible
+ * to separate, and an explicit `vipId` still wins for a fixture that wants a VIP who has left.
+ */
+function vipIdFor(
+  patch: Partial<RoomViewBase>,
+  players: readonly PlayerSummary[],
+): RoomViewBase["vipId"] {
+  if (patch.vipId !== undefined) return patch.vipId;
+  return players.find((player) => player.isVip)?.id ?? BASE_VIEW.vipId;
+}
+
 export function makeHostView(
   patch: Partial<HostRoomView> = {},
 ): HostRoomView {
-  return { role: "host", ...BASE_VIEW, ...patch };
+  const players = patch.players ?? BASE_VIEW.players;
+  return { role: "host", ...BASE_VIEW, ...patch, vipId: vipIdFor(patch, players) };
 }
 
 export function makePlayerView(
   patch: Partial<PlayerRoomView> = {},
 ): PlayerRoomView {
-  return { role: "player", you: "p1", ...BASE_VIEW, ...patch };
+  const players = patch.players ?? BASE_VIEW.players;
+  return {
+    role: "player",
+    you: "p1",
+    ...BASE_VIEW,
+    ...patch,
+    vipId: vipIdFor(patch, players),
+  };
 }
