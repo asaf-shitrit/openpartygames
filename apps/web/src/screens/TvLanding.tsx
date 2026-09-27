@@ -80,6 +80,7 @@ function LandingHero({
       </div>
       {error ? (
         <div
+          role="alert"
           style={{
             fontSize: 28,
             fontWeight: 700,

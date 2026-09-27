@@ -755,7 +755,10 @@ function PlayersCard({
 function StartButtonError({ error }: { error: string | null }) {
   if (!error) return null;
   return (
+    // Announced: this is why the start the VIP just asked for did not happen, and the button
+    // it explains sits below it, so a screen reader would otherwise pass straight over it.
     <div
+      role="alert"
       style={{
         fontSize: 16,
         fontWeight: 700,

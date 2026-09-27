@@ -128,6 +128,7 @@ function StartSection({ busy, error, onStart, t }: StartSectionProps) {
 
       {error ? (
         <div
+          role="alert"
           style={{
             fontSize: 16,
             fontWeight: 700,

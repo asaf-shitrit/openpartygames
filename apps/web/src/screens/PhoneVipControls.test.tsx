@@ -194,6 +194,17 @@ describe("PhoneVipControls", () => {
     expect(handlers.onStartGame).toHaveBeenCalledTimes(1);
   });
 
+  it("announces why the start the VIP asked for did not happen", async () => {
+    const { user, rerender } = setupWithRerender();
+    await user.click(screen.getByRole("button", { name: /start imposter/i }));
+    rerender("That game is not available.");
+    // The explanation renders above the button it explains, so without a live region a screen
+    // reader moving forward from the button never reaches it.
+    expect(screen.getByRole("alert").textContent).toContain(
+      "That game is not available.",
+    );
+  });
+
   it("re-enables start once the server rejects the attempt with an error", async () => {
     const { handlers, user, rerender } = setupWithRerender();
     const startButton = screen.getByRole("button", { name: /start imposter/i });
