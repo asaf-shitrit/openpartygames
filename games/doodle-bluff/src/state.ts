@@ -197,6 +197,11 @@ export interface DoodleState {
 
 // ---------- Actions ----------
 
+/**
+ * "strokes" appends at exactly `from`: the rules take a chunk only when `from` is the drawing's
+ * current stroke count, and drop it otherwise. The phone's cursor therefore has to track the
+ * room's own count, never the pad's — see `myStrokeCounts` and games/doodle-bluff/src/ui/PhoneDraw.tsx.
+ */
 export type DoodleAction =
   | { type: "strokes"; drawingId: string; from: number; strokes: Stroke[] }
   | { type: "doodle-done"; drawingId: string }

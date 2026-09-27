@@ -3,13 +3,14 @@
 import type { ReactNode } from "react";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import { Icon, Marker, PhaseEnter, PhoneScreen, PhoneStrip } from "@opg/ui";
+import { Icon, Marker, PhaseEnter, PhoneScreen, PhoneStrip, Timer } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
-import type { DoodleAction, DoodleHostView, DoodlePlayerView } from "../state";
+import type { DoodleAction, DoodleHostView, DoodlePhase, DoodlePlayerView } from "../state";
 import { HostGallery } from "./HostGallery";
 import { PhoneDraw } from "./PhoneDraw";
 import { PhoneReveal } from "./PhoneReveal";
+import { isStagedPhase, PhoneStage } from "./PhoneStage";
 import { PhoneTitle } from "./PhoneTitle";
 import { PhoneVote } from "./PhoneVote";
 
@@ -46,28 +47,58 @@ function GalleryPhase({ stage, clock, players }: { stage: DoodleHostView | null;
   return <HostGallery entries={stage.gallery ?? []} players={players} clock={clock} />;
 }
 
-function renderPhase(props: PhoneProps): ReactNode {
-  const { view, room, deadline, timerStartedAt, clock, send, stage } = props;
-  const me = room.you;
-  const players = room.players;
+function controlsFor(props: PhoneProps): ReactNode {
+  const { view, room, clock, send } = props;
   if (view.phase === "draw") return <PhoneDraw view={view} roomCode={room.code} clock={clock} send={send} />;
   if (view.phase === "title") return <PhoneTitle view={view} clock={clock} send={send} />;
-  if (view.phase === "vote") return <PhoneVote view={view} clock={clock} send={send} />;
+  return <PhoneVote view={view} clock={clock} send={send} />;
+}
+
+/** In a no-TV room the phone carries the stage above its own controls; in a room with a shared
+ * screen `stage` is null and this is the controls alone, unchanged. */
+function StagedPhase(props: PhoneProps & { phase: "draw" | "title" | "vote" }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, flexGrow: 1, minHeight: 0 }}>
+      <PhoneStage phase={props.phase} stage={props.stage} players={props.room.players} />
+      {controlsFor(props)}
+    </div>
+  );
+}
+
+function renderPhase(props: PhoneProps): ReactNode {
+  const { view, room, deadline, timerStartedAt, clock, stage } = props;
+  const players = room.players;
+  if (isStagedPhase(view.phase)) return <StagedPhase {...props} phase={view.phase} />;
   if (view.phase === "reveal") {
-    return <PhoneReveal view={view} players={players} me={me} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} stage={stage} />;
+    return <PhoneReveal view={view} players={players} me={room.you} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} stage={stage} />;
   }
   return <GalleryPhase stage={stage} clock={clock} players={players} />;
 }
 
-function Strip({ view }: { view: DoodlePlayerView }) {
+/** The phases where the clock is the player's own: drawing, writing a title, voting. Each ends
+ * on a deadline that throws away whatever wasn't sent, and in a no-TV room this strip is the
+ * only clock anybody in the room can see. The reveal and the gallery run themselves, so their
+ * strip stays quiet. */
+function timedPhase(phase: DoodlePhase): boolean {
+  return phase === "draw" || phase === "title" || phase === "vote";
+}
+
+function Strip({ view, deadline, timerStartedAt, clock }: Omit<PhoneProps, "room" | "send" | "stage">) {
   const { t } = useLocale();
-  return <PhoneStrip gameName={t.doodleBluff.title} progress={progressFor(t, view)} />;
+  const timed = timedPhase(view.phase);
+  return (
+    <PhoneStrip
+      gameName={t.doodleBluff.title}
+      progress={progressFor(t, view)}
+      right={timed ? <Timer deadline={deadline} clock={clock} startedAt={timerStartedAt} haptics /> : undefined}
+    />
+  );
 }
 
 export function Phone(props: PhoneProps) {
   return (
     <PhoneScreen>
-      <Strip view={props.view} />
+      <Strip view={props.view} deadline={props.deadline} timerStartedAt={props.timerStartedAt} clock={props.clock} />
       <PhaseEnter phaseKey={`${props.view.roundNumber}:${props.view.phase}`}>{renderPhase(props)}</PhaseEnter>
     </PhoneScreen>
   );
