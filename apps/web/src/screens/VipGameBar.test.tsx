@@ -15,6 +15,22 @@ const CLUES = "imposter:clues/:1700:";
 describe("VipGameBar", () => {
   afterEach(cleanup);
 
+  it("puts focus on the safe choice when the end-game confirm opens", () => {
+    renderLocalized(
+      <VipGameBar
+        settledBy={CLUES}
+        onSkip={vi.fn<() => void>()}
+        onEnd={vi.fn<() => void>()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "End game" }));
+    // The pressed button is unmounted by the swap, so without this focus falls to <body> and a
+    // keyboard VIP has to tab from the top of the page to reach the confirmation they opened.
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Keep playing" }),
+    );
+  });
+
   it("skips the current part", () => {
     const onSkip = vi.fn<() => void>();
     renderLocalized(

@@ -24,6 +24,7 @@ import { format, joinNamesOr, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { QrCode } from "./shared";
 import { readyPlayerCount } from "./player-signals";
+import { useFocusOnStepChange } from "./confirm-focus";
 import { gameIconFor } from "../games";
 
 export interface PhoneVipControlsProps {
@@ -174,49 +175,51 @@ function KickButton({
   onKick: (id: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
-  if (confirming) {
-    return (
-      <div
-        style={{
-          flexBasis: "100%",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
-        <div style={{ fontSize: 16, fontWeight: 700 }}>
-          {format(t.picker.kickConfirm, { name: player.name })}
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          <Button
-            size="md"
-            variant="danger"
-            onClick={() => onKick(player.id)}
-          >
-            <Icon name="kick" size={18} color="var(--opg-paper)" />
-            <span>{t.picker.kickConfirmYes}</span>
-          </Button>
-          <Button
-            size="md"
-            variant="secondary"
-            onClick={() => setConfirming(false)}
-          >
-            <span>{t.picker.cancel}</span>
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const setStep = useFocusOnStepChange(confirming);
+  // `display: contents` so the wrapper holds a ref without adding a box: the confirm panel
+  // still claims its own row in the flex list and the idle button still sits inline.
   return (
-    <Button
-      size="md"
-      variant="danger"
-      onClick={() => setConfirming(true)}
-      aria-label={format(t.picker.kickAriaLabel, { name: player.name })}
-    >
-      <Icon name="kick" size={18} color="var(--opg-paper)" />
-      <span>{t.picker.kick}</span>
-    </Button>
+    <span ref={setStep} style={{ display: "contents" }}>
+      {confirming ? (
+        <div
+          style={{
+            flexBasis: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <div style={{ fontSize: 16, fontWeight: 700 }}>
+            {format(t.picker.kickConfirm, { name: player.name })}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {/* Cancel first, matching VipGameBar's end-game confirm: the safe choice leads,
+                and it is the one focus lands on when this step opens. */}
+            <Button
+              size="md"
+              variant="secondary"
+              onClick={() => setConfirming(false)}
+            >
+              <span>{t.picker.cancel}</span>
+            </Button>
+            <Button size="md" variant="danger" onClick={() => onKick(player.id)}>
+              <Icon name="kick" size={18} color="var(--opg-paper)" />
+              <span>{t.picker.kickConfirmYes}</span>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          size="md"
+          variant="danger"
+          onClick={() => setConfirming(true)}
+          aria-label={format(t.picker.kickAriaLabel, { name: player.name })}
+        >
+          <Icon name="kick" size={18} color="var(--opg-paper)" />
+          <span>{t.picker.kick}</span>
+        </Button>
+      )}
+    </span>
   );
 }
 
