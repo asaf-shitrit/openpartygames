@@ -47,6 +47,9 @@ export const status = {
   startingHeading: "Starting {game}…",
   startingBody: "Get ready. The first round is coming up.",
   startingGameFallback: "the game",
+  storageBlockedTitle: "Local storage is blocked",
+  storageBlockedBody:
+    "This screen could not read the room it created. Allow site data for this site and reload, or start a new room here.",
   otherHostTitle: "This room is hosted on another screen",
   otherHostBody: "Open this room on the screen that created it, or start a new room here.",
   connectingTitle: "Connecting…",
