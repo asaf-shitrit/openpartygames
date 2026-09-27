@@ -15,8 +15,6 @@ const TITLE_DEADLINE = SERVER_NOW + 20000;
 const VOTE_DEADLINE = SERVER_NOW + 15000;
 const REVEAL_DEADLINE = SERVER_NOW + 1000;
 
-/** A reveal already at its 8s mark, so previews and tests render the settled end state. */
-export const REVEAL_PREVIEW_START = SERVER_NOW - 8000;
 
 function player(id: PlayerId, name: string, avatar: AvatarId, isVip = false): PlayerSummary {
   return { id, name, avatar, connected: true, isVip, crowns: 0, waitingForNextGame: false };
@@ -281,18 +279,28 @@ export interface DoodleBluffPreview {
   stage?: DoodleHostView;
 }
 
+/**
+ * Every reveal fixture here passes a deadline and no `timerStartedAt`, and that is the whole
+ * reason these screens show anything. The dev gallery freezes its clock at
+ * `timerStartedAt ?? serverNow` (apps/web/src/dev/screens.ts) and the reveal resolves its own
+ * beat anchor to that same `timerStartedAt`, so a fixture that sets one pins `now` and the
+ * storyboard's start to the same instant and renders elapsed 0 for ever: a blank replaying
+ * canvas on the TV, "the votes are in…" on every phone. Four of these previews sat on that
+ * placeholder, so the layout suite measured it four times and never once measured a real
+ * reveal card — including the worst case, which is the one most likely to run off the stage.
+ *
+ * With the deadline alone, `anchorAt` falls back to `deadline - REVEAL_MS`, which keeps the
+ * frozen clock and the storyboard's start apart: REVEAL_DEADLINE is `SERVER_NOW + 1000`, so the
+ * anchor lands 11s back and every reveal preview renders the settled end of its 12s moment.
+ */
 function hostRevealPreview(label: string, reveal: DoodleReveal): DoodleBluffPreview {
   const view = hostReveal(reveal);
-  return { label, surface: "host", view, room: hostRoom(view, REVEAL_DEADLINE, REVEAL_PREVIEW_START) };
+  return { label, surface: "host", view, room: hostRoom(view, REVEAL_DEADLINE) };
 }
 
+/** Deadline only, no `timerStartedAt` — see `hostRevealPreview`. */
 function phoneRevealPreview(label: string, you: PlayerId, view: DoodlePlayerView): DoodleBluffPreview {
-  return {
-    label,
-    surface: "phone",
-    view,
-    room: playerRoom(view, you, { deadline: REVEAL_DEADLINE, timerStartedAt: REVEAL_PREVIEW_START }),
-  };
+  return { label, surface: "phone", view, room: playerRoom(view, you, { deadline: REVEAL_DEADLINE }) };
 }
 
 // ---------- Worst case ----------
@@ -398,10 +406,18 @@ const stressPhoneVote: DoodlePlayerView = {
   myPoints: null,
 };
 
+/**
+ * The title screen a full room's worst case actually is: the player's own title already in,
+ * so the waiting line carries the count, which is the only part of this screen that changes
+ * with the size of the room. It used to sit on the writing form with `myTitle: null`, which
+ * renders exactly the four-player preview — the same words, pixel for pixel — so the "8 long
+ * names" in its label described content this screen never shows.
+ */
 const stressPhoneTitle: DoodlePlayerView = {
   ...stressPhoneVote,
   phase: "title",
   currentDrawingId: `${STRESS_ARTIST}:0`,
+  myTitle: STRESS_PLAYER_TITLE,
   titledCount: 4,
   options: null,
   votedCount: 0,
@@ -551,8 +567,8 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
     surface: "phone",
     view: phoneReveal(FOUND_REVEAL, false, "o1", 1000),
     room: playerRoom(phoneReveal(FOUND_REVEAL, false, "o1", 1000), MAYA, {
+      // Deadline only, no `timerStartedAt` — see the comment on `hostRevealPreview`.
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
       stage: hostReveal(FOUND_REVEAL),
     }),
     stage: hostReveal(FOUND_REVEAL),
@@ -580,7 +596,7 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
     label: "Host: worst case, reveal (7 long titles, house title)",
     surface: "host",
     view: stressHostReveal(),
-    room: hostRoom(stressHostReveal(), REVEAL_DEADLINE, REVEAL_PREVIEW_START, STRESS_PLAYERS),
+    room: hostRoom(stressHostReveal(), REVEAL_DEADLINE, null, STRESS_PLAYERS),
   },
   {
     label: "Host: worst case, gallery (16 drawings, long titles)",
@@ -589,7 +605,7 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
     room: hostRoom(stressHostGallery(), null, null, STRESS_PLAYERS),
   },
   {
-    label: "Phone: worst case, writing a title (8 long names)",
+    label: "Phone: worst case, title locked in (8 players)",
     surface: "phone",
     view: stressPhoneTitle,
     room: playerRoom(stressPhoneTitle, STRESS_NON_ARTISTS[0] ?? MAYA, {
@@ -612,7 +628,6 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
     view: stressPhoneReveal,
     room: playerRoom(stressPhoneReveal, STRESS_NON_ARTISTS[0] ?? MAYA, {
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
       players: STRESS_PLAYERS,
     }),
   },
@@ -622,7 +637,6 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
     view: stressPhoneReveal,
     room: playerRoom(stressPhoneReveal, STRESS_NON_ARTISTS[0] ?? MAYA, {
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
       stage: stressHostReveal(),
       players: STRESS_PLAYERS,
     }),
@@ -638,5 +652,25 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
       players: STRESS_PLAYERS,
     }),
     stage: stressHostGallery(),
+  },
+  // Appended, not slotted in beside their shared-screen twins: a preview's id is its index, so
+  // inserting one renumbers every screen after it and orphans anything that cites an id.
+  {
+    label: "Phone (no-TV): Dov drawing",
+    surface: "phone",
+    view: phoneDraw,
+    room: playerRoom(phoneDraw, DOV, { deadline: DRAW_DEADLINE, stage: hostDraw }),
+    stage: hostDraw,
+  },
+  {
+    label: "Phone (no-TV): worst case, title locked in (8 long names)",
+    surface: "phone",
+    view: stressPhoneTitle,
+    room: playerRoom(stressPhoneTitle, STRESS_NON_ARTISTS[0] ?? MAYA, {
+      deadline: TITLE_DEADLINE,
+      stage: stressHostTitle,
+      players: STRESS_PLAYERS,
+    }),
+    stage: stressHostTitle,
   },
 ];

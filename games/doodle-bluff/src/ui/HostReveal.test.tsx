@@ -6,7 +6,7 @@ import { SoundProvider } from "@opg/ui";
 import type { PlayerSummary } from "@opg/protocol";
 import { LocaleProvider } from "@opg/i18n";
 import type { DoodleHostView, DoodleReveal } from "../state";
-import { HostReveal } from "./HostReveal";
+import { HostReveal, revealLook } from "./HostReveal";
 
 afterEach(() => {
   cleanup();
@@ -97,6 +97,21 @@ function setup(elapsedMs: number, view: DoodleHostView = hostView()) {
   );
   return { engine, advanceTo, rendered };
 }
+
+describe("revealLook", () => {
+  it("holds a lie to one line on the TV, where the longest one still fits", () => {
+    const tv = revealLook(false);
+    expect(tv.oneLine).toBe(true);
+    expect(tv.text).toBeGreaterThanOrEqual(28);
+  });
+
+  it("lets a lie wrap on a phone, which scrolls, and drops to phone type sizes", () => {
+    const phone = revealLook(true);
+    expect(phone.oneLine).toBe(false);
+    expect(phone.text).toBeGreaterThanOrEqual(16);
+    expect(phone.doodle).toBeLessThan(revealLook(false).doodle);
+  });
+});
 
 describe("HostReveal, staged from the start", () => {
   it("holds the truth until its beat", () => {

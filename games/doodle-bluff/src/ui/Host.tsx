@@ -202,7 +202,10 @@ function Vote(props: SectionProps) {
     <div style={BODY}>
       {view.doodle !== null ? <DoodleView doodle={view.doodle} label={drawingLabel(t, nameOf(props.players, view.artistId, t.common.someone))} clock={clock} size={260} style={{ alignSelf: "center", flexShrink: 0 }} /> : null}
       <VoteHeading {...props} />
-      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 24, alignContent: "flex-start", ...FILL_ROW }}>
+      {/* gap 18, not 24: at eight options this wraps to two rows, and each card is tilted, so
+          the bounding box of the bottom row reaches a couple of px lower than the card does.
+          In Hebrew that was enough to put the last row's text past the stage's bottom edge. */}
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 18, alignContent: "flex-start", ...FILL_ROW }}>
         {(view.options ?? []).map((option, index) => (
           <VoteOption key={option.id} text={option.text} index={index} />
         ))}

@@ -91,7 +91,7 @@ export interface PhoneRevealProps {
 
 export function PhoneReveal({ view, players, me, deadline, timerStartedAt, clock, stage }: PhoneRevealProps) {
   if (stage !== null) {
-    return <HostReveal view={stage} players={players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />;
+    return <HostReveal view={stage} players={players} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} compact />;
   }
   return <TvFollowingReveal view={view} me={me} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />;
 }

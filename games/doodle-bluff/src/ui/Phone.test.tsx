@@ -65,10 +65,31 @@ function playerView(overrides: Partial<DoodlePlayerView> = {}): DoodlePlayerView
   };
 }
 
-function renderPhone(view: DoodlePlayerView, stage: DoodleHostView | null = null) {
+function stageView(overrides: Partial<DoodleHostView> = {}): DoodleHostView {
+  return {
+    phase: "draw",
+    playerIds: ["maya"],
+    drawnIds: [],
+    drawnCounts: {},
+    roundNumber: 0,
+    roundCount: 0,
+    artistId: null,
+    doodle: null,
+    writtenIds: [],
+    votedIds: [],
+    options: null,
+    reveal: null,
+    pointsThisRound: null,
+    totals: { maya: 0 },
+    gallery: null,
+    ...overrides,
+  };
+}
+
+function renderPhone(view: DoodlePlayerView, stage: DoodleHostView | null = null, deadline: number | null = null) {
   return render(
     <LocaleProvider>
-      <Phone view={view} room={room()} deadline={null} timerStartedAt={null} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} stage={stage} />
+      <Phone view={view} room={room()} deadline={deadline} timerStartedAt={null} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} stage={stage} />
     </LocaleProvider>,
   );
 }
@@ -113,5 +134,39 @@ describe("Phone", () => {
     renderPhone(playerView({ phase: "gallery" }));
     expect(screen.getByText("תסתכלו למעלה")).toBeTruthy();
     expect(screen.getByText("הגלריה על הטלוויזיה.")).toBeTruthy();
+  });
+
+  // Without this the phone has no clock at all, and a no-TV room has none anywhere: an
+  // unsubmitted title is simply thrown away when the deadline lands.
+  it.each(["draw", "title", "vote"] as const)("shows the countdown in the %s phase", (phase) => {
+    renderPhone(playerView({ phase }), null, 31000);
+    expect(screen.getByLabelText("Time left 0:30")).toBeTruthy();
+  });
+
+  it.each(["reveal", "gallery"] as const)("leaves the strip's timer slot empty in the %s phase", (phase) => {
+    renderPhone(playerView({ phase }), null, 31000);
+    expect(screen.queryByLabelText("Time left 0:30")).toBeNull();
+  });
+
+  // In a phones-only room these three phases carried no stage at all, so nobody could see how
+  // far along the room was until the reveal.
+  it("stages the room's progress above the controls in a no-TV vote", () => {
+    renderPhone(playerView({ phase: "vote" }), stageView({ phase: "vote", artistId: "maya", votedIds: [] }));
+    expect(screen.getByText("The room is voting")).toBeTruthy();
+  });
+
+  it("stages the room's progress above the controls in a no-TV draw", () => {
+    renderPhone(playerView(), stageView({ drawnIds: ["maya"] }));
+    expect(screen.getByText("1 of 1 finished")).toBeTruthy();
+  });
+
+  it("stages the room's progress above the controls in a no-TV title", () => {
+    renderPhone(playerView({ phase: "title" }), stageView({ phase: "title", artistId: "maya" }));
+    expect(screen.getByText("Who's written")).toBeTruthy();
+  });
+
+  it("shows no stage in a room with a shared screen", () => {
+    renderPhone(playerView({ phase: "vote" }));
+    expect(screen.queryByText("The room is voting")).toBeNull();
   });
 });
