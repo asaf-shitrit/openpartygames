@@ -247,11 +247,23 @@ function isReconnecting(
   return status === "reconnecting" && view !== null;
 }
 
-function readHostToken(code: string): string | null {
+/**
+ * Three outcomes, not two. A browser that blocks site data — Safari's private mode, or a
+ * profile whose storage was cleared — makes `getItem` throw, and folding that into "no token"
+ * told the host their own room was open on another screen and left them no way back. The
+ * distinction is the whole point of this type.
+ */
+type HostTokenRead =
+  | { kind: "found"; token: string }
+  | { kind: "missing" }
+  | { kind: "unreadable" };
+
+function readHostToken(code: string): HostTokenRead {
   try {
-    return localStorage.getItem(`opg:host:${code}`);
+    const token = localStorage.getItem(`opg:host:${code}`);
+    return token === null ? { kind: "missing" } : { kind: "found", token };
   } catch {
-    return null;
+    return { kind: "unreadable" };
   }
 }
 
@@ -272,7 +284,8 @@ function ownsRoom(
 
 export function HostApp({ code }: { code: string }) {
   const { t } = useLocale();
-  const hostToken = useMemo(() => readHostToken(code), [code]);
+  const stored = useMemo(() => readHostToken(code), [code]);
+  const hostToken = stored.kind === "found" ? stored.token : null;
 
   const socket = useRoomSocket({
     code,
@@ -284,6 +297,18 @@ export function HostApp({ code }: { code: string }) {
   const clock = socket.clock;
 
   useScreenWakeLock(true);
+
+  if (stored.kind === "unreadable") {
+    return (
+      <Stage>
+        <MessageScreen
+          title={t.status.storageBlockedTitle}
+          body={t.status.storageBlockedBody}
+          t={t}
+        />
+      </Stage>
+    );
+  }
 
   if (!ownsRoom(hostToken, socket.lastError)) {
     return (

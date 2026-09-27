@@ -116,6 +116,26 @@ describe("HostApp", () => {
     expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
+  it("says storage is blocked, not that another screen has the room", () => {
+    // Safari private mode and a cleared profile both make getItem throw. Folding that into
+    // "no token" told a host their own room was open somewhere else, with no way back.
+    vi.stubGlobal("localStorage", {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+    });
+    render(
+      <LocaleProvider>
+        <HostApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Local storage is blocked")).toBeTruthy();
+    expect(
+      screen.queryByText("This room is hosted on another screen"),
+    ).toBeNull();
+    expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
   it("explains the same when the host token is rejected", () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
     render(
