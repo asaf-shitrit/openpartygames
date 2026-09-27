@@ -271,6 +271,37 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
   );
 }
 
+/** No-TV mode's own decoy reminder: the stage above already carries the caught beat, the
+ * tiles and the timer (see StageLastChance), so all that is missing here is the one thing
+ * that stage never had reason to say -- what the imposter's own decoy word actually was. */
+function DecoyReminder({ view }: { view: ImposterPlayerView }) {
+  const { t } = useLocale();
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "baseline",
+        gap: 8,
+        fontSize: 17,
+      }}
+    >
+      <div style={{ fontWeight: 400 }}>{t.imposter.lastChance.decoyWas}</div>
+      <Highlight style={{ maxWidth: "100%", padding: "0 6px" }}>
+        <strong
+          style={{
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            overflowWrap: "anywhere",
+          }}
+        >
+          {view.decoyWord ?? "—"}
+        </strong>
+      </Highlight>
+    </div>
+  );
+}
+
 /** Stage region: the drain everyone watches, only in a no-TV room. */
 function StageArea({
   stage,
@@ -322,7 +353,7 @@ export function GuessView(props: SectionProps) {
         timerStartedAt={timerStartedAt}
         clock={clock}
       />
-      {stage === null ? <CaughtBanner view={view} /> : null}
+      {stage === null ? <CaughtBanner view={view} /> : <DecoyReminder view={view} />}
       <GuessForm view={view} send={send} clock={clock} />
       <MeRow me={me} />
     </>

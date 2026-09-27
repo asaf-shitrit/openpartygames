@@ -2,8 +2,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LocaleProvider } from "@opg/i18n";
+import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import type { ImposterAction } from "../state";
+import { imposterHostViewSchema } from "../state";
+import type { ImposterAction, ImposterHostView } from "../state";
 import {
   GuessView,
   GuessWaiting,
@@ -26,6 +28,16 @@ function stubVibrate() {
     value: vibrate,
   });
   return vibrate;
+}
+
+/** The protocol types `game.stage` as `unknown` since it is generic across games, same as the
+ * wire boundary in apps/web/src/games.tsx: parse it with the game's own schema rather than
+ * asserting its shape. */
+function stageOf(room: PlayerRoomView): ImposterHostView | null {
+  const stage = room.game?.stage ?? null;
+  if (stage === null) return null;
+  const parsed = imposterHostViewSchema.parse(stage);
+  return parsed;
 }
 
 function findPreview(label: string) {
@@ -295,6 +307,28 @@ describe("GuessWaiting", () => {
     });
     expect(vibrate.mock.calls.length).toBe(2);
     expect(vibrate.mock.calls.length).toBeGreaterThan(slowBeats);
+  });
+});
+
+describe("GuessView in a no-TV room", () => {
+  it("still reminds the imposter of their own decoy word", () => {
+    const { view, room } = findPreview("Phone (no-TV): Priya last chance");
+    const clock: ServerClock = { now: () => room.serverNow };
+    render(
+      <GuessView
+        view={view}
+        players={room.players}
+        me={room.players.find((p) => p.id === room.you) ?? null}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+        send={vi.fn<(action: ImposterAction) => void>()}
+        stage={stageOf(room)}
+      />,
+      { wrapper: LocaleProvider },
+    );
+    expect(screen.getByText("Your decoy was")).toBeTruthy();
+    expect(screen.getByText(view.decoyWord ?? "")).toBeTruthy();
   });
 });
 

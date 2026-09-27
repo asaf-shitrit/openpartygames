@@ -4,7 +4,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { LocaleProvider } from "@opg/i18n";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import type { ImposterAction, ImposterPlayerView } from "../state";
+import type { ImposterAction, ImposterHostView, ImposterPlayerView } from "../state";
 import { PhoneResult } from "./PhoneResult";
 import { imposterPreviews } from "./preview";
 
@@ -150,6 +150,51 @@ describe("PhoneResult, escaped path", () => {
     expect(screen.getByText("The imposter got away")).toBeTruthy();
     expect(vibrate).toHaveBeenCalledWith([120]);
     expect(screen.queryByText(/guessed nothing/i)).toBeNull();
+  });
+});
+
+function isHostView(
+  view: ImposterHostView | ImposterPlayerView,
+): view is ImposterHostView {
+  return "votedIds" in view;
+}
+
+function hostView(label: string): ImposterHostView {
+  const preview = imposterPreviews.find((candidate) => candidate.label === label);
+  if (preview === undefined) throw new Error(`no preview labelled ${label}`);
+  if (!isHostView(preview.view)) throw new Error(`${label} is not a host view`);
+  return preview.view;
+}
+
+describe("PhoneResult, no-TV room", () => {
+  it("waits with eyes on the room, not the TV, before the personal beat lands", () => {
+    vi.useFakeTimers();
+    stubVibrate();
+    const { room } = phoneSample("Phone: Priya result");
+    const me = room.players.find((player) => player.id === room.you) ?? null;
+    const fakeNow = 0;
+    const clock: ServerClock = { now: () => fakeNow };
+    const { container } = render(
+      <PhoneResult
+        view={priyaStole}
+        players={room.players}
+        me={me}
+        deadline={null}
+        timerStartedAt={0}
+        clock={clock}
+        send={vi.fn<(action: ImposterAction) => void>()}
+        progress="Word 3 of 6"
+        stage={hostView("Host: result caught got it")}
+      />,
+      { wrapper: LocaleProvider },
+    );
+    expect(screen.getByText("Your guess is in…")).toBeTruthy();
+    // The room doodle draws three extra huddle faces beyond the two eyes; the TV doodle draws
+    // only the eyes. Counting circles distinguishes the two without depending on internals.
+    const preResultCard = screen.getByText("Your guess is in…").closest("output")?.parentElement;
+    expect(preResultCard).toBeTruthy();
+    expect(preResultCard?.querySelectorAll("circle").length).toBeGreaterThan(2);
+    expect(container).toBeTruthy();
   });
 });
 

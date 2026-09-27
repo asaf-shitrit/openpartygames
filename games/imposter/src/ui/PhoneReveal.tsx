@@ -47,7 +47,12 @@ function ResultCard({
   const { t } = useLocale();
   const imposter = nameOf(players, view.imposterId, t.common.someone);
   return (
-    <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
+    // `overflowX: hidden` (X only -- the card's own content can genuinely grow taller than its
+    // box at 200% text, and clipping Y too would cut real text off): the card's own `-1deg` tilt
+    // rotates a tall box, and even a small angle displaces its corners several px past its
+    // un-rotated footprint over that height -- real geometry with nothing to contain it
+    // otherwise (same fact behind the sticker-burst and the no-TV result card's tilted-card fix).
+    <div ref={cardRef} style={{ flexGrow: 1, display: "flex", overflowX: "hidden" }}>
       <Card
         variant="L"
         tilt={-1}
@@ -72,6 +77,10 @@ function ResultCard({
               inset: 0,
               zIndex: 0,
               pointerEvents: "none",
+              // The burst's stickers fan out to `size`, wider than the card holding them.
+              // Without this the page itself grows with it and the phone scrolls sideways
+              // mid-celebration -- same fix as the confetti burst in PhoneResult.tsx.
+              overflow: "hidden",
             }}
           >
             <StickerBurst live={live} count={14} size={340} />

@@ -41,6 +41,16 @@ const CARD_STYLE: CSSProperties = {
   gap: 10,
 };
 
+/**
+ * A row of tiles at a fixed `size` needs roughly double its own footprint at 200% text, inside a
+ * phone viewport that never grows to match (the OS "page zoom" model `a11y.spec.ts` tests
+ * against: `window.innerWidth` never moves) -- shrinking the tiles to fit is not an option, since
+ * `tileSizeFor` (packages/ui) has to shrink them well past the 16px phone text floor before a
+ * 5-letter guess fits this card's width. `flexWrap: "wrap"` on the tile row (below) lets a guess
+ * that cannot fit one line wrap to a second instead, so every tile stays legible.
+ */
+const GUESS_TILE_SIZE = 28;
+
 function CancelledCard() {
   const { t } = useLocale();
   return (
@@ -128,8 +138,10 @@ function WordLine({ crewWord, shown }: { crewWord: string | null; shown: boolean
       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
         {t.imposter.result.theWordWas}
       </div>
-      <Highlight style={{ alignSelf: "flex-start", padding: "0 8px" }}>
-        <Marker size={34}>{crewWord}</Marker>
+      <Highlight style={{ alignSelf: "flex-start", maxWidth: "100%", padding: "0 8px" }}>
+        <Marker size={34} style={{ overflowWrap: "anywhere" }}>
+          {crewWord}
+        </Marker>
       </Highlight>
     </div>
   );
@@ -178,7 +190,14 @@ function GuessLine({
           />
         )}
       </div>
-      <LetterTiles length={length} letters={guess} revealed={revealed} live size={28} />
+      <LetterTiles
+        length={length}
+        letters={guess}
+        revealed={revealed}
+        live
+        size={GUESS_TILE_SIZE}
+        style={{ flexWrap: "wrap", rowGap: 6 }}
+      />
     </div>
   );
 }
@@ -377,24 +396,33 @@ export function StageResult(props: StageResultProps) {
 
   return (
     <>
-      <Card variant="M" tilt={0.6} style={CARD_STYLE}>
-        <VerdictChip
-          text={verdictChipText(t, path, view.guessCorrect)}
-          shown={verdictShown(path, stage)}
-          live={verdictLive(path, stage)}
-        />
-        <WordLine crewWord={view.crewWord} shown={stage.wordReached} />
-        <GuessSlot
-          path={path}
-          imposter={nameOf(players, view.imposterId, t.common.someone)}
-          guess={view.guess ?? ""}
-          revealed={revealed}
-          suspenseStartedAt={suspenseStartedAt}
-          verdictReached={stage.verdictReached}
-          clock={clock}
-        />
-        <SummaryNote view={view} players={players} shown={stage.wordReached} />
-      </Card>
+      {/* The card's own `tilt` rotates it, and a rotated box paints past its un-rotated layout
+          footprint (the same "true geometry survives clipping" fact behind the sticker-burst
+          and badge fixes elsewhere in this file) -- with no ancestor to contain that ink
+          overflow, it was tipping the whole page a few px past 390 at 200% text even though no
+          element's own rect ever crossed the edge. `overflowX: hidden` (X only: the card's own
+          content genuinely grows taller at 200% text, and clipping Y too cut real text off)
+          contains the rotated corners' ink overflow without touching that. */}
+      <div style={{ overflowX: "hidden" }}>
+        <Card variant="M" tilt={0.6} style={CARD_STYLE}>
+          <VerdictChip
+            text={verdictChipText(t, path, view.guessCorrect)}
+            shown={verdictShown(path, stage)}
+            live={verdictLive(path, stage)}
+          />
+          <WordLine crewWord={view.crewWord} shown={stage.wordReached} />
+          <GuessSlot
+            path={path}
+            imposter={nameOf(players, view.imposterId, t.common.someone)}
+            guess={view.guess ?? ""}
+            revealed={revealed}
+            suspenseStartedAt={suspenseStartedAt}
+            verdictReached={stage.verdictReached}
+            clock={clock}
+          />
+          <SummaryNote view={view} players={players} shown={stage.wordReached} />
+        </Card>
+      </div>
       <StandingsCard
         order={order}
         players={players}

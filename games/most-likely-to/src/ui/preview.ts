@@ -203,17 +203,19 @@ interface RoomTiming {
   timerStartedAt?: number | null;
   /** The host view a no-TV phone stages, or null for a shared-screen room. */
   stage?: MltHostView | null;
+  /** The room's cast, when it is not the usual six. */
+  players?: PlayerSummary[];
 }
 
 function commonRoom(view: MltHostView | MltPlayerView, timing: RoomTiming) {
-  const { deadline, timerStartedAt = null, stage = null } = timing;
+  const { deadline, timerStartedAt = null, stage = null, players = PLAYERS } = timing;
   return {
     code: "BKTZ",
     sharedScreen: stage === null,
     phase: "in-game" as const,
     lobbyScreen: "join" as const,
-    players: PLAYERS,
-    vipId: MAYA,
+    players,
+    vipId: players.find((each) => each.isVip)?.id ?? MAYA,
     locked: false,
     games: [],
     selectedGameId: "most-likely-to",
@@ -229,8 +231,9 @@ function hostRoom(
   view: MltHostView,
   deadline: number | null,
   timerStartedAt: number | null = null,
+  players: PlayerSummary[] = PLAYERS,
 ): HostRoomView {
-  return { role: "host", ...commonRoom(view, { deadline, timerStartedAt }) };
+  return { role: "host", ...commonRoom(view, { deadline, timerStartedAt, players }) };
 }
 
 function playerRoom(
@@ -365,13 +368,24 @@ export interface MltPreview {
   stage?: MltHostView;
 }
 
+/**
+ * Deadline only, no `timerStartedAt`: the dev gallery freezes its clock at
+ * `timerStartedAt ?? serverNow` (`apps/web/src/dev/screens.ts`), and a phase-start
+ * `timerStartedAt` would freeze `now` and the reveal's own beat-anchor to the same instant,
+ * always landing on elapsed 0 — the intro beat, forever. Falling back to `deadline - REVEAL_MS`
+ * for the anchor (see `anchorAt`) keeps the frozen clock and the reveal's start time apart, so
+ * these previews actually land on the beat their label promises instead of the teaser that
+ * plays before it. `REVEAL_DEADLINE` is `SERVER_NOW + 1000`, so the resulting anchor is
+ * `REVEAL_PREVIEW_START` exactly — this only routes to it through the deadline instead of
+ * setting it directly.
+ */
 function hostRevealPreview(label: string, reveal: MltReveal): MltPreview {
   const view = hostReveal(reveal);
   return {
     label,
     surface: "host",
     view,
-    room: hostRoom(view, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(view, REVEAL_DEADLINE),
   };
 }
 
@@ -384,10 +398,7 @@ function phoneRevealPreview(
     label,
     surface: "phone",
     view,
-    room: playerRoom(view, you, {
-      deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
-    }),
+    room: playerRoom(view, you, { deadline: REVEAL_DEADLINE }),
   };
 }
 
@@ -471,7 +482,6 @@ export const mostLikelyToPreviews: MltPreview[] = [
     view: phoneReveal(PICKED_REVEAL, DOV, 500),
     room: playerRoom(phoneReveal(PICKED_REVEAL, DOV, 500), PRIYA, {
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
       stage: hostReveal(PICKED_REVEAL),
     }),
     stage: hostReveal(PICKED_REVEAL),
@@ -480,13 +490,13 @@ export const mostLikelyToPreviews: MltPreview[] = [
     label: "Host: worst case, vote (8 long names, longest prompt)",
     surface: "host",
     view: stressHostVote,
-    room: hostRoom(stressHostVote, VOTE_DEADLINE),
+    room: hostRoom(stressHostVote, VOTE_DEADLINE, null, STRESS_PLAYERS),
   },
   {
     label: "Host: worst case, reveal (8 long names, longest prompt)",
     surface: "host",
     view: stressHostReveal,
-    room: hostRoom(stressHostReveal, REVEAL_DEADLINE, REVEAL_PREVIEW_START),
+    room: hostRoom(stressHostReveal, REVEAL_DEADLINE, null, STRESS_PLAYERS),
   },
   {
     label: "Phone: worst case, ballot (8 long names, longest prompt)",
@@ -494,15 +504,18 @@ export const mostLikelyToPreviews: MltPreview[] = [
     view: stressPhoneVoteSelecting,
     room: playerRoom(stressPhoneVoteSelecting, "stress-1", {
       deadline: VOTE_DEADLINE,
+      players: STRESS_PLAYERS,
     }),
   },
   {
     label: "Phone: worst case, reveal matched (8 long names, longest prompt)",
     surface: "phone",
     view: stressPhoneReveal,
+    // Deadline only, no `timerStartedAt` — see the comment on `phoneRevealPreview`: this
+    // lands the frozen dev-gallery clock past the personal beat instead of on the intro.
     room: playerRoom(stressPhoneReveal, "stress-0", {
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
+      players: STRESS_PLAYERS,
     }),
   },
   {
@@ -512,6 +525,7 @@ export const mostLikelyToPreviews: MltPreview[] = [
     room: playerRoom(stressPhoneVoteSelecting, "stress-1", {
       deadline: VOTE_DEADLINE,
       stage: stressHostVote,
+      players: STRESS_PLAYERS,
     }),
     stage: stressHostVote,
   },
@@ -519,10 +533,11 @@ export const mostLikelyToPreviews: MltPreview[] = [
     label: "Phone (no-TV): worst case, reveal (8 long names, longest prompt)",
     surface: "phone",
     view: stressPhoneReveal,
+    // Deadline only, no `timerStartedAt`, for the same reason as the fixture above.
     room: playerRoom(stressPhoneReveal, "stress-0", {
       deadline: REVEAL_DEADLINE,
-      timerStartedAt: REVEAL_PREVIEW_START,
       stage: stressHostReveal,
+      players: STRESS_PLAYERS,
     }),
     stage: stressHostReveal,
   },

@@ -11,6 +11,8 @@ import {
   anchorAt,
   Avatar,
   Card,
+  Highlight,
+  Marker,
   reached,
   SlamStamp,
   StickyNote,
@@ -143,8 +145,9 @@ function rowBadge({ t, id, stage, verdictId, unmaskId, outcome }: RowBadgeArgs):
 }
 
 const REST_ROW: CSSProperties = {
-  height: 46,
+  minHeight: 46,
   display: "flex",
+  flexWrap: "wrap",
   alignItems: "center",
   gap: 10,
   padding: "0 6px",
@@ -172,11 +175,20 @@ function RestRow({
         alt={format(t.imposter.avatarAlt, { name })}
         style={voted ? undefined : { opacity: 0.55 }}
       />
-      <div style={{ flexGrow: 1, fontSize: 17, fontWeight: 700, opacity: voted ? 1 : 0.55 }}>
+      <div
+        style={{
+          flexGrow: 1,
+          minWidth: "6ch",
+          fontSize: 17,
+          fontWeight: 700,
+          opacity: voted ? 1 : 0.55,
+          overflowWrap: "anywhere",
+        }}
+      >
         {name}
       </div>
       {voted ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
           <TallyScratch count={total} drawn={shown} size={20} />
           <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
@@ -202,36 +214,104 @@ const FOCUS_ROW: CSSProperties = {
   transform: "rotate(-0.6deg)",
 };
 
+const VOTER_ROW_MAX = 4;
+
+/** Who voted for this row's target -- the same avatars the TV's tile row carries, shrunk to
+ * fit a single-column focus row. Only ever shows voters already scratched onto the tally. */
+function VoterAvatars({
+  voters,
+  shown,
+  players,
+}: {
+  voters: readonly PlayerId[];
+  shown: number;
+  players: PlayerSummary[];
+}) {
+  const { t } = useLocale();
+  const drawnVoters = voters.slice(0, shown);
+  if (drawnVoters.length === 0) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      {drawnVoters.slice(0, VOTER_ROW_MAX).map((voterId) => (
+        <Avatar
+          key={voterId}
+          id={avatarOf(players, voterId)}
+          size={26}
+          alt={format(t.imposter.avatarAlt, { name: nameOf(players, voterId, t.common.someone) })}
+        />
+      ))}
+      {drawnVoters.length > VOTER_ROW_MAX ? (
+        <div style={{ fontSize: 15, fontWeight: 700 }}>+{drawnVoters.length - VOTER_ROW_MAX}</div>
+      ) : null}
+    </div>
+  );
+}
+
 interface FocusRowProps {
   id: PlayerId;
   shown: number;
   total: number;
+  voters: readonly PlayerId[];
   badge: RowBadge | null;
   suspenseStartedAt: number | null;
   clock: ServerClock;
   players: PlayerSummary[];
 }
 
-function FocusRow({ id, shown, total, badge, suspenseStartedAt, clock, players }: FocusRowProps) {
+function FocusRow({ id, shown, total, voters, badge, suspenseStartedAt, clock, players }: FocusRowProps) {
   const { t } = useLocale();
   const name = nameOf(players, id, t.common.someone);
   return (
     <div style={FOCUS_ROW} data-testid="stage-reveal-focus-row">
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
         <Avatar
           id={avatarOf(players, id)}
           size={56}
           alt={format(t.imposter.avatarAlt, { name })}
         />
-        <div style={{ flexGrow: 1, fontSize: 20, fontWeight: 700 }}>{name}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ flexGrow: 1, minWidth: "6ch", fontSize: 20, fontWeight: 700, overflowWrap: "anywhere" }}>
+          {name}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
           <TallyScratch count={total} drawn={shown} size={22} />
           <div style={{ fontSize: 18, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
       </div>
+      <VoterAvatars voters={voters} shown={shown} players={players} />
       {badge === null ? null : (
-        <div style={{ alignSelf: "flex-end" }} data-testid="stage-reveal-badge">
-          <SlamStamp live={badge.live} shake={badge.shake} size={22}>
+        // `tilt={0}`: `Stamp`'s default -6deg tilt widens its rotated bounding box past the
+        // un-rotated one -- but even un-rotated, "Imposter!" at 200% text is simply wider than
+        // this focus row. `alignSelf: "stretch"` (instead of "flex-end") gives the stamp's
+        // own containing block the row's real width, so `maxWidth: "100%"` below has something
+        // to shrink against and the text wraps onto a second line instead of spilling past the
+        // row's left edge (the row is right-to-left safe already: `justifyContent: "flex-end"`
+        // keeps the stamp pinned to the name-and-tally side in both directions).
+        <div
+          style={{ alignSelf: "stretch", display: "flex", justifyContent: "flex-end" }}
+          data-testid="stage-reveal-badge"
+        >
+          <SlamStamp
+            live={badge.live}
+            shake={badge.shake}
+            size={24}
+            tilt={0}
+            // `--opg-marker` is 3.69:1 against this row's highlight background -- below the
+            // 4.5:1 body-text floor. `--opg-marker-text` is the same ink family sized for body
+            // text, but even that only clears 4.20:1 against this particular yellow, still short
+            // of 4.5. `size={24}` crosses into WCAG's large-text bracket (24px, regular weight),
+            // whose floor is 3:1 -- comfortably cleared by either color, so 24px is the one
+            // change that actually closes the gap.
+            color="var(--opg-marker-text)"
+            style={{ maxWidth: "100%", whiteSpace: "normal", overflowWrap: "anywhere", textAlign: "center" }}
+          >
             {badge.text}
           </SlamStamp>
         </div>
@@ -255,6 +335,7 @@ interface TallyRowProps {
   id: PlayerId;
   shown: number;
   total: number;
+  voters: readonly PlayerId[];
   badge: RowBadge | null;
   suspenseStartedAt: number | null;
   clock: ServerClock;
@@ -280,6 +361,37 @@ const CAPTION: CSSProperties = {
   textAlign: "center",
   marginTop: 4,
 };
+
+const DECOY_ROW: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginTop: 2,
+};
+
+/** The payoff every room gets, TV or not: what the imposter's decoy word actually was. Public
+ * from the unmask beat on -- `view.decoyWord` is only ever set once the state is revealed
+ * (see views.ts), so there is no secret to leak by rendering it here. */
+function DecoyFooter({
+  view,
+  players,
+}: {
+  view: ImposterHostView;
+  players: PlayerSummary[];
+}) {
+  const { t } = useLocale();
+  const imposter = nameOf(players, view.imposterId, t.common.someone);
+  return (
+    <div style={DECOY_ROW} data-testid="stage-reveal-decoy">
+      <div style={{ fontSize: 16, fontWeight: 700 }}>
+        {format(t.imposter.reveal.decoyWas, { name: imposter })}
+      </div>
+      <Highlight style={{ padding: "0 8px" }}>
+        <Marker size={22}>{view.decoyWord ?? "—"}</Marker>
+      </Highlight>
+    </div>
+  );
+}
 
 function NextNote({
   nextReached,
@@ -350,6 +462,7 @@ export function StageReveal(props: StageRevealProps) {
           id={id}
           shown={marksForTarget(plan.order, id, drawn)}
           total={plan.tally[id]?.length ?? 0}
+          voters={plan.tally[id] ?? []}
           badge={rowBadge({ t, id, stage, verdictId, unmaskId, outcome: plan.outcome })}
           suspenseStartedAt={suspenseOn && id === verdictId ? suspenseStartedAt : null}
           clock={clock}
@@ -357,6 +470,7 @@ export function StageReveal(props: StageRevealProps) {
         />
       ))}
       {caption === null ? null : <div style={CAPTION}>{caption}</div>}
+      {stage.unmaskReached ? <DecoyFooter view={view} players={players} /> : null}
       <NextNote nextReached={stage.nextReached} view={view} players={players} />
       <VerdictAnnouncer
         verdictReached={stage.verdictReached}

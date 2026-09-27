@@ -51,7 +51,7 @@ const STAGE: CSSProperties = {
   flexGrow: 1,
   display: "flex",
   flexDirection: "column",
-  gap: 32,
+  gap: 10,
   overflow: "hidden",
 };
 
@@ -109,7 +109,7 @@ function activeLieIndex(
 function IntroHeading({ live, t }: { live: boolean; t: Dictionary }) {
   return (
     <FxIn live={live} preset="slideIn">
-      <Marker size={64}>{t.realOrNah.introHeading}</Marker>
+      <Marker size={36}>{t.realOrNah.introHeading}</Marker>
     </FxIn>
   );
 }
@@ -133,21 +133,21 @@ function DudCard({
       variant="M"
       tilt={-1}
       style={{
-        padding: "18px 20px",
+        padding: "14px 16px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 8,
+        gap: 6,
       }}
     >
-      <div style={{ fontSize: 30, fontWeight: 700 }}>{lie.text}</div>
+      <div style={{ fontSize: 28, fontWeight: 700 }}>{lie.text}</div>
       <Stamp size={28} tilt={-6}>
         {t.realOrNah.nahStamp}
       </Stamp>
       <PersonTag
         name={authorName(t, players, lie.authorId)}
         avatar={avatarOf(players, lie.authorId)}
-        avatarSize={44}
+        avatarSize={40}
         fontSize={28}
       />
     </Card>
@@ -228,23 +228,30 @@ function LieAuthorFooter({
   compact: boolean;
   t: Dictionary;
 }) {
+  // A row, not a wrapping inline group: the name, its NAH stamp and the points chip
+  // together are wider than a compact card at TV-floor font sizes, and PersonTag keeps
+  // its own row from wrapping internally — so without a second row here, the overflow
+  // spills out of the card and into whichever neighbour sits to its right.
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <PersonTag
         name={authorName(t, players, lie.authorId)}
         avatar={avatarOf(players, lie.authorId)}
-        avatarSize={compact ? 36 : 52}
-        fontSize={compact ? 24 : 32}
-      >
-        <SlamStamp live={live} shake="small" shakeRef={shakeRef} size={compact ? 22 : 30}>
+        avatarSize={compact ? 40 : 52}
+        // Never below the TV floor: a compact card's own name/stamp/points text still
+        // has to be readable from the couch, even while a neighbouring card has focus.
+        fontSize={compact ? 28 : 32}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <SlamStamp live={live} shake="small" shakeRef={shakeRef} size={compact ? 28 : 30}>
           {t.realOrNah.nahStamp}
         </SlamStamp>
-      </PersonTag>
-      {lie.progress.pointsShown ? (
-        <Marker size={compact ? 26 : 34} color="var(--opg-marker)">
-          +{lie.points.toLocaleString("en-US")}
-        </Marker>
-      ) : null}
+        {lie.progress.pointsShown ? (
+          <Marker size={compact ? 28 : 34} color="var(--opg-marker)">
+            +{lie.points.toLocaleString("en-US")}
+          </Marker>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -263,12 +270,16 @@ const LIE_CARD_TRANSITION =
  * shortens `transition-duration` globally).
  */
 function lieCardStyle(compact: boolean): CSSProperties {
-  const size = compact ? 220 : 420;
+  // Compact is wide enough that the longest lie a player can submit (LIE_MAX_LENGTH, see
+  // types.ts) wraps to at most 3 lines instead of 5 — the line count, not the card width,
+  // is what was driving the whole lies row's height once several cards share a settled,
+  // all-compact reveal.
+  const size = compact ? 260 : 340;
   return {
-    padding: compact ? "16px 18px" : "28px 32px",
+    padding: compact ? "10px 12px" : "16px 20px",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: 6,
     width: size,
     minWidth: size,
     transition: LIE_CARD_TRANSITION,
@@ -318,7 +329,7 @@ function RemovedLieCard({ compact, t }: { compact: boolean; t: Dictionary }) {
     <Card variant={compact ? "M" : "L"} tilt={compact ? 1 : -1} style={lieCardStyle(compact)}>
       <div
         style={{
-          fontSize: compact ? 22 : 28,
+          fontSize: 28,
           fontWeight: 700,
           color: "var(--opg-ink-secondary)",
         }}
@@ -354,7 +365,7 @@ function LieCard({
   return (
     <div style={{ position: "relative" }}>
       <Card variant={compact ? "M" : "L"} tilt={compact ? 1 : -1} style={lieCardStyle(compact)}>
-        <div style={{ fontSize: compact ? 28 : 40, fontWeight: 700, lineHeight: 1.2 }}>
+        <div style={{ fontSize: compact ? 28 : 32, fontWeight: 700, lineHeight: 1.2 }}>
           {lie.text}
         </div>
         <FooledAvatars lie={lie} players={players} compact={compact} t={t} />
@@ -384,7 +395,7 @@ function LieStageSection({
   if (shown.length === 0) return null;
   const active = activeLieIndex(lies, truthShown);
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "flex-end", gap: 28 }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "flex-end", gap: 12 }}>
       {shown.map((lie) => (
         <LieCard
           key={lie.optionId}
@@ -418,19 +429,19 @@ function FindersRow({
     );
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         {reveal.foundByIds.map((id) => (
           <PersonTag
             key={id}
             name={nameOf(players, id, t.common.someone)}
             avatar={avatarOf(players, id)}
-            avatarSize={56}
-            fontSize={30}
+            avatarSize={36}
+            fontSize={28}
           />
         ))}
       </div>
-      <Marker size={30} color="var(--opg-marker)">
+      <Marker size={28} color="var(--opg-marker)">
         {format(t.realOrNah.pointsEach, { points: POINTS_TRUTH.toLocaleString("en-US") })}
       </Marker>
     </div>
@@ -453,17 +464,17 @@ function TruthSection({
     <Card
       variant="L"
       tilt={-1}
-      style={{ padding: "36px 40px", display: "flex", flexDirection: "column", gap: 20, alignSelf: "center" }}
+      style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 6, alignSelf: "center" }}
     >
       <div style={LABEL}>{t.realOrNah.theTruthLabel}</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <Highlight style={{ padding: "0 16px" }}>
-          <span style={{ fontSize: 96, fontWeight: 700 }}>
+          <span style={{ fontSize: 48, fontWeight: 700 }}>
             {progress.truthStamped ? reveal.answer : "?"}
           </span>
         </Highlight>
         {progress.truthStamped ? (
-          <SlamStamp live={progress.truthStampedLive} shake="small" size={52}>
+          <SlamStamp live={progress.truthStampedLive} shake="small" size={34}>
             {t.realOrNah.realStamp}
           </SlamStamp>
         ) : null}
@@ -545,6 +556,26 @@ export function HostReveal(props: HostRevealProps) {
   const announcement = progress.truthStamped
     ? format(t.realOrNah.truthAnnouncement, { answer: reveal.answer })
     : "";
+  const announcer = (
+    <output aria-live="polite" style={HIDDEN}>
+      {announcement}
+    </output>
+  );
+
+  // The standings take the whole stage once they land, instead of piling up under the
+  // duds/lies/truth stack above them: a full room of players and their fact-by-fact
+  // deltas is tall on its own (see Standings.tsx), and the TV stage doesn't scroll. By
+  // the time standings are due, the room has already seen the lies and the truth, so
+  // nothing is lost by retiring them rather than stacking a second screen's worth of
+  // content underneath.
+  if (progress.standingsShown) {
+    return (
+      <div ref={rootRef} style={STAGE}>
+        <StandingsSection view={view} players={players} progress={progress} />
+        {announcer}
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} style={STAGE}>
@@ -569,10 +600,7 @@ export function HostReveal(props: HostRevealProps) {
         t={t}
       />
       <TruthSection progress={progress} reveal={reveal} players={players} t={t} />
-      <StandingsSection view={view} players={players} progress={progress} />
-      <output aria-live="polite" style={HIDDEN}>
-        {announcement}
-      </output>
+      {announcer}
     </div>
   );
 }

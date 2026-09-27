@@ -68,16 +68,19 @@ function PreResult({
   path,
   isImposter,
   guesserName,
+  noTv,
 }: {
   path: ResultPath;
   isImposter: boolean;
   guesserName: string;
+  noTv: boolean;
 }) {
   const { t } = useLocale();
   return (
     <EyesOnTv
       title={preResultTitle(t, path, isImposter, guesserName)}
       tempo={path === "caught" ? "fast" : "slow"}
+      variant={noTv ? "room" : "screen"}
     />
   );
 }
@@ -136,6 +139,7 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
             flexDirection: "column",
             alignItems: "center",
             gap: 16,
+            maxWidth: "100%",
           }}
         >
           <Marker size={30}>{personal.headline}</Marker>
@@ -303,6 +307,7 @@ export function PhoneResult(props: PhoneResultProps) {
           path={path}
           isImposter={isImposter}
           guesserName={nameOf(players, view.imposterId, t.common.someone)}
+          noTv={stage !== null}
         />
       )}
       {countReached ? (

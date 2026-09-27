@@ -41,11 +41,15 @@ const BADGE: CSSProperties = {
   justifyContent: "center",
 };
 
-const PLACEHOLDER: CSSProperties = {
+const PENDING_RING: CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: "50%",
   border: "3px dashed var(--opg-muted)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  opacity: 0.6,
 };
 
 function VotedAvatar({
@@ -73,6 +77,36 @@ function VotedAvatar({
   );
 }
 
+/** A player the room is still waiting on: their own avatar, dimmed and ringed with a dash
+ * instead of struck through, so a no-TV player can see who is holding things up — the data
+ * was already on the stage, only the name was withheld. */
+function PendingAvatar({
+  players,
+  id,
+  t,
+}: {
+  players: PlayerSummary[];
+  id: PlayerId;
+  t: Dictionary;
+}) {
+  return (
+    <div data-testid="stage-vote-pending" style={PENDING_RING}>
+      <Avatar
+        id={avatarOf(players, id)}
+        size={32}
+        alt={format(t.mostLikelyTo.stillVotingAlt, {
+          name: nameOf(players, id, t.common.someone),
+        })}
+      />
+    </div>
+  );
+}
+
+/** Players who have not voted yet, in roster order. */
+function pendingIds(view: MltHostView): PlayerId[] {
+  return view.playerIds.filter((id) => !view.votedIds.includes(id));
+}
+
 export interface StageVoteProps {
   view: MltHostView;
   players: PlayerSummary[];
@@ -81,7 +115,6 @@ export interface StageVoteProps {
 /** The stage region while the room votes: the prompt, and who has locked in. */
 export function StageVote({ view, players }: StageVoteProps) {
   const { t } = useLocale();
-  const remaining = Math.max(view.playerIds.length - view.votedIds.length, 0);
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
       <PromptLine prompt={view.prompt} size={26} />
@@ -96,13 +129,8 @@ export function StageVote({ view, players }: StageVoteProps) {
           {view.votedIds.map((id) => (
             <VotedAvatar key={id} players={players} id={id} t={t} />
           ))}
-          {Array.from({ length: remaining }, (_, index) => (
-            <div
-              key={`pending-${index}`}
-              data-testid="stage-vote-pending"
-              style={PLACEHOLDER}
-              aria-hidden="true"
-            />
+          {pendingIds(view).map((id) => (
+            <PendingAvatar key={id} players={players} id={id} t={t} />
           ))}
         </div>
       </div>

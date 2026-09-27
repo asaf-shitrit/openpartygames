@@ -50,13 +50,13 @@ export function Phone({ view, room, deadline, timerStartedAt, clock, send }: Pho
       <PhoneStrip
         gameName={t.realOrNah.title}
         progress={format(t.realOrNah.factOf, { number: view.factNumber, count: view.factCount })}
+        // The reveal has nothing left for this player to beat a clock for — a static
+        // "0:00" badge next to the header would read as a stuck timer, not a finished
+        // one. Only the timed phases (writing, voting) get the countdown at all.
         right={
-          <Timer
-            deadline={deadline}
-            clock={clock}
-            startedAt={timed ? timerStartedAt : null}
-            haptics={timed}
-          />
+          timed ? (
+            <Timer deadline={deadline} clock={clock} startedAt={timerStartedAt} haptics />
+          ) : undefined
         }
       />
       <PhoneBody

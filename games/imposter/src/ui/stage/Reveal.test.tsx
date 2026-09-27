@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { LocaleProvider } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import type { ImposterHostView, ImposterPlayerView } from "../../state";
@@ -147,6 +147,30 @@ describe("StageReveal, tie and no votes", () => {
     vi.useFakeTimers();
     setup("Host: reveal no votes", 11200);
     expect(screen.getByText("No votes?!")).toBeTruthy();
+  });
+});
+
+describe("StageReveal, decoy payoff", () => {
+  it("says nothing about the decoy word before the unmask beat", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal", 8100);
+    expect(screen.queryByText("Priya's decoy word was")).toBeNull();
+  });
+
+  it("reveals the decoy word once the unmask beat lands, same as the TV", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal", 11200);
+    expect(screen.getByText("Priya's decoy word was")).toBeTruthy();
+    expect(screen.getByText("ZEBRA")).toBeTruthy();
+  });
+});
+
+describe("StageReveal, voter avatars", () => {
+  it("shows the voters scratched onto the tally so far, on the focused row", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal", 6500);
+    const focusRow = screen.getByTestId("stage-reveal-focus-row");
+    expect(within(focusRow).getAllByRole("img").length).toBeGreaterThan(0);
   });
 });
 
