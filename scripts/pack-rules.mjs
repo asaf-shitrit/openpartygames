@@ -19,6 +19,17 @@ export const ALLOWED_LICENSES = Object.freeze([
   "CC-BY-4.0",
   "CC-BY-SA-4.0",
 ]);
+/**
+ * Licenses whose terms require the work to be credited. CC0 waives that; the BY family does
+ * not, and shipping BY-licensed content with no credit is a license violation rather than an
+ * untidy field. Every pack in the repo already carries an attribution — this keeps the next
+ * one from being the exception.
+ */
+export const LICENSES_NEEDING_ATTRIBUTION = Object.freeze([
+  "CC-BY-4.0",
+  "CC-BY-SA-4.0",
+]);
+
 export const ALLOWED_LANGUAGES = Object.freeze(["en", "he"]);
 
 export const MAX_WORD_LENGTH = 24;
@@ -186,7 +197,18 @@ function vocabularyErrors(pack) {
       `license ${JSON.stringify(pack.license)} must be one of ${ALLOWED_LICENSES.join(", ")}`,
     );
   }
+  errors.push(...attributionErrors(pack));
   return errors;
+}
+
+/** A BY license obliges the pack to say whose work it is. */
+function attributionErrors(pack) {
+  if (!LICENSES_NEEDING_ATTRIBUTION.includes(pack.license)) return [];
+  const attribution = pack.attribution;
+  if (isText(attribution) && attribution.trim() !== "") return [];
+  return [
+    `license ${pack.license} requires a non-empty attribution, and this pack has none`,
+  ];
 }
 
 function wordPairErrors(items) {

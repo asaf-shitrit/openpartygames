@@ -246,6 +246,37 @@ describe("validatePack word pairs", () => {
     ).toMatch(/language/);
   });
 
+  it("requires an attribution when the license asks for one", () => {
+    // CC-BY and CC-BY-SA oblige the pack to credit whose work it is, so shipping one with no
+    // credit is a license violation rather than an untidy field. Every pack in the repo has
+    // an attribution today; nothing stopped the next one from being the exception.
+    expect(
+      validatePack(
+        validWordPack({ license: "CC-BY-SA-4.0", attribution: "" }),
+        wordOpts,
+      ).join(),
+    ).toMatch(/attribution/);
+    expect(
+      validatePack(
+        validWordPack({ license: "CC-BY-4.0", attribution: "   " }),
+        wordOpts,
+      ).join(),
+    ).toMatch(/attribution/);
+    expect(
+      validatePack(
+        validWordPack({ license: "CC-BY-SA-4.0", attribution: "By someone." }),
+        wordOpts,
+      ),
+    ).toEqual([]);
+  });
+
+  it("does not ask CC0 for an attribution it waives", () => {
+    // CC0 gives the work away outright. Demanding credit for it would be the validator
+    // inventing a rule the license does not have.
+    const pack = validWordPack({ license: "CC0-1.0", attribution: "" });
+    expect(validatePack(pack, wordOpts)).toEqual([]);
+  });
+
   it("requires a pack to name itself in its own language", () => {
     // The catalog a room sees is scoped to its content language, so a Hebrew room lists
     // only Hebrew packs — and their names are the one part of that list it cannot skip.
