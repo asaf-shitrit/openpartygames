@@ -258,6 +258,87 @@ function checkInteractive(el, limits) {
   return found.filter((each) => each !== null);
 }
 
+/** The TV stage's height in its own coordinates, the 1080 of the 1920x1080 the design is drawn at. */
+const STAGE_HEIGHT = 1080;
+
+/**
+ * Where the TV stage sits and how far it has been shrunk to fit, or null on a page that has no
+ * stage — a phone screen, or a stage whose class was renamed out from under this file.
+ *
+ * The scale is the whole point of measuring the stage rather than assuming it. `Stage`
+ * (packages/ui/src/layout.tsx) lays out a literal 1920x1080 box and then
+ * `transform: scale(...)`s it to fit whatever it is cast to, so every rect the browser reports
+ * inside it comes back in scaled viewport pixels. Dividing that scale back out puts a
+ * measurement in the units the design is written in, which is the only space where "past the
+ * bottom" is one number instead of one per window size.
+ *
+ * @returns {{ top: number, scale: number } | null}
+ */
+function stageFrame() {
+  const stage = document.querySelector(".opg-grid-tv");
+  if (stage === null) return null;
+  const rect = stage.getBoundingClientRect();
+  if (rect.height <= 0) return null;
+  return { top: rect.top, scale: rect.height / STAGE_HEIGHT };
+}
+
+/**
+ * The TV stage does not scroll and nobody can touch it. It is a fixed 1920x1080 box under
+ * `overflow: hidden`, cast to a screen across the room, so a word below its bottom edge is not
+ * awkward to reach the way the bottom of a long phone column is — it is simply not there, and
+ * the room never finds out it was written. The phone rules have no counterpart to this one
+ * because a phone scrolls; checkReachable is the nearest thing, and it only ever looks at
+ * controls, of which the TV has almost none.
+ *
+ * Like checkHorizontal, this judges only elements that carry words or take a tap. The design
+ * hangs decoration past its edges on purpose — tilted stickers, the result burst — and a rule
+ * that counted those would report the stage for doing the thing it was built to do.
+ *
+ * @param {HTMLElement} el @param {{ top: number, scale: number }} frame @returns {Violation | null}
+ */
+function checkBelowStage(el, frame) {
+  if (!carriesWords(el)) return null;
+  const rect = el.getBoundingClientRect();
+  const bottom = (rect.bottom - frame.top) / frame.scale;
+  if (bottom <= STAGE_HEIGHT + EPS) return null;
+  // Partly cut and entirely gone are the same failure at two different sizes, and saying which
+  // is what tells somebody how bad it is: a clipped last line still shows that there was a
+  // line, where an element wholly below the edge leaves nothing on the stage to hint at it.
+  const top = (rect.top - frame.top) / frame.scale;
+  const detail =
+    top >= STAGE_HEIGHT - EPS
+      ? `entirely below the stage: starts ${Math.round(top - STAGE_HEIGHT)}px past its ${STAGE_HEIGHT}px bottom edge`
+      : `cut off by the stage: ${Math.round(bottom - STAGE_HEIGHT)}px of it is below the ${STAGE_HEIGHT}px bottom edge`;
+  return violation("offstage-y", el, detail);
+}
+
+/**
+ * The stage rule over a whole TV screen. Kept out of collectViolations and exported on its own
+ * because it is the one rule here that is false of a phone: a phone column that runs long
+ * scrolls, and calling that a violation would fail every list in the app.
+ *
+ * A page with no stage is reported rather than passed. This rule can only be as good as its
+ * one selector, and a rule that answers "clean" when it found nothing to measure is the shape
+ * of every check that quietly stops checking.
+ *
+ * @returns {Violation[]}
+ */
+function collectStageViolations() {
+  const frame = stageFrame();
+  if (frame === null) {
+    return [
+      {
+        rule: "offstage-y",
+        detail: "no .opg-grid-tv stage on this page, so the rule measured nothing",
+        path: "html",
+        text: "",
+      },
+    ];
+  }
+  const elements = Array.from(document.body.querySelectorAll("*")).filter(visible);
+  return elements.map((el) => checkBelowStage(el, frame)).filter((each) => each !== null);
+}
+
 /** A screen that scrolls sideways is broken outright. @returns {Violation[]} */
 function checkPageWidth() {
   const doc = document.documentElement;
@@ -287,6 +368,14 @@ function collectViolations(limits) {
 }
 
 window.opgLayout = { collectViolations };
+
+// Its own surface rather than another entry on opgLayout, for a dull reason worth writing down
+// so nobody folds it back in: every spec in this folder declares `window.opgLayout` in its own
+// `declare global`, those declarations merge into one Window, and TypeScript requires them to
+// agree exactly — so a member added here has to be added to each of them in lockstep, forever,
+// including the specs that never call it. A second global costs nothing, and the file is
+// already split this way: opgA11y below is a surface of its own for its own one caller.
+window.opgStage = { collectStageViolations };
 
 // --- Accessibility invariants -----------------------------------------------------------
 //

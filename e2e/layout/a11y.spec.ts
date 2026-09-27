@@ -10,6 +10,7 @@
 //
 // pnpm e2e:layout runs this project alongside "en" and "he"; OPG_LAYOUT_PORT picks the port.
 import { expect, test } from "@playwright/test";
+import { expectScreenUp } from "./screen-ready";
 import type { Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 import { SCREENS } from "../../apps/web/src/dev/screens";
@@ -63,7 +64,6 @@ const VIEWPORTS: Viewport[] = [
 /** The zoom pass walks phones only — see the note beside the pass itself for why not the TV. */
 const ZOOM_VIEWPORTS: Viewport[] = VIEWPORTS.filter((viewport) => viewport.surface === "phone");
 
-const MIN_ELEMENTS = 10;
 
 const INVARIANTS_PATH = fileURLToPath(new URL("./invariants.js", import.meta.url));
 
@@ -74,6 +74,13 @@ const HEBREW_STORAGE = [{ name: "opg:locale", value: "he" }];
  * the rule. Kept as a short, explicit list (rather than weakening the rule or skipping the
  * whole project) so every other screen keeps the same conservative check with the same guard
  * against silently skipping everything.
+ *
+ * Each entry costs more than it looks. The skip is per test and a test is a whole screen, so
+ * waiving one element's colour also stops the pass looking at every other element beside it: a
+ * second, unrelated regression on a waived screen would go unreported. An entry therefore stays
+ * only while its cause is genuinely unresolved, and comes out the moment it is. Two entries for
+ * --opg-marker on body text stood here until --opg-marker-text (#c73328, 5.04:1 on paper)
+ * shipped and the screens moved to it.
  */
 const CONTRAST_KNOWN_GAPS = {
   "doodle-bluff/16":
@@ -86,21 +93,15 @@ const CONTRAST_KNOWN_GAPS = {
   "doodle-bluff/25":
     "same cause as doodle-bluff/16 — its worst-case fixture is the same no-TV reveal layout, " +
     "text straight over the grid background with nothing solid behind it.",
-  "app/5":
-    "the app's own screens reaching this rule for the first time surfaced a systemic gap in " +
-    "the palette itself, not a per-screen bug: --opg-marker (#d7372b), the app's only red, " +
-    "used everywhere a warning or an error needs to read as one, measures 4.43:1 on " +
-    "--opg-paper and 4.29:1 on --opg-highlight-soft — both under the 4.5:1 floor for body " +
-    "text (it clears 4.5:1 only on plain white --opg-card, and clears the 3:1 large-text " +
-    "floor everywhere, which is why no heading in marker red has ever tripped this rule). " +
-    "This screen's 'plays on a shared screen' notice is one visible instance; a per-component " +
-    "recolour would just leave the next one uncaught. Darkening --opg-marker for body-sized " +
-    "text is a call for whoever owns the palette, weighed against the brand red it would " +
-    "shift everywhere else it appears.",
-  "app/7":
-    "same systemic --opg-marker-on-body-text gap as app/5, hit here by the VIP controls' " +
-    "own 'couldn't reach the room' error line — see app/5's note.",
 } satisfies Record<string, string>;
+
+/**
+ * The screens a viewport answers for: a phone size gets the phone screens, the TV the host
+ * ones. Shared by both passes below so neither can drift onto the other's list.
+ */
+function screensFor(viewport: Viewport): ScreenCase[] {
+  return SCREENS.filter((screen) => screen.surface === viewport.surface);
+}
 
 function report(violations: Violation[]): string {
   return violations
@@ -130,12 +131,16 @@ async function openScreen(
   });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(60);
-  const rendered = await page.evaluate(() => document.querySelectorAll("#root *").length);
-  expect(rendered, `${screen.id} did not come up`).toBeGreaterThanOrEqual(MIN_ELEMENTS);
+  await expectScreenUp(page, screen.id);
 }
 
+// The zoom pass alone. It has its own loop because it is the only pass here that is about a
+// person's browser settings rather than the pixels on the screen, and so the only one the TV
+// is genuinely exempt from — see the note inside. Contrast and accessible names follow in
+// their own loop over every viewport; keeping the three under one head is what quietly took
+// the TV out of all of them once.
 for (const viewport of ZOOM_VIEWPORTS) {
-  const screens = SCREENS.filter((screen) => screen.surface === viewport.surface);
+  const screens = screensFor(viewport);
   if (screens.length === 0) continue;
 
   // What this pass is worth, and where it stops.
@@ -151,7 +156,7 @@ for (const viewport of ZOOM_VIEWPORTS) {
   // — or measure the viewport in JS, where `getBoundingClientRect` and `window.innerHeight` are
   // in the same (zoomed) space and a ratio between them means the same thing either way.
   //
-  // The TV is deliberately not among the viewports above. The host stage is a fixed 1920x1080
+  // The TV is deliberately not among ZOOM_VIEWPORTS. The host stage is a fixed 1920x1080
   // canvas scaled to whatever screen it is cast to, shown across a room, and driven by nobody's
   // personal browser settings — it is a presentation surface, not a page someone zooms, so
   // 1.4.4 does not apply to it. That is a decision, recorded here and in the README, not an
@@ -185,6 +190,15 @@ for (const viewport of ZOOM_VIEWPORTS) {
       }
     }
   });
+}
+
+// Colour and accessible names, on every surface. A ratio and a missing label are properties of
+// the markup, not of the width it is measured at, so one pass per surface is the whole of it —
+// but the TV is a surface, and a heading nobody across the room can read off it is as much a
+// failure there as on a phone.
+for (const viewport of VIEWPORTS) {
+  const screens = screensFor(viewport);
+  if (screens.length === 0) continue;
 
   test.describe(`contrast — ${viewport.name}`, () => {
     for (const screen of screens) {
