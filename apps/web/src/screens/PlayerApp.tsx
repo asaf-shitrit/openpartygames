@@ -1,5 +1,5 @@
 // /<CODE> — phone join flow, then the screen for the current phase.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ActiveGameView,
   AvatarId,
@@ -16,13 +16,16 @@ import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
 import { navigate } from "../router";
 import { useRoomSocket } from "../useRoomSocket";
-import type { RoomSocket, RoomSocketError } from "../useRoomSocket";
+import { errorOutlived, settledKeyOf } from "./player-signals";
+import type { RoomSocket, RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
 import { PhoneAvatarPicker } from "./PhoneAvatarPicker";
 import { PhoneJoin } from "./PhoneJoin";
 import { PhoneKicked } from "./PhoneKicked";
 import { PhoneLobby } from "./PhoneLobby";
-import { PhoneReconnecting } from "./PhoneReconnecting";
+import { PhoneNextRoundBar } from "./PhoneNextRoundBar";
+import { PhoneReconnecting, PhoneReconnectingBanner } from "./PhoneReconnecting";
 import { PhoneResults } from "./PhoneResults";
+import { PhoneStarting } from "./PhoneStarting";
 import { PhoneVipControls } from "./PhoneVipControls";
 import { PhoneWaiting } from "./PhoneWaiting";
 
@@ -64,23 +67,44 @@ function readSavedName(): string {
 }
 
 /**
- * Every code the server can send has a client-owned, localized message here; `message`
- * (server prose, always English) is only a fallback for a code this map doesn't cover.
+ * Every code the server can send, in the player's own language. The seven `common` keys came
+ * first; the eight `status` ones are the codes that used to fall through to `message` — server
+ * prose, always English, which a Hebrew player could not read. The `satisfies` is the point of
+ * the map: a code added to the protocol cannot reach a phone without copy of its own. `message`
+ * is now only ever a debugging aid on the wire.
  */
-function errorCopy(t: Dictionary): Map<ErrorCode, string> {
-  return new Map([
-    ["room-full", t.common.errorRoomFull],
-    ["room-locked", t.common.errorRoomLocked],
-    ["name-taken", t.common.errorNameTaken],
-    ["name-invalid", t.common.errorNameInvalid],
-    ["not-enough-players", t.common.errorNotEnoughPlayers],
-    ["invalid-action", t.common.errorInvalidAction],
-    ["no-language-packs", t.common.errorNoLanguagePacks],
-  ]);
+function errorCopy(t: Dictionary) {
+  return {
+    "room-full": t.common.errorRoomFull,
+    "room-locked": t.common.errorRoomLocked,
+    "name-taken": t.common.errorNameTaken,
+    "name-invalid": t.common.errorNameInvalid,
+    "not-enough-players": t.common.errorNotEnoughPlayers,
+    "players-away": t.status.errorPlayersAway,
+    "start-failed": t.status.errorStartFailed,
+    "invalid-action": t.common.errorInvalidAction,
+    "no-language-packs": t.common.errorNoLanguagePacks,
+    "room-not-found": t.status.errorRoomNotFound,
+    "not-joined": t.status.errorNotJoined,
+    "not-vip": t.status.errorNotVip,
+    "avatar-taken": t.status.errorAvatarTaken,
+    "game-in-progress": t.status.errorGameInProgress,
+    "bad-message": t.status.errorBadMessage,
+    "host-token-invalid": t.status.errorHostTokenInvalid,
+    "rate-limited": t.status.errorRateLimited,
+  } satisfies Record<ErrorCode, string>;
 }
 
-function errorText(t: Dictionary, code: ErrorCode, message: string): string {
-  return errorCopy(t).get(code) ?? (message || t.common.errorGeneric);
+/** Drops the standing error the moment a view disproves it. */
+function useOutlivedError(
+  socket: RoomSocket,
+  view: PlayerRoomView | null,
+): void {
+  const { lastError, clearError } = socket;
+  useEffect(() => {
+    if (!lastError || !view) return;
+    if (errorOutlived(lastError.code, view)) clearError();
+  }, [lastError, view, clearError]);
 }
 
 function playerViewFrom(socket: RoomSocket): PlayerRoomView | null {
@@ -126,17 +150,17 @@ function busyFor(
 
 function errorFor(t: Dictionary, error: RoomSocketError | null): string | null {
   if (!error) return null;
-  return errorText(t, error.code, error.message);
+  return errorCopy(t)[error.code];
 }
 
+/** A phone with no view yet still owns a seat when it has a saved token or a join in flight. */
 function showReconnect(
   socket: RoomSocket,
-  view: PlayerRoomView | null,
   hadToken: boolean,
   joinedName: string,
 ): boolean {
   if (socket.status !== "reconnecting") return false;
-  return Boolean(view) || hadToken || joinedName.length > 0;
+  return hadToken || joinedName.length > 0;
 }
 
 function showPickerFor(
@@ -175,8 +199,10 @@ interface LobbyStageProps {
   clock: ServerClock;
   error: string | null;
   showPicker: boolean;
+  showResults: boolean;
   onDonePicker: () => void;
   onChangeAvatar: () => void;
+  onNextRound: () => void;
 }
 
 function VipControls({ view, socket, error }: {
@@ -204,29 +230,51 @@ function VipControls({ view, socket, error }: {
   );
 }
 
-/** Results stay up until the VIP picks, toggles a pack or starts; the VIP keeps their controls above it. */
+/**
+ * The finale, and for the VIP the tap that ends it. The results and the VIP's picker used to
+ * render as siblings: two phone columns, a document past 200dvh, and the Start button a whole
+ * viewport below a screen that shows no scroll cue. The VIP who just played gets the ceremony
+ * like everyone else, with the way on pinned to the bottom of it.
+ */
 function ResultsStage({
   view,
-  socket,
   clock,
-  error,
+  isVip,
+  onNextRound,
 }: {
   view: PlayerRoomView;
-  socket: RoomSocket;
   clock: ServerClock;
-  error: string | null;
+  isVip: boolean;
+  onNextRound: () => void;
 }) {
-  const isVip = view.you === view.vipId;
+  // One element, not two siblings. `PhoneResults` is a `PhoneScreen fit` — a full 100dvh box —
+  // so a sibling can only ever sit on top of it; handing the bar to its `footer` slot puts it
+  // inside the column, where it reserves its own space and the standings end above it.
   return (
-    <>
-      <PhoneResults view={view} clock={clock} />
-      {isVip ? <VipControls view={view} socket={socket} error={error} /> : null}
-    </>
+    <PhoneResults
+      view={view}
+      clock={clock}
+      footer={isVip ? <PhoneNextRoundBar onNextRound={onNextRound} /> : null}
+    />
   );
 }
 
-function showsResults(view: PlayerRoomView): boolean {
-  return view.lobbyScreen === "results" && view.lastResult !== null;
+/**
+ * Whether the finale still owns the screen. It holds until the room moves on — or, for the VIP,
+ * until they tap through to the picker, keyed by the result's own timestamp so the next game's
+ * finale comes back on its own.
+ */
+function showsResults(
+  view: PlayerRoomView,
+  dismissedAt: number | null,
+): boolean {
+  const result = view.lastResult;
+  if (view.lobbyScreen !== "results" || result === null) return false;
+  return result.finishedAt !== dismissedAt;
+}
+
+function finishedAtOf(view: PlayerRoomView): number | null {
+  return view.lastResult?.finishedAt ?? null;
 }
 
 function LobbyStage({
@@ -235,9 +283,23 @@ function LobbyStage({
   clock,
   error,
   showPicker,
+  showResults,
   onDonePicker,
   onChangeAvatar,
+  onNextRound,
 }: LobbyStageProps) {
+  // The ceremony comes first. Anyone who joined mid-game reaches the lobby with no doodle
+  // picked, and the picker used to win this race — landing on top of the crown.
+  if (showResults) {
+    return (
+      <ResultsStage
+        view={view}
+        clock={clock}
+        isVip={view.you === view.vipId}
+        onNextRound={onNextRound}
+      />
+    );
+  }
   if (showPicker) {
     return (
       <PhoneAvatarPicker
@@ -246,9 +308,6 @@ function LobbyStage({
         onDone={onDonePicker}
       />
     );
-  }
-  if (showsResults(view)) {
-    return <ResultsStage view={view} socket={socket} clock={clock} error={error} />;
   }
   if (view.you === view.vipId) {
     return <VipControls view={view} socket={socket} error={error} />;
@@ -276,10 +335,15 @@ function waitingForNextGame(me: PlayerSummary | null): boolean {
 }
 
 /** In-game controls only the VIP sees. */
-function vipBar(me: PlayerSummary | null, socket: RoomSocket) {
+function vipBar(
+  me: PlayerSummary | null,
+  socket: RoomSocket,
+  view: PlayerRoomView,
+) {
   if (!me?.isVip) return null;
   return (
     <VipGameBar
+      settledBy={settledKeyOf(view, socket.lastError?.code ?? null)}
       onSkip={() => socket.send({ t: "skip-phase" })}
       onEnd={() => socket.send({ t: "end-game" })}
     />
@@ -310,7 +374,7 @@ function RunningGame({ view, game, me, socket, clock }: RunningGameProps) {
         }
         stage={game.stage}
       />
-      {vipBar(me, socket)}
+      {vipBar(me, socket, view)}
     </>
   );
 }
@@ -322,9 +386,15 @@ interface GameStageProps {
 }
 
 function GameStage({ view, socket, clock }: GameStageProps) {
-  const game = activeGame(view);
   const me = findMe(view);
-  if (!game || waitingForNextGame(me)) return <PhoneWaiting view={view} />;
+  // The one phone that really is sitting this one out: it joined after the deal.
+  if (waitingForNextGame(me)) return <PhoneWaiting view={view} />;
+  // `starting` carries no game payload for anyone, so every phone used to fall through to
+  // "A game is already running. You'll join when the next one starts." — at the exact moment
+  // their own game was starting, and with nothing on a TV to contradict it in a no-TV room.
+  if (view.phase === "starting") return <PhoneStarting view={view} />;
+  const game = activeGame(view);
+  if (!game) return <PhoneWaiting view={view} />;
   return (
     <RunningGame
       view={view}
@@ -334,6 +404,20 @@ function GameStage({ view, socket, clock }: GameStageProps) {
       clock={clock}
     />
   );
+}
+
+function PlayerStage(props: LobbyStageProps) {
+  if (props.view.phase !== "lobby") {
+    return (
+      <GameStage view={props.view} socket={props.socket} clock={props.clock} />
+    );
+  }
+  return <LobbyStage {...props} />;
+}
+
+function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
+  if (status !== "reconnecting") return null;
+  return <PhoneReconnectingBanner />;
 }
 
 export function PlayerApp({ code }: { code: string }) {
@@ -349,10 +433,14 @@ export function PlayerApp({ code }: { code: string }) {
     "open" | "closed" | null
   >(null);
   const [hadToken] = useState(() => Boolean(playerToken(code)));
+  const [dismissedResultAt, setDismissedResultAt] = useState<number | null>(
+    null,
+  );
 
   const me = meFor(view);
 
   useScreenWakeLock(me !== null);
+  useOutlivedError(socket, view);
   const myAvatar = avatarFor(me);
   const myName = nameFor(me, joinedName);
   const error = errorFor(t, socket.lastError);
@@ -367,6 +455,9 @@ export function PlayerApp({ code }: { code: string }) {
       navigate(`/${joinCode}`);
       return;
     }
+    // A retry is a fresh attempt, so the complaint about the last one stops standing: the
+    // button says "Joining…" instead of showing "That name is taken" over a join in flight.
+    socket.clearError();
     setJoinedName(name);
     setJoinRequested(true);
     socket.join(name);
@@ -379,11 +470,10 @@ export function PlayerApp({ code }: { code: string }) {
     return <PhoneKicked name={kickedName} avatar={myAvatar} />;
   }
 
-  if (showReconnect(socket, view, hadToken, joinedName)) {
-    return <PhoneReconnecting name={reconnectName} avatar={myAvatar} />;
-  }
-
   if (!view) {
+    if (showReconnect(socket, hadToken, joinedName)) {
+      return <PhoneReconnecting name={reconnectName} avatar={myAvatar} />;
+    }
     return (
       <JoinStage
         code={code}
@@ -394,19 +484,22 @@ export function PlayerApp({ code }: { code: string }) {
     );
   }
 
-  if (view.phase !== "lobby") {
-    return <GameStage view={view} socket={socket} clock={clock} />;
-  }
-
+  // Once there is a view there is a screen worth keeping: the reconnect state rides above it
+  // rather than replacing it, so a backgrounded tab costs nobody their half-typed answer.
   return (
-    <LobbyStage
-      view={view}
-      socket={socket}
-      clock={clock}
-      error={error}
-      showPicker={showPickerFor(playerId, code, pickerOverride)}
-      onDonePicker={donePicker}
-      onChangeAvatar={() => setPickerOverride("open")}
-    />
+    <>
+      <PlayerStage
+        view={view}
+        socket={socket}
+        clock={clock}
+        error={error}
+        showPicker={showPickerFor(playerId, code, pickerOverride)}
+        showResults={showsResults(view, dismissedResultAt)}
+        onDonePicker={donePicker}
+        onChangeAvatar={() => setPickerOverride("open")}
+        onNextRound={() => setDismissedResultAt(finishedAtOf(view))}
+      />
+      <ReconnectOverlay status={socket.status} />
+    </>
   );
 }

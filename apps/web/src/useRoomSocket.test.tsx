@@ -316,8 +316,91 @@ describe("useRoomSocket", () => {
     act(() => result.current.send({ t: "skip-phase" }));
     expect(socket.sent).toEqual([]);
     act(() => socket.open());
-    act(() => result.current.send({ t: "skip-phase" }));
     expect(socket.sent).toContain(JSON.stringify({ t: "skip-phase" }));
+  });
+
+  it("delivers a tap made while the socket was down, once the next one opens", () => {
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose());
+    const action = { t: "game-action", action: { type: "vote", target: "p2" } } as const;
+    act(() => result.current.send(action));
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    act(() => lastSocket().open());
+    expect(lastSocket().sent).toContain(JSON.stringify(action));
+  });
+
+  it("keeps one slot per kind, so a changed mind is not replayed twice", () => {
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose());
+    act(() =>
+      result.current.send({ t: "game-action", action: { type: "vote", target: "p2" } }),
+    );
+    act(() =>
+      result.current.send({ t: "game-action", action: { type: "vote", target: "p3" } }),
+    );
+    // A different kind of action is a different decision, so it keeps its own slot.
+    act(() =>
+      result.current.send({ t: "game-action", action: { type: "done" } }),
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    act(() => lastSocket().open());
+    const actions = lastSocket().sent.filter((s) => s.includes("game-action"));
+    expect(actions).toEqual([
+      JSON.stringify({ t: "game-action", action: { type: "vote", target: "p3" } }),
+      JSON.stringify({ t: "game-action", action: { type: "done" } }),
+    ]);
+  });
+
+  it("drops a tap the outage outlived rather than firing it into the next round", () => {
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose());
+    act(() =>
+      result.current.send({ t: "game-action", action: { type: "vote", target: "p2" } }),
+    );
+
+    // Thirty seconds of dead air: the round this vote belonged to is long gone.
+    for (let i = 0; i < 10; i++) {
+      act(() => {
+        vi.advanceTimersByTime(5_000);
+      });
+      act(() => lastSocket().serverClose());
+    }
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    act(() => lastSocket().open());
+    expect(lastSocket().sent.some((s) => s.includes("game-action"))).toBe(false);
+  });
+
+  it("does not buffer a join, which the next socket sends for itself", () => {
+    const { result } = renderHook(() =>
+      useRoomSocket({ code: "BKTZ", role: "player" }),
+    );
+    act(() => lastSocket().open());
+    act(() => lastSocket().serverClose());
+    act(() => result.current.join("Priya"));
+
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    act(() => lastSocket().open());
+    const joins = lastSocket().sent.filter((s) => s.includes('"join"'));
+    expect(joins).toEqual([JSON.stringify({ t: "join", name: "Priya" })]);
   });
 
   it("does nothing when disabled", () => {

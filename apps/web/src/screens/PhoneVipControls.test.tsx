@@ -62,6 +62,70 @@ function setup(
   return { handlers, user: userEvent.setup() };
 }
 
+/** Like `setup`, but exposes a `rerender` that changes only the `error` prop — used to
+ * simulate the server's next state frame rejecting a start attempt. */
+function setupWithRerender() {
+  const handlers: Handlers = {
+    onPickGame: vi.fn<(id: string) => void>(),
+    onSetPack: vi.fn<(id: string, enabled: boolean) => void>(),
+    onSetLocked: vi.fn<(locked: boolean) => void>(),
+    onSetSharedScreen: vi.fn<(value: boolean) => void>(),
+    onKick: vi.fn<(id: string) => void>(),
+    onStartGame: vi.fn<() => void>(),
+  };
+  const view = makePlayerView({
+    players: PLAYERS,
+    vipId: "p1",
+    you: "p1",
+    games: [makeGame(), makeGame({ id: "real-or-nah", name: "Real or Nah" })],
+    packs: [makePack()],
+  });
+  const { rerender: rerenderRoot } = renderLocalized(
+    <PhoneVipControls view={view} error={null} {...handlers} />,
+  );
+  const rerender = (error: string | null) =>
+    rerenderRoot(
+      <LocaleProvider>
+        <PhoneVipControls view={view} error={error} {...handlers} />
+      </LocaleProvider>,
+    );
+  return { handlers, user: userEvent.setup(), rerender };
+}
+
+const lockSwitch = () => screen.getByRole("switch", { name: "Lock room" });
+
+/** Like `setup`, but exposes a `rerender` that changes only `view.locked` — the server's next
+ * state frame either confirming a lock the VIP just tapped, or contradicting it. */
+function setupWithLockRerender(locked = false) {
+  const handlers: Handlers = {
+    onPickGame: vi.fn<(id: string) => void>(),
+    onSetPack: vi.fn<(id: string, enabled: boolean) => void>(),
+    onSetLocked: vi.fn<(locked: boolean) => void>(),
+    onSetSharedScreen: vi.fn<(value: boolean) => void>(),
+    onKick: vi.fn<(id: string) => void>(),
+    onStartGame: vi.fn<() => void>(),
+  };
+  const viewWith = (value: boolean) =>
+    makePlayerView({
+      players: PLAYERS,
+      vipId: "p1",
+      you: "p1",
+      games: [makeGame()],
+      packs: [makePack()],
+      locked: value,
+    });
+  const { rerender: rerenderRoot } = renderLocalized(
+    <PhoneVipControls view={viewWith(locked)} error={null} {...handlers} />,
+  );
+  const rerender = (value: boolean) =>
+    rerenderRoot(
+      <LocaleProvider>
+        <PhoneVipControls view={viewWith(value)} error={null} {...handlers} />
+      </LocaleProvider>,
+    );
+  return { handlers, user: userEvent.setup(), rerender };
+}
+
 afterEach(cleanup);
 
 describe("PhoneVipControls", () => {
@@ -85,9 +149,20 @@ describe("PhoneVipControls", () => {
     expect(handlers.onSetLocked).toHaveBeenCalledWith(true);
   });
 
-  it("sends kick for another player", async () => {
+  it("asks for confirmation before kicking, and can be cancelled", async () => {
     const { handlers, user } = setup();
     await user.click(screen.getByRole("button", { name: "Kick Sam" }));
+    expect(handlers.onKick).not.toHaveBeenCalled();
+    expect(screen.getByText("Remove Sam from the room?")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("Remove Sam from the room?")).toBeNull();
+    expect(screen.getByRole("button", { name: "Kick Sam" })).toBeTruthy();
+  });
+
+  it("sends kick for another player once the removal is confirmed", async () => {
+    const { handlers, user } = setup();
+    await user.click(screen.getByRole("button", { name: "Kick Sam" }));
+    await user.click(screen.getByRole("button", { name: "Yes, remove" }));
     expect(handlers.onKick).toHaveBeenCalledWith("p2");
   });
 
@@ -95,6 +170,29 @@ describe("PhoneVipControls", () => {
     const { handlers, user } = setup();
     await user.click(screen.getByRole("button", { name: /start imposter/i }));
     expect(handlers.onStartGame).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables and relabels start after one tap, so a slow link cannot send it twice", async () => {
+    const { handlers, user } = setup();
+    const startButton = screen.getByRole("button", { name: /start imposter/i });
+    await user.click(startButton);
+    expect(handlers.onStartGame).toHaveBeenCalledTimes(1);
+    const pendingButton = screen.getByRole("button", { name: "Starting…" });
+    expect(pendingButton).toHaveProperty("disabled", true);
+    await user.click(pendingButton);
+    expect(handlers.onStartGame).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-enables start once the server rejects the attempt with an error", async () => {
+    const { handlers, user, rerender } = setupWithRerender();
+    const startButton = screen.getByRole("button", { name: /start imposter/i });
+    await user.click(startButton);
+    expect(screen.getByRole("button", { name: "Starting…" })).toBeTruthy();
+    rerender("That game is not available.");
+    const retryButton = screen.getByRole("button", { name: /start imposter/i });
+    expect(retryButton).toHaveProperty("disabled", false);
+    await user.click(retryButton);
+    expect(handlers.onStartGame).toHaveBeenCalledTimes(2);
   });
 
   it("disables start until enough players are active", () => {
@@ -143,6 +241,18 @@ describe("PhoneVipControls", () => {
     expect(lockedSwitch.getAttribute("aria-checked")).toBe("true");
     await user.click(lockedSwitch);
     expect(handlers.onSetLocked).toHaveBeenCalledWith(false);
+  });
+
+  it("shows the lock switch flipped immediately, before any server view confirms it", async () => {
+    const { user } = setup({ locked: false });
+    const lockedSwitch = screen.getByRole("switch", { name: "Lock room" });
+    expect(lockedSwitch.getAttribute("aria-checked")).toBe("false");
+    // The `view` prop this screen was given never changes in this test — there is no
+    // server round trip here — so a switch reading its own state straight from `view`
+    // would still show "false". It shows "true" because the optimistic value it renders
+    // is its own last choice, not the committed prop.
+    await user.click(lockedSwitch);
+    expect(lockedSwitch.getAttribute("aria-checked")).toBe("true");
   });
 
   it("asks the VIP to pick a game first", () => {
@@ -289,6 +399,85 @@ describe("PhoneVipControls", () => {
   it("drops the hero code in a shared-screen room", () => {
     setup({ sharedScreen: true });
     expect(screen.queryByText("Your room code")).toBeNull();
+  });
+});
+
+describe("PhoneVipControls, a toggle waiting on the server", () => {
+  it("keeps the VIP's choice while the room still says otherwise", async () => {
+    const { user } = setupWithLockRerender(false);
+    await user.click(lockSwitch());
+    // No view has arrived yet; the switch shows the tap, not the stale committed value.
+    expect(lockSwitch().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("does not flicker when the room's echo agrees with the tap", async () => {
+    const { user, rerender } = setupWithLockRerender(false);
+    await user.click(lockSwitch());
+    rerender(true);
+    expect(lockSwitch().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("lets a later view that disagrees win, once the room has caught up", async () => {
+    const { user, rerender } = setupWithLockRerender(false);
+    await user.click(lockSwitch());
+    rerender(true);
+    // The optimistic value has served its purpose and let go, so the room unlocking the
+    // room from somewhere else shows through instead of being masked by the old tap.
+    rerender(false);
+    expect(lockSwitch().getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("follows the room when nothing was tapped", () => {
+    const { rerender } = setupWithLockRerender(false);
+    rerender(true);
+    expect(lockSwitch().getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("holds the second of two quick taps against the echo of the first", async () => {
+    const { handlers, user, rerender } = setupWithLockRerender(false);
+    await user.click(lockSwitch());
+    await user.click(lockSwitch());
+    expect(handlers.onSetLocked).toHaveBeenNthCalledWith(1, true);
+    expect(handlers.onSetLocked).toHaveBeenNthCalledWith(2, false);
+    // The first send lands and the room says "locked" — but that is an answer to the tap
+    // before the last one. Flipping the switch back under the VIP's thumb here is exactly
+    // the thing the optimistic value exists to prevent.
+    rerender(true);
+    expect(lockSwitch().getAttribute("aria-checked")).toBe("false");
+  });
+});
+
+describe("PhoneVipControls, players who are away", () => {
+  const AWAY_LEE = makePlayer({
+    id: "p3",
+    name: "Lee",
+    avatar: "cat",
+    connected: false,
+  });
+
+  it("counts Start by the players the server can still reach", () => {
+    setup({ players: [PRIYA, SAM, AWAY_LEE] });
+    // Three names on the roster, two phones the room can start on. The server gates on the
+    // same two, so an enabled button here could only have been refused.
+    expect(
+      screen.getByRole("button", { name: /start imposter/i }),
+    ).toHaveProperty("disabled", true);
+    expect(screen.getByText("Need at least 3 players")).toBeTruthy();
+    expect(screen.getByText("3–8 players · 2 here")).toBeTruthy();
+  });
+
+  it("marks the away player on the roster, and still lists them", () => {
+    setup({ players: [PRIYA, SAM, AWAY_LEE] });
+    expect(screen.getByText("Lee")).toBeTruthy();
+    expect(screen.getByText("Away")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Kick Lee" })).toBeTruthy();
+    expect(screen.getByText("Players (3)")).toBeTruthy();
+  });
+
+  it("tags nobody when every phone is here", () => {
+    setup();
+    expect(screen.queryByText("Away")).toBeNull();
+    expect(screen.getByText("3–8 players · 3 here")).toBeTruthy();
   });
 });
 

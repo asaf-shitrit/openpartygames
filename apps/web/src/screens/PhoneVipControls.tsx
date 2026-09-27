@@ -6,7 +6,7 @@ import type {
   PlayerRoomView,
   Rating,
 } from "@opg/protocol";
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   Avatar,
@@ -23,6 +23,7 @@ import {
 import { format, joinNamesOr, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { QrCode } from "./shared";
+import { readyPlayerCount } from "./player-signals";
 import { gameIconFor } from "../games";
 
 export interface PhoneVipControlsProps {
@@ -84,6 +85,44 @@ function useStickyFooter() {
   return { ref, pinned };
 }
 
+/**
+ * Whether the server has caught up with the choice being shown, which is the one moment the
+ * optimistic value has nothing left to add. Deliberately not "any newer value wins": a VIP
+ * who taps twice while the first send is still in flight is answered by the echo of the tap
+ * *before* their last one, and dropping the optimistic value there would flip the switch
+ * back under their thumb. It stands until the room agrees with it.
+ */
+function caughtUp<T>(pending: T | null, committed: T): boolean {
+  return pending !== null && pending === committed;
+}
+
+/**
+ * Shows a locally chosen value immediately instead of waiting for the server to echo it
+ * back. Every VIP toggle here (`onSetPack`, `onSetLocked`, `onSetSharedScreen`) is a
+ * fire-and-forget socket send with nothing rendered from but the view the server last
+ * confirmed, so on a slow link a tapped Switch held its old state through the whole round
+ * trip — the natural response to an apparently unresponsive toggle is to tap it again,
+ * which flips it straight back. The optimistic value clears itself the moment the
+ * committed value (the next view) catches up to it, so a slow *or rejected* change
+ * settles back onto whatever the server actually holds rather than getting stuck showing
+ * a choice that never took.
+ */
+function useOptimistic<T>(committed: T): [T, (next: T) => void] {
+  const [pending, setPending] = useState<T | null>(null);
+  // Clearing a stale optimistic value against a newly-arrived prop, not synchronizing
+  // with anything outside React, so this adjusts state during render rather than in an
+  // effect — React's own documented pattern for "resetting state when a prop changes":
+  // a state-held copy of the previous prop, compared and updated in the render body
+  // itself (not a ref, which the render phase must not read or write). Conditional, so
+  // it bails out the instant the two agree instead of looping.
+  const [lastCommitted, setLastCommitted] = useState(committed);
+  if (lastCommitted !== committed) {
+    setLastCommitted(committed);
+    if (caughtUp(pending, committed)) setPending(null);
+  }
+  return [pending ?? committed, setPending];
+}
+
 function ratingLabel(t: Dictionary, rating: Rating): string {
   if (rating === "adult") return t.picker.ratingAdult;
   if (rating === "teen") return t.picker.ratingTeen;
@@ -118,6 +157,94 @@ function startDisabledReason(check: DisabledCheck): string | undefined {
   return undefined;
 }
 
+/**
+ * Removing someone is the one destructive action a room-full of rows makes easiest to
+ * fire by accident: every row repeats the same tap target, right next to a scrolling
+ * list a thumb keeps sliding past. So kick is two taps, not one — the danger-variant
+ * button opens a confirm inline rather than kicking on the spot, the same shape
+ * `VipGameBar`'s end-game confirm already uses for its one irreversible action.
+ */
+function KickButton({
+  t,
+  player,
+  onKick,
+}: {
+  t: Dictionary;
+  player: PlayerSummary;
+  onKick: (id: string) => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  if (confirming) {
+    return (
+      <div
+        style={{
+          flexBasis: "100%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 16, fontWeight: 700 }}>
+          {format(t.picker.kickConfirm, { name: player.name })}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <Button
+            size="md"
+            variant="danger"
+            onClick={() => onKick(player.id)}
+          >
+            <Icon name="kick" size={18} color="var(--opg-paper)" />
+            <span>{t.picker.kickConfirmYes}</span>
+          </Button>
+          <Button
+            size="md"
+            variant="secondary"
+            onClick={() => setConfirming(false)}
+          >
+            <span>{t.picker.cancel}</span>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <Button
+      size="md"
+      variant="danger"
+      onClick={() => setConfirming(true)}
+      aria-label={format(t.picker.kickAriaLabel, { name: player.name })}
+    >
+      <Icon name="kick" size={18} color="var(--opg-paper)" />
+      <span>{t.picker.kick}</span>
+    </Button>
+  );
+}
+
+/**
+ * The same dashed tag the lobby and the waiting room use, on the one roster that has to act
+ * on it: this is the VIP's list, and away is the difference between the five names they can
+ * see and the four players Start will actually count. The word carries it — the faded doodle
+ * beside it only seconds the word.
+ */
+function AwayTag({ t }: { t: Dictionary }) {
+  return (
+    <span
+      style={{
+        fontSize: 16,
+        fontWeight: 700,
+        lineHeight: 1.15,
+        padding: "0 6px",
+        flexShrink: 0,
+        color: "var(--opg-ink-secondary)",
+        border: "2px dashed var(--opg-muted)",
+        borderRadius: "var(--opg-radius-button)",
+      }}
+    >
+      {t.status.away}
+    </span>
+  );
+}
+
 function PlayerRow({
   t,
   player,
@@ -139,7 +266,7 @@ function PlayerRow({
         gap: 10,
       }}
     >
-      <Avatar id={player.avatar} size={36} />
+      <Avatar id={player.avatar} size={36} faded={!player.connected} />
       <div
         style={{
           flexGrow: 1,
@@ -152,6 +279,7 @@ function PlayerRow({
         {player.name}
         {player.isVip ? t.picker.vipSuffix : ""}
       </div>
+      {player.connected ? null : <AwayTag t={t} />}
       {isYou ? (
         <div
           style={{
@@ -164,14 +292,7 @@ function PlayerRow({
           {t.picker.you}
         </div>
       ) : (
-        <Button
-          size="md"
-          variant="secondary"
-          onClick={() => onKick(player.id)}
-          aria-label={format(t.picker.kickAriaLabel, { name: player.name })}
-        >
-          <span>{t.picker.kick}</span>
-        </Button>
+        <KickButton t={t} player={player} onKick={onKick} />
       )}
     </div>
   );
@@ -189,6 +310,7 @@ function GameButtonReason({
     <div
       style={{
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: 4,
         fontSize: 16,
@@ -197,7 +319,9 @@ function GameButtonReason({
       }}
     >
       <Icon name="monitor" size={18} />
-      <div>{t.picker.sharedScreenOnly}</div>
+      <div style={{ minWidth: 0, overflowWrap: "break-word" }}>
+        {t.picker.sharedScreenOnly}
+      </div>
     </div>
   );
 }
@@ -242,6 +366,9 @@ function GameButton({
       <div
         style={{
           display: "flex",
+          // Wrapping, not squeezing: at 200% text the tick and the word "Picked" together are
+          // wider than half a phone, and a row that cannot wrap pushes them off the side.
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
         }}
@@ -251,6 +378,7 @@ function GameButton({
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "center",
               gap: 2,
               fontSize: 16,
@@ -337,6 +465,7 @@ function PackRow({
   last: boolean;
   onSetPack: (id: string, enabled: boolean) => void;
 }) {
+  const [enabled, setEnabled] = useOptimistic(pack.enabled);
   return (
     <div
       style={{
@@ -355,7 +484,7 @@ function PackRow({
           fontSize: 17,
           fontWeight: 700,
           overflowWrap: "break-word",
-          color: pack.enabled ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
+          color: enabled ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
         }}
       >
         {pack.name}
@@ -368,10 +497,13 @@ function PackRow({
         {ratingLabel(t, pack.rating)}
       </Chip>
       <Switch
-        checked={pack.enabled}
+        checked={enabled}
         size={30}
-        label={`${pack.name} pack`}
-        onChange={(enabled) => onSetPack(pack.id, enabled)}
+        label={format(t.picker.packAccessibleName, { pack: pack.name })}
+        onChange={(next) => {
+          setEnabled(next);
+          onSetPack(pack.id, next);
+        }}
         style={{ flexShrink: 0 }}
       />
     </div>
@@ -453,6 +585,7 @@ function SharedScreenToggle({
   blockedNames: string[];
   onSetSharedScreen: (value: boolean) => void;
 }) {
+  const [shown, setShown] = useOptimistic(sharedScreen);
   return (
     <Card
       variant="M"
@@ -491,14 +624,17 @@ function SharedScreenToggle({
             overflowWrap: "break-word",
           }}
         >
-          {sharedScreenHint(t, sharedScreen, blockedNames)}
+          {sharedScreenHint(t, shown, blockedNames)}
         </div>
       </div>
       <Switch
-        checked={sharedScreen}
+        checked={shown}
         size={30}
         label={t.picker.addSharedScreen}
-        onChange={onSetSharedScreen}
+        onChange={(next) => {
+          setShown(next);
+          onSetSharedScreen(next);
+        }}
         style={{ flexShrink: 0 }}
       />
     </Card>
@@ -514,6 +650,7 @@ function LockCard({
   locked: boolean;
   onSetLocked: (locked: boolean) => void;
 }) {
+  const [checked, setChecked] = useOptimistic(locked);
   return (
     <Card
       variant="Malt"
@@ -556,10 +693,13 @@ function LockCard({
         </div>
       </div>
       <Switch
-        checked={locked}
+        checked={checked}
         size={30}
         label={t.picker.lockRoom}
-        onChange={(value) => onSetLocked(value)}
+        onChange={(next) => {
+          setChecked(next);
+          onSetLocked(next);
+        }}
         style={{ flexShrink: 0 }}
       />
     </Card>
@@ -616,7 +756,10 @@ function StartButtonError({ error }: { error: string | null }) {
       style={{
         fontSize: 16,
         fontWeight: 700,
-        color: "var(--opg-marker)",
+        // 16px bold is body text, under WCAG's 18.66px bold "large text" floor, so this
+        // uses the darkened --opg-marker-text (5.04:1 on paper) rather than the brand
+        // --opg-marker (4.43:1, under the 4.5:1 body-text floor) — see styles.css.
+        color: "var(--opg-marker-text)",
         textAlign: "center",
       }}
     >
@@ -628,10 +771,13 @@ function StartButtonError({ error }: { error: string | null }) {
 function StartButtonLabel({
   t,
   selectedGame,
+  starting,
 }: {
   t: Dictionary;
   selectedGame: GameSummary | null;
+  starting: boolean;
 }) {
+  if (starting) return <span>{t.picker.startingGame}</span>;
   return (
     <span>
       {selectedGame
@@ -639,6 +785,87 @@ function StartButtonLabel({
         : t.picker.startGame}
     </span>
   );
+}
+
+/**
+ * `onStartGame` is a fire-and-forget socket send: nothing in `view` moves until the
+ * server's next state frame arrives, so without this the button stayed enabled and
+ * tappable through the whole round trip and a VIP on a slow link could send two
+ * `start-game` messages. `starting` latches true on the first tap and only clears when a
+ * new `error` arrives — the one signal this screen gets that the attempt was rejected
+ * rather than merely slow. A successful start unmounts this screen instead, so there is
+ * no false-negative case where the latch would need to clear on its own.
+ */
+function useStartPending(error: string | null): [boolean, () => void] {
+  const [starting, setStarting] = useState(false);
+  // Adjusted during render against a newly-arrived `error` prop, the same reasoning as
+  // `useOptimistic` above — not an effect, because nothing outside React needs to
+  // observe this transition.
+  const [lastError, setLastError] = useState(error);
+  if (lastError !== error) {
+    setLastError(error);
+    if (error && starting) setStarting(false);
+  }
+  return [starting, () => setStarting(true)];
+}
+
+/** The footer riding the bottom of the viewport, or sitting at the end of the scroll once
+ * it grows too tall to pin — see the comment on `useStickyFooter` above. */
+function startButtonFooterStyle(pinned: boolean): CSSProperties {
+  return {
+    marginTop: "auto",
+    position: pinned ? "sticky" : "static",
+    bottom: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    // Full-bleed paper behind it, since the list scrolls underneath.
+    marginInline: -18,
+    paddingInline: 18,
+    paddingTop: 12,
+    paddingBottom: "calc(6px + env(safe-area-inset-bottom, 0px))",
+    background: "var(--opg-paper)",
+  };
+}
+
+function PlayerRangeLine({
+  t,
+  min,
+  max,
+  count,
+}: {
+  t: Dictionary;
+  min: number;
+  max: number;
+  count: number;
+}) {
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        fontSize: 16,
+        fontWeight: 700,
+        color: "var(--opg-ink-secondary)",
+      }}
+    >
+      {format(t.picker.playerRangeHere, { min, max, count })}
+    </div>
+  );
+}
+
+interface StartButtonState {
+  disabled: boolean;
+  disabledReason: string | undefined;
+}
+
+/** While a start is in flight the button is disabled with no reason line of its own —
+ * the "Starting…" label already says why nothing happens on tap. */
+function startButtonState(
+  starting: boolean,
+  disabledReason: string | undefined,
+): StartButtonState {
+  if (starting) return { disabled: true, disabledReason: undefined };
+  return { disabled: Boolean(disabledReason), disabledReason };
 }
 
 function StartButton({
@@ -664,58 +891,38 @@ function StartButton({
   footerRef: RefObject<HTMLDivElement | null>;
   pinned: boolean;
 }) {
+  const [starting, markStarting] = useStartPending(error);
+  const handleStart = () => {
+    markStarting();
+    onStartGame();
+  };
+  const { disabled, disabledReason: shownReason } = startButtonState(
+    starting,
+    disabledReason,
+  );
   return (
-    <div
-      ref={footerRef}
-      style={{
-        marginTop: "auto",
-        // The picker, the packs and the player list together run well past a phone
-        // screen, so the primary action rides the bottom of the viewport instead of
-        // sitting at the end of the scroll where it cannot be reached — until it grows
-        // large enough that riding there would hide the list it belongs to, and then it
-        // takes its place at the end of the scroll after all.
-        position: pinned ? "sticky" : "static",
-        bottom: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 6,
-        // Full-bleed paper behind it, since the list scrolls underneath.
-        marginInline: -18,
-        paddingInline: 18,
-        paddingTop: 12,
-        paddingBottom: "calc(6px + env(safe-area-inset-bottom, 0px))",
-        background: "var(--opg-paper)",
-      }}
-    >
+    // The picker, the packs and the player list together run well past a phone screen,
+    // so the primary action rides the bottom of the viewport instead of sitting at the
+    // end of the scroll where it cannot be reached — until it grows large enough that
+    // riding there would hide the list it belongs to, and then it takes its place at the
+    // end of the scroll after all.
+    <div ref={footerRef} style={startButtonFooterStyle(pinned)}>
       <StartButtonError error={error} />
       <Button
         size="xl"
         fullWidth
-        disabled={Boolean(disabledReason)}
-        disabledReason={disabledReason}
-        onClick={onStartGame}
+        disabled={disabled}
+        disabledReason={shownReason}
+        onClick={handleStart}
       >
         <Icon
           name="arrow-right"
           size={24}
           color="var(--opg-paper)"
         />
-        <StartButtonLabel t={t} selectedGame={selectedGame} />
+        <StartButtonLabel t={t} selectedGame={selectedGame} starting={starting} />
       </Button>
-      <div
-        style={{
-          textAlign: "center",
-          fontSize: 16,
-          fontWeight: 700,
-          color: "var(--opg-ink-secondary)",
-        }}
-      >
-        {format(t.picker.playerRangeHere, {
-          min: minPlayers,
-          max: maxPlayers,
-          count: activeCount,
-        })}
-      </div>
+      <PlayerRangeLine t={t} min={minPlayers} max={maxPlayers} count={activeCount} />
     </div>
   );
 }
@@ -748,9 +955,14 @@ function RoomCodeHero({ t, code }: { t: Dictionary; code: string }) {
         className="opg-marker"
         style={{
           display: "flex",
+          // Four 48px letters and their separators are wider than a phone at 200% text, and a
+          // room code that runs off the side is a code nobody can read out. It takes a second
+          // line instead; at every normal size it stays on one.
+          flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "center",
           gap: 6,
+          maxWidth: "100%",
           fontSize: 48,
           lineHeight: 1,
         }}
@@ -895,14 +1107,17 @@ export function PhoneVipControls({
   const { ref: footerRef, pinned: footerPinned } = useStickyFooter();
   const selectedGame =
     view.games.find((g) => g.id === view.selectedGameId) ?? null;
-  const activePlayers = view.players.filter((p) => !p.waitingForNextGame);
+  // The same count the server will apply when this button's message lands: a phone that has
+  // dropped off cannot play, however present its name looks in the roster below. Counting the
+  // roster instead left the VIP with an enabled Start that the room would only refuse.
+  const readyCount = readyPlayerCount(view);
   const enabledPacks = view.packs.filter((p) => p.enabled);
   const limits = gameLimits(selectedGame);
   const disabledReason = startDisabledReason({
     t,
     selectedGame,
     sharedScreen: view.sharedScreen,
-    playerCount: activePlayers.length,
+    playerCount: readyCount,
     packCount: enabledPacks.length,
   });
   const blockedGameNames = view.games
@@ -942,7 +1157,7 @@ export function PhoneVipControls({
         disabledReason={disabledReason}
         minPlayers={limits.min}
         maxPlayers={limits.max}
-        activeCount={activePlayers.length}
+        activeCount={readyCount}
         error={error}
         onStartGame={onStartGame}
         footerRef={footerRef}

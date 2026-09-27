@@ -142,6 +142,24 @@ describe("PhoneJoin", () => {
     await waitFor(() => expect(onJoin).toHaveBeenCalledWith("BKTZ", "Priya"));
   });
 
+  it("shows a hint line under a parent-supplied error", () => {
+    render(
+      <LocaleProvider>
+        <PhoneJoin
+          error="That room code doesn't exist."
+          errorHint="Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again."
+          onJoin={vi.fn<(code: string, name: string) => void>()}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("That room code doesn't exist.")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Sounds alike: B/D/P/T/V/Z, M/N, S/F. Ask them to say it again.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("shows an error passed by the parent", () => {
     render(
       <LocaleProvider>

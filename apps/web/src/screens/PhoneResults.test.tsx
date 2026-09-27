@@ -9,6 +9,7 @@ import {
   makeOldSaveResult,
   makePlayer,
   makePlayerView,
+  makeResult,
   makeResultWithAwards,
   makeTiedResult,
 } from "./fixtures/room";
@@ -254,5 +255,258 @@ describe("PhoneResults, in Hebrew", () => {
       />,
     );
     expect(screen.getByText("סיימתם במקום הראשון עם 12")).toBeTruthy();
+  });
+});
+
+describe("PhoneResults, a player who never played", () => {
+  it("gets a plain final-scores card, not a bogus last-place rank", () => {
+    // The scores are keyed p1/p2/p3 only; p4 joined the room but never played this round.
+    const P4 = makePlayer({ id: "p4", name: "Newcomer", avatar: "toast" });
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p4",
+          players: [PRIYA, SAM, LEE, P4],
+          lastResult: makeOldSaveResult(),
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("Final scores")).toBeTruthy();
+    expect(screen.queryByText(/You finished/)).toBeNull();
+  });
+
+  it("does not inflate rankedCount for the 3rd/2nd beats with a bystander", () => {
+    // Only p1 and p2 played; a bystander (p4) must not make the timeline think there is a
+    // 3rd place to reveal.
+    const P4 = makePlayer({ id: "p4", name: "Newcomer", avatar: "toast" });
+    vi.useFakeTimers();
+    const { advanceTo } = setup(
+      makeResultWithAwards({
+        scores: { p1: 10, p2: 30 },
+        winnerIds: ["p2"],
+        awards: [],
+      }),
+      "p1",
+      0,
+      { players: [PRIYA, SAM, LEE, P4] },
+    );
+    advanceTo(14100);
+    expect(screen.queryByText("3rd place!")).toBeNull();
+  });
+});
+
+describe("PhoneResults, no shared screen at the settled card", () => {
+  const NAME_LENGTH = 12;
+  const eightPlayers = Array.from({ length: 8 }, (_, i) =>
+    makePlayer({
+      id: `p${i + 1}`,
+      name: `Player${i + 1}`.padEnd(NAME_LENGTH, "Z").slice(0, NAME_LENGTH),
+      avatar: "drop",
+    }),
+  );
+  // Tied for first, so the standings list carries a real tie, and the reader (p1) holds
+  // every award so the sticker row is exercised too.
+  const worstCaseResult = makeResult({
+    finishedAt: 0,
+    scores: {
+      p1: 50,
+      p2: 50,
+      p3: 40,
+      p4: 35,
+      p5: 30,
+      p6: 25,
+      p7: 20,
+      p8: 15,
+    },
+    winnerIds: ["p1", "p2"],
+    awards: [
+      { id: "word-thief", playerIds: ["p1"], value: 2 },
+      { id: "master-of-disguise", playerIds: ["p1"], value: 1 },
+      { id: "sharpest-eye", playerIds: ["p1"], value: 3 },
+    ],
+  });
+
+  it("carries the full standings and every award pill, not just one", () => {
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          vipId: "p2",
+          sharedScreen: false,
+          players: eightPlayers,
+          lastResult: worstCaseResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("You finished 1st with 50")).toBeTruthy();
+    expect(screen.getByText("Word thief")).toBeTruthy();
+    expect(screen.getByText("Master of disguise")).toBeTruthy();
+    expect(screen.getByText("Sharpest eye")).toBeTruthy();
+    for (const player of eightPlayers) {
+      expect(screen.getByText(player.name)).toBeTruthy();
+    }
+    expect(
+      screen.getByText("Waiting on Player2ZZZZZ to pick the next game"),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about waiting when the reader is the VIP", () => {
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p2",
+          vipId: "p2",
+          sharedScreen: false,
+          players: eightPlayers,
+          lastResult: worstCaseResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.queryByText(/Waiting on/)).toBeNull();
+  });
+
+  it("shows no standings list once a shared screen is carrying them", () => {
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          vipId: "p2",
+          sharedScreen: true,
+          players: eightPlayers,
+          lastResult: worstCaseResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("You finished 1st with 50")).toBeTruthy();
+    expect(screen.queryByText("Player8ZZZZZ")).toBeNull();
+    expect(screen.queryByText(/Waiting on/)).toBeNull();
+  });
+});
+
+describe("PhoneResults, the footer slot", () => {
+  const eightPlayers = Array.from({ length: 8 }, (_, i) =>
+    makePlayer({ id: `p${i + 1}`, name: `Player ${i + 1}`, avatar: "drop" }),
+  );
+  const settledResult = makeResult({
+    finishedAt: 0,
+    scores: { p1: 80, p2: 70, p3: 60, p4: 50, p5: 40, p6: 30, p7: 20, p8: 10 },
+    winnerIds: ["p1"],
+  });
+
+  function renderWithFooter() {
+    return renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          vipId: "p1",
+          sharedScreen: false,
+          players: eightPlayers,
+          lastResult: settledResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+        footer={<button type="button">Next round</button>}
+      />,
+    );
+  }
+
+  it("renders the footer inside the phone column, after the standings", () => {
+    const { container } = renderWithFooter();
+    const column = container.querySelector(".opg-grid-phone");
+    const footer = screen.getByRole("button", { name: "Next round" });
+    // The whole point of the slot: the footer is a child of the same scrolling column the
+    // standings live in, and the last one — so the list ends above it instead of under it.
+    // A bar rendered beside this screen could only sit on top of it, because the column is
+    // a `PhoneScreen fit` and owns the full viewport height.
+    expect(column?.contains(footer)).toBe(true);
+    expect(column?.lastElementChild).toBe(footer);
+  });
+
+  it("leaves the column ending in the standings when no footer is given", () => {
+    const { container } = renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p1",
+          vipId: "p2",
+          sharedScreen: false,
+          players: eightPlayers,
+          lastResult: settledResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    const column = container.querySelector(".opg-grid-phone");
+    expect(column?.children).toHaveLength(1);
+    expect(screen.getByText("Player 8")).toBeTruthy();
+  });
+});
+
+describe("PhoneResults, standings rows", () => {
+  const threePlayers = [PRIYA, SAM, LEE];
+  const settledResult = makeResult({
+    finishedAt: 0,
+    scores: { p1: 30, p2: 20, p3: 10 },
+    winnerIds: ["p1"],
+  });
+
+  function renderStandings(players = threePlayers, you = "p1") {
+    return renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you,
+          vipId: you,
+          sharedScreen: false,
+          players,
+          lastResult: settledResult,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+  }
+
+  it("marks first place in the crown's red and every other rank in ink", () => {
+    renderStandings();
+    const first = screen.getByText("1");
+    const second = screen.getByText("2");
+    expect(first.getAttribute("style")).toContain("color: var(--opg-marker)");
+    expect(second.getAttribute("style")).toContain("color: var(--opg-ink)");
+  });
+
+  it("lists nobody who has no score of their own", () => {
+    // p4 walked in after the game started: a seat on the roster, nothing in the result. A
+    // scoreboard is the one place they should not appear — not even on 0, which they did
+    // not play for.
+    const P4 = makePlayer({ id: "p4", name: "Newcomer", avatar: "toast" });
+    renderStandings([...threePlayers, P4]);
+    expect(screen.getByText("Lee")).toBeTruthy();
+    expect(screen.queryByText("Newcomer")).toBeNull();
+  });
+
+  it("reads down the card in rank order, whatever order the roster arrives in", () => {
+    const { container } = renderStandings([LEE, SAM, PRIYA]);
+    const ranks = [...container.querySelectorAll(".opg-marker")]
+      .map((el) => el.textContent)
+      .filter((text) => text === "1" || text === "2" || text === "3");
+    expect(ranks).toEqual(["1", "2", "3"]);
+  });
+});
+
+describe("PhoneResults, Eyes on the TV doodle", () => {
+  it("swaps the screen doodle for the room doodle with no shared screen", () => {
+    vi.useFakeTimers();
+    const withTv = setup(makeResultWithAwards(), "p1", 0);
+    const tvCircles = withTv.rendered.container.querySelectorAll("circle").length;
+
+    cleanup();
+
+    const noTv = setup(makeResultWithAwards(), "p1", 0, { sharedScreen: false });
+    const roomCircles = noTv.rendered.container.querySelectorAll("circle").length;
+
+    // The screen doodle draws 2 eyes; the room doodle draws the same 2 eyes plus a 3-face huddle.
+    expect(tvCircles).toBe(2);
+    expect(roomCircles).toBe(5);
   });
 });

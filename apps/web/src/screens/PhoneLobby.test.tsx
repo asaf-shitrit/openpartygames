@@ -50,6 +50,28 @@ describe("PhoneLobby", () => {
     expect(screen.getByText("Sam")).toBeTruthy();
   });
 
+  it("marks a dead phone away and leaves it out of the count", () => {
+    setup({
+      players: [ME, SAM, makePlayer({ id: "p3", name: "Lee", connected: false })],
+    });
+    expect(screen.getByText("Away")).toBeTruthy();
+    expect(screen.getByText("Lee")).toBeTruthy();
+    // The room can reach two of the three, which is the number the server plays by.
+    expect(screen.getByText("Who's here (2)")).toBeTruthy();
+  });
+
+  it("still marks an away VIP as the VIP", () => {
+    setup({
+      players: [
+        makePlayer({ id: "p1", name: "Priya", isVip: true, connected: false }),
+        SAM,
+      ],
+      vipId: "p1",
+    });
+    expect(screen.getByText("Away")).toBeTruthy();
+    expect(screen.getByText("VIP")).toBeTruthy();
+  });
+
   it("tells the VIP they pick the game", () => {
     setup();
     expect(screen.getByText("You're the VIP and pick the game.")).toBeTruthy();

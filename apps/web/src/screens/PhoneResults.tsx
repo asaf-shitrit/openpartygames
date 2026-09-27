@@ -5,8 +5,10 @@ import type {
   GameResultSummary,
   PlayerId,
   PlayerRoomView,
+  PlayerSummary,
 } from "@opg/protocol";
 import {
+  Avatar,
   Confetti,
   Crown,
   Card,
@@ -29,6 +31,7 @@ import {
   crownCopy,
   crownCueId,
   finaleBeats,
+  participantIds,
   rankPlayers,
   topRank,
 } from "./finale-timeline";
@@ -284,6 +287,10 @@ function StickerRow({
               border: "3px solid var(--opg-ink)",
               borderRadius: "var(--opg-radius-button)",
               color: "var(--opg-marker)",
+              // At 200% text an award name is wider than the phone; it breaks rather than
+              // hanging off the side, the same as every other long string on this screen.
+              maxWidth: "100%",
+              overflowWrap: "break-word",
             }}
           >
             {copy.title}
@@ -321,7 +328,7 @@ function SettledCard({
         textAlign: "center",
       }}
     >
-      <Marker size={28}>
+      <Marker size={28} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
         {rank === null
           ? t.results.finalScores
           : format(t.results.finishedPlaceWithScore, {
@@ -367,12 +374,197 @@ function myAwardCallout(
 function teaserCallout(t: Dictionary, stage: Stage, sharedScreen: boolean): ReactNode {
   return (
     <EyesOnTv
-      // A shared screen gets the kit's own "Eyes on the TV"; without one there is no
-      // screen to look at, so the teaser says what is coming instead.
+      // A shared screen gets the kit's own "Eyes on the TV" doodle; without one there is no
+      // screen to look at, so the teaser swaps in the room doodle and says what is coming.
+      variant={sharedScreen ? "screen" : "room"}
       title={sharedScreen ? undefined : t.results.almostTime}
       detail={t.results.awardsComing}
       tempo={stage.crownIntroReached ? "fast" : "slow"}
     />
+  );
+}
+
+/**
+ * The seat a ranked row belongs to. Every rank has one, because `rankPlayers` ranks exactly
+ * the roster ids that carry a score — but it is still a lookup, and a row with no name and no
+ * doodle is not a row worth drawing, so the case the types insist on drops out of the list
+ * rather than being filled in with a stand-in player nobody in the room would recognise.
+ */
+function seatFor(
+  players: readonly PlayerSummary[],
+  id: PlayerId,
+): PlayerSummary | null {
+  return players.find((candidate) => candidate.id === id) ?? null;
+}
+
+/**
+ * The crown's red, for the one rank that won. Colour is never the only signal here: first
+ * place is the row at the top of a numbered list, and the card above it has already said
+ * the winner's name.
+ */
+function rankInkColor(rank: number): string {
+  return rank === 1 ? "var(--opg-marker)" : "var(--opg-ink)";
+}
+
+function StandingsRow({
+  row,
+  players,
+}: {
+  row: RankedPlayer;
+  players: readonly PlayerSummary[];
+}) {
+  const player = seatFor(players, row.id);
+  if (player === null) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <div
+        className="opg-marker"
+        style={{
+          width: 26,
+          fontSize: 20,
+          lineHeight: 1,
+          flexShrink: 0,
+          color: rankInkColor(row.rank),
+        }}
+      >
+        {row.rank}
+      </div>
+      <Avatar id={player.avatar} size={32} />
+      <div
+        style={{
+          flexGrow: 1,
+          minWidth: 0,
+          fontSize: 16,
+          fontWeight: 700,
+          // Wrapping rather than an ellipsis, the same as every other roster in the app. The
+          // row is a fixed rank, a fixed doodle, a fixed score and whatever is left over; at
+          // 200% text what is left over is a few pixels, and a name clipped to nothing tells
+          // the reader less than a name on two lines.
+          overflowWrap: "anywhere",
+        }}
+      >
+        {player.name}
+      </div>
+      <div style={{ flexShrink: 0, fontSize: 16, fontWeight: 700 }}>
+        {row.score.toLocaleString("en-US")}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The scoreboard the TV would otherwise carry. With no shared screen there is nowhere else
+ * standings can land, so the settled card grows this underneath the reader's own place —
+ * every ranked player, then who the room is waiting on to pick the next game.
+ */
+function Standings({
+  t,
+  ranked,
+  players,
+  vipName,
+  amVip,
+}: {
+  t: Dictionary;
+  ranked: RankedPlayer[];
+  players: readonly PlayerSummary[];
+  vipName: string | null;
+  amVip: boolean;
+}) {
+  return (
+    <Card
+      variant="M"
+      tilt={1}
+      style={{
+        padding: "18px 16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <Marker size={20}>{t.results.finalScores}</Marker>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {ranked.map((row) => (
+          <StandingsRow key={row.id} row={row} players={players} />
+        ))}
+      </div>
+      {!amVip && vipName !== null ? (
+        // 16px, not 14: this is the only thing on the screen telling a non-VIP why nothing is
+        // happening, and the project's phone floor is 16px whether a line is incidental or not.
+        <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
+          {format(t.results.waitingOnVip, { vip: vipName })}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+/**
+ * Settled beat: my own card, plus — with no shared screen to carry them — the standings a
+ * TV would otherwise show. Its own function so `bodyFor`'s branching stays simple enough for
+ * the CRAP gate; the shared/no-shared-screen split gets its own tests here instead.
+ */
+function SettledSection({
+  t,
+  view,
+  me,
+  myRank,
+  ranked,
+  awards,
+  gameId,
+}: {
+  t: Dictionary;
+  view: PlayerRoomView;
+  me: PlayerId;
+  myRank: number | null;
+  ranked: RankedPlayer[];
+  awards: readonly Award[];
+  gameId: string;
+}): ReactNode {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        flexGrow: 1,
+        minWidth: 0,
+      }}
+    >
+      <SettledCard
+        rank={myRank}
+        score={myScoreIn(ranked, me)}
+        awards={myAwards(awards, me)}
+        gameId={gameId}
+      />
+      {view.sharedScreen ? null : (
+        <Standings
+          t={t}
+          ranked={ranked}
+          players={view.players}
+          vipName={
+            view.vipId ? findPlayerName(view, view.vipId, t.common.someone) : null
+          }
+          amVip={me === view.vipId}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Before the crown: my own rank moment, then my own award, then the teaser. */
+function preCrownBody(args: {
+  t: Dictionary;
+  stage: Stage;
+  myRank: number | null;
+  awards: readonly Award[];
+  gameId: string;
+  sharedScreen: boolean;
+}): ReactNode {
+  const { t, stage, myRank, awards, gameId, sharedScreen } = args;
+  return (
+    rankPlaceCallout(t, stage, myRank) ??
+    myAwardCallout(stage, awards, gameId) ??
+    teaserCallout(t, stage, sharedScreen)
   );
 }
 
@@ -391,10 +583,13 @@ function bodyFor(args: {
 
   if (stage.settleReached) {
     return (
-      <SettledCard
-        rank={myRank}
-        score={myScoreIn(ranked, me)}
-        awards={myAwards(awards, me)}
+      <SettledSection
+        t={t}
+        view={view}
+        me={me}
+        myRank={myRank}
+        ranked={ranked}
+        awards={awards}
         gameId={gameId}
       />
     );
@@ -409,11 +604,14 @@ function bodyFor(args: {
       />
     );
   }
-  return (
-    rankPlaceCallout(t, stage, myRank) ??
-    myAwardCallout(stage, awards, gameId) ??
-    teaserCallout(t, stage, view.sharedScreen)
-  );
+  return preCrownBody({
+    t,
+    stage,
+    myRank,
+    awards,
+    gameId,
+    sharedScreen: view.sharedScreen,
+  });
 }
 
 function GameOverCard({ t, score }: { t: Dictionary; score: number }) {
@@ -532,7 +730,10 @@ function ResultContent(args: ResultContentArgs): ReactNode {
   );
 
   return (
-    <div ref={cardRef} style={{ display: "flex", flexGrow: 1 }}>
+    // `minWidth: 0` because this is a flex row, and a flex item's `min-width: auto` refuses to
+    // shrink below the widest word inside it. At 200% text that floor is wider than the phone,
+    // and the whole settled column — card, standings, waiting line — would slide off the side.
+    <div ref={cardRef} style={{ display: "flex", flexGrow: 1, minWidth: 0 }}>
       {bodyFor({
         t,
         view,
@@ -550,15 +751,31 @@ function ResultContent(args: ResultContentArgs): ReactNode {
 export interface PhoneResultsProps {
   view: PlayerRoomView;
   clock: ServerClock;
+  /**
+   * An action that belongs to this screen but not to the ceremony — today only the VIP's way
+   * on to the next round. It is a slot rather than a sibling because this column is a
+   * `PhoneScreen fit`: a full `100dvh` box, so anything rendered *beside* it has nowhere to
+   * go but on top of it, and a bar floating over the bottom of the column covered the last
+   * standings row in a room with no TV. Rendered as the column's last child, it takes its own
+   * room in the flow and the standings end above it.
+   *
+   * So whatever is passed has to lay out in flow: an element that positions itself `fixed`
+   * reserves no space and puts the overlap straight back.
+   */
+  footer?: ReactNode;
 }
 
-export function PhoneResults({ view, clock }: PhoneResultsProps) {
+export function PhoneResults({ view, clock, footer }: PhoneResultsProps) {
   const { t } = useLocale();
   const result = view.lastResult;
   const me = view.you;
+  const scores = resultScores(result);
   const ranked = rankPlayers(
-    resultScores(result),
-    view.players.map((player) => player.id),
+    scores,
+    participantIds(
+      scores,
+      view.players.map((player) => player.id),
+    ),
   );
   const awards = resultAwards(result);
   const beats = finaleBeats({
@@ -595,6 +812,7 @@ export function PhoneResults({ view, clock }: PhoneResultsProps) {
         awards={awards}
         cardRef={cardRef}
       />
+      {footer}
     </PhoneScreen>
   );
 }

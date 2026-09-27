@@ -21,6 +21,14 @@ export interface PhoneJoinProps {
   initialName?: string;
   busy?: boolean;
   error?: string | null;
+  /**
+   * A second line under `error`, for a reason that helps rather than just restates —
+   * the sounds-alike hint under a not-found code, say. Optional and separate from
+   * `error` itself, which both current callers (`PlayerApp.tsx`, `PhoneJoinRoute.tsx`)
+   * and every fixture already pass as a plain string; a hint sits alongside it instead
+   * of requiring either caller to switch to a richer error shape.
+   */
+  errorHint?: string;
   onJoin: (code: string, name: string) => void;
 }
 
@@ -194,7 +202,10 @@ function ErrorLine({ error }: { error: JoinErrorResult }) {
       {error.hint ? (
         <div
           style={{
-            fontSize: 15,
+            // Phone text floor is 16px; this sat at 15px and stayed invisible to the a11y
+            // suite because the only fixture that hits this branch (a room-full error)
+            // carries no hint. See PhoneJoin's report for the fixture fix this needs.
+            fontSize: 17,
             fontWeight: 700,
             color: "var(--opg-ink-secondary)",
           }}
@@ -265,6 +276,21 @@ function JoinForm({
   );
 }
 
+function NoAccountNote({ t }: { t: Dictionary }) {
+  return (
+    <div
+      style={{
+        textAlign: "center",
+        fontSize: 17,
+        fontWeight: 700,
+        color: "var(--opg-ink-secondary)",
+      }}
+    >
+      {t.join.noAccount}
+    </div>
+  );
+}
+
 /** The room code wasn't found, with a hint for the most likely reason why. */
 function missingRoomError(t: Dictionary): JoinErrorResult {
   return { message: t.join.errorMissing, hint: t.join.soundsAlikeHint };
@@ -316,6 +342,7 @@ export function PhoneJoin({
   initialName = "",
   busy = false,
   error = null,
+  errorHint,
   onJoin,
 }: PhoneJoinProps) {
   const [code, setCode] = useState(
@@ -349,7 +376,8 @@ export function PhoneJoin({
     onJoin(cleanCode, cleanName);
   };
 
-  const shownError = localError ?? (error ? { message: error } : null);
+  const shownError =
+    localError ?? (error ? { message: error, hint: errorHint } : null);
   const pending = busy || checking;
   const handleSubmit = () => {
     void submit();
@@ -380,16 +408,7 @@ export function PhoneJoin({
           onSubmit={handleSubmit}
           t={t}
         />
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 17,
-            fontWeight: 700,
-            color: "var(--opg-ink-secondary)",
-          }}
-        >
-          {t.join.noAccount}
-        </div>
+        <NoAccountNote t={t} />
       </div>
     </PhoneScreen>
   );

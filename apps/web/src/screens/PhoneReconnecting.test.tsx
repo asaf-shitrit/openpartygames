@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "@opg/i18n";
-import { PhoneReconnecting } from "./PhoneReconnecting";
+import { PhoneReconnecting, PhoneReconnectingBanner } from "./PhoneReconnecting";
 
 function setup(props: Parameters<typeof PhoneReconnecting>[0] = {}) {
   render(
@@ -43,5 +43,32 @@ describe("PhoneReconnecting", () => {
       screen.getByText("המקום והניקוד שלכם שמורים. רגע אחד."),
     ).toBeTruthy();
     expect(screen.getByText("רענון")).toBeTruthy();
+  });
+});
+
+describe("PhoneReconnectingBanner", () => {
+  it("says the taps are safe, politely and without taking any", () => {
+    render(
+      <LocaleProvider>
+        <PhoneReconnectingBanner />
+      </LocaleProvider>,
+    );
+    const banner = screen.getByText("Reconnecting… your taps are saved.");
+    expect(banner).toBeTruthy();
+    const live = document.querySelector("output");
+    expect(live?.getAttribute("aria-live")).toBe("polite");
+    expect(live?.style.pointerEvents).toBe("none");
+  });
+
+  it("renders in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    render(
+      <LocaleProvider>
+        <PhoneReconnectingBanner />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("מתחברים מחדש… הלחיצות שלכם נשמרות."),
+    ).toBeTruthy();
   });
 });

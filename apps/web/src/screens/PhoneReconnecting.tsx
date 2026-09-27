@@ -1,8 +1,55 @@
-// design/PhoneReconnecting.dc.html — overlay while reconnecting.
+// design/PhoneReconnecting.dc.html — the reconnect state, as a whole screen and as a banner.
 import type { AvatarId } from "@opg/protocol";
 import { useLocale } from "@opg/i18n";
 import { Button, Highlight, Marker, PhoneScreen, PlayerChip } from "@opg/ui";
 import { Icon } from "@opg/ui";
+
+/**
+ * The reconnect state for a phone that already has a game on screen. It rides above that
+ * screen instead of replacing it — the way `TvReconnecting` rides above the TV stage — because
+ * every in-progress draft on a phone is local `useState`: the imposter's vote, a half-typed
+ * guess, the lie a player is still wording. Mobile browsers close the socket whenever the tab
+ * goes to the background, so unmounting the game here would cost a player their round for
+ * glancing at a text message. It takes no taps and covers nothing below the room strip.
+ */
+export function PhoneReconnectingBanner() {
+  const { t } = useLocale();
+  return (
+    <output
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        insetBlockStart: 0,
+        insetInline: 0,
+        zIndex: 10,
+        display: "flex",
+        justifyContent: "center",
+        padding: "8px 12px",
+        // Everything underneath stays live: the point of the banner is that play continues.
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          maxWidth: 456,
+          padding: "8px 14px",
+          background: "var(--opg-paper)",
+          border: "4px solid var(--opg-ink)",
+          borderRadius: "var(--opg-radius-l)",
+          fontSize: 17,
+          fontWeight: 700,
+          lineHeight: 1.3,
+        }}
+      >
+        <Icon name="reload" size={22} style={{ flexShrink: 0 }} />
+        <span>{t.status.reconnectingBanner}</span>
+      </div>
+    </output>
+  );
+}
 
 export interface PhoneReconnectingProps {
   name?: string;
@@ -10,6 +57,11 @@ export interface PhoneReconnectingProps {
   onReload?: () => void;
 }
 
+/**
+ * The whole-screen reconnect state, for a phone that has nothing to keep mounted yet: it holds
+ * a seat (a saved token, or a join already sent) but has not been handed a view. Once a view
+ * has arrived, `PhoneReconnectingBanner` takes over so the game stays where it is.
+ */
 export function PhoneReconnecting({
   name,
   avatar = null,

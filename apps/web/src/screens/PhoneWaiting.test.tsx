@@ -61,6 +61,16 @@ describe("PhoneWaiting", () => {
     expect(screen.getByText("Lee")).toBeTruthy();
   });
 
+  it("marks a dead phone away and leaves it out of the count", () => {
+    setup({
+      players: [ME, SAM, makePlayer({ id: "p3", name: "Lee", connected: false })],
+    });
+    expect(screen.getByText("Away")).toBeTruthy();
+    expect(screen.getByText("Lee")).toBeTruthy();
+    // Two phones are playing; the third is on the screen, not in the number.
+    expect(screen.getByText("Who's playing (2)")).toBeTruthy();
+  });
+
   it("falls back to a plain game label with no running game", () => {
     setup({ game: null });
     expect(screen.getByText("Game")).toBeTruthy();
