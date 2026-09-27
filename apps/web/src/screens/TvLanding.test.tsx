@@ -158,6 +158,36 @@ describe("TvLanding", () => {
     }
   });
 
+  it("lays the game showcase out in two columns once there is a third game", () => {
+    // A single column grew one row per game, which is what pushed the how-to-play steps
+    // and the footer below the stage's bottom edge once a fourth game shipped. Two columns
+    // keep the showcase's height bounded by half as many rows.
+    const { container } = renderLanding();
+    expect(LANDING_GAMES.length).toBeGreaterThan(2);
+    const showcaseGrid = [...container.querySelectorAll<HTMLElement>("div")].find(
+      (el) => el.style.gridTemplateColumns === "repeat(2, minmax(0, 1fr))",
+    );
+    expect(showcaseGrid).toBeTruthy();
+  });
+
+  it("shows the how-to-play steps and the footer links", () => {
+    // These were entirely below the fold on the TV stage: fixing the layout without a
+    // regression test here would leave them free to disappear again.
+    renderLanding();
+    expect(screen.getByText("Start a room on this screen")).toBeTruthy();
+    expect(
+      screen.getByText("Everyone scans the code with their phone"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("The first player to join picks a game"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Open source on GitHub" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Privacy" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Credits" })).toBeTruthy();
+  });
+
   it("unlocks sound inside the Start click", async () => {
     stubFetch(async () => Response.json(CREATED));
     const engine = new FakeEngine();

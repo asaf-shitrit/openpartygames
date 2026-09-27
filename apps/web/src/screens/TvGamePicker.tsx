@@ -1,4 +1,5 @@
 // design/TVGamePicker.dc.html — lobby pick screen (brand header + Room chip).
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import type {
   AvatarId,
@@ -63,25 +64,72 @@ function cardLook(selected: boolean): CardLook {
   return { variant: "Malt", tilt: 1 };
 }
 
+/**
+ * The card grid earns one row for up to four games — the roster today — and only wraps to a
+ * second once a fifth game ships. `wide` is the roomy two-up look for a fresh room with one or
+ * two games offered; `compact` fits three or four games across a single row; `dense` caps the
+ * row at four and clips each card's blurb to two lines so a wrapped second row still lands
+ * inside the stage rather than growing without bound as the roster keeps growing.
+ */
+type CardDensity = "wide" | "compact" | "dense";
+
+function cardDensity(gameCount: number): CardDensity {
+  if (gameCount <= 2) return "wide";
+  if (gameCount <= 4) return "compact";
+  return "dense";
+}
+
+/** One row for up to four games; beyond that, wrap at four columns rather than keep widening. */
+function gridColumns(gameCount: number): number {
+  if (gameCount <= 2) return 2;
+  return Math.min(gameCount, 4);
+}
+
 interface CardMetrics {
   padding: string;
   gap: number;
   icon: number;
   name: number;
   blurb: number;
+  blurbLines: number | undefined;
   meta: number;
   stamp: number;
 }
 
-/** Roomier metrics for two games, denser ones once a third game has to fit. */
-function cardMetrics(compact: boolean): CardMetrics {
-  if (compact) {
+/** Roomier metrics for two games, denser ones once a third has to share the row. */
+function cardMetrics(density: CardDensity): CardMetrics {
+  if (density === "dense") {
+    return {
+      padding: "18px 20px 20px",
+      gap: 6,
+      icon: 56,
+      name: 38,
+      blurb: 28,
+      blurbLines: 2,
+      meta: 28,
+      stamp: 28,
+    };
+  }
+  if (density === "compact") {
     return {
       padding: "22px 24px 24px",
       gap: 8,
       icon: 72,
-      name: 46,
+      // 40, not 46. Four games share one row, which leaves each card about 190px of inner
+      // width, and the names are wrapped in `overflow-wrap: break-word` so nothing can escape
+      // the card. That containment turns a name too wide to fit into a word broken across two
+      // lines rather than an overflow — "Imposter" rendered as "Imposte" / "r" on the screen
+      // the whole room is looking at, and no layout invariant objects, because technically
+      // nothing left its box.
+      //
+      // Wrapping *between* words is fine and unavoidable: measured in Permanent Marker, "Most
+      // Likely To" is 210px on one line even at the 28px TV floor, so it was always going to
+      // take two. What has to hold is that the longest single *word* fits: "Imposter" measures
+      // 205px at 46 and 178px at 40, against that 190px box. If a future game ships a longer
+      // single word, or this grid gains a fifth column, re-measure — do not assume.
+      name: 40,
       blurb: 28,
+      blurbLines: undefined,
       meta: 28,
       stamp: 30,
     };
@@ -92,8 +140,26 @@ function cardMetrics(compact: boolean): CardMetrics {
     icon: 120,
     name: 64,
     blurb: 34,
+    blurbLines: undefined,
     meta: 30,
     stamp: 38,
+  };
+}
+
+/**
+ * Roomy densities let the blurb wrap freely; `dense` (five-plus games, two rows of cards)
+ * clips it to a fixed number of lines instead, so a long blurb cannot grow the card past the
+ * row height the layout budgeted for it.
+ */
+function blurbStyle(metrics: CardMetrics): CSSProperties {
+  const base: CSSProperties = { fontSize: metrics.blurb, lineHeight: 1.3 };
+  if (metrics.blurbLines === undefined) return base;
+  return {
+    ...base,
+    display: "-webkit-box",
+    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: metrics.blurbLines,
+    overflow: "hidden",
   };
 }
 
@@ -102,13 +168,13 @@ function GameCard({
   game,
   selected,
   justPicked,
-  compact,
+  density,
 }: {
   t: Dictionary;
   game: GameSummary;
   selected: boolean;
   justPicked: boolean;
-  compact: boolean;
+  density: CardDensity;
 }) {
   const reduced = useReducedMotion();
   const cue = useCue();
@@ -118,7 +184,7 @@ function GameCard({
     playFx(cardRef.current, "pop", reduced);
     cue("tape");
   }, [justPicked, reduced, cue]);
-  const metrics = cardMetrics(compact);
+  const metrics = cardMetrics(density);
   return (
     <div ref={cardRef}>
       <Card
@@ -146,9 +212,7 @@ function GameCard({
           color="var(--opg-ink)"
         />
         <Marker size={metrics.name}>{game.name}</Marker>
-        <div style={{ fontSize: metrics.blurb, lineHeight: 1.3 }}>
-          {game.blurb}
-        </div>
+        <div style={blurbStyle(metrics)}>{game.blurb}</div>
         <div
           style={{
             fontSize: metrics.meta,
@@ -199,11 +263,18 @@ function PackRow({
       <Chip height={42} fontSize={28}>
         {ratingLabel(t, pack.rating)}
       </Chip>
+      {/*
+        This is a read-only mirror of the VIP's phone, not a control the host can flip from
+        the TV. Passing `disabled` keeps the primitive's dim look and `cursor: not-allowed`
+        instead of a live-looking switch that silently does nothing when someone clicks it —
+        the previous state, with no `onChange`, still let it be focused and pressed.
+      */}
       <Switch
         checked={pack.enabled}
         size={42}
         labelFontSize={28}
-        label={`${pack.name} pack`}
+        label={format(t.picker.packAccessibleName, { pack: pack.name })}
+        disabled
       />
     </div>
   );
@@ -354,7 +425,8 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
   const selectedGame = pickGame(view.games, view.selectedGameId);
   const active = countActivePlayers(view.players);
   const justPicked = useJustPicked(view.selectedGameId);
-  const compactCards = view.games.length > 2;
+  const density = cardDensity(view.games.length);
+  const columns = gridColumns(view.games.length);
 
   return (
     <TvPage>
@@ -374,8 +446,8 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${compactCards ? 3 : 2}, minmax(0, 1fr))`,
-            gap: compactCards ? 28 : 40,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            gap: density === "wide" ? 40 : 28,
             paddingTop: 8,
             alignContent: "start",
           }}
@@ -387,7 +459,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
               game={game}
               selected={game.id === view.selectedGameId}
               justPicked={game.id === justPicked}
-              compact={compactCards}
+              density={density}
             />
           ))}
         </div>
