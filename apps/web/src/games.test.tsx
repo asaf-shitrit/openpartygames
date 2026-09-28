@@ -12,6 +12,7 @@ import {
   gameIconFor,
   gameUiFor,
   LANDING_GAMES,
+  preloadGameUi,
   registerGame,
 } from "./games";
 import { makePlayerView } from "./screens/fixtures/room";
@@ -65,7 +66,12 @@ describe("registry", () => {
     });
   });
 
-  it("describes Most Likely To awards", () => {
+  // awardCopy reads from the game's `/ui` module, which now loads lazily — so, unlike before
+  // code splitting, it is only guaranteed to answer once that module has loaded. In the app
+  // this happens naturally (the game's Host/Phone rendered during play); here we drive it
+  // explicitly with preloadGameUi, the seam built for exactly this.
+  it("describes Most Likely To awards", async () => {
+    await preloadGameUi("most-likely-to");
     expect(
       awardCopyFor(
         "most-likely-to",
@@ -75,7 +81,8 @@ describe("registry", () => {
     ).toEqual({ title: "Crowd reader", detail: "Read the room 4 times" });
   });
 
-  it("describes them in the reader's language", () => {
+  it("describes them in the reader's language", async () => {
+    await preloadGameUi("most-likely-to");
     expect(
       awardCopyFor(
         "most-likely-to",
@@ -83,6 +90,22 @@ describe("registry", () => {
         he,
       ),
     ).toEqual({ title: "קורא/ת קהל", detail: "קרא/ה את החדר 4 פעמים" });
+  });
+});
+
+describe("awardCopy before a game's ui has loaded", () => {
+  it("returns null instead of crashing", async () => {
+    // A fresh registerGame with a loader that never resolves: models a device that reaches
+    // the finale without this game's Host/Phone ever having rendered in this session (e.g. a
+    // reconnect straight into the results screen, before anything preloads it).
+    const registered = registerGame({
+      loadUi: () => new Promise<typeof stubUi>(() => {}),
+      hostViewSchema: stubHostViewSchema,
+      playerViewSchema: stubPlayerViewSchema,
+    });
+    expect(
+      registered.ui.awardCopy?.({ id: "crowd-reader", playerIds: [], value: 1 }, en),
+    ).toBeNull();
   });
 });
 
@@ -102,15 +125,18 @@ const stubUi: GameUi<
 
 type StubStage = null | { secretWord: string } | { mismatchedFields: boolean };
 
+// registerGame now loads the game's ui lazily (behind Suspense), even for this in-memory
+// stub, so a render only shows the real content once that microtask resolves — hence
+// `findByTestId` (which waits) rather than `getByTestId` (which does not) below.
 function renderStubPhone(stage: StubStage) {
   const registered = registerGame({
-    ui: stubUi,
+    loadUi: () => Promise.resolve(stubUi),
     hostViewSchema: stubHostViewSchema,
     playerViewSchema: stubPlayerViewSchema,
   });
   const room = makePlayerView();
   render(
-    <registered.Phone
+    <registered.ui.Phone
       view={{ myWord: "cat" }}
       room={room}
       deadline={null}
@@ -123,20 +149,51 @@ function renderStubPhone(stage: StubStage) {
 }
 
 describe("registerGame's stage parsing", () => {
-  it("passes null straight through in a shared-screen room", () => {
+  it("passes null straight through in a shared-screen room", async () => {
     renderStubPhone(null);
-    expect(screen.getByTestId("stage").textContent).toBe("null");
+    expect((await screen.findByTestId("stage")).textContent).toBe("null");
   });
 
-  it("parses a valid stage with the game's own host view schema", () => {
+  it("parses a valid stage with the game's own host view schema", async () => {
     renderStubPhone({ secretWord: "otter" });
-    expect(screen.getByTestId("stage").textContent).toBe(
+    expect((await screen.findByTestId("stage")).textContent).toBe(
       JSON.stringify({ secretWord: "otter" }),
     );
   });
 
-  it("falls back to null instead of crashing on an unparseable stage", () => {
+  it("falls back to null instead of crashing on an unparseable stage", async () => {
     renderStubPhone({ mismatchedFields: true });
-    expect(screen.getByTestId("stage").textContent).toBe("null");
+    expect((await screen.findByTestId("stage")).textContent).toBe("null");
+  });
+});
+
+describe("registerGame's lazy loading", () => {
+  it("shows a non-blank loading state before the ui module resolves, then the real screen", async () => {
+    let resolveUi: ((ui: typeof stubUi) => void) | undefined;
+    const pending = new Promise<typeof stubUi>((resolve) => {
+      resolveUi = resolve;
+    });
+    const registered = registerGame({
+      loadUi: () => pending,
+      hostViewSchema: stubHostViewSchema,
+      playerViewSchema: stubPlayerViewSchema,
+    });
+    const room = makePlayerView();
+    render(
+      <registered.ui.Phone
+        view={{ myWord: "cat" }}
+        room={room}
+        deadline={null}
+        timerStartedAt={null}
+        clock={{ now: () => 0 }}
+        send={() => {}}
+        stage={null}
+      />,
+    );
+    // Before the module resolves: no blank screen, and no crash from an undefined component.
+    expect(screen.queryByTestId("stage")).toBeNull();
+    expect(document.body.textContent).not.toBe("");
+    resolveUi?.(stubUi);
+    expect((await screen.findByTestId("stage")).textContent).toBe("null");
   });
 });
