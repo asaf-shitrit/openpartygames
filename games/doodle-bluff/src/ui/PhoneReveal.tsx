@@ -58,7 +58,7 @@ function ResultCard({ personal, live, total, t }: { personal: PersonalReveal; li
           </div>
         ) : null}
         <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <Marker size={30}>{personal.headline}</Marker>
+          <Marker size={30} level={1}>{personal.headline}</Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>{format(t.doodleBluff.totalPoints, { points: formatPoints(total) })}</div>
         </div>

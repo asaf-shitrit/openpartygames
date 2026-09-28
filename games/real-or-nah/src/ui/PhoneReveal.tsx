@@ -46,7 +46,15 @@ export function ordinalOf(totals: Record<PlayerId, number>, me: PlayerId): numbe
   return rank;
 }
 
-function ResultCard({ card, live }: { card: PersonalCard; live: boolean }) {
+function ResultCard({
+  card,
+  live,
+  level,
+}: {
+  card: PersonalCard;
+  live: boolean;
+  level: 1 | 2;
+}) {
   return (
     <div
       style={{
@@ -74,7 +82,7 @@ function ResultCard({ card, live }: { card: PersonalCard; live: boolean }) {
         data-testid="reveal-content"
         style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 8 }}
       >
-        <Marker size={26}>{card.headline}</Marker>
+        <Marker size={26} level={level}>{card.headline}</Marker>
         {card.sub ? (
           <div style={{ fontSize: 18, fontWeight: 700 }}>{card.sub}</div>
         ) : null}
@@ -107,7 +115,14 @@ function CardStack({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {newestFirst(cards).map(({ card, index }) => (
-        <ResultCard key={card.id} card={card} live={live && index === currentIndex} />
+        // Newest first: the card the ceremony just reached is the screen's h1, the ones
+        // already settled beneath it are its subsections.
+        <ResultCard
+          key={card.id}
+          card={card}
+          live={live && index === currentIndex}
+          level={index === currentIndex ? 1 : 2}
+        />
       ))}
     </div>
   );

@@ -2,9 +2,10 @@
 // screen; the artist sits tight. Follows Real or Nah's write-phase shape (games/real-or-nah/src/ui/Phone.tsx).
 import { useState } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodleView, Icon, Marker, TextInput } from "@opg/ui";
+import { Button, Card, DoodleView, Icon, TextInput } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { ControlsMarker } from "./common";
 import { TITLE_MAX_LENGTH, type DoodleAction, type DoodlePlayerView, type DoodleTitleError } from "../state";
 
 function titleErrorText(t: Dictionary, error: DoodleTitleError | null): string | undefined {
@@ -47,7 +48,7 @@ function ArtistWaiting({ view, t }: { view: DoodlePlayerView; t: Dictionary }) {
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="pencil" size={40} color="var(--opg-ink-secondary)" />
-      <Marker size={30}>{t.doodleBluff.yourDrawingSitTight}</Marker>
+      <ControlsMarker size={30}>{t.doodleBluff.yourDrawingSitTight}</ControlsMarker>
       <div style={{ fontSize: 17, fontWeight: 700 }}>
         <WaitingLine waiting={waiting} t={t} />
       </div>
@@ -60,7 +61,7 @@ function TitleForm({ view, send, t }: { view: DoodlePlayerView; send: (action: D
   const ready = text.trim().length > 0;
   return (
     <>
-      <Marker size={26}>{t.doodleBluff.giveItAGoodLie}</Marker>
+      <ControlsMarker size={26}>{t.doodleBluff.giveItAGoodLie}</ControlsMarker>
       <TextInput
         label={t.doodleBluff.yourTitleLabel}
         value={text}
@@ -93,7 +94,7 @@ function TitleLocked({ view, t }: { view: DoodlePlayerView; t: Dictionary }) {
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="check" size={40} color="var(--opg-marker)" />
-      <Marker size={30}>{t.doodleBluff.titleLockedIn}</Marker>
+      <ControlsMarker size={30}>{t.doodleBluff.titleLockedIn}</ControlsMarker>
       <div style={{ fontSize: 18, fontWeight: 700 }}>
         <WaitingLine waiting={waiting} t={t} />
       </div>

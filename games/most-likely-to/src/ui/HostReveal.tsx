@@ -656,7 +656,7 @@ export function HostReveal(props: HostRevealProps) {
   return (
     <div ref={rootRef} style={ROOT}>
       <FxIn live={stage.introLive} preset="slideIn">
-        <PromptLine prompt={props.view.prompt} size={44} />
+        <PromptLine prompt={props.view.prompt} size={44} level={1} />
       </FxIn>
       <CenteredVerdict
         text={verdict.centeredStamp}

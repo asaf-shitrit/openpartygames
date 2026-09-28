@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   Icon,
+  Marker,
   PhaseEnter,
   PhoneScreen,
   PhoneStrip,
@@ -211,12 +212,14 @@ function VoteLocked(
         >
           <Icon name="check" size={40} color="var(--opg-marker)" />
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div
-              className="opg-marker"
-              style={{ fontSize: 32, color: "var(--opg-ink)" }}
+            {/* A no-TV room's stage above already holds the h1 (the prompt). */}
+            <Marker
+              size={32}
+              color="var(--opg-ink)"
+              level={stage === null ? 1 : 2}
             >
               {t.mostLikelyTo.voteLockedIn}
-            </div>
+            </Marker>
             {isSelf ? null : (
               <Avatar
                 id={avatarOf(players, view.myVote)}
@@ -264,7 +267,7 @@ function VoteForm(props: SectionProps) {
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {/* The stage above already carries the prompt in a no-TV room — repeating it here
             would be the same sentence twice on the screen with the least room to spare. */}
-        {stage === null ? <PromptLine prompt={view.prompt} size={22} /> : null}
+        {stage === null ? <PromptLine prompt={view.prompt} size={22} level={1} /> : null}
         <Timer deadline={deadline} clock={clock} style={{ marginTop: 4 }} />
       </div>
       <div style={voteListStyle(stage === null)}>

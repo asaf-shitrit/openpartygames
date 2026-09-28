@@ -153,7 +153,9 @@ export function HostLastChance({
           textAlign: "center",
         }}
       >
-        <Marker size={112}>{format(t.imposter.lastChance.heading, { name: imposter })}</Marker>
+        <Marker size={112} level={1}>
+          {format(t.imposter.lastChance.heading, { name: imposter })}
+        </Marker>
         <div
           style={{
             maxWidth: 1500,

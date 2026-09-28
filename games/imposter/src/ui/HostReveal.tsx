@@ -757,7 +757,7 @@ function RevealStage(props: RevealStageProps) {
   return (
     <>
       <FxIn live={stage.introLive} preset="slideIn">
-        <Marker size={96}>{t.imposter.reveal.votesAreIn}</Marker>
+        <Marker size={96} level={1}>{t.imposter.reveal.votesAreIn}</Marker>
       </FxIn>
       <Caption suspense={stage.suspense} />
       {canCenterVerdict(plan.outcome) ? (

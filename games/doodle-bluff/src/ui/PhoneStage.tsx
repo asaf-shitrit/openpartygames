@@ -118,7 +118,7 @@ export function PhoneStage({ phase, stage, players }: PhoneStageProps) {
   return (
     <div style={WRAP}>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <div style={LABEL}>{label}</div>
+        <h1 style={{ ...LABEL, margin: 0 }}>{label}</h1>
         <div style={LABEL}>{count}</div>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>

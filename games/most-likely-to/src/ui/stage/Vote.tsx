@@ -117,7 +117,7 @@ export function StageVote({ view, players }: StageVoteProps) {
   const { t } = useLocale();
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
-      <PromptLine prompt={view.prompt} size={26} />
+      <PromptLine prompt={view.prompt} size={26} level={1} />
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={VOTED_LABEL}>
           {format(t.mostLikelyTo.votedSoFar, {

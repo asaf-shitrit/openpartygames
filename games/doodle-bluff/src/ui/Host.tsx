@@ -95,7 +95,7 @@ function Draw({ view, players, deadline, timerStartedAt, clock }: SectionProps) 
   return (
     <div style={BODY}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Marker size={52}>{t.doodleBluff.everyoneIsDrawing}</Marker>
+        <Marker size={52} level={1}>{t.doodleBluff.everyoneIsDrawing}</Marker>
         <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
       </div>
       <TileGrid count={view.playerIds.length}>
@@ -121,7 +121,7 @@ function TitleHeading({ view, deadline, timerStartedAt, clock, t }: SectionProps
   const eligible = Math.max(0, view.playerIds.length - 1);
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Marker size={44}>{t.doodleBluff.whosWritten}</Marker>
+      <Marker size={44} level={1}>{t.doodleBluff.whosWritten}</Marker>
       <div style={{ fontSize: 30, fontWeight: 700 }}>
         {format(t.doodleBluff.writtenOfEligible, { written: view.writtenIds.length, eligible })}
       </div>
@@ -158,7 +158,7 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
   const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <Marker size={48}>{t.doodleBluff.whichIsReal}</Marker>
+      <Marker size={48} level={1}>{t.doodleBluff.whichIsReal}</Marker>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
         <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
         <div style={{ fontSize: 30, fontWeight: 700 }}>

@@ -16,11 +16,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodlePad, Icon, Marker, PRESSABLE_CLASS } from "@opg/ui";
+import { Button, Card, DoodlePad, Icon, PRESSABLE_CLASS } from "@opg/ui";
 import type { Doodle, Stroke } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { doodleSchema, emptyDoodle, MAX_POINTS_PER_CHUNK, type DoodleAction, type DoodlePlayerPrompt, type DoodlePlayerView } from "../state";
+import { ControlsMarker } from "./common";
 
 const TAP_TARGET = 44;
 
@@ -290,7 +291,7 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
   if (prompts.length === 0 || active === undefined) {
     return (
       <Card style={{ padding: 20, textAlign: "center" }}>
-        <Marker size={26}>{t.doodleBluff.waitingOnPrompts}</Marker>
+        <ControlsMarker size={26}>{t.doodleBluff.waitingOnPrompts}</ControlsMarker>
       </Card>
     );
   }
@@ -309,9 +310,9 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
           gap: 8,
         }}
       >
-        <Marker size={24} style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+        <ControlsMarker size={24} style={{ minWidth: 0, overflowWrap: "anywhere" }}>
           {progressLabel(t, activeIndex, prompts.length)}
-        </Marker>
+        </ControlsMarker>
         {prompts.length > 1 ? (
           <button
             type="button"

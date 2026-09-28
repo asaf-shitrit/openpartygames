@@ -147,7 +147,7 @@ export function HostGallery({ entries, players, clock }: HostGalleryProps) {
   const fit = galleryFit(entries.length);
   return (
     <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 20, minHeight: 0, overflow: "hidden" }}>
-      <Marker size={40}>{t.doodleBluff.galleryHeading}</Marker>
+      <Marker size={40} level={1}>{t.doodleBluff.galleryHeading}</Marker>
       <div style={GRID}>
         {entries.map((entry, index) => (
           <GalleryTile key={entry.drawingId} entry={entry} index={index} players={players} clock={clock} fit={fit} t={t} />

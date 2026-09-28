@@ -7,6 +7,7 @@ import { Icon, Marker, PhaseEnter, PhoneScreen, PhoneStrip, Timer } from "@opg/u
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { DoodleAction, DoodleHostView, DoodlePhase, DoodlePlayerView } from "../state";
+import { ControlsLevelProvider } from "./common";
 import { HostGallery } from "./HostGallery";
 import { PhoneDraw } from "./PhoneDraw";
 import { PhoneReveal } from "./PhoneReveal";
@@ -36,7 +37,7 @@ function LookUp() {
   return (
     <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, textAlign: "center" }}>
       <Icon name="monitor" size={48} color="var(--opg-ink-secondary)" />
-      <Marker size={30}>{t.doodleBluff.lookUp}</Marker>
+      <Marker size={30} level={1}>{t.doodleBluff.lookUp}</Marker>
       <div style={{ fontSize: 18, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.galleryOnTv}</div>
     </div>
   );
@@ -60,7 +61,7 @@ function StagedPhase(props: PhoneProps & { phase: "draw" | "title" | "vote" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, flexGrow: 1, minHeight: 0 }}>
       <PhoneStage phase={props.phase} stage={props.stage} players={props.room.players} />
-      {controlsFor(props)}
+      <ControlsLevelProvider value={props.stage === null ? 1 : 2}>{controlsFor(props)}</ControlsLevelProvider>
     </div>
   );
 }

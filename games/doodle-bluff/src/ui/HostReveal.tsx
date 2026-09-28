@@ -188,9 +188,9 @@ function TruthSection({ view, players, shown, look, t }: { view: DoodleHostView;
   if (!shown || reveal === null) return null;
   return (
     <Card variant="L" style={{ boxSizing: "border-box", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
-      <div style={{ fontSize: look.text, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--opg-ink-secondary)" }}>
+      <h2 style={{ margin: 0, fontSize: look.text, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--opg-ink-secondary)" }}>
         {t.doodleBluff.theRealTitle}
-      </div>
+      </h2>
       <Highlight style={{ padding: "0 12px", minWidth: 0 }}>
         <span style={{ fontSize: look.truth, fontWeight: 700, lineHeight: 1.2, overflowWrap: "anywhere" }}>{reveal.prompt}</span>
       </Highlight>
@@ -231,7 +231,7 @@ export function HostReveal({ view, players, deadline, timerStartedAt, clock, com
 
   return (
     <div ref={rootRef} style={STAGE}>
-      <Marker size={compact ? 28 : 44}>{t.doodleBluff.letsSeeWhoFooledWho}</Marker>
+      <Marker size={compact ? 28 : 44} level={1}>{t.doodleBluff.letsSeeWhoFooledWho}</Marker>
       <div style={COLUMNS}>
         <div style={COLUMN}>
           <Card style={{ padding: 8, alignSelf: "center", flexShrink: 0 }}>
