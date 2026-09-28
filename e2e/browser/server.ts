@@ -14,13 +14,25 @@ import { fileURLToPath } from "node:url";
 export const ROOT_DIR = fileURLToPath(new URL("../..", import.meta.url));
 export const WORKER_DIR = path.join(ROOT_DIR, "apps", "worker");
 export const HOST = "127.0.0.1";
-export const PORT = 8801;
+// A run id namespaces the port, the D1 persist directory and the output directory, so two
+// `pnpm e2e:browser` invocations on one machine never collide (issue #40): overlapping runs
+// used to write traces into the same shared test-results/, clobbering each other's artifacts
+// mid-suite (a `real-or-nah.spec.ts` failure surfaced only in `context.close()`, after every
+// assertion had already passed). Deriving the default port from process.pid means two
+// concurrently running processes essentially never bind the same one, either — this suite
+// always starts its own wrangler dev rather than reusing one, so a collision there would at
+// least fail loudly (EADDRINUSE) rather than corrupt a run, but avoiding it lets two runs
+// share a machine cleanly instead of just failing safely. OPG_BROWSER_PORT/OPG_E2E_RUN_ID
+// override the defaults outright when a stable value is useful.
+const RUN_ID = process.env.OPG_E2E_RUN_ID ?? String(process.pid);
+export const PORT = Number(process.env.OPG_BROWSER_PORT ?? 30_000 + (process.pid % 20_000));
 export const BASE_URL = `http://${HOST}:${PORT}`;
-export const OUTPUT_DIR = path.join(ROOT_DIR, "test-results");
+export const OUTPUT_DIR = path.join(ROOT_DIR, "test-results", `browser-${RUN_ID}`);
 
-const LOG_PATH = path.join(WORKER_DIR, ".wrangler", "e2e-browser-wrangler.log");
-/** Separate from the API suite's `.wrangler/e2e-state`, so the suites can run side by side. */
-const PERSIST_DIR = ".wrangler/e2e-browser-state";
+const LOG_PATH = path.join(WORKER_DIR, ".wrangler", `e2e-browser-wrangler-${RUN_ID}.log`);
+/** Separate from the API suite's `.wrangler/e2e-state`, and namespaced per run so the suites
+ * can run side by side and two runs of this suite can't share (and corrupt) the same D1. */
+const PERSIST_DIR = `.wrangler/e2e-browser-state-${RUN_ID}`;
 const HEALTH_TIMEOUT_MS = 120_000;
 const POLL_MS = 500;
 const STOP_GRACE_MS = 5_000;

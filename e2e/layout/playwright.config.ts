@@ -6,7 +6,17 @@
 import { defineConfig } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
-const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 5174);
+// A run id namespaces this suite's port and its own output directory, so two `pnpm
+// e2e:layout` invocations on one machine never collide (issue #40): the second run used to
+// find the first run's dev server already listening on the shared default port, attach to
+// it via reuseExistingServer, and lose it — mid-suite — the moment the first run tore it
+// down, producing a block of failures that looked like a real layout regression. Deriving
+// the default port from process.pid instead of a fixed number means two concurrently
+// running processes essentially never pick the same one, so each always gets — and keeps —
+// its own server. OPG_LAYOUT_PORT still overrides it outright, unchanged from before, for
+// the documented manual workflows (see visual.spec.ts) that want a specific port.
+const RUN_ID = process.env.OPG_LAYOUT_RUN_ID ?? String(process.pid);
+const PORT = Number(process.env.OPG_LAYOUT_PORT ?? 20_000 + (process.pid % 20_000));
 
 /** Suites that are projects of their own, so the default projects leave them alone. */
 const DEFAULT_SKIPS = [
@@ -18,6 +28,10 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: fileURLToPath(new URL(".", import.meta.url)),
+  // Namespaced by the same run id as the port, so a second concurrent run also can't clobber
+  // this run's traces by writing into the same test-results/ directory (the other half of
+  // issue #40).
+  outputDir: fileURLToPath(new URL(`../../test-results/layout-${RUN_ID}`, import.meta.url)),
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
