@@ -20,7 +20,14 @@
 //   OPG_LAYOUT_PORT=5184 pnpm exec playwright test -c e2e/layout/playwright.config.ts \
 //     --project=visual --update-snapshots
 //
-// commit the changed PNGs under e2e/layout/visual.spec.ts-snapshots/ alongside the change that
+// That command only produces correct baselines on Linux. To get them without a Docker daemon,
+// push a branch named visual-baselines/<anything> (or dispatch the "Visual baselines" workflow
+// on one): .github/workflows/visual-baselines.yml compares against the committed baselines,
+// regenerates them on ubuntu-latest, re-runs to prove they are stable, and uploads the
+// `visual-snapshots` and `visual-report` artifacts. Look at every PNG that changed before
+// committing any of them.
+//
+// Either way, commit the changed PNGs under e2e/layout/visual.spec.ts-snapshots/ alongside the change that
 // caused them, and say in the PR description which screens moved and why. A baseline that
 // changes without an explanation in the same PR is a reason to reject the PR, not merge it.
 //
