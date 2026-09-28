@@ -1,6 +1,6 @@
 # OpenPartyGames
 
-Open-source Jackbox-style party games. Two ways to play: a host screen (TV/laptop) plus phones joining by room code, or phones alone with no shared screen, where each phone carries the stage above its own controls. Games opt into the second with `GameDefinition.noTv`; rooms carry `sharedScreen`. TV mode is the default and is unchanged by it. Cloudflare Workers + Durable Objects + D1, TypeScript, React + Vite. Intent: `intent/0001-platform-mvp.md`. Plan and rules: `plan/0001-platform-mvp.md`. Designs: `design/*.dc.html` (open in a browser at frame size) and `design/AVATARS.md`.
+Open-source Jackbox-style party games. Two ways to play: a host screen (TV/laptop) plus phones joining by room code, or phones alone with no shared screen, where each phone carries the stage above its own controls. Games opt into the second with `GameDefinition.noTv`; rooms carry `sharedScreen`. TV mode is the default and is unchanged by it. Cloudflare Workers + Durable Objects + D1, TypeScript, React + Vite. Intent: `intent/0001-platform-mvp.md`. Plan and rules: `plan/0001-platform-mvp.md`, `plan/0002-game-feel.md`, `plan/0003-doodle-bluff.md`, `plan/0004-no-tv-mode.md`. Designs: `design/*.dc.html` (open in a browser at frame size) and `design/AVATARS.md`.
 
 ## Commands
 
@@ -19,6 +19,8 @@ Open-source Jackbox-style party games. Two ways to play: a host screen (TV/lapto
 
 Run `pnpm check` before reporting done. Healthy output: packs validate with no errors, Oxlint reports 0 problems, every `typecheck` exits 0, all Vitest tests pass (never skip or delete a failing test), `crap-typescript` reports no failed methods, and Vite prints `built in`. For UI work also run `pnpm dev` and look at the screen next to its design file.
 
+`pnpm check` does not run `e2e/browser` or `e2e/layout`, so it cannot catch a behaviour change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs `pnpm e2e:browser` too before calling it done (about 3 minutes; needs `wrangler` and a local D1, which is why it isn't part of `pnpm check`). In `e2e/browser`'s output, watch the pass count: the `imposter` project depends on `fast`, so any failure in `fast` makes Playwright skip `imposter` entirely rather than reporting it failed — a red run showing `1 failed, 10 passed` instead of `12 passed` means the Imposter spec never ran.
+
 ## Architecture
 
 - `packages/protocol`: wire types and `parseClientMessage`. Contract; change only deliberately.
@@ -27,15 +29,16 @@ Run `pnpm check` before reporting done. Healthy output: packs validate with no e
 - `apps/worker`: Worker routes + `Room` Durable Object adapter around RoomCore; D1 migrations.
 - `apps/web`: host stage (1920×1080 scaled) and phone UI.
 - `packages/ui`: Doodle Notebook UI kit.
+- `packages/i18n`: `LocaleProvider`, the `en`/`he` dictionaries, and the plural helpers.
 - `packs/`: JSON content packs, validated in CI.
 
 ## Conventions
 
 - TypeScript strict, ESM, no default exports except React route components. Workspace packages export `src/*.ts` directly.
-- Games and RoomCore are pure and deterministic: no `Date.now()`, `Math.random()`, timers or I/O. Use `ctx.now` and `ctx.rng`. State must be plain JSON.
+- Games and RoomCore are pure and deterministic: no `Date.now()`, `Math.random()`, timers or I/O. Use `ctx.now` and `ctx.rng`. State must be plain JSON. `scripts/purity.test.ts` scans the SDK, the protocol and every game's rules for these and fails `pnpm test` on a violation.
 - A player's view never contains another player's secrets.
 - Don't add or upgrade dependencies without asking.
-- Player-visible copy: short, warm, plain. Never color alone for meaning (pair with icon/text).
+- Player-visible copy: short, warm, plain. Never color alone for meaning (pair with icon/text). Copy comes from `packages/i18n`, not hardcoded English; a new key goes in both `en/` and `he/` with the same `{placeholders}` in each, enforced by `packages/i18n/src/placeholder-parity.test.ts`.
 - A screen a player cannot read or tap is a release blocker: nothing with words or a tap target may cross the screen edge, sit past the bottom of a screen that does not scroll, or be covered by anything else. `e2e/layout/` measures this in a real browser on every push; happy-dom reports every rect as zero, so no unit test can.
 - Each game's `preview.ts` carries worst-case fixtures: the longest content its packs ship, eight players, names at `NAME_MAX_LENGTH`. Add content longer than `STRESS_TEXT` and `scripts/content-stress.test.ts` fails until the fixture catches up.
 - Headings/stamps use Permanent Marker; everything else Atkinson Hyperlegible. TV text ≥ 28px at 1920×1080, phone text ≥ 16px, tap targets ≥ 44px.
