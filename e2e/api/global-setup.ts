@@ -25,6 +25,9 @@ const webDistDir = path.join(rootDir, "apps", "web", "dist");
  * them when something outside needs to know where the server is.
  */
 const RUN_ID = process.env.OPG_E2E_RUN_ID ?? String(process.pid);
+// Safe here where it is not in the other two: this runs once, in Vitest's parent process,
+// before any worker is forked, and it already hands the tests their base URL through
+// OPG_E2E_BASE_URL rather than having them recompute it.
 const PERSIST_DIR = `.wrangler/e2e-state-${RUN_ID}`;
 const logPath = path.join(
   workerDir,

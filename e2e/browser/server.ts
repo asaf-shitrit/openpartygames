@@ -24,8 +24,38 @@ export const HOST = "127.0.0.1";
 // least fail loudly (EADDRINUSE) rather than corrupt a run, but avoiding it lets two runs
 // share a machine cleanly instead of just failing safely. OPG_BROWSER_PORT/OPG_E2E_RUN_ID
 // override the defaults outright when a stable value is useful.
-const RUN_ID = process.env.OPG_E2E_RUN_ID ?? String(process.pid);
-export const PORT = Number(process.env.OPG_BROWSER_PORT ?? 30_000 + (process.pid % 20_000));
+/**
+ * One id for the whole run, pinned into the environment the first time any process in the run
+ * asks for it.
+ *
+ * It cannot simply be `process.pid`. Playwright evaluates this config in every worker process
+ * as well as the parent, and Vitest forks its own; each has a different pid, so a pid-derived
+ * port means the workers dial a port nobody is serving. That failure looks exactly like the
+ * bug this file exists to fix — every spec failing in about a second, in a contiguous block —
+ * which is how it got caught.
+ *
+ * Writing it back to `process.env` is the whole trick: workers are spawned after this runs and
+ * inherit it, so the parent's value is the run's value.
+ */
+function runId(): string {
+  const pinned = process.env.OPG_E2E_RUN_ID;
+  if (pinned !== undefined && pinned !== "") return pinned;
+  const id = String(process.pid);
+  process.env.OPG_E2E_RUN_ID = id;
+  return id;
+}
+
+/** A port derived from the run id, so every process in the run agrees on it. */
+function portFor(base: number, span: number, id: string): number {
+  let hash = 0;
+  for (const char of id) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % span;
+  return base + hash;
+}
+
+const RUN_ID = runId();
+export const PORT = Number(
+  process.env.OPG_BROWSER_PORT ?? portFor(30_000, 20_000, RUN_ID),
+);
 export const BASE_URL = `http://${HOST}:${PORT}`;
 export const OUTPUT_DIR = path.join(ROOT_DIR, "test-results", `browser-${RUN_ID}`);
 
