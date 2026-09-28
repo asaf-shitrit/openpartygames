@@ -638,6 +638,99 @@ function GameOverCard({ t, score }: { t: Dictionary; score: number }) {
   );
 }
 
+/**
+ * The headline for a game the VIP called off early: named for whoever ended it, in the second
+ * person when that was the reader themselves — third person always reads oddly about your own
+ * action ("Priya ended the game early" when Priya is the one reading it).
+ */
+function earlyEndHeadline(t: Dictionary, view: PlayerRoomView, me: PlayerId): string {
+  if (me === view.vipId) return t.results.youEndedGameEarly;
+  const vipName = findPlayerName(view, view.vipId, t.common.someone);
+  return format(t.results.gameEndedEarly, { vip: vipName });
+}
+
+/**
+ * The card for a game the VIP ended deliberately: no rank, no crown (there is no winner to
+ * name), just the reader's own score under a headline that says why the game stopped short.
+ */
+function EarlyEndCard({
+  t,
+  view,
+  me,
+  score,
+}: {
+  t: Dictionary;
+  view: PlayerRoomView;
+  me: PlayerId;
+  score: number;
+}) {
+  return (
+    <Card
+      variant="L"
+      tilt={-1}
+      style={{
+        flexGrow: 1,
+        padding: "28px 22px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        textAlign: "center",
+      }}
+    >
+      <Marker size={30} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
+        {earlyEndHeadline(t, view, me)}
+      </Marker>
+      <div style={{ fontSize: 20, fontWeight: 700 }}>
+        {format(t.results.points, { score: score.toLocaleString("en-US") })}
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * The whole early-end screen: the reader's own card, plus — with no shared screen to carry
+ * them — the same standings table the settled beat uses. No crown, no awards: the game did not
+ * finish, so nothing here should look like it did.
+ */
+function EarlyEndSection({
+  t,
+  view,
+  me,
+  ranked,
+}: {
+  t: Dictionary;
+  view: PlayerRoomView;
+  me: PlayerId;
+  ranked: RankedPlayer[];
+}): ReactNode {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        flexGrow: 1,
+        minWidth: 0,
+      }}
+    >
+      <EarlyEndCard t={t} view={view} me={me} score={myScoreIn(ranked, me)} />
+      {view.sharedScreen ? null : (
+        <Standings
+          t={t}
+          ranked={ranked}
+          players={view.players}
+          vipName={
+            view.vipId ? findPlayerName(view, view.vipId, t.common.someone) : null
+          }
+          amVip={me === view.vipId}
+        />
+      )}
+    </div>
+  );
+}
+
 interface BeatContext {
   awards: readonly Award[];
   me: PlayerId;
@@ -720,7 +813,11 @@ function ResultContent(args: ResultContentArgs): ReactNode {
   const { t, view, me, result, stage, ranked, awards, cardRef } = args;
   if (result === null) return <GameOverCard t={t} score={0} />;
   if (!completedOf(result))
-    return <GameOverCard t={t} score={myScoreIn(ranked, me)} />;
+    return (
+      <div style={{ display: "flex", flexGrow: 1, minWidth: 0 }}>
+        <EarlyEndSection t={t} view={view} me={me} ranked={ranked} />
+      </div>
+    );
 
   const crownLine = crownCopy(
     t,

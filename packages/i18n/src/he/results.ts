@@ -3,6 +3,9 @@ import type { Dictionary } from "../dictionary";
 export const results: Dictionary["results"] = {
   gameOver: "המשחק נגמר",
   points: "{score} נקודות",
+  // TODO: a native speaker should check this phrasing.
+  gameEndedEarly: "{vip} סיים/סיימה את המשחק מוקדם",
+  youEndedGameEarly: "סיימתם את המשחק מוקדם",
   waitingForFinalScores: "מחכים לניקוד הסופי",
   finalScores: "ניקוד סופי",
   newBadge: "חדש!",

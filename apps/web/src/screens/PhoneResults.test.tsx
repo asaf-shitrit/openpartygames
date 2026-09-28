@@ -193,7 +193,9 @@ describe("PhoneResults, mounted late", () => {
 });
 
 describe("PhoneResults, not completed", () => {
-  it("shows Game over with my score", () => {
+  it("tells the VIP they ended it, with their own score, and no standings on a shared screen", () => {
+    // vipId defaults to p1 (see fixtures/room.ts), and this view is p1 — the VIP reading their
+    // own early end.
     renderLocalized(
       <PhoneResults
         view={makePlayerView({
@@ -204,8 +206,54 @@ describe("PhoneResults, not completed", () => {
         clock={{ now: () => FINISHED_AT }}
       />,
     );
-    expect(screen.getByText("Game over")).toBeTruthy();
+    expect(screen.getByText("You ended the game early")).toBeTruthy();
     expect(screen.getByText("6 points")).toBeTruthy();
+    // Shared screen (the view's default): no standings table duplicated on the phone.
+    expect(screen.queryByText("Final scores")).toBeNull();
+  });
+
+  it("names the VIP for everyone else, and shows the standings with no shared screen", () => {
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p2",
+          vipId: "p1",
+          players: [PRIYA, SAM],
+          lastResult: makeEndedEarlyResult(),
+          sharedScreen: false,
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("Priya ended the game early")).toBeTruthy();
+    expect(screen.getByText("2 points")).toBeTruthy();
+    expect(screen.getByText("Final scores")).toBeTruthy();
+    expect(screen.getByText("Priya")).toBeTruthy();
+    expect(screen.getByText("Sam")).toBeTruthy();
+    expect(
+      screen.getByText("Waiting on Priya to pick the next game"),
+    ).toBeTruthy();
+  });
+
+  it("gives no crown and no award ceremony, even with awards and a winner on the wire", () => {
+    renderLocalized(
+      <PhoneResults
+        view={makePlayerView({
+          you: "p2",
+          vipId: "p1",
+          players: [PRIYA, SAM],
+          sharedScreen: false,
+          lastResult: makeEndedEarlyResult({
+            winnerIds: ["p2"],
+            awards: [{ id: "word-thief", playerIds: ["p2"], value: 2 }],
+          }),
+        })}
+        clock={{ now: () => FINISHED_AT }}
+      />,
+    );
+    expect(screen.getByText("Priya ended the game early")).toBeTruthy();
+    expect(screen.queryByText("You win the crown!")).toBeNull();
+    expect(screen.queryByText("Word thief")).toBeNull();
   });
 
   it("does not buzz the ceremony for a game that ended early", () => {
@@ -217,7 +265,7 @@ describe("PhoneResults, not completed", () => {
     advanceTo(20_000);
 
     expect(vibrate).not.toHaveBeenCalled();
-    expect(screen.getByText("Game over")).toBeTruthy();
+    expect(screen.getByText("Priya ended the game early")).toBeTruthy();
   });
 });
 
