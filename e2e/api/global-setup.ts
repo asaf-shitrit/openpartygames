@@ -1,8 +1,11 @@
 // Vitest global setup for the API e2e suite.
 //
 // Starts a real `wrangler dev` (Worker + Room Durable Object + local D1) on a
-// dedicated port with its own `--persist-to` directory, after preparing that
-// directory with scripts/e2e-setup.mjs. The teardown kills the whole process
+// per-run port with its own `--persist-to` directory, after preparing that
+// directory with scripts/e2e-setup.mjs. Per-run because a fixed port and a shared
+// D1 directory let two overlapping suites corrupt each other, and the damage reads
+// as a product bug: this suite once failed 11 of 16 with "failed to count today's
+// rooms" purely because a layout run was going at the same time. The teardown kills the whole process
 // group, so no wrangler is left behind when the suite ends.
 
 import { spawn, spawnSync } from "node:child_process";
@@ -13,8 +16,25 @@ import { fileURLToPath } from "node:url";
 const rootDir = fileURLToPath(new URL("../..", import.meta.url));
 const workerDir = path.join(rootDir, "apps", "worker");
 const webDistDir = path.join(rootDir, "apps", "web", "dist");
-const logPath = path.join(workerDir, ".wrangler", "e2e-wrangler.log");
-const PORT = 8799;
+/**
+ * Per-run, so two suites on one machine cannot land on the same port or share one D1.
+ *
+ * The layout and browser suites derive theirs the same way; the bands are kept apart
+ * (layout 20000+, browser 30000+, this 50000+) so a coincidence between two *different*
+ * suites needs two unlucky pids rather than one. `OPG_E2E_RUN_ID` and `OPG_API_PORT` pin
+ * them when something outside needs to know where the server is.
+ */
+const RUN_ID = process.env.OPG_E2E_RUN_ID ?? String(process.pid);
+// Safe here where it is not in the other two: this runs once, in Vitest's parent process,
+// before any worker is forked, and it already hands the tests their base URL through
+// OPG_E2E_BASE_URL rather than having them recompute it.
+const PERSIST_DIR = `.wrangler/e2e-state-${RUN_ID}`;
+const logPath = path.join(
+  workerDir,
+  ".wrangler",
+  `e2e-wrangler-${RUN_ID}.log`,
+);
+const PORT = Number(process.env.OPG_API_PORT ?? 50_000 + (process.pid % 10_000));
 const HOST = "127.0.0.1";
 const BASE_URL = `http://${HOST}:${PORT}`;
 const HEALTH_TIMEOUT_MS = 120_000;
@@ -29,7 +49,7 @@ function prepareState(): void {
   const result = spawnSync("node", ["scripts/e2e-setup.mjs"], {
     cwd: rootDir,
     stdio: ["ignore", "inherit", "inherit"],
-    env: { ...process.env, CI: "true" },
+    env: { ...process.env, CI: "true", OPG_E2E_PERSIST: PERSIST_DIR },
     shell: false,
   });
   if (result.error) throw result.error;
@@ -66,7 +86,7 @@ function startWrangler() {
       "--ip",
       HOST,
       "--persist-to",
-      ".wrangler/e2e-state",
+      PERSIST_DIR,
     ],
     {
       cwd: workerDir,
