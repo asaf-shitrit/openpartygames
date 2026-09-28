@@ -276,7 +276,7 @@ describe("TvGamePicker, in Hebrew", () => {
         })}
       />,
     );
-    expect(screen.getByText("בוחר/ת משחק")).toBeTruthy();
+    expect(screen.getByText("בוחר משחק")).toBeTruthy();
     expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
   });
 });

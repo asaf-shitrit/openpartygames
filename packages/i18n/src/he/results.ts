@@ -4,7 +4,7 @@ export const results: Dictionary["results"] = {
   gameOver: "המשחק נגמר",
   points: "{score} נקודות",
   // TODO: a native speaker should check this phrasing.
-  gameEndedEarly: "{vip} סיים/סיימה את המשחק מוקדם",
+  gameEndedEarly: "{vip} סיים את המשחק מוקדם",
   youEndedGameEarly: "סיימתם את המשחק מוקדם",
   waitingForFinalScores: "מחכים לניקוד הסופי",
   finalScores: "ניקוד סופי",
@@ -25,6 +25,6 @@ export const results: Dictionary["results"] = {
   secondPlaceBang: "מקום שני!",
   thirdPlaceLabel: "מקום שלישי",
   secondPlaceLabel: "מקום שני",
-  picksNextGame: "בוחר/ת את המשחק הבא מהטלפון שלו/ה",
-  waitingOnVip: "מחכים ל{vip} שיבחר/תבחר את המשחק הבא",
+  picksNextGame: "בוחר את המשחק הבא מהטלפון שלו",
+  waitingOnVip: "מחכים ל{vip} שיבחר את המשחק הבא",
 };
