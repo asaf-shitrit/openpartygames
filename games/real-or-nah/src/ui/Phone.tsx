@@ -110,9 +110,11 @@ function lieErrorText(t: Dictionary, error: RonLieError | null): string | undefi
 function PromptLine({
   prompt,
   compact,
+  level,
 }: {
   prompt: string;
   compact?: boolean;
+  level?: 1 | 2;
 }) {
   if (compact) {
     return (
@@ -126,6 +128,7 @@ function PromptLine({
             verticalAlign: "-1px",
           }}
           style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.35 }}
+          level={level}
         />
       </Card>
     );
@@ -144,6 +147,7 @@ function PromptLine({
         prompt={prompt}
         blank={{ width: 96, height: 14, thickness: 12, verticalAlign: "-2px" }}
         style={{ fontSize: 23, fontWeight: 700, lineHeight: "38px" }}
+        level={level}
       />
     </LinedCard>
   );
@@ -210,7 +214,8 @@ function WriteForm({
   const ready = text.trim().length > 0;
   return (
     <>
-      <PromptLine prompt={view.prompt} />
+      {/* The form has no title of its own: the fact to lie about is the screen's h1. */}
+      <PromptLine prompt={view.prompt} level={1} />
       <div
         style={{
           display: "flex",
@@ -268,7 +273,7 @@ function LieLocked({ view }: { view: RonPlayerView }) {
         }}
       >
         <Icon name="check" size={40} color="var(--opg-marker)" />
-        <Marker size={32}>{t.realOrNah.lieLockedIn}</Marker>
+        <Marker size={32} level={1}>{t.realOrNah.lieLockedIn}</Marker>
         <div style={{ fontSize: 18, fontWeight: 700 }}>
           {waitingLabel(t, waiting)}
         </div>
@@ -324,7 +329,7 @@ function VoteForm({
   return (
     <>
       <PromptLine prompt={view.prompt} compact />
-      <Marker size={28}>{t.realOrNah.whichIsReal}</Marker>
+      <Marker size={28} level={1}>{t.realOrNah.whichIsReal}</Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {options.map((option) => (
           <VoteRow
@@ -446,7 +451,7 @@ function VoteLocked({ view }: { view: RonPlayerView }) {
   return (
     <>
       <PromptLine prompt={view.prompt} compact />
-      <Marker size={28}>{t.realOrNah.whichIsReal}</Marker>
+      <Marker size={28} level={1}>{t.realOrNah.whichIsReal}</Marker>
       <Card
         variant="M"
         style={{
@@ -459,7 +464,7 @@ function VoteLocked({ view }: { view: RonPlayerView }) {
         }}
       >
         <Icon name="check" size={40} color="var(--opg-marker)" />
-        <Marker size={32}>{t.realOrNah.voteLockedIn}</Marker>
+        <Marker size={32} level={2}>{t.realOrNah.voteLockedIn}</Marker>
         <div style={{ fontSize: 18, fontWeight: 700 }}>
           {t.realOrNah.holdTight}
         </div>

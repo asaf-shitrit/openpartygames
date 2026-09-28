@@ -8,6 +8,7 @@ import type {
         PlayerSummary,
 } from "@opg/protocol";
 import { Avatar } from "@opg/ui";
+import type { MarkerProps } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 
 type Room = HostRoomView | PlayerRoomView;
@@ -149,6 +150,8 @@ export interface PromptTextProps {
         answer?: string | null;
         blank?: BlankProps;
         style?: CSSProperties;
+        /** Renders a real heading of this level instead of a div: for a prompt that is the screen's title. */
+        level?: MarkerProps["level"];
 }
 
 function BlankSlot({
@@ -164,13 +167,14 @@ function BlankSlot({
 }
 
 /** The fact prompt with its "____" blank drawn as an underline or the answer. */
-export function PromptText({ prompt, answer, blank, style }: PromptTextProps) {
+export function PromptText({ prompt, answer, blank, style, level }: PromptTextProps) {
         const [before, after] = splitBlank(prompt);
+        const Tag = level === undefined ? "div" : (`h${level}` as const);
         return (
-                <div style={{ whiteSpace: "pre-wrap", ...style }}>
+                <Tag style={{ whiteSpace: "pre-wrap", margin: 0, ...style }}>
                         {before}
                         <BlankSlot answer={answer} blank={blank} />
                         {after}
-                </div>
+                </Tag>
         );
 }

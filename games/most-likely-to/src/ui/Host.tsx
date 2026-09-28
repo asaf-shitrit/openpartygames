@@ -59,7 +59,7 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
         gap: 48,
       }}
     >
-      <PromptLine prompt={view.prompt} size={46} />
+      <PromptLine prompt={view.prompt} size={46} level={1} />
       <div
         style={{
           display: "flex",

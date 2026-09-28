@@ -85,15 +85,22 @@ function PreResult({
   );
 }
 
+/** A cancelled word's stage card is itself an h1, so the personal headline goes under it;
+ * every other stage has no title and the headline is the h1. */
+export function resultHeadingLevel(staged: boolean, path: ResultPath): 1 | 2 {
+  return staged && path === "cancelled" ? 2 : 1;
+}
+
 interface ResultCardProps {
   personal: PersonalResult;
+  level: 1 | 2;
   crewWord: string | null;
   live: boolean;
   cardRef: RefObject<HTMLDivElement | null>;
 }
 
 /** The burst renders behind the text: a wrapper at z-index 0, content at z-index 1. */
-function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
+function ResultCard({ personal, level, crewWord, live, cardRef }: ResultCardProps) {
   const { t } = useLocale();
   return (
     <div ref={cardRef} style={{ flexGrow: 1, minWidth: 0, display: "flex" }}>
@@ -142,7 +149,7 @@ function ResultCard({ personal, crewWord, live, cardRef }: ResultCardProps) {
             maxWidth: "100%",
           }}
         >
-          <Marker size={30}>{personal.headline}</Marker>
+          <Marker size={30} level={level}>{personal.headline}</Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
           {crewWord === null ? null : (
             <div
@@ -298,6 +305,8 @@ export function PhoneResult(props: PhoneResultProps) {
       {personalReached ? (
         <ResultCard
           personal={personal}
+          // A cancelled word's stage card is itself an h1; every other stage has no title.
+          level={resultHeadingLevel(stage !== null, path)}
           crewWord={view.crewWord}
           live={moment.live}
           cardRef={cardRef}

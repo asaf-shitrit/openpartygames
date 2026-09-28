@@ -3,10 +3,11 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodleView, Icon, Marker, PRESSABLE_CLASS } from "@opg/ui";
+import { Button, Card, DoodleView, Icon, PRESSABLE_CLASS } from "@opg/ui";
 import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerOption, DoodlePlayerView } from "../state";
+import { ControlsMarker } from "./common";
 
 export interface PhoneVoteProps {
   view: DoodlePlayerView;
@@ -77,7 +78,7 @@ function VoteForm({ view, send, t }: { view: DoodlePlayerView; send: (action: Do
   const options = view.options ?? [];
   return (
     <>
-      <Marker size={26}>{t.doodleBluff.whichIsReal}</Marker>
+      <ControlsMarker size={26}>{t.doodleBluff.whichIsReal}</ControlsMarker>
       <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{t.doodleBluff.pickOneNotYourOwn}</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {options.map((option) => (
@@ -106,7 +107,7 @@ function VoteLocked({ t }: { t: Dictionary }) {
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="check" size={40} color="var(--opg-marker)" />
-      <Marker size={30}>{t.doodleBluff.voteLockedIn}</Marker>
+      <ControlsMarker size={30}>{t.doodleBluff.voteLockedIn}</ControlsMarker>
       <div style={{ fontSize: 18, fontWeight: 700 }}>{t.doodleBluff.holdTightForReveal}</div>
     </Card>
   );
@@ -119,7 +120,7 @@ function ArtistSpectator({ t }: { t: Dictionary }) {
       style={{ padding: "24px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}
     >
       <Icon name="eye-off" size={40} color="var(--opg-ink-secondary)" />
-      <Marker size={30}>{t.doodleBluff.noPeekingOwnTitle}</Marker>
+      <ControlsMarker size={30}>{t.doodleBluff.noPeekingOwnTitle}</ControlsMarker>
       <div style={{ fontSize: 18, fontWeight: 700 }}>{t.doodleBluff.roomIsVoting}</div>
     </Card>
   );

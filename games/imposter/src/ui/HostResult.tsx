@@ -181,7 +181,7 @@ function GuessLine({
         gap: hero ? 20 : 22,
       }}
     >
-      <Marker size={hero ? HERO_NAME_SIZE : COMPACT_NAME_SIZE}>
+      <Marker size={hero ? HERO_NAME_SIZE : COMPACT_NAME_SIZE} level={1}>
         {format(t.imposter.result.guessedEllipsis, { name: imposter })}
       </Marker>
       <LetterTiles
@@ -364,7 +364,7 @@ function EscapedLeft({
     <FxIn live={stage.wordLive} preset="fadeIn">
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         <SneakDoodle />
-        <Marker size={72}>{format(t.imposter.reveal.slippedAway, { name: imposter })}</Marker>
+        <Marker size={72} level={1}>{format(t.imposter.reveal.slippedAway, { name: imposter })}</Marker>
       </div>
     </FxIn>
   );
@@ -372,7 +372,7 @@ function EscapedLeft({
 
 function CancelledLeft() {
   const { t } = useLocale();
-  return <Marker size={72}>{t.imposter.result.wordCancelled}</Marker>;
+  return <Marker size={72} level={1}>{t.imposter.result.wordCancelled}</Marker>;
 }
 
 function ResultHeadline({
@@ -556,7 +556,7 @@ function PointsCard({
         gap: 14,
       }}
     >
-      <Marker size={48}>{t.imposter.result.pointsThisWord}</Marker>
+      <Marker size={48} level={2}>{t.imposter.result.pointsThisWord}</Marker>
       {rows.map((row, index) => (
         <FxIn
           key={row.key}
@@ -677,7 +677,7 @@ function StandingsCard({
         gap: 8,
       }}
     >
-      <Marker size={56} style={{ marginBottom: 8 }}>
+      <Marker size={56} level={2} style={{ marginBottom: 8 }}>
         {t.imposter.result.standings}
       </Marker>
       {order.map((id, index) => (

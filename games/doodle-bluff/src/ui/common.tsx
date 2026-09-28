@@ -1,7 +1,25 @@
 // Shared bits for the Doodle Bluff host and phone screens.
+import { createContext, useContext } from "react";
 import type { AvatarId, PlayerId, PlayerSummary } from "@opg/protocol";
+import { Marker } from "@opg/ui";
+import type { MarkerProps } from "@opg/ui";
 import { format } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+
+/**
+ * The heading level the phone's own controls take. A room with a shared screen has nothing
+ * above them, so their title is the screen's h1. A no-TV room stages the room's title (the
+ * same words the TV shows) above the controls; that is the h1 and the controls' title sits
+ * one level under it.
+ */
+const ControlsLevel = createContext<1 | 2>(1);
+export const ControlsLevelProvider = ControlsLevel.Provider;
+
+/** A `Marker` heading at the level the surrounding phone screen leaves for its controls. */
+export function ControlsMarker(props: Omit<MarkerProps, "level">) {
+  const level = useContext(ControlsLevel);
+  return <Marker {...props} level={level} />;
+}
 
 /** Looks a player up in the room roster; null for a kicked or unknown id. */
 export function findPlayer(

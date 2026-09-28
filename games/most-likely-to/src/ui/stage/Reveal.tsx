@@ -455,7 +455,7 @@ export function StageReveal(props: StageRevealProps) {
 
   return (
     <Card variant="M" tilt={-0.8} style={CARD_STYLE}>
-      <PromptLine prompt={view.prompt} size={19} />
+      <PromptLine prompt={view.prompt} size={19} level={1} />
       <VerdictArea
         outcome={reveal.outcome}
         verdictReached={stage.verdictReached}

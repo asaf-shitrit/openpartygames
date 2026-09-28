@@ -80,7 +80,7 @@ function WordCheckHeading({ deadline, timerStartedAt, clock }: SectionProps) {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <Marker size={112}>{t.imposter.wordCheck.heading}</Marker>
+        <Marker size={112} level={1}>{t.imposter.wordCheck.heading}</Marker>
         <div
           style={{
             maxWidth: 1300,
@@ -128,7 +128,7 @@ function ClueOrderCard({ view, players }: SectionProps) {
       }}
     >
       <Tape left={820} top={-24} width={200} height={46} rotate={-3} />
-      <Marker size={56}>{t.imposter.clues.orderLabel}</Marker>
+      <Marker size={56} level={2}>{t.imposter.clues.orderLabel}</Marker>
       <div
         style={{
           display: "grid",
@@ -283,7 +283,7 @@ function SpeakerCard({ view, players }: SectionProps) {
             <div style={{ fontSize: 30, ...SECONDARY }}>{t.imposter.clues.turnLabel}</div>
           </div>
         </div>
-        <Marker size={104}>{format(t.imposter.clues.speakerTurn, { name: speaker })}</Marker>
+        <Marker size={104} level={1}>{format(t.imposter.clues.speakerTurn, { name: speaker })}</Marker>
         <div style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.2 }}>
           {t.imposter.clues.sayClueOutLoud}
         </div>
@@ -473,6 +473,7 @@ function ClueOrderList({ view, players }: SectionProps) {
     >
       <Marker
         size={compact ? CLUE_ORDER_HEADING_SIZE_COMPACT : CLUE_ORDER_HEADING_SIZE}
+        level={2}
         style={{ marginBottom: 4 }}
       >
         {t.imposter.clues.orderLabel}
@@ -543,7 +544,7 @@ function VoteHeading({ view, deadline, timerStartedAt, clock }: SectionProps) {
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <Marker size={108}>{t.imposter.vote.heading}</Marker>
+        <Marker size={108} level={1}>{t.imposter.vote.heading}</Marker>
         <div style={{ fontSize: 46, fontWeight: 700, lineHeight: 1.2 }}>
           {t.imposter.vote.question}
         </div>

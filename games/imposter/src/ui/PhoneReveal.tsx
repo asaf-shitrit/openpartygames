@@ -102,7 +102,7 @@ function ResultCard({
             size={120}
             alt={format(t.imposter.avatarAlt, { name: imposter })}
           />
-          <Marker size={30}>{personal.headline}</Marker>
+          <Marker size={30} level={1}>{personal.headline}</Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
         </div>
       </Card>

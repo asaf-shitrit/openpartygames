@@ -120,7 +120,7 @@ function WritePhase({ view, room, deadline, timerStartedAt, clock }: PhaseProps)
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 30 }}>
-          <Marker size={64}>{t.realOrNah.writeHeading}</Marker>
+          <Marker size={64} level={1}>{t.realOrNah.writeHeading}</Marker>
           <LinedCard
             tilt={-1}
             style={{
@@ -224,7 +224,7 @@ function WriteProgress({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 18 }}>
-        <Marker size={44}>{t.realOrNah.liesIn}</Marker>
+        <Marker size={44} level={2}>{t.realOrNah.liesIn}</Marker>
         <div style={{ fontSize: 36, fontWeight: 700 }}>
           {format(t.realOrNah.countOfTotal, {
             count: view.submittedIds.length,
@@ -357,7 +357,7 @@ function VotePhase({ view, deadline, timerStartedAt, clock }: Omit<PhaseProps, "
         <VotedSide view={view} deadline={deadline} timerStartedAt={timerStartedAt} clock={clock} />
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 28 }}>
-        <Marker size={68}>{t.realOrNah.whichIsReal}</Marker>
+        <Marker size={68} level={1}>{t.realOrNah.whichIsReal}</Marker>
         <div
           style={{
             fontSize: 38,

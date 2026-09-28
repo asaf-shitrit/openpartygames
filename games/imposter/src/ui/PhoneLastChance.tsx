@@ -240,6 +240,7 @@ function CaughtBanner({ view }: { view: ImposterPlayerView }) {
       <Marker
         size={40}
         color="var(--opg-marker)"
+        level={1}
         style={{ transform: "rotate(-3deg)" }}
       >
         {t.imposter.lastChance.caughtHeadline}

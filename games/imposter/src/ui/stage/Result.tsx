@@ -55,7 +55,7 @@ function CancelledCard() {
   const { t } = useLocale();
   return (
     <Card variant="M" tilt={0.6} style={CARD_STYLE}>
-      <Marker size={26}>{t.imposter.result.wordCancelled}</Marker>
+      <Marker size={26} level={1}>{t.imposter.result.wordCancelled}</Marker>
       <div style={{ fontSize: 17, fontWeight: 700 }}>
         {t.imposter.result.noPointsThisWord}
       </div>

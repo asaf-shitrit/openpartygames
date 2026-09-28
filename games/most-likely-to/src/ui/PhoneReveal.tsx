@@ -27,7 +27,7 @@ import {
   type MltPlayerView,
   type MltReveal,
 } from "../state";
-import { nameOf, PromptLine } from "./common";
+import { controlsHeadingLevel, nameOf, PromptLine } from "./common";
 import { personalReveal, phoneRevealBeats } from "./reveal-timeline";
 import type { PersonalReveal } from "./reveal-timeline";
 import { StageReveal } from "./stage/Reveal";
@@ -38,7 +38,9 @@ function ResultCard({
   totals,
   me,
   cardRef,
+  level,
 }: {
+  level: 1 | 2;
   personal: PersonalReveal;
   live: boolean;
   totals: Record<string, number>;
@@ -96,7 +98,9 @@ function ResultCard({
             gap: 16,
           }}
         >
-          <Marker size={30}>{personal.headline}</Marker>
+          <Marker size={30} level={level}>
+            {personal.headline}
+          </Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
             {formatPoints(total)} total
@@ -193,7 +197,7 @@ function Waiting({
   if (noTv) return null;
   return (
     <>
-      <PromptLine prompt={prompt} size={20} />
+      <PromptLine prompt={prompt} size={20} level={1} />
       <EyesOnTv
         detail={suspense ? t.mostLikelyTo.hereItComes : t.mostLikelyTo.votesAreIn}
         tempo={suspense ? "fast" : "slow"}
@@ -243,6 +247,8 @@ export function PhoneReveal(props: PhoneRevealProps) {
           totals={view.totals}
           me={meId}
           cardRef={cardRef}
+          // A no-TV room's stage above already holds the h1 (the prompt).
+          level={controlsHeadingLevel(stage !== null)}
         />
       ) : (
         <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} t={t} />

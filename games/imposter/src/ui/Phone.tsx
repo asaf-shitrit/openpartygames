@@ -336,9 +336,9 @@ function ClueBanner({
     >
       <Avatar id={avatarOf(players, view.currentSpeakerId)} size={48} />
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>
           {title}
-        </div>
+        </h1>
         <div style={{ fontSize: 17, fontWeight: 400, lineHeight: 1.25 }}>
           {sub}
         </div>
@@ -413,9 +413,13 @@ function WordPanel({
         gap: 12,
       }}
     >
+      {/* Compact is the clue screen's peek card, a subsection under that screen's h1. Full is
+          the face of the word-check card, which sits inside a button: a heading there is not
+          exposed to a screen reader, so it stays a plain Marker. */}
       <Marker
         size={compact ? 22 : 27}
         color={isImposter ? "var(--opg-marker)" : undefined}
+        level={compact ? 2 : undefined}
         style={{ transform: "rotate(-2deg)" }}
       >
         {title}
@@ -654,7 +658,7 @@ function YourTurn(props: SectionProps) {
           }}
         >
           <div>
-            <Marker size={34}>{t.imposter.clues.yourTurnBang}</Marker>
+            <Marker size={34} level={1}>{t.imposter.clues.yourTurnBang}</Marker>
             <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>
               {t.imposter.clues.sayClueShort}
             </div>
@@ -804,7 +808,7 @@ function VoteLocked(
           }}
         >
           <Icon name="check" size={40} color="var(--opg-marker)" />
-          <Marker size={32}>{t.imposter.vote.lockedIn}</Marker>
+          <Marker size={32} level={1}>{t.imposter.vote.lockedIn}</Marker>
           <div style={{ fontSize: 18, fontWeight: 700 }}>
             {votedFor
               ? format(t.imposter.vote.youVotedFor, { name: votedFor.name })
@@ -849,7 +853,7 @@ function VoteForm(props: SectionProps) {
       />
       {stage === null ? null : <StageVote view={stage} players={players} />}
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <Marker size={32} style={{ lineHeight: 1.15 }}>
+        <Marker size={32} level={1} style={{ lineHeight: 1.15 }}>
           {t.imposter.vote.whoIsImposter}
         </Marker>
         <div style={{ fontSize: 19, lineHeight: 1.35 }}>

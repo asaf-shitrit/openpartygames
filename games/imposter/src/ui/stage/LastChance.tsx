@@ -61,7 +61,7 @@ export function StageLastChance({
   const startedAt = anchorAt(timerStartedAt, deadline, LAST_CHANCE_MS);
   return (
     <Card variant="M" tilt={-0.6} style={CARD_STYLE}>
-      <Marker size={26} color="var(--opg-marker)">
+      <Marker size={26} color="var(--opg-marker)" level={1}>
         {format(t.imposter.lastChance.caughtStage, { name: imposter })}
       </Marker>
       <div style={RING_WRAP}>

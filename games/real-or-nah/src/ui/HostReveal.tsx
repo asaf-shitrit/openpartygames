@@ -109,7 +109,7 @@ function activeLieIndex(
 function IntroHeading({ live, t }: { live: boolean; t: Dictionary }) {
   return (
     <FxIn live={live} preset="slideIn">
-      <Marker size={36}>{t.realOrNah.introHeading}</Marker>
+      <Marker size={36} level={1}>{t.realOrNah.introHeading}</Marker>
     </FxIn>
   );
 }
@@ -466,7 +466,7 @@ function TruthSection({
       tilt={-1}
       style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 6, alignSelf: "center" }}
     >
-      <div style={LABEL}>{t.realOrNah.theTruthLabel}</div>
+      <h2 style={{ ...LABEL, margin: 0 }}>{t.realOrNah.theTruthLabel}</h2>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <Highlight style={{ padding: "0 16px" }}>
           <span style={{ fontSize: 48, fontWeight: 700 }}>

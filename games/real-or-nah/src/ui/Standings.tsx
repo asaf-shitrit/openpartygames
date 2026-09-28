@@ -145,7 +145,7 @@ export function Standings({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Marker size={48}>{t.realOrNah.standingsLabel}</Marker>
+      <Marker size={48} level={1}>{t.realOrNah.standingsLabel}</Marker>
       {order.map((id) => (
         <StandingsRow
           key={id}
