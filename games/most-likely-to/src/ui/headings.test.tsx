@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
 import type { MltAction, MltHostView, MltPlayerView } from "../state";
+import { controlsHeadingLevel } from "./common";
 import { Host } from "./Host";
 import { Phone } from "./Phone";
 import { mostLikelyToPreviews } from "./preview";
@@ -164,5 +165,12 @@ describe("focus on a phase change", () => {
     rerender(ui(findPreview("Phone: Maya reveal matched")));
     expect(document.activeElement).toBe(input);
     input.remove();
+  });
+});
+
+describe("controlsHeadingLevel", () => {
+  it("is h1 alone and h2 under a staged prompt", () => {
+    expect(controlsHeadingLevel(false)).toBe(1);
+    expect(controlsHeadingLevel(true)).toBe(2);
   });
 });

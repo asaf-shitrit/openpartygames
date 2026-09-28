@@ -29,6 +29,11 @@ export function avatarOf(
   return findPlayer(players, id)?.avatar ?? null;
 }
 
+/** The level of the phone's own title: h1 alone, h2 under a no-TV room's staged prompt (the h1). */
+export function controlsHeadingLevel(staged: boolean): 1 | 2 {
+  return staged ? 2 : 1;
+}
+
 export interface PromptLineProps {
   prompt: string;
   /** Font size in px for the whole line. */

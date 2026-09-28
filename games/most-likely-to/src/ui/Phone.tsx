@@ -19,7 +19,7 @@ import {
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { MltAction, MltHostView, MltPhase, MltPlayerView } from "../state";
-import { avatarOf, findPlayer, nameOf, PromptLine } from "./common";
+import { avatarOf, controlsHeadingLevel, findPlayer, nameOf, PromptLine } from "./common";
 import { PhoneReveal } from "./PhoneReveal";
 import { StageVote } from "./stage/Vote";
 
@@ -216,7 +216,7 @@ function VoteLocked(
             <Marker
               size={32}
               color="var(--opg-ink)"
-              level={stage === null ? 1 : 2}
+              level={controlsHeadingLevel(stage !== null)}
             >
               {t.mostLikelyTo.voteLockedIn}
             </Marker>

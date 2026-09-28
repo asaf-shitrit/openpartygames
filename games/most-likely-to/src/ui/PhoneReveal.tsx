@@ -27,7 +27,7 @@ import {
   type MltPlayerView,
   type MltReveal,
 } from "../state";
-import { nameOf, PromptLine } from "./common";
+import { controlsHeadingLevel, nameOf, PromptLine } from "./common";
 import { personalReveal, phoneRevealBeats } from "./reveal-timeline";
 import type { PersonalReveal } from "./reveal-timeline";
 import { StageReveal } from "./stage/Reveal";
@@ -248,7 +248,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
           me={meId}
           cardRef={cardRef}
           // A no-TV room's stage above already holds the h1 (the prompt).
-          level={stage === null ? 1 : 2}
+          level={controlsHeadingLevel(stage !== null)}
         />
       ) : (
         <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} t={t} />

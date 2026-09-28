@@ -85,6 +85,12 @@ function PreResult({
   );
 }
 
+/** A cancelled word's stage card is itself an h1, so the personal headline goes under it;
+ * every other stage has no title and the headline is the h1. */
+export function resultHeadingLevel(staged: boolean, path: ResultPath): 1 | 2 {
+  return staged && path === "cancelled" ? 2 : 1;
+}
+
 interface ResultCardProps {
   personal: PersonalResult;
   level: 1 | 2;
@@ -300,7 +306,7 @@ export function PhoneResult(props: PhoneResultProps) {
         <ResultCard
           personal={personal}
           // A cancelled word's stage card is itself an h1; every other stage has no title.
-          level={stage !== null && path === "cancelled" ? 2 : 1}
+          level={resultHeadingLevel(stage !== null, path)}
           crewWord={view.crewWord}
           live={moment.live}
           cardRef={cardRef}

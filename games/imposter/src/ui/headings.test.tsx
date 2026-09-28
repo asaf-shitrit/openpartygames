@@ -7,6 +7,7 @@ import { imposterHostViewSchema } from "../state";
 import type { ImposterAction, ImposterHostView, ImposterPlayerView } from "../state";
 import { Host } from "./Host";
 import { Phone } from "./Phone";
+import { resultHeadingLevel } from "./PhoneResult";
 import { REVEAL_PREVIEW_START, RESULT_PREVIEW_START, imposterPreviews } from "./preview";
 
 afterEach(() => {
@@ -253,5 +254,14 @@ describe("focus on a phase change", () => {
     rerender(uiAt(guess, () => guess.room.serverNow));
     expect(document.activeElement).toBe(input);
     input.remove();
+  });
+});
+
+describe("resultHeadingLevel", () => {
+  it("drops to h2 only under a no-TV room's cancelled-word card", () => {
+    expect(resultHeadingLevel(true, "cancelled")).toBe(2);
+    expect(resultHeadingLevel(true, "caught")).toBe(1);
+    expect(resultHeadingLevel(true, "escaped")).toBe(1);
+    expect(resultHeadingLevel(false, "cancelled")).toBe(1);
   });
 });
