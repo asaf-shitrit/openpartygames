@@ -423,22 +423,35 @@ function PlayerStage(props: LobbyStageProps) {
  * card, a game, results, the avatar picker, the VIP controls, the plain lobby), the same move
  * `HostApp` already makes for the TV.
  */
+/** The screen a phone shows once the room has left the lobby. */
+function playingScreenKey(view: PlayerRoomView): string {
+  const me = findMe(view);
+  if (waitingForNextGame(me)) return "waiting";
+  if (view.phase === "starting") return "starting";
+  if (activeGame(view) === null) return "waiting";
+  return `game:${view.game?.id ?? ""}`;
+}
+
+/** The screen a phone shows while the room is in the lobby. */
+function lobbyScreenKey(
+  view: PlayerRoomView,
+  showPicker: boolean,
+  showResults: boolean,
+): string {
+  if (showResults) return "results";
+  if (showPicker) return "picker";
+  if (view.you === view.vipId) return "vip";
+  return "lobby";
+}
+
 function playerScreenKey(
   view: PlayerRoomView,
   showPicker: boolean,
   showResults: boolean,
 ): string {
-  if (view.phase !== "lobby") {
-    const me = findMe(view);
-    if (waitingForNextGame(me)) return "waiting";
-    if (view.phase === "starting") return "starting";
-    if (activeGame(view) === null) return "waiting";
-    return `game:${view.game?.id ?? ""}`;
-  }
-  if (showResults) return "results";
-  if (showPicker) return "picker";
-  if (view.you === view.vipId) return "vip";
-  return "lobby";
+  return view.phase === "lobby"
+    ? lobbyScreenKey(view, showPicker, showResults)
+    : playingScreenKey(view);
 }
 
 function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
