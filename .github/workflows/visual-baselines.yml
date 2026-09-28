@@ -1,0 +1,95 @@
+name: Visual baselines
+
+# Regenerates the Linux pixel baselines in e2e/layout/visual.spec.ts-snapshots/ on the same
+# runner image CI uses, because they cannot be made on macOS. Manual and branch-only: it never
+# runs on main or on pull requests, and `visual` is deliberately not part of the CI gate yet.
+#
+# To refresh baselines: push a branch named visual-baselines/<anything> (or run this workflow
+# by hand against one), download the `visual-snapshots` artifact, look at every PNG that
+# changed, and commit only the ones that should have.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['visual-baselines/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-baselines-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      # The pnpm version comes from packageManager in package.json.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # 1. Against the committed baselines. Failures here are recorded, not fatal: this step
+      #    says which baselines are stale (and, if a baseline that should be fine fails, that
+      #    this runner is not the environment that made it).
+      - name: Compare against committed baselines
+        id: before
+        continue-on-error: true
+        run: pnpm e2e:visual --reporter=list,html
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+          PLAYWRIGHT_HTML_REPORT: ${{ github.workspace }}/report-before
+      - name: Keep the first run's diffs
+        if: always()
+        run: |
+          mkdir -p diffs-before
+          cp -R test-results/. diffs-before/ 2>/dev/null || true
+
+      # 2. Regenerate.
+      - name: Update baselines
+        run: pnpm e2e:visual:update
+
+      # 3. Regenerated baselines must pass unchanged on a second run in the same environment.
+      - name: Confirm regenerated baselines are stable
+        run: pnpm e2e:visual --reporter=list,html
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+          PLAYWRIGHT_HTML_REPORT: ${{ github.workspace }}/report-after
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Visual baselines"
+            echo "First run against committed baselines: **${{ steps.before.outcome }}**"
+            echo
+            echo "Files that differ from the commit after the update run:"
+            echo '```'
+            git status --short e2e/layout/visual.spec.ts-snapshots || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # 4. Everything, whatever happened.
+      - name: Upload snapshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-snapshots
+          path: e2e/layout/visual.spec.ts-snapshots/
+          if-no-files-found: error
+      - name: Upload Playwright reports and diffs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-report
+          path: |
+            report-before/
+            report-after/
+            diffs-before/
+            test-results/
+          if-no-files-found: ignore
