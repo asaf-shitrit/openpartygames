@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { LocaleProvider } from "@opg/i18n";
 import { DoodlePad } from "./DoodlePad";
@@ -53,11 +54,13 @@ function canvasEl(): HTMLCanvasElement {
   return el;
 }
 
-// The canvas is aria-hidden and the words sit in the span beside it, so that is what a
-// screen reader reads and what these assert on.
+// The canvas names itself via aria-labelledby, and the words live in that referenced span, so
+// that is what a screen reader reads and what these assert on.
 function spokenLabel(): string {
-  const el = canvasEl().nextElementSibling;
-  if (!el) throw new Error("expected a label beside the canvas");
+  const labelId = canvasEl().getAttribute("aria-labelledby");
+  if (!labelId) throw new Error("expected the canvas to have aria-labelledby");
+  const el = document.getElementById(labelId);
+  if (!el) throw new Error("expected the referenced label to exist");
   return el.textContent ?? "";
 }
 
@@ -225,6 +228,112 @@ describe("DoodlePad", () => {
     expect(onChange).toHaveBeenCalledTimes(1); // only the drawn stroke so far, not a clear yet
     fireEvent.click(screen.getByRole("button", { name: /tap again/i }));
     expect(onChange.mock.calls.at(-1)?.[0]?.s).toEqual([]);
+  });
+});
+
+describe("DoodlePad, from the keyboard", () => {
+  it("has no aria-hidden canvas and exposes a real accessible name and description", () => {
+    renderDoodlePad(
+      <DoodlePad
+        prompt="a cat"
+        clock={steppingClock(0, 20)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+      />,
+    );
+    const canvas = canvasEl();
+    expect(canvas.getAttribute("aria-hidden")).toBeNull();
+    expect(canvas.tabIndex).toBe(0);
+    expect(canvas.hasAttribute("aria-labelledby")).toBe(true);
+    expect(canvas.hasAttribute("aria-describedby")).toBe(true);
+  });
+
+  it("draws a real stroke with arrow keys and space, committed through the ordinary path", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderDoodlePad(
+      <DoodlePad
+        prompt="a cat"
+        clock={steppingClock(0, 50)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+        onChange={onChange}
+      />,
+    );
+    const canvas = canvasEl();
+    await user.tab(); // focuses the palette's first swatch, then...
+    canvas.focus();
+    await user.keyboard("{ }"); // pen down
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowDown}");
+    await user.keyboard("{ }"); // pen up: commits the stroke
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const doodle = onChange.mock.calls[0]?.[0];
+    expect(doodle?.s).toHaveLength(1);
+    const stroke = doodle?.s[0];
+    // A real stroke has more than one point: the keyboard moved the pen after putting it down.
+    expect(deltaDecode(stroke?.p ?? []).length).toBeGreaterThan(1);
+    expect(stroke?.d).toBeGreaterThan(0);
+  });
+
+  it("escape cancels a keyboard stroke in progress without committing anything", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderDoodlePad(
+      <DoodlePad
+        prompt="a cat"
+        clock={steppingClock(0, 50)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+        onChange={onChange}
+      />,
+    );
+    canvasEl().focus();
+    await user.keyboard("{ }{ArrowRight}{Escape}");
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("announces the pen state while drawing with the keyboard", async () => {
+    const user = userEvent.setup();
+    renderDoodlePad(
+      <DoodlePad
+        prompt="a cat"
+        clock={steppingClock(0, 50)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+      />,
+    );
+    canvasEl().focus();
+    await user.keyboard("{ }");
+    expect(spokenLabel()).toBe("Drawing a line. Press space or enter to lift the pen.");
+    await user.keyboard("{ }");
+    expect(spokenLabel()).toBe("Your drawing for a cat: 1 stroke so far");
+  });
+
+  it("blurring the canvas mid-stroke cancels it rather than leaving it stuck", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderDoodlePad(
+      <>
+        <DoodlePad
+          prompt="a cat"
+          clock={steppingClock(0, 50)}
+          rectOf={stubRectOf()}
+          getContext={recordingContext()}
+          onChange={onChange}
+        />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+    canvasEl().focus();
+    await user.keyboard("{ }{ArrowRight}");
+    fireEvent.blur(canvasEl());
+    // Pen was never lifted with space/enter, so nothing should have committed...
+    expect(onChange).not.toHaveBeenCalled();
+    // ...and pressing space again after refocusing starts a fresh stroke, not resumes the old one.
+    canvasEl().focus();
+    await user.keyboard("{ }{ArrowRight}{ }");
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
 
