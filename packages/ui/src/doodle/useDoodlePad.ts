@@ -3,6 +3,7 @@
 // touches refs and DOM events. Ref mutations are routed through plain setters below, not inlined
 // in the returned callbacks, so a stroke's fields stay easy to follow one at a time.
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { ServerClock } from "../game-ui";
 import { finalizeStroke } from "./capture";
@@ -11,9 +12,26 @@ import type { ClientRectLike } from "./geometry";
 import { paintDoodle } from "./paint";
 import type { DoodleCanvasContext } from "./paint";
 import type { Doodle, GridPoint, InkIndex, Stroke } from "./types";
+import { GRID } from "./types";
 
 const MAX_BACKING_RATIO = 2;
 const DEFAULT_LINE_WIDTH = 4;
+
+/**
+ * A keyboard-drawn stroke shares the exact same pointer-id-gated state as a touch or mouse
+ * stroke; it is just identified by a sentinel id no real PointerEvent can produce (those are
+ * always >= 0), so the "only the first pointer draws" guard covers it for free.
+ */
+const KEYBOARD_POINTER_ID = -1;
+
+/** Grid units a single arrow-key press moves the keyboard pen; well above MIN_STEP so every
+ * press survives simplification as its own point. */
+const KEYBOARD_STEP = 48;
+
+function centerPoint(): GridPoint {
+  const mid = Math.round((GRID - 1) / 2);
+  return [mid, mid];
+}
 
 interface LiveStroke {
   ink: InkIndex;
@@ -26,6 +44,7 @@ interface PointerState {
   live: LiveStroke | null;
   activePointerId: number | null;
   lastEndAt: number | null;
+  keyboardAt: GridPoint;
 }
 
 function setStrokesField(ref: RefObject<PointerState>, strokes: Stroke[]): void {
@@ -44,6 +63,10 @@ function setLastEndField(ref: RefObject<PointerState>, at: number | null): void 
   ref.current.lastEndAt = at;
 }
 
+function setKeyboardAtField(ref: RefObject<PointerState>, at: GridPoint): void {
+  ref.current.keyboardAt = at;
+}
+
 export interface UseDoodlePadOptions {
   clock: ServerClock;
   size: number;
@@ -59,6 +82,8 @@ export interface DoodlePadHandlers {
   onPointerMove: (e: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerUp: (e: ReactPointerEvent<HTMLCanvasElement>) => void;
   onPointerCancel: (e: ReactPointerEvent<HTMLCanvasElement>) => void;
+  onKeyDown: (e: ReactKeyboardEvent<HTMLCanvasElement>) => void;
+  onBlur: (e: ReactFocusEvent<HTMLCanvasElement>) => void;
 }
 
 export interface UseDoodlePad {
@@ -71,6 +96,10 @@ export interface UseDoodlePad {
   undo: () => void;
   clear: () => void;
   cancelClear: () => void;
+  /** The keyboard pen's position, [0, GRID), shown only while a keyboard user is driving it. */
+  keyboardCursor: GridPoint | null;
+  /** True while a keyboard-drawn stroke is in progress (pen down, not yet lifted). */
+  keyboardDrawing: boolean;
 }
 
 function devicePixelCap(): number {
@@ -155,8 +184,13 @@ interface PointerHandlerOptions {
   commit: (next: Stroke[]) => void;
 }
 
+type PointerHandlers = Pick<
+  DoodlePadHandlers,
+  "onPointerDown" | "onPointerMove" | "onPointerUp" | "onPointerCancel"
+>;
+
 /** Pointer handlers over a shared PointerState ref; every field write goes through a setter above. */
-function usePointerHandlers(options: PointerHandlerOptions): DoodlePadHandlers {
+function usePointerHandlers(options: PointerHandlerOptions): PointerHandlers {
   const { stateRef, rectOf, clock, selectedInk, repaint, commit } = options;
   const pointOf = useCallback(
     (event: PointerEvent | ReactPointerEvent<HTMLCanvasElement>, canvas: Element): GridPoint =>
@@ -187,21 +221,162 @@ function usePointerHandlers(options: PointerHandlerOptions): DoodlePadHandlers {
   );
 
   const endStroke = useCallback(
-    (e: ReactPointerEvent<HTMLCanvasElement>) => {
-      const { live, activePointerId, lastEndAt, strokes } = stateRef.current;
-      if (e.pointerId !== activePointerId) return;
-      setActivePointerField(stateRef, null);
-      setLiveField(stateRef, null);
-      if (!live) return;
-      const now = clock.now();
-      const gap = lastEndAt === null ? 0 : now - lastEndAt;
-      setLastEndField(stateRef, now);
-      commit([...strokes, finalizeStroke(live.ink, live.points, now - live.startedAt, gap)]);
-    },
+    (e: ReactPointerEvent<HTMLCanvasElement>) =>
+      commitLiveStroke({ stateRef, clock, commit }, e.pointerId),
     [clock, commit, stateRef],
   );
 
   return { onPointerDown, onPointerMove, onPointerUp: endStroke, onPointerCancel: endStroke };
+}
+
+interface CommitStrokeOptions {
+  stateRef: RefObject<PointerState>;
+  clock: ServerClock;
+  commit: (next: Stroke[]) => void;
+}
+
+/**
+ * Ends whichever pointer id is currently live and commits its stroke. Shared by pointer-up /
+ * pointer-cancel and by the keyboard's "lift the pen" action, so both paths produce an ordinary
+ * Stroke through the exact same commit call.
+ */
+function commitLiveStroke(options: CommitStrokeOptions, pointerId: number): void {
+  const { stateRef, clock, commit } = options;
+  const { live, activePointerId, lastEndAt, strokes } = stateRef.current;
+  if (pointerId !== activePointerId) return;
+  setActivePointerField(stateRef, null);
+  setLiveField(stateRef, null);
+  if (!live) return;
+  const now = clock.now();
+  const gap = lastEndAt === null ? 0 : now - lastEndAt;
+  setLastEndField(stateRef, now);
+  commit([...strokes, finalizeStroke(live.ink, live.points, now - live.startedAt, gap)]);
+}
+
+function clampGrid(value: number): number {
+  if (value < 0) return 0;
+  if (value > GRID - 1) return GRID - 1;
+  return value;
+}
+
+/** The grid delta an arrow key moves the keyboard pen, or null for any other key. */
+function arrowDelta(key: string): GridPoint | null {
+  switch (key) {
+    case "ArrowUp":
+      return [0, -KEYBOARD_STEP];
+    case "ArrowDown":
+      return [0, KEYBOARD_STEP];
+    case "ArrowLeft":
+      return [-KEYBOARD_STEP, 0];
+    case "ArrowRight":
+      return [KEYBOARD_STEP, 0];
+    default:
+      return null;
+  }
+}
+
+interface KeyboardHandlerOptions {
+  stateRef: RefObject<PointerState>;
+  clock: ServerClock;
+  selectedInk: InkIndex;
+  repaint: () => void;
+  commit: (next: Stroke[]) => void;
+}
+
+interface KeyboardHandlers {
+  onKeyDown: (e: ReactKeyboardEvent<HTMLCanvasElement>) => void;
+  onBlur: (e: ReactFocusEvent<HTMLCanvasElement>) => void;
+  hideCursor: () => void;
+  cursor: GridPoint | null;
+  drawing: boolean;
+}
+
+/**
+ * Cursor-key drawing: arrow keys move a pen over the grid, Space/Enter lowers or lifts it,
+ * Escape drops the line in progress. Every field write goes through the same PointerState ref
+ * and setters the pointer handlers use, gated by the same "only one drawer at a time" rule via
+ * KEYBOARD_POINTER_ID.
+ */
+function useKeyboardHandlers(options: KeyboardHandlerOptions): KeyboardHandlers {
+  const { stateRef, clock, selectedInk, repaint, commit } = options;
+  const [cursor, setCursor] = useState<GridPoint | null>(null);
+  const [drawing, setDrawing] = useState(false);
+
+  const revealCursor = useCallback(() => {
+    setCursor((prev) => prev ?? stateRef.current.keyboardAt);
+  }, [stateRef]);
+
+  const hideCursor = useCallback(() => {
+    if (stateRef.current.activePointerId === KEYBOARD_POINTER_ID) return; // keyboard still owns it
+    setCursor(null);
+  }, [stateRef]);
+
+  const moveCursor = useCallback(
+    ([dx, dy]: GridPoint) => {
+      const { activePointerId, live, keyboardAt } = stateRef.current;
+      const next: GridPoint = [clampGrid(keyboardAt[0] + dx), clampGrid(keyboardAt[1] + dy)];
+      setKeyboardAtField(stateRef, next);
+      setCursor(next);
+      if (activePointerId === KEYBOARD_POINTER_ID && live) {
+        live.points.push(next);
+        repaint();
+      }
+    },
+    [repaint, stateRef],
+  );
+
+  const togglePen = useCallback(() => {
+    const { activePointerId, keyboardAt } = stateRef.current;
+    if (activePointerId === null) {
+      setActivePointerField(stateRef, KEYBOARD_POINTER_ID);
+      setLiveField(stateRef, { ink: selectedInk, points: [keyboardAt], startedAt: clock.now() });
+      setDrawing(true);
+      repaint();
+      return;
+    }
+    if (activePointerId !== KEYBOARD_POINTER_ID) return; // a pointer stroke owns the canvas
+    commitLiveStroke({ stateRef, clock, commit }, KEYBOARD_POINTER_ID);
+    setDrawing(false);
+    repaint();
+  }, [clock, commit, repaint, selectedInk, stateRef]);
+
+  const cancelPen = useCallback(() => {
+    if (stateRef.current.activePointerId !== KEYBOARD_POINTER_ID) return;
+    setActivePointerField(stateRef, null);
+    setLiveField(stateRef, null);
+    setDrawing(false);
+    repaint();
+  }, [repaint, stateRef]);
+
+  const onKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLCanvasElement>) => {
+      const delta = arrowDelta(e.key);
+      if (delta) {
+        e.preventDefault();
+        revealCursor();
+        moveCursor(delta);
+        return;
+      }
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        revealCursor();
+        togglePen();
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelPen();
+      }
+    },
+    [cancelPen, moveCursor, revealCursor, togglePen],
+  );
+
+  const onBlur = useCallback(() => {
+    cancelPen();
+    setCursor(null);
+  }, [cancelPen]);
+
+  return { onKeyDown, onBlur, hideCursor, cursor, drawing };
 }
 
 export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
@@ -215,6 +390,7 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     live: null,
     activePointerId: null,
     lastEndAt: null,
+    keyboardAt: centerPoint(),
   });
   const { canvasRef, repaint } = usePadCanvas(stateRef, options);
 
@@ -228,7 +404,25 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     [onChange, repaint, stateRef],
   );
 
-  const handlers = usePointerHandlers({ stateRef, rectOf, clock, selectedInk, repaint, commit });
+  const pointerHandlers = usePointerHandlers({ stateRef, rectOf, clock, selectedInk, repaint, commit });
+  const keyboardHandlers = useKeyboardHandlers({ stateRef, clock, selectedInk, repaint, commit });
+
+  const onPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLCanvasElement>) => {
+      keyboardHandlers.hideCursor();
+      pointerHandlers.onPointerDown(e);
+    },
+    [keyboardHandlers, pointerHandlers],
+  );
+
+  const handlers: DoodlePadHandlers = {
+    onPointerDown,
+    onPointerMove: pointerHandlers.onPointerMove,
+    onPointerUp: pointerHandlers.onPointerUp,
+    onPointerCancel: pointerHandlers.onPointerCancel,
+    onKeyDown: keyboardHandlers.onKeyDown,
+    onBlur: keyboardHandlers.onBlur,
+  };
 
   const undo = useCallback(() => {
     const { strokes } = stateRef.current;
@@ -258,5 +452,7 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     undo,
     clear,
     cancelClear,
+    keyboardCursor: keyboardHandlers.cursor,
+    keyboardDrawing: keyboardHandlers.drawing,
   };
 }

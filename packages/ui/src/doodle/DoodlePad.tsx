@@ -1,6 +1,16 @@
 // The phone drawing pad: a <canvas> sized to its CSS box, a six-swatch palette, undo and clear.
 // Pointer handling and timing live in ./useDoodlePad; this is the thin render (plan/0003-doodle-bluff.md).
+//
+// Keyboard input: a keyboard-only or switch-access player cannot swipe a finger, so the canvas
+// also accepts cursor-key drawing (arrow keys move a pen, space/enter lowers or lifts it, escape
+// drops a line not yet finished). It produces the exact same Stroke the pointer path does, through
+// the same commit call in useDoodlePad — never a second data shape. A stamp/shape palette was the
+// other option on the table (issue #54); cursor-key drawing won because it needs no new wire
+// format and gives a keyboard player the same freehand result a touch player gets, not a
+// consolation prize. The visible pen marker is a plain CSS position, no animation, so there is
+// nothing for prefers-reduced-motion to turn off.
 import type { CSSProperties } from "react";
+import { useId } from "react";
 import { format, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { ServerClock } from "../game-ui";
@@ -8,12 +18,16 @@ import { SR_ONLY } from "../sr-only";
 import type { ClientRectLike } from "./geometry";
 import { doodleInkNames, DOODLE_INKS } from "./inks";
 import type { DoodleCanvasContext } from "./paint";
-import type { Doodle } from "./types";
+import type { RefObject } from "react";
+import type { Doodle, GridPoint } from "./types";
+import { GRID } from "./types";
 import { DoodlePalette } from "./DoodlePalette";
 import { useDoodlePad } from "./useDoodlePad";
+import type { DoodlePadHandlers } from "./useDoodlePad";
 
 const DEFAULT_SIZE = 320;
 const TAP_TARGET = 44;
+const CURSOR_DOT = 16;
 
 export interface DoodlePadProps {
   /** Announced in the aria-label: "Your drawing for <prompt>: N strokes so far". */
@@ -47,6 +61,90 @@ function ariaLabelFor(prompt: string, strokeCount: number, t: Dictionary["kit"])
   return format(t.doodle.ariaLabel, { prompt, strokes });
 }
 
+/** What the live region says: the pen state while a keyboard stroke is in progress, otherwise
+ * the same prompt-and-count label a mouse or touch drawer gets. */
+function statusFor(
+  drawing: boolean,
+  prompt: string,
+  strokeCount: number,
+  t: Dictionary["kit"],
+): string {
+  return drawing ? t.doodle.keyboardDrawing : ariaLabelFor(prompt, strokeCount, t);
+}
+
+/** Percentage position of the keyboard pen over the canvas box, for the CSS overlay marker. */
+function cursorMarkerStyle(at: GridPoint, drawing: boolean): CSSProperties {
+  const [x, y] = at;
+  return {
+    position: "absolute",
+    left: `${(x / (GRID - 1)) * 100}%`,
+    top: `${(y / (GRID - 1)) * 100}%`,
+    width: CURSOR_DOT,
+    height: CURSOR_DOT,
+    marginLeft: -CURSOR_DOT / 2,
+    marginTop: -CURSOR_DOT / 2,
+    borderRadius: "50%",
+    border: "3px solid #2B2B2B",
+    background: drawing ? "#D7372B" : "transparent",
+    // A static position, no transition or animation: nothing here for
+    // prefers-reduced-motion to turn off.
+    pointerEvents: "none",
+  };
+}
+
+interface DoodleCanvasSurfaceProps {
+  canvasRef: RefObject<HTMLCanvasElement | null>;
+  handlers: DoodlePadHandlers;
+  size: number;
+  labelId: string;
+  instructionsId: string;
+  keyboardCursor: GridPoint | null;
+  keyboardDrawing: boolean;
+}
+
+/**
+ * The canvas plus its keyboard-pen overlay, split out so DoodlePad stays under the line cap.
+ * The `role="application"` sits on this wrapping div rather than the canvas itself — a canvas
+ * counts as an interactive element, and lint (rightly) rejects handing an interactive element a
+ * non-interactive role; a plain div has no such conflict, and the role still reaches assistive
+ * tech before it gets to the focused, keystroke-driven canvas inside it.
+ */
+function DoodleCanvasSurface({
+  canvasRef,
+  handlers,
+  size,
+  labelId,
+  instructionsId,
+  keyboardCursor,
+  keyboardDrawing,
+}: DoodleCanvasSurfaceProps) {
+  return (
+    <div role="application" style={{ position: "relative", width: size, height: size }}>
+      <canvas
+        ref={canvasRef}
+        // The words live in the span below: a canvas is not an image element, so it carries the
+        // drawing and the span carries what a screen reader says about it.
+        tabIndex={0}
+        aria-labelledby={labelId}
+        aria-describedby={instructionsId}
+        {...handlers}
+        style={{
+          display: "block",
+          width: size,
+          height: size,
+          touchAction: "none",
+          background: "#FFFFFF",
+          border: "4px solid #2B2B2B",
+          borderRadius: "30px 10px 26px 12px / 12px 26px 10px 30px",
+        }}
+      />
+      {keyboardCursor ? (
+        <span aria-hidden="true" style={cursorMarkerStyle(keyboardCursor, keyboardDrawing)} />
+      ) : null}
+    </div>
+  );
+}
+
 export function DoodlePad({
   prompt,
   clock,
@@ -70,26 +168,29 @@ export function DoodlePad({
     undo,
     clear,
     cancelClear,
+    keyboardCursor,
+    keyboardDrawing,
   } = useDoodlePad({ clock, size, inks, initialDoodle, onChange, rectOf, getContext });
+  const labelId = useId();
+  const instructionsId = useId();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, ...style }}>
-      <canvas
-        ref={canvasRef}
-        // The words live in the sibling <span> below: a canvas is not an image element, so it
-        // carries the drawing and the span carries what a screen reader says about it.
-        aria-hidden="true"
-        {...handlers}
-        style={{
-          width: size,
-          height: size,
-          touchAction: "none",
-          background: "#FFFFFF",
-          border: "4px solid #2B2B2B",
-          borderRadius: "30px 10px 26px 12px / 12px 26px 10px 30px",
-        }}
+      <DoodleCanvasSurface
+        canvasRef={canvasRef}
+        handlers={handlers}
+        size={size}
+        labelId={labelId}
+        instructionsId={instructionsId}
+        keyboardCursor={keyboardCursor}
+        keyboardDrawing={keyboardDrawing}
       />
-      <span style={SR_ONLY}>{ariaLabelFor(prompt, strokeCount, t.kit)}</span>
+      <span id={labelId} style={SR_ONLY} aria-live="polite">
+        {statusFor(keyboardDrawing, prompt, strokeCount, t.kit)}
+      </span>
+      <span id={instructionsId} style={SR_ONLY}>
+        {t.kit.doodle.keyboardInstructions}
+      </span>
       <DoodlePalette
         inks={inks}
         inkNames={inkNames ?? doodleInkNames(t.kit.ink)}

@@ -32,6 +32,9 @@ export const kit: Dictionary["kit"] = {
     pen: "עט {name}",
     penSelected: "עט {name}, נבחר",
     inkFallback: "דיו {n}",
+    keyboardInstructions:
+      "השתמשו בחצים כדי להזיז את העט. הקישו על רווח או Enter כדי להוריד או להרים אותו. הקישו Escape כדי לבטל קו שטרם הושלם.",
+    keyboardDrawing: "מציירים קו. הקישו על רווח או Enter כדי להרים את העט.",
   },
   ink: {
     ink: "דיו",

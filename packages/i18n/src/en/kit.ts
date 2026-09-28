@@ -36,6 +36,9 @@ export const kit = {
     pen: "{name} pen",
     penSelected: "{name} pen, selected",
     inkFallback: "Ink {n}",
+    keyboardInstructions:
+      "Use the arrow keys to move the pen. Press space or enter to put it down or lift it. Press escape to cancel a line you have not finished.",
+    keyboardDrawing: "Drawing a line. Press space or enter to lift the pen.",
   },
   ink: {
     ink: "Ink",
