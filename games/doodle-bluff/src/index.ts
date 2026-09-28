@@ -176,6 +176,27 @@ function applyStrokes(
   return { ...state, drawings: { ...state.drawings, [action.drawingId]: { ...drawing, doodle } } };
 }
 
+/**
+ * The shrinking counterpart to `applyStrokes`, for undo and clear (issue #37). Gated by the same
+ * exact-count check as an append: `from` must be the drawing's current stroke count, so a stale
+ * or replayed truncate — the room already moved past the count it was built against, whether by
+ * a later append or a later truncate — is silently dropped rather than reapplied. `to` must be
+ * strictly less than `from`; anything else isn't a truncate and is left to "strokes" to express.
+ */
+function applyTruncate(
+  state: DoodleState,
+  playerId: PlayerId,
+  action: Extract<DoodleAction, { type: "truncate" }>,
+): DoodleState {
+  if (state.phase !== "draw") return state;
+  const drawing = state.drawings[action.drawingId];
+  if (drawing === undefined || drawing.artistId !== playerId || drawing.done) return state;
+  if (action.from !== drawing.doodle.s.length) return state;
+  if (action.to >= action.from) return state;
+  const doodle = { v: 1 as const, s: drawing.doodle.s.slice(0, action.to) };
+  return { ...state, drawings: { ...state.drawings, [action.drawingId]: { ...drawing, doodle } } };
+}
+
 function applyDoodleDone(state: DoodleState, playerId: PlayerId, drawingId: string, ctx: Ctx): DoodleState {
   if (state.phase !== "draw") return state;
   const drawing = state.drawings[drawingId];
@@ -345,6 +366,7 @@ function endGallery(state: DoodleState): DoodleState {
 export function onAction(state: DoodleState, playerId: PlayerId, action: DoodleAction, ctx: Ctx): DoodleState {
   if (state.finished) return state;
   if (action.type === "strokes") return applyStrokes(state, playerId, action);
+  if (action.type === "truncate") return applyTruncate(state, playerId, action);
   if (action.type === "doodle-done") return applyDoodleDone(state, playerId, action.drawingId, ctx);
   if (action.type === "title") return applyTitle(state, playerId, action.text, ctx);
   return applyVote(state, playerId, action.optionId, ctx);

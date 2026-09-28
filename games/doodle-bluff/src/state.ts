@@ -201,9 +201,20 @@ export interface DoodleState {
  * "strokes" appends at exactly `from`: the rules take a chunk only when `from` is the drawing's
  * current stroke count, and drop it otherwise. The phone's cursor therefore has to track the
  * room's own count, never the pad's — see `myStrokeCounts` and games/doodle-bluff/src/ui/PhoneDraw.tsx.
+ *
+ * "truncate" is the shrinking counterpart undo and clear need: it drops the drawing back to `to`
+ * strokes, and, like "strokes", only when `from` is exactly the drawing's current stroke count.
+ * That CAS check is the whole idempotency story for both action types, and it answers the
+ * question that sank the first attempt at this (issue #37): what does a stale duplicate do?
+ * Nothing — a replayed "strokes" or "truncate" carries a `from` that no longer matches the room's
+ * count (something else landed first, an append or a truncate), so the rules drop it, same as
+ * today. Unlike the reverted design, "strokes" never overwrites a suffix — it only ever appends —
+ * so a stale `from: 0` chunk can no longer legitimately turn into a rewrite; shrinking is only
+ * ever expressed by "truncate", gated by the same exact-count check.
  */
 export type DoodleAction =
   | { type: "strokes"; drawingId: string; from: number; strokes: Stroke[] }
+  | { type: "truncate"; drawingId: string; from: number; to: number }
   | { type: "doodle-done"; drawingId: string }
   | { type: "title"; text: string }
   | { type: "vote"; optionId: string };
@@ -214,6 +225,14 @@ export const doodleActionSchema = z.discriminatedUnion("type", [
     drawingId: z.string().min(1).max(128),
     from: z.int().min(0),
     strokes: z.array(strokeSchema).min(1).max(MAX_STROKES_PER_DOODLE),
+  }),
+  z.object({
+    type: z.literal("truncate"),
+    drawingId: z.string().min(1).max(128),
+    /** Expected current stroke count; a stale value (anything else landed since) is a no-op. */
+    from: z.int().min(0),
+    /** The stroke count to drop to. Must be less than `from`: rules.ts rejects anything else. */
+    to: z.int().min(0),
   }),
   z.object({ type: z.literal("doodle-done"), drawingId: z.string().min(1).max(128) }),
   z.object({ type: z.literal("title"), text: z.string().max(200) }),

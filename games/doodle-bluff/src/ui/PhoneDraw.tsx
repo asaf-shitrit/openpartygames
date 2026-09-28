@@ -101,13 +101,35 @@ export function restoreMirror(code: string, drawingId: string, ackCount: number)
   return mirrored !== null && mirrored.s.length >= ackCount ? mirrored : undefined;
 }
 
-function sendChunks(
-  send: (action: DoodleAction) => void,
-  sentRef: MutableRefObject<SentCursors>,
-  drawingId: string,
-  doodle: Doodle,
-): void {
+/**
+ * `canTruncate` decides what a pad holding fewer strokes than the cursor means (issue #37).
+ * Defaults to false, the pre-existing behaviour: leave the cursor on the room's count and send
+ * nothing, because this function also runs on every mount-time resync, where a short pad usually
+ * means a lost mirror, not a real undo — shrinking there would throw away strokes the artist
+ * never chose to remove. `commitDrawingChange`, the one caller that fires from a live pad edit
+ * (a finished stroke, an undo or a clear — see DoodlePad's own `onChange` contract), passes
+ * `true` once the pad's starting point is known to be at least as complete as the room's; see
+ * `OneDrawing`'s `canTruncate`.
+ */
+interface SendChunksParams {
+  send: (action: DoodleAction) => void;
+  sentRef: MutableRefObject<SentCursors>;
+  drawingId: string;
+  doodle: Doodle;
+  canTruncate?: boolean;
+}
+
+function sendChunks({ send, sentRef, drawingId, doodle, canTruncate = false }: SendChunksParams): void {
   const from = sentRef.current[drawingId] ?? 0;
+  if (doodle.s.length < from) {
+    if (!canTruncate) return;
+    // A real shrink: undo or clear. `from` doubles as the CAS the rules check against, exactly
+    // like an append's — a stale truncate this phone builds against a count the room has since
+    // moved past is a no-op there, never a rewrite.
+    send({ type: "truncate", drawingId, from, to: doodle.s.length });
+    sentRef.current = { ...sentRef.current, [drawingId]: doodle.s.length };
+    return;
+  }
   let cursor = from;
   for (const chunk of pendingChunks(doodle.s, from)) {
     send({ type: "strokes", drawingId, from: cursor, strokes: chunk });
@@ -147,19 +169,40 @@ export interface CommitDrawingChangeParams {
   doodle: Doodle;
   sentRef: MutableRefObject<SentCursors>;
   send: (action: DoodleAction) => void;
+  /** See `sendChunks`. Defaults to false so a caller that doesn't know better keeps the old,
+   * protective behaviour of never shrinking the room's copy. */
+  canTruncate?: boolean;
 }
 
 /** Runs on every DoodlePad commit: mirror to sessionStorage, then send whatever the room does
- * not have yet. The mirror is written first so a blip between the two leaves the pad able to
- * pick up exactly where the room did. */
-export function commitDrawingChange({ roomCode, drawingId, doodle, sentRef, send }: CommitDrawingChangeParams): void {
+ * not have yet, or, when `canTruncate` says this pad's starting point can be trusted, a truncate
+ * for whatever it has lost. The mirror is written first so a blip between the two leaves the pad
+ * able to pick up exactly where the room did. */
+export function commitDrawingChange({
+  roomCode,
+  drawingId,
+  doodle,
+  sentRef,
+  send,
+  canTruncate = false,
+}: CommitDrawingChangeParams): void {
   writeMirror(roomCode, drawingId, doodle);
-  sendChunks(send, sentRef, drawingId, doodle);
+  sendChunks({ send, sentRef, drawingId, doodle, canTruncate });
 }
 
 function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send }: OneDrawingProps) {
   const { drawingId } = prompt;
-  const [initialDoodle] = useState(() => restoreMirror(roomCode, drawingId, ack));
+  // Computed once, at mount: whether this pad's starting point is known to hold at least
+  // everything the room does, so a later shrink from it is a real undo or clear rather than a
+  // pad recovering from a lost mirror. True whenever the room has nothing to lose yet (`ack ===
+  // 0`) or the mirror was restored (which only happens when it met that same bar — see
+  // `restoreMirror`). Every live edit after mount only ever grows on top of that trusted starting
+  // point, or shrinks it through the pad's own undo/clear, so the one computation covers the
+  // whole mount; it does not get revisited as `ack` moves.
+  const [{ initialDoodle, canTruncate }] = useState(() => {
+    const restored = restoreMirror(roomCode, drawingId, ack);
+    return { initialDoodle: restored, canTruncate: ack === 0 || restored !== undefined };
+  });
   const latestRef = useRef<Doodle>(initialDoodle ?? emptyDoodle());
 
   // On mount, and again whenever the room's count for this drawing moves: put the cursor back
@@ -169,22 +212,22 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   useEffect(() => {
     if (done) return;
     resyncCursor(sentRef, drawingId, ack);
-    sendChunks(send, sentRef, drawingId, latestRef.current);
+    sendChunks({ send, sentRef, drawingId, doodle: latestRef.current });
   }, [ack, done, drawingId, send, sentRef]);
 
   const onChange = useCallback(
     (doodle: Doodle) => {
       latestRef.current = doodle;
-      commitDrawingChange({ roomCode, drawingId, doodle, sentRef, send });
+      commitDrawingChange({ roomCode, drawingId, doodle, sentRef, send, canTruncate });
     },
-    [drawingId, roomCode, send, sentRef],
+    [canTruncate, drawingId, roomCode, send, sentRef],
   );
 
   const onSquiggle = useCallback(() => {
     latestRef.current = SQUIGGLE_DOODLE;
-    commitDrawingChange({ roomCode, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send });
+    commitDrawingChange({ roomCode, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
     send({ type: "doodle-done", drawingId });
-  }, [drawingId, roomCode, send, sentRef]);
+  }, [canTruncate, drawingId, roomCode, send, sentRef]);
 
   return (
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>

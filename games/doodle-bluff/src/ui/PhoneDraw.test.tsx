@@ -291,13 +291,47 @@ describe("commitDrawingChange", () => {
     expect(sentRef.current["p1:0"]).toBe(2);
   });
 
-  it("leaves the cursor on the room's count when the pad holds less than the room does", () => {
+  it("leaves the cursor on the room's count when the pad holds less than the room does, by default", () => {
     // The pad of a phone whose mirror was gone starts blank while the room still holds strokes.
     // Dropping the cursor to the pad's own count is what used to send `from: 0` into a void.
+    // `canTruncate` defaults to false, so a caller that doesn't say otherwise keeps this guard.
     const send = vi.fn<(action: DoodleAction) => void>();
     const sentRef = sentCursorsRef({ "p1:0": 3 });
     commitDrawingChange({ roomCode: "BKTZ", drawingId: "p1:0", doodle: { v: 1, s: [stroke(2)] }, sentRef, send });
     expect(send).not.toHaveBeenCalled();
     expect(sentRef.current["p1:0"]).toBe(3);
+  });
+
+  // Issue #37: undo and clear are a real shrink of the pad, and, once the caller knows this pad's
+  // starting point can be trusted (canTruncate: true), must reach the room as a truncate — not be
+  // swallowed the way a lost-mirror shrink is above.
+  it("sends a truncate when the pad shrinks and canTruncate is true", () => {
+    const send = vi.fn<(action: DoodleAction) => void>();
+    const sentRef = sentCursorsRef({ "p1:0": 3 });
+    commitDrawingChange({
+      roomCode: "BKTZ",
+      drawingId: "p1:0",
+      doodle: { v: 1, s: [stroke(2)] },
+      sentRef,
+      send,
+      canTruncate: true,
+    });
+    expect(send).toHaveBeenCalledWith({ type: "truncate", drawingId: "p1:0", from: 3, to: 1 });
+    expect(sentRef.current["p1:0"]).toBe(1);
+  });
+
+  it("sends a truncate to 0 for a clear", () => {
+    const send = vi.fn<(action: DoodleAction) => void>();
+    const sentRef = sentCursorsRef({ "p1:0": 2 });
+    commitDrawingChange({
+      roomCode: "BKTZ",
+      drawingId: "p1:0",
+      doodle: { v: 1, s: [] },
+      sentRef,
+      send,
+      canTruncate: true,
+    });
+    expect(send).toHaveBeenCalledWith({ type: "truncate", drawingId: "p1:0", from: 2, to: 0 });
+    expect(sentRef.current["p1:0"]).toBe(0);
   });
 });
