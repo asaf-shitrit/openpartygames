@@ -16,7 +16,7 @@ export const landing: Dictionary["landing"] = {
   errorGeneric: "לא הצלחנו לפתוח חדר. נסו שוב בעוד רגע.",
   step1: "פתחו חדר במסך הזה",
   step2: "כולם סורקים את הקוד עם הטלפון",
-  step3: "מי שמצטרף/ת ראשון/ה בוחר/ת משחק",
+  step3: "מי שמצטרף ראשון בוחר משחק",
   openSourceOnGitHub: "קוד פתוח ב-GitHub",
   privacy: "פרטיות",
   credits: "תודות",

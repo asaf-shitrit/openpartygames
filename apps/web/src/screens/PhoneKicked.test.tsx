@@ -42,7 +42,7 @@ describe("PhoneKicked", () => {
     setup({ name: "Priya" });
     expect(screen.getByText("הוצאתם מהחדר")).toBeTruthy();
     expect(
-      screen.getByText("Priya, ה-VIP הוציא/ה אתכם מהחדר."),
+      screen.getByText("Priya, ה-VIP הוציא אתכם מהחדר."),
     ).toBeTruthy();
     expect(screen.getByText("הצטרפו לחדר חדש")).toBeTruthy();
   });

@@ -133,7 +133,7 @@ describe("HostLastChance in Hebrew", () => {
     try {
       const { view } = hostSample("Host: last chance");
       renderLastChance({ ...view, guessLength: 0 }, recordingEngine());
-      expect(screen.getByText("Priya חושב/ת…")).toBeTruthy();
+      expect(screen.getByText("Priya חושב…")).toBeTruthy();
     } finally {
       window.localStorage.removeItem("opg:locale");
     }
