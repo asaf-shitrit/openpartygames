@@ -119,7 +119,20 @@ function DoodleCanvasSurface({
   keyboardDrawing,
 }: DoodleCanvasSurfaceProps) {
   return (
-    <div role="application" style={{ position: "relative", width: size, height: size }}>
+    <div
+      role="application"
+      // `maxWidth` because this wrapper is new: the canvas alone used to be the widest thing
+      // here and `.opg-root canvas` caps it at 100%, so it shrank on a narrow screen. Wrapping
+      // it in a fixed-width box put a 676px element on a 390px screen at 200% text and the
+      // page scrolled sideways. The cap keeps the wrapper inside the phone, and the marker
+      // inside it is positioned in percentages, so it follows.
+      style={{
+        position: "relative",
+        width: size,
+        maxWidth: "100%",
+        height: size,
+      }}
+    >
       <canvas
         ref={canvasRef}
         // The words live in the span below: a canvas is not an image element, so it carries the
