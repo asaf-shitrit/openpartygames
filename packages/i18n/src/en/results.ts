@@ -1,6 +1,8 @@
 export const results = {
   gameOver: "Game over",
   points: "{score} points",
+  gameEndedEarly: "{vip} ended the game early",
+  youEndedGameEarly: "You ended the game early",
   waitingForFinalScores: "Waiting for final scores",
   finalScores: "Final scores",
   newBadge: "new!",

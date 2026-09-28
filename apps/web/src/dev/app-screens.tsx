@@ -17,6 +17,7 @@ import {
   makeHostView,
   makePack,
   makePlayer,
+  makeEndedEarlyResult,
   makePlayerView,
   makeResultWithAwards,
   makeTiedResult,
@@ -392,6 +393,40 @@ function ResultsVipNoTvScreen() {
   );
 }
 
+/**
+ * The VIP ended the game early, no TV: the worst case for a screen whose whole risk is looking
+ * almost empty. Eight names at NAME_MAX_LENGTH, and the reader is the one who scored 0 — "0
+ * points" needs the "ended early" headline and the standings underneath it to read as context
+ * rather than a verdict. `winnerIds`/`awards` are set anyway, to prove the early-end branch
+ * ignores them: no crown, no award ceremony for a game that did not finish.
+ */
+function ResultsEarlyEndNoTvScreen() {
+  const players = stressPlayers(0);
+  const result = makeEndedEarlyResult({
+    finishedAt: SERVER_NOW,
+    scores: {
+      "stress-0": 40,
+      "stress-1": 30,
+      "stress-2": 25,
+      "stress-3": 20,
+      "stress-4": 15,
+      "stress-5": 10,
+      "stress-6": 5,
+      "stress-7": 0,
+    },
+    winnerIds: ["stress-0"],
+    awards: [{ id: "word-thief", playerIds: ["stress-0"], value: 4 }],
+  });
+  const view = makePlayerView({
+    you: "stress-7",
+    vipId: "stress-0",
+    players,
+    lastResult: result,
+    sharedScreen: false,
+  });
+  return <PhoneResults view={view} clock={clockAt(SERVER_NOW)} />;
+}
+
 // ---------- phone: reconnecting / kicked / waiting / landing ----------
 
 function ReconnectingScreen() {
@@ -591,6 +626,7 @@ const APP_SCREEN_COMPONENTS = {
   "results-worst": ResultsWorstScreen,
   "results-worst-no-tv": ResultsWorstNoTvScreen,
   "results-vip-no-tv": ResultsVipNoTvScreen,
+  "results-early-end-no-tv": ResultsEarlyEndNoTvScreen,
   reconnecting: ReconnectingScreen,
   kicked: KickedScreen,
   "kicked-worst": KickedWorstScreen,

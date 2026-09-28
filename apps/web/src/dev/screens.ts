@@ -172,6 +172,12 @@ const APP_SCREENS: readonly AppScreenSpec[] = [
     label: "Phone: results as the VIP with no TV (standings plus the next-round bar)",
     surface: "phone",
   },
+  {
+    appId: "results-early-end-no-tv",
+    label:
+      "Phone: results, VIP ended it early with no TV (0 points, 8 long names, no crown)",
+    surface: "phone",
+  },
   { appId: "reconnecting", label: "Phone: reconnecting", surface: "phone" },
   { appId: "kicked", label: "Phone: kicked from the room", surface: "phone" },
   {
