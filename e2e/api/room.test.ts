@@ -495,6 +495,10 @@ function sendStrokes(
   });
 }
 
+function sendTruncate(player: SocketClient, drawingId: string, from: number, to: number): void {
+  player.send({ t: "game-action", action: { type: "truncate", drawingId, from, to } });
+}
+
 function sendDoodleDone(player: SocketClient, drawingId: string): void {
   player.send({ t: "game-action", action: { type: "doodle-done", drawingId } });
 }
@@ -522,9 +526,18 @@ async function drawSimple(player: SocketClient, drawingId: string): Promise<void
 
 /**
  * Draws one drawing across two chunks using the `from` cursor from `myStrokeCounts`, the
- * chunked-upload path that exists nowhere else in the product. Then replays the first,
- * already-applied chunk with its stale `from` — the idempotency guarantee a reconnecting
- * phone depends on — and asserts the replay added nothing.
+ * chunked-upload path that exists nowhere else in the product. Then:
+ *
+ *  - replays the first, already-applied chunk with its stale `from` and asserts it added
+ *    nothing — the append idempotency a reconnecting phone depends on;
+ *  - undoes one stroke with a "truncate" action (issue #37: undo and clear have to be able to
+ *    shrink the room's copy, which chunked "strokes" appends alone cannot express) and asserts
+ *    the room's count actually drops;
+ *  - replays that same truncate a second time and asserts it, too, is a no-op. This is the
+ *    contract's answer to the question a previous, reverted attempt at this left open ("what
+ *    does a stale duplicate do?"): both action types are gated by the same CAS check against
+ *    the drawing's current stroke count, so a duplicate of either — built against a count the
+ *    room has since moved past — is always dropped, never reapplied and never a rewrite.
  */
 async function drawChunkedWithReplay(
   player: SocketClient,
@@ -558,13 +571,32 @@ async function drawChunkedWithReplay(
   // Stale replay: `from` no longer matches the drawing's current stroke count, so the
   // rules reject it as a no-op rather than appending the strokes a second time.
   sendStrokes(player, drawingId, 0, chunk1);
+  await sleep(50);
+  expect(doodlePlayerView(player).myStrokeCounts[drawingId]).toBe(total);
+
+  // Undo one stroke: a truncate from the room's current count down by one. This is the part
+  // "strokes" alone can never do, because it only ever appends.
+  const afterUndo = total - 1;
+  sendTruncate(player, drawingId, total, afterUndo);
+  await player.waitFor(
+    safe((client) => doodlePlayerView(client).myStrokeCounts[drawingId] === afterUndo),
+    WAIT_MS,
+    "undo applied",
+  );
+
+  // Stale replay of that same truncate: `from` (still `total`) no longer matches the drawing's
+  // current count (`afterUndo`), so it is dropped rather than truncated a second time.
+  sendTruncate(player, drawingId, total, afterUndo);
+  await sleep(50);
+  expect(doodlePlayerView(player).myStrokeCounts[drawingId]).toBe(afterUndo);
+
   sendDoodleDone(player, drawingId);
   await player.waitFor(
     safe((client) => doodlePlayerView(client).myDone[drawingId] ?? false),
     WAIT_MS,
     "chunked drawing done",
   );
-  expect(doodlePlayerView(player).myStrokeCounts[drawingId]).toBe(total);
+  expect(doodlePlayerView(player).myStrokeCounts[drawingId]).toBe(afterUndo);
 }
 
 /** One title submission for the current drawing, or a skip when nobody can title it. */
@@ -969,7 +1001,7 @@ describe("api e2e", () => {
     await closeAll(lobby);
   });
 
-  it("drives Doodle Bluff's chunked upload with an idempotent replay, then plays a full game to awards", async () => {
+  it("drives Doodle Bluff's chunked upload with an idempotent replay and an undo, then plays a full game to awards", async () => {
     const lobby = await makeLobby(3);
     await startGame(lobby, "doodle-bluff");
     await lobby.host.waitFor(

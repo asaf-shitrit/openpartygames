@@ -4,6 +4,7 @@ import type { DrawingPromptContent, GameContext } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
   bot,
+  doodleActionSchema,
   DRAW_MS,
   drawingIdOf,
   GALLERY_MS,
@@ -113,6 +114,33 @@ function voteAsEveryNonArtist(state: DoodleState, ctx: GameContext<DrawingPrompt
   return next;
 }
 
+describe("doodleActionSchema: truncate", () => {
+  it("parses a well-formed truncate action", () => {
+    const result = doodleActionSchema.safeParse({ type: "truncate", drawingId: "p1:0", from: 3, to: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a negative `from`", () => {
+    const result = doodleActionSchema.safeParse({ type: "truncate", drawingId: "p1:0", from: -1, to: 0 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a negative `to`", () => {
+    const result = doodleActionSchema.safeParse({ type: "truncate", drawingId: "p1:0", from: 3, to: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a non-integer `to`", () => {
+    const result = doodleActionSchema.safeParse({ type: "truncate", drawingId: "p1:0", from: 3, to: 1.5 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an empty drawingId", () => {
+    const result = doodleActionSchema.safeParse({ type: "truncate", drawingId: "", from: 3, to: 1 });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe("setup", () => {
   it("creates two drawings per player, in the draw phase, deadline DRAW_MS out", () => {
     const ctx = makeCtx({ n: 3 });
@@ -176,6 +204,97 @@ describe("draw phase: chunked strokes", () => {
     const drawingId = drawingIdOf("p1", 0);
     const resent = send(state, ctx, "p1", { type: "strokes", drawingId, from: 0, strokes: scribble() });
     expect(resent).toBe(state);
+  });
+});
+
+/** Appends `n` single-stroke chunks for "p1", in order, so the drawing ends with exactly `n`
+ * strokes. Every call site is "p1"'s own drawing, so the player isn't a parameter. */
+function appendStrokes(state: DoodleState, ctx: GameContext<DrawingPromptContent>, drawingId: string, n: number): DoodleState {
+  let next = state;
+  for (let i = 0; i < n; i += 1) {
+    next = send(next, ctx, "p1", { type: "strokes", drawingId, from: i, strokes: scribble() });
+  }
+  return next;
+}
+
+describe("draw phase: truncate (undo/clear)", () => {
+  it("shrinks the room's copy when `from` matches the current count", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 3);
+    // An undo down to 1 stroke, expressed as a truncate rather than a rewrite.
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 3, to: 1 });
+    expect(next.drawings[drawingId]?.doodle.s).toHaveLength(1);
+  });
+
+  it("clear is a truncate to 0", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 2);
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 0 });
+    expect(next.drawings[drawingId]?.doodle.s).toHaveLength(0);
+  });
+
+  // The question the reverted attempt left open: what does a stale duplicate do under the new
+  // contract? The same thing a stale "strokes" chunk does — nothing. `from` is a CAS against the
+  // drawing's current count, so a truncate built against a count the room has since moved past
+  // (by a later append, or, here, a later truncate) is dropped rather than reapplied.
+  it("a stale truncate (from no longer matches) is a no-op and returns the identical state object", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 2);
+    const truncated = send(state, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 0 });
+    // A replayed truncate, built against the pre-truncate count of 2: the room is now at 0.
+    const replayed = send(truncated, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 0 });
+    expect(replayed).toBe(truncated);
+    expect(replayed.drawings[drawingId]?.doodle.s).toHaveLength(0);
+  });
+
+  it("a stale truncate after an intervening append is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    // Built a truncate action against count 2, but another chunk landed first, taking it to 3.
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 3);
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 1 });
+    expect(next).toBe(state);
+  });
+
+  it("a truncate that does not shrink (`to` >= `from`) is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 2);
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 2 });
+    expect(next).toBe(state);
+  });
+
+  it("a truncate for another player's drawing is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = appendStrokes(setup(ctx), ctx, drawingId, 2);
+    const next = send(state, ctx, "p2", { type: "truncate", drawingId, from: 2, to: 0 });
+    expect(next).toBe(state);
+  });
+
+  it("a truncate for an already-done drawing is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = send(
+      appendStrokes(setup(ctx), ctx, drawingId, 2),
+      ctx,
+      "p1",
+      { type: "doodle-done", drawingId },
+    );
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 2, to: 0 });
+    expect(next).toBe(state);
+  });
+
+  it("a truncate outside the draw phase is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawingId = drawingIdOf("p1", 0);
+    const state = finishAllDrawings(setup(ctx), ctx);
+    expect(state.phase).not.toBe("draw");
+    const next = send(state, ctx, "p1", { type: "truncate", drawingId, from: 1, to: 0 });
+    expect(next).toBe(state);
   });
 });
 
