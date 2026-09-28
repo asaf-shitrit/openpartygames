@@ -20,7 +20,14 @@
 //   OPG_LAYOUT_PORT=5184 pnpm exec playwright test -c e2e/layout/playwright.config.ts \
 //     --project=visual --update-snapshots
 //
-// commit the changed PNGs under e2e/layout/visual.spec.ts-snapshots/ alongside the change that
+// That command only produces correct baselines on Linux. To get them without a Docker daemon,
+// push a branch named visual-baselines/<anything> (or dispatch the "Visual baselines" workflow
+// on one): .github/workflows/visual-baselines.yml compares against the committed baselines,
+// regenerates them on ubuntu-latest, re-runs to prove they are stable, and uploads the
+// `visual-snapshots` and `visual-report` artifacts. Look at every PNG that changed before
+// committing any of them.
+//
+// Either way, commit the changed PNGs under e2e/layout/visual.spec.ts-snapshots/ alongside the change that
 // caused them, and say in the PR description which screens moved and why. A baseline that
 // changes without an explanation in the same PR is a reason to reject the PR, not merge it.
 //
@@ -34,39 +41,53 @@
 // CI's e2e job; it runs opt-in via `pnpm e2e:visual` until the baselines have been proven stable
 // against a few real CI runs, at which point adding one line to ci.yml turns it into a gate.
 import { expect, test } from "@playwright/test";
+import { SCREENS } from "../../apps/web/src/dev/screens";
 
 interface VisualCase {
   /** Snapshot file name, independent of the screen id so a renumbered fixture doesn't orphan a baseline. */
   name: string;
-  id: string;
+  gameId: string;
+  /** The preview's label, exactly. Screen ids are positions in a list; a case names its screen instead. */
+  label: string;
   width: number;
   height: number;
 }
 
+/** The one screen with this game and label. Throws rather than pick one, so a renamed or duplicated label can never silently retarget a baseline. */
+function screenIdFor(gameId: string, label: string): string {
+  const matches = SCREENS.filter((screen) => screen.gameId === gameId && screen.label === label);
+  const [only] = matches;
+  if (only === undefined || matches.length !== 1) {
+    throw new Error(`visual.spec: expected one "${gameId}" screen labelled "${label}", found ${matches.length}`);
+  }
+  return only.id;
+}
+
 const CASES: VisualCase[] = [
-  // TV: one per game that has a shared screen, weighted toward reveals and the gallery. Every
+  // TV: one per game that has a shared screen, weighted toward reveals and the gallery. The Doodle Bluff galleries use the worst-case fixtures (sixteen drawings, long titles); the two-drawing galleries cannot fail the way that layout can. Every
   // fixture freezes its clock at the phase's own start (see ScreenGallery's clockFor), so a
   // reveal that counts up or fills in over time is caught here at its first frame — still a
   // real frame a player sees, and enough to prove the standings card, avatars and colour
   // blocks painted at all.
-  { name: "doodle-bluff-host-gallery", id: "doodle-bluff/5", width: 1920, height: 1080 },
-  { name: "imposter-host-result-caught", id: "imposter/11", width: 1920, height: 1080 },
-  { name: "real-or-nah-host-reveal-3-foolers", id: "real-or-nah/2", width: 1920, height: 1080 },
+  { name: "doodle-bluff-host-gallery", gameId: "doodle-bluff", label: "Host: worst case, gallery (16 drawings, long titles)", width: 1920, height: 1080 },
+  { name: "imposter-host-result-caught", gameId: "imposter", label: "Host: result caught got it", width: 1920, height: 1080 },
+  { name: "real-or-nah-host-reveal-3-foolers", gameId: "real-or-nah", label: "Host: reveal, 3 foolers", width: 1920, height: 1080 },
   // Phone, at the design reference size (390x844), and the no-TV variant where the reveal's own
   // colour and avatars have to render on the phone itself — there's no host screen to fall back
   // on if they don't. A blank doodle here is worst of all: nothing else on the screen says so.
-  { name: "doodle-bluff-phone-no-tv-gallery", id: "doodle-bluff/17", width: 390, height: 844 },
-  { name: "imposter-phone-no-tv-result", id: "imposter/42", width: 390, height: 844 },
-  { name: "most-likely-to-phone-no-tv-reveal", id: "most-likely-to/16", width: 390, height: 844 },
+  { name: "doodle-bluff-phone-no-tv-gallery", gameId: "doodle-bluff", label: "Phone (no-TV): worst case, gallery (16 drawings, long titles)", width: 390, height: 844 },
+  { name: "imposter-phone-no-tv-result", gameId: "imposter", label: "Phone (no-TV): Dov result settled", width: 390, height: 844 },
+  { name: "most-likely-to-phone-no-tv-reveal", gameId: "most-likely-to", label: "Phone (no-TV): Priya reveal settled", width: 390, height: 844 },
 ];
 
 for (const visualCase of CASES) {
+  const screenId = screenIdFor(visualCase.gameId, visualCase.label);
   test(`${visualCase.name} matches its baseline`, async ({ page }) => {
     await page.setViewportSize({ width: visualCase.width, height: visualCase.height });
-    await page.goto(`/dev/screens?id=${encodeURIComponent(visualCase.id)}`);
+    await page.goto(`/dev/screens?id=${encodeURIComponent(screenId)}`);
     await page.waitForFunction(
       (id) => document.body.dataset.screen === id,
-      visualCase.id,
+      screenId,
       { timeout: 15_000 },
     );
     await page.evaluate(() => document.fonts.ready);
