@@ -172,7 +172,9 @@ The Cloudflare managed ruleset and HTTP DDoS attack protection are always on, in
 
 ### Deploy from GitHub Actions
 
-The `deploy` job in `.github/workflows/ci.yml` ships every push to `main` once `pnpm check` and the e2e suites (`pnpm e2e`) pass. It applies the D1 migrations, reseeds the packs, deploys the Worker and then checks `/api/health` on the live site. Run the CI workflow by hand from the Actions tab to redeploy.
+The `deploy` job in `.github/workflows/ci.yml` ships every push to `main` once three jobs pass: `check` (packs, lint, typecheck, tests, CRAP, build), the four sharded `layout` runs, and `smoke` — which creates a room, joins it and plays a round against the real Worker and D1 in about a minute. It applies the D1 migrations, reseeds the packs, deploys the Worker and then checks `/api/health` on the live site. Run the CI workflow by hand from the Actions tab to redeploy.
+
+The browser e2e suite is **not** in that gate: `e2e` runs on pull requests only, because a rebase merge puts the same tree on `main` and `smoke` re-proves it boots rather than replaying seven minutes of browsers. CI also never runs the `pnpm e2e` alias, which would measure the layout suite a second time on top of the sharded `layout` job — it runs `pnpm e2e:api && pnpm e2e:browser` instead.
 
 Migrations run before the new Worker goes live, so a migration must keep working with the version still running.
 
