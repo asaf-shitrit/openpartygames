@@ -257,7 +257,7 @@ describe("PlayerApp", () => {
     expect(screen.getByText(/You're in,/)).toBeTruthy();
   });
 
-  it("renders the active game UI for a playing player", () => {
+  it("renders the active game UI for a playing player", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(
       <LocaleProvider>
@@ -268,10 +268,10 @@ describe("PlayerApp", () => {
     const preview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!preview) throw new Error("missing phone preview");
     act(() => socket.receive({ t: "state", view: preview.room }));
-    expect(screen.getByText(/went to war against/)).toBeTruthy();
+    expect(await screen.findByText(/went to war against/)).toBeTruthy();
   });
 
-  it("keeps rendering the game when a shared stage rides along with the view", () => {
+  it("keeps rendering the game when a shared stage rides along with the view", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(
       <LocaleProvider>
@@ -295,10 +295,10 @@ describe("PlayerApp", () => {
         },
       }),
     );
-    expect(screen.getByText(/went to war against/)).toBeTruthy();
+    expect(await screen.findByText(/went to war against/)).toBeTruthy();
   });
 
-  it("keeps rendering the game when the shared stage is malformed", () => {
+  it("keeps rendering the game when the shared stage is malformed", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(
       <LocaleProvider>
@@ -321,10 +321,10 @@ describe("PlayerApp", () => {
         },
       }),
     );
-    expect(screen.getByText(/went to war against/)).toBeTruthy();
+    expect(await screen.findByText(/went to war against/)).toBeTruthy();
   });
 
-  it("keeps the game mounted through a blip and says so in a banner", () => {
+  it("keeps the game mounted through a blip and says so in a banner", async () => {
     sessionStorage.setItem("opg:avatarPicked:BKTZ:p1", "1");
     render(
       <LocaleProvider>
@@ -335,7 +335,7 @@ describe("PlayerApp", () => {
     const preview = realOrNahPreviews.find((p) => p.surface === "phone");
     if (!preview) throw new Error("missing phone preview");
     act(() => socket.receive({ t: "state", view: preview.room }));
-    const claim = screen.getByText(/went to war against/);
+    const claim = await screen.findByText(/went to war against/);
 
     act(() => socket.serverClose());
 

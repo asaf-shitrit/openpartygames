@@ -1,25 +1,36 @@
 // Game registry: maps a game id to its TV and phone screens.
+//
+// What is eager and what is lazy is deliberate. A game's `Host`/`Phone` components are the
+// heavy part and load on demand (`loadScreens`, one chunk per game). Everything the shared
+// ceremony needs at a *known moment* stays in the main chunk: the view schemas (`/views`) and
+// `awardCopy` (`/award-copy`). `awardCopy` feeds `describableAwards` -> `finaleBeats`, which
+// decides how many award beats exist and when the crown lands, and the TV and every phone
+// compute that independently. Behind a dynamic import it would answer null on a device whose
+// chunk had not arrived, and that device would stage a different ceremony from the room.
 import type { Dictionary } from "@opg/i18n";
+import { doodleBluffAwardCopy } from "@opg/game-doodle-bluff/award-copy";
 import {
   doodleHostViewSchema,
   doodlePlayerViewSchema,
-} from "@opg/game-doodle-bluff";
-import { doodleBluffUi } from "@opg/game-doodle-bluff/ui";
+} from "@opg/game-doodle-bluff/views";
+import { imposterAwardCopy } from "@opg/game-imposter/award-copy";
 import {
   imposterHostViewSchema,
   imposterPlayerViewSchema,
-} from "@opg/game-imposter";
-import { imposterUi } from "@opg/game-imposter/ui";
+} from "@opg/game-imposter/views";
+import { mostLikelyToAwardCopy } from "@opg/game-most-likely-to/award-copy";
 import {
   mltHostViewSchema,
   mltPlayerViewSchema,
-} from "@opg/game-most-likely-to";
-import { mostLikelyToUi } from "@opg/game-most-likely-to/ui";
-import { ronHostViewSchema, ronPlayerViewSchema } from "@opg/game-real-or-nah";
-import { realOrNahUi } from "@opg/game-real-or-nah/ui";
+} from "@opg/game-most-likely-to/views";
+import { realOrNahAwardCopy } from "@opg/game-real-or-nah/award-copy";
+import {
+  ronHostViewSchema,
+  ronPlayerViewSchema,
+} from "@opg/game-real-or-nah/views";
 import type { Award, AvatarId } from "@opg/protocol";
 import type { GameUi, IconName } from "@opg/ui";
-import type { ComponentProps } from "react";
+import { lazy, Suspense, type ComponentProps } from "react";
 import type { z, ZodType } from "zod";
 
 export interface LandingGame {
@@ -87,10 +98,34 @@ type AnyGameUi = GameUi<unknown, unknown, z.core.util.JSONType>;
 type HostProps = ComponentProps<AnyGameUi["Host"]>;
 type PhoneProps = ComponentProps<AnyGameUi["Phone"]>;
 
+/** The heavy half of a game's UI: the components, loaded on demand. */
+type GameScreens<HostView, PlayerView, Action> = Pick<
+  GameUi<HostView, PlayerView, Action>,
+  "Host" | "Phone"
+>;
+
 export interface GameEntry<HostView, PlayerView, Action extends z.core.util.JSONType> {
-  ui: GameUi<HostView, PlayerView, Action>;
+  /** Loads the game's Host and Phone. Runs on first render or preload, then is cached. */
+  loadScreens: () => Promise<GameScreens<HostView, PlayerView, Action>>;
+  /** Eager on purpose: the finale needs it synchronously. See the header comment. */
+  awardCopy?: GameUi<HostView, PlayerView, Action>["awardCopy"];
   hostViewSchema: ZodType<HostView>;
   playerViewSchema: ZodType<PlayerView>;
+}
+
+export interface RegisteredGame {
+  ui: AnyGameUi;
+  /** Starts (or joins) the screens download. Resolves once the game's screens are ready. */
+  preload: () => Promise<void>;
+}
+
+/** Runs `load` at most once, however many callers ask. */
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let promise: Promise<T> | null = null;
+  return () => {
+    promise ??= load();
+    return promise;
+  };
 }
 
 function ViewMismatch() {
@@ -101,27 +136,49 @@ function ViewMismatch() {
   );
 }
 
+/** The `data-game-loading` attribute is what the layout gallery waits to see gone. */
+export const GAME_LOADING_ATTRIBUTE = "data-game-loading";
+
+/** Shown while a game's chunk downloads: same words and footprint as `ViewMismatch`. */
+function GameLoading() {
+  return (
+    <output
+      {...{ [GAME_LOADING_ATTRIBUTE]: "" }}
+      style={{ display: "block", padding: 24, fontSize: 20 }}
+    >
+      Updating the game… one moment.
+    </output>
+  );
+}
+
 /**
  * Adapts a typed game UI to the registry's untyped shape. Views arrive over the socket, so
- * each adapter parses them with the game's own schema before rendering.
+ * each adapter parses them with the game's own schema before rendering. The components load
+ * lazily behind Suspense; `awardCopy` is passed straight through, so it answers the same
+ * whether or not the chunk has arrived.
  */
 export function registerGame<
   HostView,
   PlayerView,
   Action extends z.core.util.JSONType,
->(entry: GameEntry<HostView, PlayerView, Action>): AnyGameUi {
-  const { ui, hostViewSchema, playerViewSchema } = entry;
+>(entry: GameEntry<HostView, PlayerView, Action>): RegisteredGame {
+  const { hostViewSchema, playerViewSchema } = entry;
+  const load = once(entry.loadScreens);
+  const LazyHost = lazy(async () => ({ default: (await load()).Host }));
+  const LazyPhone = lazy(async () => ({ default: (await load()).Phone }));
   function RegisteredHost(props: HostProps) {
     const parsed = hostViewSchema.safeParse(props.view);
     if (!parsed.success) return <ViewMismatch />;
     return (
-      <ui.Host
-        view={parsed.data}
-        room={props.room}
-        deadline={props.deadline}
-        timerStartedAt={props.timerStartedAt}
-        clock={props.clock}
-      />
+      <Suspense fallback={<GameLoading />}>
+        <LazyHost
+          view={parsed.data}
+          room={props.room}
+          deadline={props.deadline}
+          timerStartedAt={props.timerStartedAt}
+          clock={props.clock}
+        />
+      </Suspense>
     );
   }
   function RegisteredPhone(props: PhoneProps) {
@@ -135,29 +192,35 @@ export function registerGame<
       if (parsedStage.success) stage = parsedStage.data;
     }
     return (
-      <ui.Phone
-        view={parsed.data}
-        room={props.room}
-        deadline={props.deadline}
-        timerStartedAt={props.timerStartedAt}
-        clock={props.clock}
-        send={(action: Action) => props.send(action)}
-        stage={stage}
-      />
+      <Suspense fallback={<GameLoading />}>
+        <LazyPhone
+          view={parsed.data}
+          room={props.room}
+          deadline={props.deadline}
+          timerStartedAt={props.timerStartedAt}
+          clock={props.clock}
+          send={(action: Action) => props.send(action)}
+          stage={stage}
+        />
+      </Suspense>
     );
   }
   return {
-    Host: RegisteredHost,
-    Phone: RegisteredPhone,
-    awardCopy: ui.awardCopy,
+    ui: {
+      Host: RegisteredHost,
+      Phone: RegisteredPhone,
+      awardCopy: entry.awardCopy,
+    },
+    preload: () => load().then(() => undefined),
   };
 }
 
-const GAME_UIS = new Map<string, AnyGameUi>([
+const GAME_REGISTRY = new Map<string, RegisteredGame>([
   [
     "imposter",
     registerGame({
-      ui: imposterUi,
+      loadScreens: () => import("@opg/game-imposter/ui").then((m) => m.imposterUi),
+      awardCopy: imposterAwardCopy,
       hostViewSchema: imposterHostViewSchema,
       playerViewSchema: imposterPlayerViewSchema,
     }),
@@ -165,7 +228,9 @@ const GAME_UIS = new Map<string, AnyGameUi>([
   [
     "real-or-nah",
     registerGame({
-      ui: realOrNahUi,
+      loadScreens: () =>
+        import("@opg/game-real-or-nah/ui").then((m) => m.realOrNahUi),
+      awardCopy: realOrNahAwardCopy,
       hostViewSchema: ronHostViewSchema,
       playerViewSchema: ronPlayerViewSchema,
     }),
@@ -173,7 +238,9 @@ const GAME_UIS = new Map<string, AnyGameUi>([
   [
     "most-likely-to",
     registerGame({
-      ui: mostLikelyToUi,
+      loadScreens: () =>
+        import("@opg/game-most-likely-to/ui").then((m) => m.mostLikelyToUi),
+      awardCopy: mostLikelyToAwardCopy,
       hostViewSchema: mltHostViewSchema,
       playerViewSchema: mltPlayerViewSchema,
     }),
@@ -181,7 +248,9 @@ const GAME_UIS = new Map<string, AnyGameUi>([
   [
     "doodle-bluff",
     registerGame({
-      ui: doodleBluffUi,
+      loadScreens: () =>
+        import("@opg/game-doodle-bluff/ui").then((m) => m.doodleBluffUi),
+      awardCopy: doodleBluffAwardCopy,
       hostViewSchema: doodleHostViewSchema,
       playerViewSchema: doodlePlayerViewSchema,
     }),
@@ -189,7 +258,16 @@ const GAME_UIS = new Map<string, AnyGameUi>([
 ]);
 
 export function gameUiFor(id: string): AnyGameUi | null {
-  return GAME_UIS.get(id) ?? null;
+  return GAME_REGISTRY.get(id)?.ui ?? null;
+}
+
+/**
+ * Starts a game's chunk download before any screen asks for it. Safe to call repeatedly and
+ * for an unknown id (does nothing). It only changes *when the bytes arrive*; nothing the
+ * ceremony reads depends on it.
+ */
+export function preloadGameUi(id: string): Promise<void> {
+  return GAME_REGISTRY.get(id)?.preload() ?? Promise.resolve();
 }
 
 /** A game's award id turned into words, or null when the game has no copy for it. */

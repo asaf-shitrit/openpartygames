@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "@opg/i18n";
 import { AppScreenView, ScreenGallery } from "./ScreenGallery";
@@ -39,11 +39,13 @@ describe("ScreenGallery", () => {
     expect(index.querySelectorAll("li")).toHaveLength(SCREENS.length);
   });
 
-  it("renders a phone screen's own game UI", () => {
+  it("renders a phone screen's own game UI", async () => {
     expect(firstPhone).toBeDefined();
     renderGallery(`?id=${firstPhone?.id ?? ""}`);
+    await waitFor(() => expect(document.body.dataset.screen).toBe(firstPhone?.id));
     expect(screen.queryByTestId("screen-missing")).toBeNull();
     expect(document.body.textContent).not.toBe("");
+    expect(document.body.textContent).not.toContain("Updating the game");
   });
 
   it("renders a host screen inside the TV stage", () => {
@@ -58,10 +60,20 @@ describe("ScreenGallery", () => {
     expect(screen.getByTestId("screen-missing").textContent).toContain("imposter/9999");
   });
 
-  it("marks the body with the screen it is showing, which is what the suite waits for", () => {
+  it("marks the body with the screen it is showing, which is what the suite waits for", async () => {
     expect(firstPhone).toBeDefined();
     renderGallery(`?id=${firstPhone?.id ?? ""}`);
-    expect(document.body.dataset.screen).toBe(firstPhone?.id);
+    await waitFor(() => expect(document.body.dataset.screen).toBe(firstPhone?.id));
+  });
+
+  it("holds that mark until the game's screens are in, not while its loading message shows", async () => {
+    expect(firstPhone).toBeDefined();
+    renderGallery(`?id=${firstPhone?.id ?? ""}`);
+    // The game's screens load on demand and say "Updating the game…" meanwhile; that has text,
+    // so the layout suite would accept it as a screen. It must not be told the screen is up yet.
+    expect(document.body.dataset.screen).toBeUndefined();
+    await waitFor(() => expect(document.body.dataset.screen).toBe(firstPhone?.id));
+    expect(document.body.textContent).not.toContain("Updating the game");
   });
 
   it("renders an app-owned phone screen (the join flow, the lobby, ...)", () => {

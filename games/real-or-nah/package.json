@@ -6,6 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./ui": "./src/ui/index.tsx",
+    "./views": "./src/types.ts",
+    "./award-copy": "./src/ui/award-copy.ts",
     "./preview": "./src/ui/preview.ts"
   },
   "scripts": {

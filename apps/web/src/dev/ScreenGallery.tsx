@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { Stage } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
-import { gameUiFor } from "../games";
+import { GAME_LOADING_ATTRIBUTE, gameUiFor, preloadGameUi } from "../games";
 import { appScreenById } from "./app-screens";
 import { SCREENS, screenById, screenIdFromSearch, timingOf } from "./screens";
 import type { AppCase, HostCase, PhoneCase, ScreenCase } from "./screens";
@@ -96,20 +96,46 @@ function ScreenView({ screen }: { screen: ScreenCase }) {
  * measurement can land on a blank page — and a blank page violates nothing, which would make
  * the layout suite pass by measuring nothing at all.
  */
-function useScreenReady(id: string | null): void {
+function useScreenReady(id: string | null, gameId: string | null): void {
   useEffect(() => {
-    if (id !== null) document.body.dataset.screen = id;
+    if (id === null) return undefined;
+    let cancelled = false;
+    // A game's Host and Phone load on demand and show "Updating the game…" until they arrive.
+    // That fallback has text, so it would pass the suite's liveness check: hold the signal
+    // until the screens are in, or the suite measures the fallback and calls it a screen.
+    void (async () => {
+      await screensLoaded(gameId);
+      if (!cancelled) document.body.dataset.screen = id;
+    })();
     return () => {
+      cancelled = true;
       delete document.body.dataset.screen;
     };
-  }, [id]);
+  }, [id, gameId]);
+}
+
+/** Resolves once the game's screens are loaded and painted; at once for app-owned screens. */
+function screensLoaded(gameId: string | null): Promise<void> {
+  if (gameId === null || gameUiFor(gameId) === null) return Promise.resolve();
+  return preloadGameUi(gameId).then(loadingMessageGone);
+}
+
+/** Polls each frame until React has swapped the loading message for the real screen. */
+function loadingMessageGone(): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (document.querySelector(`[${GAME_LOADING_ATTRIBUTE}]`) === null) resolve();
+      else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  });
 }
 
 export function ScreenGallery({ search }: { search?: string }) {
   const id = screenIdFromSearch(search ?? window.location.search);
-  useScreenReady(id);
+  const screen = id === null ? null : screenById(id);
+  useScreenReady(id, screen?.gameId ?? null);
   if (id === null) return <ScreenIndex />;
-  const screen = screenById(id);
   if (screen === null) return <Missing text={`No screen with id ${id}`} />;
   return <ScreenView screen={screen} />;
 }
