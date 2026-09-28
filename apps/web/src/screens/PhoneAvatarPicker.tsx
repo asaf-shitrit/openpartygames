@@ -251,7 +251,7 @@ function playerAvatar(player: PlayerSummary | null): AvatarId | null {
 function PickerHeading({ name, t }: { name: string; t: Dictionary }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <Marker size={34} style={{ lineHeight: 1.15 }}>
+      <Marker level={1} size={34} style={{ lineHeight: 1.15 }}>
         {t.avatarPicker.heading}
       </Marker>
       <div style={{ fontSize: 20, fontWeight: 700 }}>

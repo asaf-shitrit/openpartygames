@@ -101,6 +101,7 @@ export function PhoneReconnecting({
         </svg>
         <Highlight style={{ padding: "0 10px", maxWidth: "100%" }}>
           <Marker
+            level={1}
             size={40}
             style={{
               lineHeight: 1.15,

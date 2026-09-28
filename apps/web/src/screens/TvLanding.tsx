@@ -42,7 +42,10 @@ function LandingHero({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Split across two Markers so the highlighted half can sit on its own line; the real
+          heading tag wraps both, so a screen reader reads them as the one heading they form
+          together rather than as two. */}
+      <h1 style={{ margin: 0, display: "flex", flexDirection: "column", gap: 4 }}>
         <Marker size={84} style={{ lineHeight: 1.12 }}>
           {t.heroLine1}
         </Marker>
@@ -51,7 +54,7 @@ function LandingHero({
             {t.heroTvAndPhones}
           </Marker>
         </Highlight>
-      </div>
+      </h1>
       <div style={{ maxWidth: 900, fontSize: 38, lineHeight: 1.35 }}>
         {t.tvTagline}
       </div>

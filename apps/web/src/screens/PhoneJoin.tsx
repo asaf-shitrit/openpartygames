@@ -260,7 +260,7 @@ function JoinForm({
           the zoomed viewport just fine; a pixel offset on top of it does not), so it's
           pinned to the card's own width instead — same spot, any width. */}
       <Tape left="30%" top={-20} width="42%" height={40} rotate={-3} />
-      <Marker size={40}>{t.join.heading}</Marker>
+      <Marker level={1} size={40}>{t.join.heading}</Marker>
       <CodeField code={code} onChange={onCodeChange} t={t} />
       <TextInput
         label={t.join.yourNameLabel}

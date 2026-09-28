@@ -5,6 +5,8 @@ export const kit = {
     noTimer: "No timer",
     left: "Time left {time}",
     leftAlmostOut: "Time left {time}, almost out",
+    /** Spoken once, on entering the final stage — not once per second. */
+    finalStageAnnounce: "Almost out of time",
   },
   sound: {
     on: "Sound on",

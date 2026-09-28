@@ -40,7 +40,7 @@ export function PhoneKicked({ name, avatar = null }: PhoneKickedProps) {
           }}
         >
           <Avatar id={avatar} size={96} />
-          <Marker size={40}>{t.status.removedHeading}</Marker>
+          <Marker level={1} size={40}>{t.status.removedHeading}</Marker>
           <div style={{ fontSize: 20, lineHeight: 1.4 }}>
             {name
               ? format(t.status.removedByNamed, { name })

@@ -200,7 +200,7 @@ function JoinPanel({
       }}
     >
       <Tape left={280} top={-26} width={200} height={50} rotate={-3} />
-      <Marker size={56} style={{ lineHeight: 1.15 }}>
+      <Marker level={1} size={56} style={{ lineHeight: 1.15 }}>
         {t.lobby.grabYourPhone}
       </Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -237,7 +237,7 @@ function SeatGrid({
           justifyContent: "space-between",
         }}
       >
-        <Marker size={76}>{t.lobby.whosHereTv}</Marker>
+        <Marker level={2} size={76}>{t.lobby.whosHereTv}</Marker>
         <div style={{ fontSize: 38, fontWeight: 700 }}>
           {format(t.lobby.playersOfMax, { count: players.length, max: MAX_PLAYERS })}
         </div>

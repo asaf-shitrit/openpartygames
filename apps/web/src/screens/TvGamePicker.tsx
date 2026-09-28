@@ -293,13 +293,19 @@ function vipLook(t: Dictionary, vip: PlayerSummary | null): VipLook {
 function PickHeader({ t, vip }: { t: Dictionary; vip: PlayerSummary | null }) {
   const { avatar, name } = vipLook(t, vip);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
+    // This screen's title is split across two Markers ("Ada" + "is picking a game") so the VIP's
+    // name can carry its own highlight styling; a screen reader needs the pair to read as one
+    // heading rather than as two, so the real heading tag wraps both instead of either Marker
+    // rendering its own.
+    <h1
+      style={{ margin: 0, display: "flex", alignItems: "center", gap: 22 }}
+    >
       <Avatar id={avatar} size={92} />
       <Highlight style={{ padding: "0 12px" }}>
         <Marker size={72}>{name}</Marker>
       </Highlight>
       <Marker size={72}>{t.picker.pickingGame}</Marker>
-    </div>
+    </h1>
   );
 }
 
@@ -322,7 +328,7 @@ function PacksPanel({
         gap: 18,
       }}
     >
-      <Marker size={50}>
+      <Marker level={2} size={50}>
         {selectedGame
           ? format(t.picker.gamePacks, { game: selectedGame.name })
           : t.picker.packs}

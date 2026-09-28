@@ -195,29 +195,50 @@ export function Highlight({
   );
 }
 
+export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+const HEADING_TAGS = {
+  1: "h1",
+  2: "h2",
+  3: "h3",
+  4: "h4",
+  5: "h5",
+  6: "h6",
+} satisfies Record<HeadingLevel, "h1" | "h2" | "h3" | "h4" | "h5" | "h6">;
+
 export interface MarkerProps {
   children: ReactNode;
   size?: number;
   color?: string;
   style?: CSSProperties;
   className?: string;
+  /**
+   * Render as a real `h1`-`h6` instead of a plain `span`, so the text is a heading a
+   * screen reader can jump to. Opt-in per call site: `Marker` is also used for
+   * non-heading emphasis (stamps, inline callouts, a room code), and giving every one of
+   * those a heading role would hand a screen reader an outline that does not match the
+   * page. Pick the level the same way you would for real HTML: one `1` per screen.
+   */
+  level?: HeadingLevel;
 }
 
-/** Permanent Marker heading text. */
+/** Permanent Marker heading text; a real heading when `level` is given, a span otherwise. */
 export function Marker({
   children,
   size = 56,
   color,
   style,
   className,
+  level,
 }: MarkerProps) {
+  const Tag = level === undefined ? "span" : HEADING_TAGS[level];
   return (
-    <span
+    <Tag
       className={["opg-marker", className].filter(Boolean).join(" ")}
-      style={{ display: "block", fontSize: size, color, ...style }}
+      style={{ display: "block", fontSize: size, color, margin: 0, ...style }}
     >
       {children}
-    </span>
+    </Tag>
   );
 }
 
