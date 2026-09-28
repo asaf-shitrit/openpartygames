@@ -6,6 +6,7 @@ export const kit: Dictionary["kit"] = {
     noTimer: "זמן פתוח",
     left: "נותרו {time}",
     leftAlmostOut: "נותרו {time}, כמעט נגמר",
+    finalStageAnnounce: "כמעט נגמר הזמן",
   },
   sound: {
     on: "קול פועל",

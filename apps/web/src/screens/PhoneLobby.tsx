@@ -391,7 +391,7 @@ function SelectedGameSection({
   if (!game) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <Marker size={22} style={{ lineHeight: 1.15 }}>
+      <Marker level={2} size={22} style={{ lineHeight: 1.15 }}>
         {format(t.lobby.picked, { name: vipName })}
       </Marker>
       <GameCard game={game} t={t} />
@@ -477,7 +477,7 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
     <PhoneScreen>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-          <Marker size={40} style={{ lineHeight: 1.15 }}>
+          <Marker level={1} size={40} style={{ lineHeight: 1.15 }}>
             {t.lobby.youreIn}
           </Marker>
         </Highlight>
@@ -505,7 +505,7 @@ export function PhoneLobby({ view, onChangeAvatar, onLeave }: PhoneLobbyProps) {
         <SelectedGameSection view={view} vipName={vipLabel(vip, t)} t={t} />
       )}
 
-      <Marker size={28} style={{ lineHeight: 1.15 }}>
+      <Marker level={2} size={28} style={{ lineHeight: 1.15 }}>
         {format(t.lobby.whosHere, { count: connectedCount(view.players) })}
       </Marker>
 

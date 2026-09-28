@@ -82,6 +82,39 @@ function inWindow(seconds: number | null, max: number): boolean {
   return seconds !== null && seconds >= 1 && seconds <= max;
 }
 
+/** Zero-width space: invisible and unspoken, appended to force a live region to re-announce
+ * identical text (a second final stage with the same wording would otherwise not be seen by
+ * assistive tech as a change, since the DOM text content would be unchanged). */
+const ZWS = "​";
+
+/**
+ * Announces the final stage exactly once per entry, live text only — never on mount (mounting
+ * already-final plays nothing, matching `useTimerCues`' "never on mount" rule) and never once
+ * per second (a running commentary on the last three seconds would be unbearable). `role="timer"`
+ * has an implicit live politeness of `off`, so without this nothing is said at all.
+ */
+function useFinalStageAnnouncement(stage: TimerStage, text: string): string {
+  const mountedRef = useRef(false);
+  const previousRef = useRef(stage);
+  const [entryCount, setEntryCount] = useState(0);
+
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      previousRef.current = stage;
+      return;
+    }
+    const previous = previousRef.current;
+    previousRef.current = stage;
+    if (stage === "final" && previous !== "final") {
+      setEntryCount((count) => count + 1);
+    }
+  }, [stage]);
+
+  if (entryCount === 0) return "";
+  return entryCount % 2 === 0 ? `${text}${ZWS}` : text;
+}
+
 /**
  * Schedules one setTimeout aligned to the next whole-second boundary, chaining itself by
  * re-rendering (`now` is recomputed by the caller from `clock` on every render).
@@ -215,6 +248,19 @@ function rootAttrs(stage: TimerStage): RootAttrs {
   };
 }
 
+/** Visually-hidden but still readable by assistive tech (the standard clip-rect pattern). */
+const VISUALLY_HIDDEN: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
 function digitStyle(big: boolean, stage: TimerStage): React.CSSProperties {
   return {
     position: "relative",
@@ -299,36 +345,48 @@ export function Timer({
   const drainStyle = useRingDrainStyle(startedAt, deadline, reduced, clock);
   const staticFraction = computeStaticFraction(startedAt, deadline, reduced, now);
   const attrs = rootAttrs(stage);
+  const finalAnnouncement = useFinalStageAnnouncement(stage, t.kit.timer.finalStageAnnounce);
 
   return (
-    <div
-      ref={rootRef}
-      className={attrs.className}
-      data-urgent={attrs.dataUrgent}
-      data-stage={stage}
-      style={{
-        width: size,
-        height: size,
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        ...style,
-      }}
-      role="timer"
-      aria-label={timerAriaLabel(seconds, stage, t.kit)}
-    >
-      <TimerRing
-        size={size}
-        ring={ringLook(big, stage)}
-        showProgress={hasProgress(startedAt, deadline)}
-        drainStyle={drainStyle}
-        staticFraction={staticFraction}
-      />
-      <div ref={digitsRef} style={digitStyle(big, stage)}>
-        {formatLeft(seconds)}
+    <>
+      <div
+        ref={rootRef}
+        className={attrs.className}
+        data-urgent={attrs.dataUrgent}
+        data-stage={stage}
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          ...style,
+        }}
+        role="timer"
+        aria-label={timerAriaLabel(seconds, stage, t.kit)}
+      >
+        <TimerRing
+          size={size}
+          ring={ringLook(big, stage)}
+          showProgress={hasProgress(startedAt, deadline)}
+          drainStyle={drainStyle}
+          staticFraction={staticFraction}
+        />
+        <div ref={digitsRef} style={digitStyle(big, stage)}>
+          {formatLeft(seconds)}
+        </div>
       </div>
-    </div>
+      {/*
+        `role="timer"` above has an implicit live politeness of "off", so the digits and the
+        urgency styling never reach a screen reader on their own. This separate region speaks
+        once on entering the final stage — not every second, which would be unbearable — so a
+        player is warned their unsubmitted answer is about to be thrown away.
+      */}
+      <output aria-live="polite" style={VISUALLY_HIDDEN}>
+        {finalAnnouncement}
+      </output>
+    </>
   );
 }

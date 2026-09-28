@@ -104,7 +104,7 @@ function EmptyFinalScores({ t, code }: { t: Dictionary; code: string }) {
           justifyContent: "center",
         }}
       >
-        <Marker size={64}>{t.results.waitingForFinalScores}</Marker>
+        <Marker level={1} size={64}>{t.results.waitingForFinalScores}</Marker>
       </div>
     </TvPage>
   );
@@ -255,7 +255,8 @@ function ScoresList({
   const winnerSet = new Set(winners);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <Marker size={40}>{t.results.finalScores}</Marker>
+      {/* Always paired with a level-1 title above it (Game over, or the crown banner). */}
+      <Marker level={2} size={40}>{t.results.finalScores}</Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {ranked.map((row) => (
           <ScoreRow
@@ -313,7 +314,7 @@ function WrapBanner({
   if (!show) return null;
   return (
     <FxIn live={live} preset="slideIn">
-      <Marker size={72}>{t.results.wrapBanner}</Marker>
+      <Marker level={1} size={72}>{t.results.wrapBanner}</Marker>
     </FxIn>
   );
 }
@@ -499,7 +500,7 @@ function SettledBanner({
         ))}
       </div>
       <Crown size={48} style={{ transform: "rotate(-8deg)" }} />
-      {crownLine ? <Marker size={40}>{crownLine}</Marker> : null}
+      {crownLine ? <Marker level={1} size={40}>{crownLine}</Marker> : null}
     </div>
   );
 }
@@ -522,7 +523,7 @@ function CrownIntro({ t, stage }: { t: Dictionary; stage: Stage }) {
         preset="fadeIn"
         style={{ position: "relative" }}
       >
-        <Marker size={64}>{t.results.crownGoesTo}</Marker>
+        <Marker level={1} size={64}>{t.results.crownGoesTo}</Marker>
       </FxIn>
     </div>
   );
@@ -628,7 +629,7 @@ function CrownReveal({
           </div>
         ))}
       </div>
-      {crownLine ? <Marker size={56}>{crownLine}</Marker> : null}
+      {crownLine ? <Marker level={1} size={56}>{crownLine}</Marker> : null}
       <Confetti live={stage.crownLive} surface="tv" />
     </div>
   );
@@ -678,7 +679,7 @@ function NotCompletedView({
           gap: 24,
         }}
       >
-        <Marker size={64}>{t.results.gameOver}</Marker>
+        <Marker level={1} size={64}>{t.results.gameOver}</Marker>
         <ScoresList t={t} ranked={ranked} players={view.players} winners={[]} />
       </div>
       <FinalScoresFooter t={t} vip={vipName(t, view.players, view.vipId)} />

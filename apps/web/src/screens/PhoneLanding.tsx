@@ -46,7 +46,10 @@ function BrandHeader({ brand }: { brand: string }) {
 
 function Hero({ t }: { t: Dictionary["landing"] }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    // The headline is split across two Markers (one highlighted) so the highlight can wrap
+    // its own line; the real heading tag wraps both, so a screen reader reads them as the one
+    // heading they form together rather than as two.
+    <h1 style={{ margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
       <Marker size={40} style={{ lineHeight: 1.15 }}>
         {t.heroLine1}
       </Marker>
@@ -68,7 +71,7 @@ function Hero({ t }: { t: Dictionary["landing"] }) {
           {t.heroPhones}
         </Marker>
       </div>
-    </div>
+    </h1>
   );
 }
 

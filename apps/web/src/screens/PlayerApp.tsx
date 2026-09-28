@@ -8,7 +8,7 @@ import type {
   PlayerSummary,
 } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import { useScreenWakeLock } from "@opg/ui";
+import { PhaseEnter, useScreenWakeLock } from "@opg/ui";
 import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { z } from "zod";
@@ -415,6 +415,45 @@ function PlayerStage(props: LobbyStageProps) {
   return <LobbyStage {...props} />;
 }
 
+/**
+ * The top-level screen this phone is on right now, mirroring the branches `GameStage` and
+ * `LobbyStage` pick between. Round-by-round detail inside a running game is not repeated here —
+ * each game's own `Phone` component already keys its own `PhaseEnter` by round and phase — this
+ * key only needs to change when the phone swaps to a different *screen* (waiting room, starting
+ * card, a game, results, the avatar picker, the VIP controls, the plain lobby), the same move
+ * `HostApp` already makes for the TV.
+ */
+/** The screen a phone shows once the room has left the lobby. */
+function playingScreenKey(view: PlayerRoomView): string {
+  const me = findMe(view);
+  if (waitingForNextGame(me)) return "waiting";
+  if (view.phase === "starting") return "starting";
+  if (activeGame(view) === null) return "waiting";
+  return `game:${view.game?.id ?? ""}`;
+}
+
+/** The screen a phone shows while the room is in the lobby. */
+function lobbyScreenKey(
+  view: PlayerRoomView,
+  showPicker: boolean,
+  showResults: boolean,
+): string {
+  if (showResults) return "results";
+  if (showPicker) return "picker";
+  if (view.you === view.vipId) return "vip";
+  return "lobby";
+}
+
+function playerScreenKey(
+  view: PlayerRoomView,
+  showPicker: boolean,
+  showResults: boolean,
+): string {
+  return view.phase === "lobby"
+    ? lobbyScreenKey(view, showPicker, showResults)
+    : playingScreenKey(view);
+}
+
 function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
   if (status !== "reconnecting") return null;
   return <PhoneReconnectingBanner />;
@@ -486,19 +525,23 @@ export function PlayerApp({ code }: { code: string }) {
 
   // Once there is a view there is a screen worth keeping: the reconnect state rides above it
   // rather than replacing it, so a backgrounded tab costs nobody their half-typed answer.
+  const showPicker = showPickerFor(playerId, code, pickerOverride);
+  const showResults = showsResults(view, dismissedResultAt);
   return (
     <>
-      <PlayerStage
-        view={view}
-        socket={socket}
-        clock={clock}
-        error={error}
-        showPicker={showPickerFor(playerId, code, pickerOverride)}
-        showResults={showsResults(view, dismissedResultAt)}
-        onDonePicker={donePicker}
-        onChangeAvatar={() => setPickerOverride("open")}
-        onNextRound={() => setDismissedResultAt(finishedAtOf(view))}
-      />
+      <PhaseEnter phaseKey={playerScreenKey(view, showPicker, showResults)}>
+        <PlayerStage
+          view={view}
+          socket={socket}
+          clock={clock}
+          error={error}
+          showPicker={showPicker}
+          showResults={showResults}
+          onDonePicker={donePicker}
+          onChangeAvatar={() => setPickerOverride("open")}
+          onNextRound={() => setDismissedResultAt(finishedAtOf(view))}
+        />
+      </PhaseEnter>
       <ReconnectOverlay status={socket.status} />
     </>
   );

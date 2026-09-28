@@ -404,6 +404,102 @@ describe("Timer haptics", () => {
   });
 });
 
+function liveRegion(container: HTMLElement): HTMLElement {
+  const el = container.querySelector('[aria-live="polite"]');
+  if (!(el instanceof HTMLElement)) throw new Error("missing live region");
+  return el;
+}
+
+describe("Timer final-stage announcement", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("has an empty polite live region before the final stage", () => {
+    const { container } = renderTimer(
+      <Timer deadline={12_000} clock={clockAt(0)} />,
+    );
+    const region = liveRegion(container);
+    expect(region.getAttribute("aria-live")).toBe("polite");
+    expect(region.textContent).toBe("");
+  });
+
+  it("announces exactly once on entering the final stage, unconditionally (no ticks/haptics needed)", () => {
+    let now = 0;
+    const clock: ServerClock = { now: () => now };
+    const { container } = renderTimer(<Timer deadline={4_000} clock={clock} />);
+    expect(liveRegion(container).textContent).toBe("");
+
+    // 4s left at mount (urgent). Entering final (<=3s) at now=1000 should announce once.
+    now = 1_000;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(liveRegion(container).textContent).toBe("Almost out of time");
+
+    // Staying in the final stage every following second must not add a running commentary.
+    now = 2_000;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(liveRegion(container).textContent).toBe("Almost out of time");
+    now = 3_000;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(liveRegion(container).textContent).toBe("Almost out of time");
+  });
+
+  it("says nothing when it mounts already in the final stage", () => {
+    let now = 2_000;
+    const clock: ServerClock = { now: () => now };
+    const { container } = renderTimer(<Timer deadline={4_000} clock={clock} />);
+    expect(liveRegion(container).textContent).toBe("");
+    now = 3_000;
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+    // Never entered the final stage live (it was already final on mount), so still nothing.
+    expect(liveRegion(container).textContent).toBe("");
+  });
+
+  it("re-announces on a second final stage even with identical wording", () => {
+    let now = 0;
+    const clock: ServerClock = { now: () => now };
+    const { container, rerender } = renderTimer(
+      <Timer deadline={4_000} clock={clock} />,
+    );
+    now = 3_000;
+    act(() => {
+      vi.advanceTimersByTime(3_000);
+    });
+    const firstRaw = liveRegion(container).innerHTML;
+    expect(liveRegion(container).textContent).toBe("Almost out of time");
+
+    // A fresh round: a new deadline further out, then counting back down into final again.
+    now = 3_000;
+    rerender(
+      <LocaleProvider>
+        <Timer deadline={13_000} clock={clock} />
+      </LocaleProvider>,
+    );
+    now = 10_000;
+    act(() => {
+      vi.advanceTimersByTime(7_000);
+    });
+    // The spoken text reads the same both times (an invisible, unspoken marker may differ), but
+    // the raw DOM content must actually change between the two announcements, or a screen
+    // reader sees no mutation and says nothing the second time.
+    expect(liveRegion(container).textContent?.replace(/[​]/g, "")).toBe(
+      "Almost out of time",
+    );
+    expect(liveRegion(container).innerHTML).not.toBe(firstRaw);
+  });
+});
+
 describe("Timer ring", () => {
   it("without startedAt, there is no progress circle", () => {
     const { container } = renderTimer(

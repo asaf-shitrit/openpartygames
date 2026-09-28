@@ -52,7 +52,7 @@ function TonightOptions({ t }: { t: Dictionary }) {
           background: "var(--opg-paper)",
         }}
       >
-        <Marker size={46}>{t.status.comeBackHeading}</Marker>
+        <Marker level={2} size={46}>{t.status.comeBackHeading}</Marker>
         <div style={{ fontSize: 32, lineHeight: 1.3 }}>
           {t.status.comeBackBody}
         </div>
@@ -67,7 +67,7 @@ function TonightOptions({ t }: { t: Dictionary }) {
           background: "var(--opg-paper)",
         }}
       >
-        <Marker size={46}>{t.status.runOwnCopyHeading}</Marker>
+        <Marker level={2} size={46}>{t.status.runOwnCopyHeading}</Marker>
         <div style={{ fontSize: 32, lineHeight: 1.3 }}>
           {t.status.runOwnCopyBody}
         </div>
@@ -119,7 +119,7 @@ export function TvFullTonight() {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              <Marker size={96}>{t.status.fullTonightHeading}</Marker>
+              <Marker level={1} size={96}>{t.status.fullTonightHeading}</Marker>
               <div style={{ maxWidth: 900, fontSize: 40, lineHeight: 1.3 }}>
                 {t.status.fullTonightBody}
               </div>

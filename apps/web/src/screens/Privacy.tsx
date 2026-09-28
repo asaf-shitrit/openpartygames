@@ -38,7 +38,7 @@ export function Privacy() {
       <Highlight
         style={{ alignSelf: "flex-start", marginTop: 12, padding: "0 14px" }}
       >
-        <Marker size={96}>Privacy</Marker>
+        <Marker level={1} size={96}>Privacy</Marker>
       </Highlight>
       <div
         style={{
@@ -61,6 +61,7 @@ export function Privacy() {
             }}
           >
             <Marker
+              level={2}
               size={38}
               color="var(--opg-marker)"
               style={{ lineHeight: 1.15 }}

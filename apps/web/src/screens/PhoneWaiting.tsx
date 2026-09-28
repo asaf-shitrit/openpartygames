@@ -139,6 +139,7 @@ function WaitingHeader({
     >
       <Highlight style={{ padding: "0 10px", maxWidth: "100%" }}>
         <Marker
+          level={1}
           size={38}
           style={{
             lineHeight: 1.15,

@@ -429,7 +429,7 @@ function GamePicker({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <Marker size={24} style={{ lineHeight: 1.15 }}>
+      <Marker level={2} size={24} style={{ lineHeight: 1.15 }}>
         {t.picker.pickAGame}
       </Marker>
       <div
@@ -524,7 +524,7 @@ function PackList({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <Marker size={24} style={{ lineHeight: 1.15 }}>
+      <Marker level={2} size={24} style={{ lineHeight: 1.15 }}>
         {t.picker.packs}
       </Marker>
       <Card
@@ -722,7 +722,7 @@ function PlayersCard({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <Marker size={24} style={{ lineHeight: 1.15 }}>
+      <Marker level={2} size={24} style={{ lineHeight: 1.15 }}>
         {format(t.picker.playersHeading, { count: players.length })}
       </Marker>
       <Card
@@ -1079,7 +1079,7 @@ function VipHeader({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <Highlight style={{ alignSelf: "flex-start", padding: "0 10px" }}>
-        <Marker size={34} style={{ lineHeight: 1.15 }}>
+        <Marker level={1} size={34} style={{ lineHeight: 1.15 }}>
           {t.picker.youreVip}
         </Marker>
       </Highlight>

@@ -170,6 +170,33 @@ describe("Marker", () => {
     expect(el.className).toBe("opg-marker m");
     expect(el.style.marginTop).toBe("4px");
   });
+
+  it("stays a plain span without a level, invisible to the heading outline", () => {
+    render(<Marker>Title</Marker>);
+    expect(screen.queryByRole("heading")).toBeNull();
+  });
+
+  it("renders as a real heading when a level is given", () => {
+    render(<Marker level={1}>Lobby</Marker>);
+    const heading = screen.getByRole("heading", { level: 1, name: "Lobby" });
+    expect(heading.tagName).toBe("H1");
+    expect(heading.className).toBe("opg-marker");
+  });
+
+  it("renders every heading level 1 through 6", () => {
+    for (const level of [1, 2, 3, 4, 5, 6] as const) {
+      const { unmount } = render(<Marker level={level}>H{level}</Marker>);
+      expect(
+        screen.getByRole("heading", { level, name: `H${level}` }).tagName,
+      ).toBe(`H${level}`);
+      unmount();
+    }
+  });
+
+  it("resets the browser's default heading margin so the look is unchanged", () => {
+    const { container } = render(<Marker level={1}>Lobby</Marker>);
+    expect(firstChild(container).style.margin).toBe("0px");
+  });
 });
 
 describe("Stamp", () => {

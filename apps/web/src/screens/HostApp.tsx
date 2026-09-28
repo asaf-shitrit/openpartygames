@@ -59,7 +59,7 @@ function MessageScreen({
             maxWidth: 1100,
           }}
         >
-          <Marker size={76}>{title}</Marker>
+          <Marker size={76} level={1}>{title}</Marker>
           <div style={{ fontSize: 38, lineHeight: 1.35 }}>{body}</div>
           <Link to="/" style={{ fontSize: 30, fontWeight: 700 }}>
             {t.status.backToStart}
@@ -137,7 +137,7 @@ function StartingScreen({ view, t }: { view: HostRoomView; t: Dictionary }) {
           }}
         >
           <div ref={titleRef}>
-            <Marker size={76}>
+            <Marker size={76} level={1}>
               {format(t.status.startingHeading, { game: gameName })}
             </Marker>
           </div>

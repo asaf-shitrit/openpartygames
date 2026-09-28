@@ -150,6 +150,7 @@ function AwardCallout({
     >
       {live ? <StickerBurst live count={8} size={220} /> : null}
       <Marker
+        level={1}
         size={26}
         style={{ maxWidth: "100%", overflowWrap: "break-word" }}
       >
@@ -184,7 +185,7 @@ function RankCallout({ label }: { label: string }) {
         justifyContent: "center",
       }}
     >
-      <Marker size={32}>{label}</Marker>
+      <Marker level={1} size={32}>{label}</Marker>
     </Card>
   );
 }
@@ -242,6 +243,7 @@ function CrownCallout({
       {amWinner ? <Confetti live={live} surface="phone" /> : null}
       <Crown size={amWinner ? 130 : 60} />
       <Marker
+        level={1}
         size={amWinner ? 34 : 26}
         style={{ maxWidth: "100%", overflowWrap: "break-word" }}
       >
@@ -328,7 +330,7 @@ function SettledCard({
         textAlign: "center",
       }}
     >
-      <Marker size={28} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
+      <Marker level={1} size={28} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
         {rank === null
           ? t.results.finalScores
           : format(t.results.finishedPlaceWithScore, {
@@ -481,7 +483,8 @@ function Standings({
         gap: 12,
       }}
     >
-      <Marker size={20}>{t.results.finalScores}</Marker>
+      {/* Always paired with a level-1 card above it (settled or early-end). */}
+      <Marker level={2} size={20}>{t.results.finalScores}</Marker>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {ranked.map((row) => (
           <StandingsRow key={row.id} row={row} players={players} />
@@ -630,7 +633,7 @@ function GameOverCard({ t, score }: { t: Dictionary; score: number }) {
         textAlign: "center",
       }}
     >
-      <Marker size={30}>{t.results.gameOver}</Marker>
+      <Marker level={1} size={30}>{t.results.gameOver}</Marker>
       <div style={{ fontSize: 20, fontWeight: 700 }}>
         {format(t.results.points, { score: score.toLocaleString("en-US") })}
       </div>
@@ -679,7 +682,7 @@ function EarlyEndCard({
         textAlign: "center",
       }}
     >
-      <Marker size={30} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
+      <Marker level={1} size={30} style={{ maxWidth: "100%", overflowWrap: "break-word" }}>
         {earlyEndHeadline(t, view, me)}
       </Marker>
       <div style={{ fontSize: 20, fontWeight: 700 }}>

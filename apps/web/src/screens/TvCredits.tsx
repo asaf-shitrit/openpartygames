@@ -118,7 +118,7 @@ export function TvCredits() {
       <Highlight
         style={{ alignSelf: "flex-start", marginTop: 12, padding: "0 14px" }}
       >
-        <Marker size={96}>{t.status.creditsHeading}</Marker>
+        <Marker level={1} size={96}>{t.status.creditsHeading}</Marker>
       </Highlight>
       <div
         style={{
@@ -141,6 +141,7 @@ export function TvCredits() {
             }}
           >
             <Marker
+              level={2}
               size={40}
               color="var(--opg-marker)"
               style={{ lineHeight: 1.15 }}
