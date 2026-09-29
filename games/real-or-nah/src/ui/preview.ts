@@ -686,6 +686,84 @@ const stressHostReveal: RonHostView = {
   pointsThisFact: STRESS_TOTALS,
 };
 
+/**
+ * Eight lies, the most a full room can produce: every player writes one, and nothing caps the
+ * option list (see `buildOptions` in ../index.ts — `MIN_OPTIONS` tops it up, nothing trims it).
+ * Every lie is at LIE_MAX_LENGTH, so the table below the fact has to hold eight rows of the
+ * longest text a player can submit, at the TV's 28px floor, on a stage that does not scroll.
+ */
+const STRESS_TABLE_LIE_TAILS = [
+  "ferrets",
+  "badgers",
+  "wombats",
+  "marmots",
+  "gophers",
+  "muskrat",
+  "lemming",
+  "raccoon",
+];
+
+function stressTableLie(index: number): string {
+  return `a completely made up story about ${STRESS_TABLE_LIE_TAILS[index] ?? "ferrets"}`;
+}
+
+/**
+ * Every lie fooled nobody because all eight players found the truth. This is the reveal's two
+ * tallest states at once: eight rows in the lies table, and eight names in the truth card's
+ * "Found by" — one is only reachable when the other is, since a vote spent on the truth is a
+ * vote no lie collected.
+ */
+const STRESS_ALL_DUDS_LIES: RonFooledLie[] = STRESS_IDS.map((id, index) => ({
+  optionId: `d${index + 1}`,
+  text: stressTableLie(index),
+  authorId: id,
+  fooledIds: [],
+  points: 0,
+}));
+
+const STRESS_ALL_DUDS_REVEAL: RonReveal = {
+  truthOptionId: "t1",
+  answer: STRESS_ANSWER,
+  source: { title: "Shortest war", url: "https://en.wikipedia.org/wiki/Anglo-Zanzibar_War" },
+  foundByIds: STRESS_IDS,
+  lies: STRESS_ALL_DUDS_LIES,
+};
+
+const stressHostRevealAllDuds: RonHostView = {
+  ...STRESS_HOST_BASE,
+  phase: "reveal",
+  submittedIds: STRESS_IDS,
+  votedIds: STRESS_IDS,
+  totals: STRESS_TOTALS,
+  options: STRESS_HOST_OPTIONS,
+  reveal: STRESS_ALL_DUDS_REVEAL,
+  pointsThisFact: STRESS_TOTALS,
+};
+
+/**
+ * The widest a "Fooled" cell gets: one lie took everyone who did not write it. Seven avatars
+ * and the "Fooled 7 people!" callout share a cell with seven other rows still on the table —
+ * and, as above, this is only reachable when every other lie is a dud.
+ */
+const STRESS_ONE_FOOLER_LIES: RonFooledLie[] = STRESS_IDS.map((id, index) => ({
+  optionId: `d${index + 1}`,
+  text: stressTableLie(index),
+  authorId: id,
+  fooledIds: index === 0 ? STRESS_IDS.slice(1) : [],
+  points: index === 0 ? (STRESS_IDS.length - 1) * 500 : 0,
+}));
+
+const STRESS_ONE_FOOLER_REVEAL: RonReveal = {
+  ...STRESS_ALL_DUDS_REVEAL,
+  foundByIds: STRESS_IDS.slice(0, 1),
+  lies: STRESS_ONE_FOOLER_LIES,
+};
+
+const stressHostRevealOneFooler: RonHostView = {
+  ...stressHostRevealAllDuds,
+  reveal: STRESS_ONE_FOOLER_REVEAL,
+};
+
 const stressPhoneWrite: RonPlayerView = {
   ...STRESS_PLAYER_BASE,
   phase: "write",
@@ -902,5 +980,17 @@ export const realOrNahPreviews: Array<{
     surface: "host",
     view: stressHostReveal,
     room: hostRevealRoom(stressHostReveal, STRESS_REVEAL, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, reveal table (8 duds, 8 finders, 40-char lies)",
+    surface: "host",
+    view: stressHostRevealAllDuds,
+    room: hostRevealRoom(stressHostRevealAllDuds, STRESS_ALL_DUDS_REVEAL, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, reveal table (8 lies, one fooled seven)",
+    surface: "host",
+    view: stressHostRevealOneFooler,
+    room: hostRevealRoom(stressHostRevealOneFooler, STRESS_ONE_FOOLER_REVEAL, STRESS_PLAYERS),
   },
 ];

@@ -177,9 +177,13 @@ describe("TV reveal beats", () => {
     expect(outline()).toEqual([[1, "Let's see who fooled who"]]);
 
     advanceTo(15750);
+    // Two sections once the reveal is playing out, in stage order: the fact on the left, the
+    // lies table on the right (see HostReveal.tsx). "The lies" is absent at elapsed 0 above
+    // because the table renders nothing until the first row lands.
     expect(outline()).toEqual([
       [1, "Let's see who fooled who"],
       [2, "The truth"],
+      [2, "The lies"],
     ]);
 
     advanceTo(21999);
