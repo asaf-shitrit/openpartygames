@@ -579,8 +579,13 @@ export function HostReveal(props: HostRevealProps) {
 
   return (
     <div ref={rootRef} style={STAGE}>
+      {/* The blank follows the truth card: an underline while the answer is still hidden, the
+          answer itself once the truth stamps. Passing neither leaves a hole in the sentence —
+          `BlankSlot` renders nothing — which is what shipped until now. */}
       <PromptText
         prompt={view.prompt}
+        answer={progress.truthStamped ? reveal.answer : null}
+        blank={{ width: 140, height: 16, thickness: 11, verticalAlign: "-3px" }}
         style={{ fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}
       />
       <IntroHeading live={progress.introLive} t={t} />

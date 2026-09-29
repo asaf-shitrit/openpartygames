@@ -100,7 +100,10 @@ describe("HostReveal, staged from the start", () => {
     expect(screen.getByText("?")).toBeTruthy();
 
     advanceTo(15750);
-    expect(screen.getByText("emus")).toBeTruthy();
+    // The answer now lands in two places at this beat: the truth card, and the fact's blank
+    // above it, which reads "...went to war against emus and lost." once the truth stamps.
+    // This beat is about the card, so scope to it rather than matching "emus" anywhere.
+    expect(screen.getByText("The truth").parentElement?.textContent).toContain("emus");
     expect(screen.getByText("REAL")).toBeTruthy();
 
     advanceTo(16350);
@@ -208,5 +211,46 @@ describe("HostReveal, other lie counts", () => {
       </LocaleProvider>,
     );
     expect(screen.getByText("Nobody found it! Tricky one.")).toBeTruthy();
+  });
+});
+
+/**
+ * The fact keeps its blank on the reveal: an underline while the answer is hidden, the answer
+ * itself once the truth stamps. Both callers of `PromptText` on the write and vote screens pass
+ * one or the other; the reveal passed neither, so `BlankSlot` rendered nothing and the TV showed
+ * "...went to war against  and lost." with a hole in it, on the one screen whose job is to
+ * reveal the answer.
+ */
+/** The element whose whole text is exactly this sentence — the prompt line, not an ancestor. */
+function lineReading(sentence: string): HTMLElement | undefined {
+  const all = [...document.body.querySelectorAll<HTMLElement>("*")];
+  return all.find((el) => (el.textContent ?? "").replace(/\s+/g, " ").trim() === sentence);
+}
+
+describe("HostReveal, the fact's blank", () => {
+  const WITH_ANSWER = "In 1932, the Australian army went to war against emus and lost.";
+  const WITHOUT_ANSWER = "In 1932, the Australian army went to war against and lost.";
+
+  it("draws an underline in the blank while the answer is still hidden", () => {
+    vi.useFakeTimers();
+    const { advanceTo } = setup("Host: reveal, 3 foolers", 0);
+
+    // The truth section is up and still showing "?" — see the beat math above.
+    advanceTo(14550);
+    const line = lineReading(WITHOUT_ANSWER);
+    expect(line).toBeTruthy();
+    expect(line?.querySelector("svg")).toBeTruthy();
+  });
+
+  it("puts the answer into the sentence once the truth stamps", () => {
+    vi.useFakeTimers();
+    const { advanceTo } = setup("Host: reveal, 3 foolers", 15750);
+
+    expect(lineReading(WITH_ANSWER)).toBeTruthy();
+    expect(lineReading(WITHOUT_ANSWER)).toBeUndefined();
+
+    // And it stays for the rest of the beat, rather than flashing on the stamp.
+    advanceTo(17000);
+    expect(lineReading(WITH_ANSWER)).toBeTruthy();
   });
 });
