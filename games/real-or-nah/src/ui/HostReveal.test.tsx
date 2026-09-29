@@ -86,7 +86,8 @@ describe("HostReveal, staged from the start", () => {
     expect(screen.queryByText("These fooled nobody")).toBeNull();
 
     advanceTo(2050);
-    expect(screen.getByText("These fooled nobody")).toBeTruthy();
+    // The duds land as one block, each row saying for itself that it fooled nobody.
+    expect(screen.getAllByText("Fooled nobody")).toHaveLength(3);
 
     advanceTo(4050);
     expect(screen.getByText("rabbits")).toBeTruthy();
@@ -160,7 +161,8 @@ describe("HostReveal, Hebrew locale", () => {
     // (see the English timeline in "staged from the start" above for the beat math).
     setup("Host: reveal, 3 foolers", 17000);
     expect(screen.getByText("בואו נראה מי רימה את מי")).toBeTruthy();
-    expect(screen.getByText("אלה לא רימו אף אחד")).toBeTruthy();
+    expect(screen.getByText("השקרים")).toBeTruthy();
+    expect(screen.getAllByText("לא רימה אף אחד")).toHaveLength(3);
     expect(screen.getByText("האמת")).toBeTruthy();
     expect(screen.getByText("אמת")).toBeTruthy();
     window.localStorage.removeItem("opg:locale");
@@ -176,17 +178,18 @@ describe("HostReveal, Hebrew locale", () => {
 });
 
 describe("HostReveal, other lie counts", () => {
-  it("skips the duds row when nobody wrote a dud lie", () => {
+  it("gives every dud its own row when only two lies fooled anyone", () => {
     vi.useFakeTimers();
-    // Mid-reveal, well before standings retire the duds/lies/truth stack.
+    // Mid-reveal, well before standings retire the lies table and the truth. The fixture
+    // turns "dingoes" into a dud on top of the base reveal's three, leaving four.
     setup("Host: reveal, 2 foolers plus a dud", 5000);
-    expect(screen.getByText("These fooled nobody")).toBeTruthy();
+    expect(screen.getAllByText("Fooled nobody")).toHaveLength(4);
   });
 
-  it("never shows the duds row for an all-duds reveal", () => {
+  it("gives every lie a dud row, and no callout, for an all-duds reveal", () => {
     vi.useFakeTimers();
     setup("Host: reveal, 0 foolers (duds only)", 5000);
-    expect(screen.getByText("These fooled nobody")).toBeTruthy();
+    expect(screen.getAllByText("Fooled nobody")).toHaveLength(6);
     expect(screen.queryByText("Fooled everyone!")).toBeNull();
   });
 
@@ -252,5 +255,54 @@ describe("HostReveal, the fact's blank", () => {
     // And it stays for the rest of the beat, rather than flashing on the stamp.
     advanceTo(17000);
     expect(lineReading(WITH_ANSWER)).toBeTruthy();
+  });
+});
+
+/**
+ * The composition this replaces stacked staggered cards and put one caption, "These fooled
+ * nobody", between the duds and the foolers — 12px below the cards it described and 10px above
+ * the cards it did not (HostReveal.tsx's `DudsRow`, before this change). On a TV a bold caption
+ * sitting above a row of cards reads as their heading, so it labelled the wrong group. A row
+ * that states its own outcome cannot be read against the wrong lie, wherever the table puts it.
+ *
+ * The settled frame, elapsed 18250ms: every lie has flipped and paid out, standings are still
+ * 250ms away. It is the instant the dev gallery freezes these fixtures at (`revealPreviewNow`
+ * in preview.ts) and so the one the visual baseline captures.
+ */
+const SETTLED_MS = 18250;
+
+/** The row a cell belongs to: each cell is a direct child of its row (see `rowStyle`). */
+function rowTextOf(cell: HTMLElement): string {
+  return (cell.parentElement?.textContent ?? "").replace(/\s+/g, " ");
+}
+
+describe("HostReveal, every lie carries its own outcome", () => {
+  const DUDS = ["koalas", "a swarm of locusts", "kangaroos"];
+  const FOOLERS = ["cane toads", "rabbits", "dingoes"];
+
+  it("puts 'Fooled nobody' in the row of each lie that fooled nobody, and in no other", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal, 3 foolers", SETTLED_MS);
+
+    const rows = screen.getAllByText("Fooled nobody").map(rowTextOf);
+    expect(rows).toHaveLength(DUDS.length);
+    for (const dud of DUDS) {
+      expect(rows.filter((row) => row.includes(dud))).toHaveLength(1);
+    }
+    for (const fooler of FOOLERS) {
+      expect(rows.some((row) => row.includes(fooler))).toBe(false);
+    }
+  });
+
+  it("puts a fooler's points in that fooler's own row", () => {
+    vi.useFakeTimers();
+    setup("Host: reveal, 3 foolers", SETTLED_MS);
+
+    // Dov's "cane toads" fooled two people at 500 each; the other two foolers paid 500.
+    expect(rowTextOf(screen.getByText("+1,000"))).toContain("cane toads");
+    const five = screen.getAllByText("+500").map(rowTextOf);
+    expect(five).toHaveLength(2);
+    expect(five.some((row) => row.includes("rabbits"))).toBe(true);
+    expect(five.some((row) => row.includes("dingoes"))).toBe(true);
   });
 });

@@ -104,7 +104,9 @@ describe("Host reveal phase", () => {
     const { view } = hostSample("Host: reveal, 3 foolers");
     renderHost("Host: reveal, 3 foolers");
     expect(screen.getByText("Let's see who fooled who")).toBeTruthy();
-    expect(screen.getByText("These fooled nobody")).toBeTruthy();
+    // Each dud says so in its own row now, instead of a caption beside the group: the fixture
+    // has three lies that fooled nobody.
+    expect(screen.getAllByText("Fooled nobody")).toHaveLength(3);
     expect(screen.getByText("The truth")).toBeTruthy();
     expect(screen.getByText("REAL")).toBeTruthy();
     expect(screen.getAllByText("NAH")).toHaveLength(
