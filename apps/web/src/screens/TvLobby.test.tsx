@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { SoundProvider } from "@opg/ui";
@@ -53,7 +53,7 @@ class FakeEngine implements SoundEngine {
 afterEach(cleanup);
 
 describe("TvLobby", () => {
-  it("shows the room code and a QR code svg", () => {
+  it("shows the room code and a QR code svg", async () => {
     const { container } = render(
       <LocaleProvider>
         <TvLobby
@@ -65,9 +65,10 @@ describe("TvLobby", () => {
     );
     expect(screen.getByText("BKTZ")).toBeTruthy();
     expect(screen.getByText("1 of 8 players")).toBeTruthy();
-    const qrTitle = container.querySelector("svg title");
+    // The QR library loads on demand, so the svg arrives a tick after the rest of the lobby.
+    await waitFor(() => expect(container.querySelector(".opg-qr")).not.toBeNull());
+    const qrTitle = container.querySelector("svg.opg-qr title");
     expect(qrTitle?.textContent).toContain("/BKTZ");
-    expect(container.querySelector(".opg-qr")).not.toBeNull();
   });
 
   it("shows the VIP callout and open seats", () => {

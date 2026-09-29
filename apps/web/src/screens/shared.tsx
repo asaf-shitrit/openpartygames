@@ -1,8 +1,7 @@
 // Small shared pieces for the TV screens.
 import type { ReactNode } from "react";
-import { useId, useMemo } from "react";
-import { create } from "qrcode";
-import { format, useLocale } from "@opg/i18n";
+import { lazy, Suspense } from "react";
+import { LOADING_ATTRIBUTE } from "../loading";
 
 export interface TvPageProps {
   children: ReactNode;
@@ -33,34 +32,29 @@ export interface QrCodeProps {
   size?: number;
 }
 
-/** Renders a QR code as crisp SVG rects from qrcode's bit matrix. */
-export function QrCode({ value, size = 156 }: QrCodeProps) {
-  const { t } = useLocale();
-  const { dimension, path } = useMemo(() => {
-    const qr = create(value);
-    const n = qr.modules.size;
-    const data = qr.modules.data;
-    let d = "";
-    for (let row = 0; row < n; row++) {
-      for (let col = 0; col < n; col++) {
-        if (data[row * n + col]) d += `M${col} ${row}h1v1h-1z`;
-      }
-    }
-    return { dimension: n, path: d };
-  }, [value]);
+// The `qrcode` library is ~70 kB that only two screens draw with: the TV lobby and the VIP's
+// no-TV share button. Every other guest's phone would download it for nothing, so it loads on
+// demand, the same way a game's screens do.
+const LazyQrCodeSvg = lazy(async () => ({
+  default: (await import("./QrCodeSvg")).QrCodeSvg,
+}));
 
-  const titleId = useId();
+/**
+ * A QR code for `value`, loaded on demand. Until the library arrives it holds the same square
+ * with no words in it, carrying the loading mark so the layout gallery waits for the real one.
+ */
+export function QrCode({ value, size = 156 }: QrCodeProps) {
   return (
-    <svg
-      className="opg-qr"
-      width={size}
-      height={size}
-      viewBox={`0 0 ${dimension} ${dimension}`}
-      aria-labelledby={titleId}
+    <Suspense
+      fallback={
+        <span
+          {...{ [LOADING_ATTRIBUTE]: "" }}
+          style={{ display: "inline-block", width: size, height: size }}
+        />
+      }
     >
-      <title id={titleId}>{format(t.status.qrCodeAlt, { value })}</title>
-      <path fill="#2B2B2B" d={path} />
-    </svg>
+      <LazyQrCodeSvg value={value} size={size} />
+    </Suspense>
   );
 }
 

@@ -7,7 +7,7 @@
 // decides how many award beats exist and when the crown lands, and the TV and every phone
 // compute that independently. Behind a dynamic import it would answer null on a device whose
 // chunk had not arrived, and that device would stage a different ceremony from the room.
-import type { Dictionary } from "@opg/i18n";
+import { useLocale, type Dictionary } from "@opg/i18n";
 import { doodleBluffAwardCopy } from "@opg/game-doodle-bluff/award-copy";
 import {
   doodleHostViewSchema,
@@ -32,6 +32,7 @@ import type { Award, AvatarId } from "@opg/protocol";
 import type { GameUi, IconName } from "@opg/ui";
 import { lazy, Suspense, type ComponentProps } from "react";
 import type { z, ZodType } from "zod";
+import { LOADING_ATTRIBUTE } from "./loading";
 
 export interface LandingGame {
   id: string;
@@ -129,24 +130,23 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
 }
 
 function ViewMismatch() {
+  const { t } = useLocale();
   return (
     <output style={{ display: "block", padding: 24, fontSize: 20 }}>
-      Updating the game… one moment.
+      {t.status.gameUpdating}
     </output>
   );
 }
 
-/** The `data-game-loading` attribute is what the layout gallery waits to see gone. */
-export const GAME_LOADING_ATTRIBUTE = "data-game-loading";
-
 /** Shown while a game's chunk downloads: same words and footprint as `ViewMismatch`. */
 function GameLoading() {
+  const { t } = useLocale();
   return (
     <output
-      {...{ [GAME_LOADING_ATTRIBUTE]: "" }}
+      {...{ [LOADING_ATTRIBUTE]: "" }}
       style={{ display: "block", padding: 24, fontSize: 20 }}
     >
-      Updating the game… one moment.
+      {t.status.gameUpdating}
     </output>
   );
 }
