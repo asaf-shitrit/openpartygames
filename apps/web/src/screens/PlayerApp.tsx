@@ -15,6 +15,7 @@ import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
 import { navigate } from "../router";
+import { useRoomGamePreload } from "../useGamePreload";
 import { useRoomSocket } from "../useRoomSocket";
 import { errorOutlived, settledKeyOf } from "./player-signals";
 import type { RoomSocket, RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
@@ -478,6 +479,7 @@ export function PlayerApp({ code }: { code: string }) {
 
   const me = meFor(view);
 
+  useRoomGamePreload(view);
   useScreenWakeLock(me !== null);
   useOutlivedError(socket, view);
   const myAvatar = avatarFor(me);

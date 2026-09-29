@@ -17,6 +17,7 @@ import {
 } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
 import { gameUiFor } from "../games";
+import { useRoomGamePreload } from "../useGamePreload";
 import { Link } from "../router";
 import { useRoomSocket } from "../useRoomSocket";
 import type { RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
@@ -223,6 +224,7 @@ function HostStage({
   t: Dictionary;
 }) {
   useMusic(screenMusic(view));
+  useRoomGamePreload(view);
   useStartStinger(view.phase);
   const key = screenKey(view);
   useScreenTransitionCue(key);

@@ -232,7 +232,7 @@ describe("HostApp", () => {
     expect(screen.getByText("Starting Imposter…")).toBeTruthy();
   });
 
-  it("shows the game stage when a game is running", () => {
+  it("shows the game stage when a game is running", async () => {
     localStorage.setItem("opg:host:BKTZ", "tok");
     render(
       <LocaleProvider>
@@ -255,7 +255,7 @@ describe("HostApp", () => {
         },
       }),
     );
-    expect(screen.getByText(/went to war against/)).toBeTruthy();
+    expect(await screen.findByText(/went to war against/)).toBeTruthy();
   });
 
   it("explains when the room picked a game this screen cannot show", () => {
