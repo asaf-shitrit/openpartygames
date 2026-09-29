@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en, LocaleProvider } from "@opg/i18n";
@@ -402,12 +402,13 @@ describe("PhoneVipControls", () => {
     }
   });
 
-  it("offers the join link as a QR you can also tap to share", () => {
+  it("offers the join link as a QR you can also tap to share", async () => {
     setup({ sharedScreen: false, code: "BKTZ" });
     const share = screen.getByLabelText("Share the link to join this room");
     expect(share).toBeTruthy();
     // The QR encodes the join URL, so a scan lands on the room rather than the home page.
-    expect(share.querySelector("svg.opg-qr")).toBeTruthy();
+    // The QR library loads on demand, so the svg arrives a tick after the button.
+    await waitFor(() => expect(share.querySelector("svg.opg-qr")).toBeTruthy());
     expect(screen.getByText("Scan it, or tap to share")).toBeTruthy();
   });
 

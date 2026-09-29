@@ -1,4 +1,4 @@
-import { en, he } from "@opg/i18n";
+import { en, he, LocaleProvider } from "@opg/i18n";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -126,11 +126,13 @@ function stubEntry(loadScreens: () => Promise<StubScreens>) {
 function renderStubPhone(stage: StubStage) {
   const registered = registerGame(stubEntry(() => Promise.resolve(stubUi)));
   render(
-    <registered.ui.Phone
-      view={{ myWord: "cat" }}
-      stage={stage}
-      {...PHONE_PROPS}
-    />,
+    <LocaleProvider>
+      <registered.ui.Phone
+        view={{ myWord: "cat" }}
+        stage={stage}
+        {...PHONE_PROPS}
+      />
+    </LocaleProvider>,
   );
 }
 
@@ -155,28 +157,46 @@ describe("registerGame's stage parsing", () => {
   });
 });
 
+/** Renders the stub phone with screens that arrive only when `arrive` is called. */
+function renderPendingPhone(view: Record<string, string | number> = { myWord: "cat" }) {
+  let arrive: (() => void) | undefined;
+  const registered = registerGame(
+    stubEntry(
+      () =>
+        new Promise<StubScreens>((resolve) => {
+          arrive = () => resolve(stubUi);
+        }),
+    ),
+  );
+  render(
+    <LocaleProvider>
+      <registered.ui.Phone view={view} stage={null} {...PHONE_PROPS} />
+    </LocaleProvider>,
+  );
+  return () => arrive?.();
+}
+
 describe("registerGame's lazy screens", () => {
+  afterEach(() => window.localStorage.removeItem("opg:locale"));
+
   it("shows a message, not a blank screen, until the screens arrive", async () => {
-    let arrive: (() => void) | undefined;
-    const registered = registerGame(
-      stubEntry(
-        () =>
-          new Promise<StubScreens>((resolve) => {
-            arrive = () => resolve(stubUi);
-          }),
-      ),
-    );
-    render(
-      <registered.ui.Phone
-        view={{ myWord: "cat" }}
-        stage={null}
-        {...PHONE_PROPS}
-      />,
-    );
+    const arrive = renderPendingPhone();
     expect(screen.queryByTestId("stage")).toBeNull();
-    expect(document.body.textContent).not.toBe("");
-    arrive?.();
+    expect(document.body.textContent).toBe(en.status.gameUpdating);
+    arrive();
     expect(await screen.findByTestId("stage")).toBeTruthy();
+  });
+
+  it("says it in the player's language", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderPendingPhone();
+    expect(document.body.textContent).toBe(he.status.gameUpdating);
+  });
+
+  it("says the same when a view arrives that this build cannot read", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderPendingPhone({ notMyWord: 1 });
+    expect(document.body.textContent).toBe(he.status.gameUpdating);
   });
 
   it("loads a game's screens once, however often preload is called", async () => {

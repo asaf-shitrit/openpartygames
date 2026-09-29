@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "@opg/i18n";
 import { AppScreenView, ScreenGallery } from "./ScreenGallery";
+import { LOADING_ATTRIBUTE } from "../loading";
 import { SCREENS } from "./screens";
 import type { AppCase } from "./screens";
 
@@ -31,6 +32,7 @@ const firstAppPhone = SCREENS.find(
 const firstAppHost = SCREENS.find(
   (each) => each.surface === "host" && each.kind === "app",
 );
+const tvLobby = SCREENS.find((each) => each.kind === "app" && each.appId === "tv-lobby");
 
 describe("ScreenGallery", () => {
   it("lists every screen when no id is given", () => {
@@ -74,6 +76,16 @@ describe("ScreenGallery", () => {
     expect(document.body.dataset.screen).toBeUndefined();
     await waitFor(() => expect(document.body.dataset.screen).toBe(firstPhone?.id));
     expect(document.body.textContent).not.toContain("Updating the game");
+  });
+
+  it("holds that mark on an app screen until its QR code is in, not its empty placeholder", async () => {
+    expect(tvLobby).toBeDefined();
+    renderGallery(`?id=${tvLobby?.id ?? ""}`);
+    // The QR library loads on demand behind a wordless square; measuring that square would
+    // check a screen the guests never see.
+    await waitFor(() => expect(document.body.dataset.screen).toBe(tvLobby?.id));
+    expect(document.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull();
+    expect(document.querySelector("svg.opg-qr")).not.toBeNull();
   });
 
   it("renders an app-owned phone screen (the join flow, the lobby, ...)", () => {

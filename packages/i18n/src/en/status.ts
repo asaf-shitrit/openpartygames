@@ -40,6 +40,8 @@ export const status = {
   creditsFontsTitle: "Fonts",
   creditsLicenseTitle: "License",
   creditsLicenseLine: "Code licensed under AGPL-3.0",
+  /** While a game's screens download, or a screen gets a view it cannot read yet. */
+  gameUpdating: "Updating the game… one moment.",
   qrCodeAlt: "QR code linking to {value}",
   gameNotFoundTitle: "Game not found",
   gameNotFoundBody: "This room picked a game this screen does not know how to show.",

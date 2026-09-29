@@ -41,6 +41,8 @@ export const status: Dictionary["status"] = {
   creditsFontsTitle: "גופנים",
   creditsLicenseTitle: "רישיון",
   creditsLicenseLine: "הקוד ברישיון AGPL-3.0",
+  /** While a game's screens download, or a screen gets a view it cannot read yet. */
+  gameUpdating: "מעדכנים את המשחק… רגע אחד.",
   qrCodeAlt: "קוד QR שמוביל אל {value}",
   gameNotFoundTitle: "המשחק לא נמצא",
   gameNotFoundBody: "החדר הזה בחר משחק שהמסך הזה לא יודע להציג.",

@@ -6,7 +6,8 @@
 import { useEffect } from "react";
 import { Stage } from "@opg/ui";
 import type { ServerClock } from "@opg/ui";
-import { GAME_LOADING_ATTRIBUTE, gameUiFor, preloadGameUi } from "../games";
+import { gameUiFor, preloadGameUi } from "../games";
+import { LOADING_ATTRIBUTE } from "../loading";
 import { appScreenById } from "./app-screens";
 import { SCREENS, screenById, screenIdFromSearch, timingOf } from "./screens";
 import type { AppCase, HostCase, PhoneCase, ScreenCase } from "./screens";
@@ -103,6 +104,7 @@ function useScreenReady(id: string | null, gameId: string | null): void {
     // A game's Host and Phone load on demand and show "Updating the game…" until they arrive.
     // That fallback has text, so it would pass the suite's liveness check: hold the signal
     // until the screens are in, or the suite measures the fallback and calls it a screen.
+    // App screens wait too: the lobby's QR code loads on demand behind an empty square.
     void (async () => {
       await screensLoaded(gameId);
       if (!cancelled) document.body.dataset.screen = id;
@@ -114,17 +116,17 @@ function useScreenReady(id: string | null, gameId: string | null): void {
   }, [id, gameId]);
 }
 
-/** Resolves once the game's screens are loaded and painted; at once for app-owned screens. */
+/** Resolves once the game's screens (or an app screen's QR code) are loaded and painted. */
 function screensLoaded(gameId: string | null): Promise<void> {
-  if (gameId === null || gameUiFor(gameId) === null) return Promise.resolve();
+  if (gameId === null || gameUiFor(gameId) === null) return loadingMessageGone();
   return preloadGameUi(gameId).then(loadingMessageGone);
 }
 
-/** Polls each frame until React has swapped the loading message for the real screen. */
+/** Polls each frame until React has swapped every loading placeholder for the real thing. */
 function loadingMessageGone(): Promise<void> {
   return new Promise((resolve) => {
     const check = () => {
-      if (document.querySelector(`[${GAME_LOADING_ATTRIBUTE}]`) === null) resolve();
+      if (document.querySelector(`[${LOADING_ATTRIBUTE}]`) === null) resolve();
       else requestAnimationFrame(check);
     };
     requestAnimationFrame(check);
