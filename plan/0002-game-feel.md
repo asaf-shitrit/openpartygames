@@ -1,6 +1,6 @@
 # Plan: Game feel (staged reveals, sound, haptics, awards, finale)
 
-Author: Asaf Shitrit. Status: slices 0–5 built and verified (unit, CRAP, API and browser e2e); slice 6 audits and the playtest sign-off (including the TV delay decision) are still open.
+Author: Asaf Shitrit. Status: slices 0–5 built and verified (unit, CRAP, API and browser e2e), including the fixed 200ms phone follow (`CARD_FOLLOW_MS`) and the crown `fanfare` (it ships in the kit, so the finale no longer falls back to `slam`). Slice 6: the cue-to-visual table is done for the no-TV games; the remaining audits are tracked as issues #102 and #103. Still human-gated: the TV-and-phones playtest that measures real cast delay and decides the "TV delay" setting. No `avDelayMs` setting exists until that decision is made.
 Inputs: [plan/0001-platform-mvp.md](0001-platform-mvp.md), [intent/0001-platform-mvp.md](../intent/0001-platform-mvp.md) (bouncy motion, reveals, music and SFX with credits, reduced motion).
 
 ## Context
@@ -30,7 +30,7 @@ The intent doc already promised "bouncy motion", reveals, music and sound effect
 | Finale | Awards then crown (~25s); the VIP can start the next game at any time |
 | Rollout | Vertical slice first: the Imposter reveal end to end, playtest, tune, then spread to everything else |
 | Audio files | Claude picks CC0 or CC-BY files and credits them; the user auditions them on a dev-only sound board |
-| TV hookup | Mixed. Ship a fixed 200ms phone follow, measure real cast delay in the slice 1 playtest, then decide on a "TV delay" setting |
+| TV hookup | Mixed. Ship a fixed 200ms phone follow (shipped), measure real cast delay in the slice 1 playtest, then decide on a "TV delay" setting (not decided yet: waiting on that human playtest) |
 
 ## Architecture
 
@@ -255,7 +255,7 @@ what a no-TV phone shows for it. Built by reading the code, not by re-deriving t
 | `pop` | Vote arrival, TV only (`Host.tsx:521` both games — never fires on a phone at all, TV-exclusive flourish); Reveal/Result "points" beat, both games | Vote arrival: the no-TV `StageVote`/`StageVote` (MLT) shows a check badge the instant `votedIds` includes the voter (`stage/Vote.tsx:64-79` Imposter, `stage/Vote.tsx` MLT) — no animated pop, but the badge appearing is itself the signal, never colour alone (a checkmark icon, not a colour swap). Points: `PointsLine`/`GuessLine` text, gated on the beat | Fine both ways. |
 | `tick` | Imposter result, one per letter flipping in (`result-timeline.ts:70`) | `LetterTiles` flips each tile (`stage/Result.tsx:97-114`, `revealed` from `lettersRevealed`) | Fine — the cue and the flip are the same event. |
 | `tick-final` | `Timer.tsx:144`, last 3s of any timer, both games' Vote/LastChance/WordCheck phases | The ring itself is CSS-drained from `startedAt` regardless of sound (`Timer.tsx`), and Last Chance additionally has the `Suspense` "drain" ring (`stage/LastChance.tsx:66-73`) | Fine — the timer's own motion carries this; the cue was always a bonus tick, never the only signal. |
-| `jingle-start` | Room-level, `HostApp.tsx:160`, phase enters "starting" | TV-only ceremony (the picker/lobby, not a per-game `stage`); out of scope for this task's file ownership. No no-TV phone shows anything different here today. | Open question, not closed here — see "Left open" below. |
+| `jingle-start` | Room-level, `HostApp.tsx:160`, phase enters "starting" | TV-only ceremony (the picker/lobby, not a per-game `stage`); out of scope for this task's file ownership. | Closed later by `PhoneStarting.tsx` — see "Left open" below. |
 | `fanfare` | Finale crown beat, `finale-timeline.ts:29-31` (falls back to `slam` until the kit ships `fanfare`) | `PhoneResults.tsx` already renders its own crown ceremony regardless of room mode, including an `EyesOnTv` teaser with a heartbeat tempo before the crown (`apps/web/src/screens/PhoneResults.tsx:311-318`, `packages/ui/src/moment/EyesOnTv.tsx`) | Fine, and already built — `apps/web/src/screens/` is outside this task's file ownership so it was read, not touched. |
 
 ### Not sound cues — audited anyway, since the brief named them
@@ -275,7 +275,7 @@ what a no-TV phone shows for it. Built by reading the code, not by re-deriving t
 
 ### Left open
 
-- **`jingle-start`** (the game-starting jingle) has no no-TV visual counterpart today. It fires from `apps/web/src/screens/HostApp.tsx`, a room-level screen outside a per-game `stage` and outside this task's file ownership (`apps/web/src/screens/` was not on the owned-files list for this pass). The "starting" phase is brief and VIP-initiated (the VIP just tapped Start), so the risk is low, but it was not verified against a no-TV fixture and should get its own pass.
+- ~~**`jingle-start`** (the game-starting jingle) has no no-TV visual counterpart.~~ Closed since: `PlayerApp` routes the "starting" phase to `apps/web/src/screens/PhoneStarting.tsx`, which shows every phone the same game title card the TV shows while the jingle plays, so a no-TV room sees the beat.
 - **Reduced-motion and screen-reader passes on `apps/web/src/screens/` (finale, lobby, game picker)** are likewise out of this task's ownership; only the two opted-in games' `src/ui/` and the kit's `fx/` were walked exhaustively.
 
 ## Milestones
@@ -324,7 +324,7 @@ Save this plan as `plan/0002-game-feel.md`, following the repo's intent/plan con
 - **Imposter:** typing action and state; `resultDurationMs`; `HostLastChance`, `HostResult`, `PhoneResult` plus `result-timeline.ts`; WordCard flip; YourTurn and vote-locked buzzes; vote arrival pops; the escaped-copy fix.
 - **Worker:** hub broadcasts only on change (+ tests: a no-op sends nothing, a welcome still gets a view).
 - **e2e:** update `imposter.ts` to flip the card.
-- **Decide:** whether casting needs a host "TV delay" setting, based on the slice 1 measurement.
+- **Decide:** whether casting needs a host "TV delay" setting, based on the slice 1 measurement. Still open: the measurement needs a human with a real TV and phones, and it has not happened yet.
 - **Done when:**
   - No letters ever leak to the TV.
   - Spamming `typing` stays at ≤7 broadcasts per second.
@@ -367,7 +367,7 @@ Save this plan as `plan/0002-game-feel.md`, following the repo's intent/plan con
 
 ## Risks
 - **Audio after a TV reload** needs a gesture. The "Tap for sound" chip and keydown unlock cover it, and visuals never depend on audio.
-- **Cast/AirPlay delay** (0.5–2s) can let phones spoil the slam. Measure it in slice 1; if needed, add a host `avDelayMs` room setting.
+- **Cast/AirPlay delay** (0.5–2s) can let phones spoil the slam. Measure it in slice 1; if needed, add a host `avDelayMs` room setting. Not measured yet (human-gated, see Status).
 - **Snapshot compatibility:** every new field is optional with normalizers, so a deploy mid-reveal just lands mid-timeline.
 - **Typing volume:** kept bounded by the in-game 150ms interval, the 250ms client throttle and the hub no-op fix.
 - **Devtools spoilers:** phones receive the reveal data about 8s early. Acceptable for a party game, since the TV makes it public.

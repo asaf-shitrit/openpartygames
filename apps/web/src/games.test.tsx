@@ -17,7 +17,7 @@ import {
   preloadGameUi,
   registerGame,
 } from "./games";
-import { crownCueId, finaleBeats } from "./screens/finale-timeline";
+import { finaleBeats } from "./screens/finale-timeline";
 import { makePlayerView } from "./screens/fixtures/room";
 
 afterEach(cleanup);
@@ -219,7 +219,6 @@ function crownAt(awardCount: number): number | undefined {
   const beats = finaleBeats({
     awardCount,
     rankedCount: 3,
-    crownCue: crownCueId(),
   });
   return beats.find((beat) => beat.id === "crown")?.atMs;
 }

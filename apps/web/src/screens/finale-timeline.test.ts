@@ -12,7 +12,6 @@ describe("finaleBeats", () => {
     const beats = finaleBeats({
       awardCount: 2,
       rankedCount: 4,
-      crownCue: "fanfare",
     });
     expect(beats.map((beat) => beat.id)).toEqual([
       "wrap",
@@ -54,11 +53,19 @@ describe("finaleBeats", () => {
     });
   });
 
+  it("lands the crown on the fanfare, whoever is ranked", () => {
+    for (const rankedCount of [0, 1, 2, 3]) {
+      const crown = finaleBeats({ awardCount: 0, rankedCount }).find(
+        (beat) => beat.id === "crown",
+      );
+      expect(crown?.cue).toBe("fanfare");
+    }
+  });
+
   it("has no award beats when nobody earned one", () => {
     const beats = finaleBeats({
       awardCount: 0,
       rankedCount: 2,
-      crownCue: "slam",
     });
     expect(beats.map((beat) => beat.id)).toEqual([
       "wrap",
@@ -73,7 +80,6 @@ describe("finaleBeats", () => {
     const beats = finaleBeats({
       awardCount: 0,
       rankedCount: 2,
-      crownCue: "slam",
     });
     expect(beats.some((beat) => beat.id === "third")).toBe(false);
     expect(beats.some((beat) => beat.id === "second")).toBe(true);
@@ -83,7 +89,6 @@ describe("finaleBeats", () => {
     const beats = finaleBeats({
       awardCount: 0,
       rankedCount: 1,
-      crownCue: "slam",
     });
     expect(beats.some((beat) => beat.id === "third")).toBe(false);
     expect(beats.some((beat) => beat.id === "second")).toBe(false);

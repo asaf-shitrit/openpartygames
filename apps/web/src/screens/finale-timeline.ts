@@ -4,8 +4,7 @@
 import { format, joinNamesAnd } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { PlayerId } from "@opg/protocol";
-import type { Beat, CueId } from "@opg/ui";
-import { CUE_IDS } from "@opg/ui";
+import type { Beat } from "@opg/ui";
 
 export const FINALE_TIMING = {
   wrapMs: 0,
@@ -28,11 +27,6 @@ function crownIntroAtMs(awardCount: number): number {
   );
 }
 
-/** "fanfare" once the kit has it, "slam" otherwise. */
-export function crownCueId(): CueId {
-  return CUE_IDS.includes("fanfare") ? "fanfare" : "slam";
-}
-
 export interface FinaleBeatsInput {
   awardCount: number;
   /**
@@ -40,8 +34,6 @@ export interface FinaleBeatsInput {
    * third or second beat, because nobody is standing at those ranks.
    */
   rankedCount: number;
-  /** "fanfare" when the kit has it, "slam" otherwise. */
-  crownCue: CueId;
 }
 
 function awardBeats(awardCount: number): Beat[] {
@@ -58,7 +50,7 @@ function awardBeats(awardCount: number): Beat[] {
 
 /**
  * Beats: wrap(0, whoosh), award-i (2000 + 3000i, tape), crown-intro (drumroll),
- * third (pop) and second (pop) when there are enough ranked players, crown (crownCue), settle.
+ * third (pop) and second (pop) when there are enough ranked players, crown (fanfare), settle.
  */
 export function finaleBeats(input: FinaleBeatsInput): Beat[] {
   const crownIntroAt = crownIntroAtMs(input.awardCount);
@@ -85,7 +77,7 @@ export function finaleBeats(input: FinaleBeatsInput): Beat[] {
     {
       id: "crown",
       atMs: crownIntroAt + FINALE_TIMING.crownAfterIntroMs,
-      cue: input.crownCue,
+      cue: "fanfare",
     },
     { id: "settle", atMs: crownIntroAt + FINALE_TIMING.settleAfterIntroMs },
   );
