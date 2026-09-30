@@ -16,6 +16,7 @@ export const results: Dictionary["results"] = {
   crownGoesTo: "והכתר עובר אל…",
   crownDecided: "הכתר נקבע",
   crownAnnounce: "הכתר נקבע. {crownLine}",
+  awardAnnounce: "פרס {title} הולך ל{names}.",
   youWinCrown: "זכיתם בכתר!",
   crownWins: "{name} זוכה בכתר!",
   crownShares: "{names} חולקים בכתר!",

@@ -1,9 +1,15 @@
 import type { ReactElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@opg/i18n";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
+import {
+  animatedProperties,
+  restoreMatchMedia,
+  spyAnimate,
+  stubReducedMotion,
+} from "./fixtures/motion";
 import { makeGame, makeHostView, makePack, makePlayer } from "./fixtures/room";
 import { TvGamePicker } from "./TvGamePicker";
 
@@ -64,7 +70,11 @@ function switchState(name: string): string | null {
   return screen.getByRole("switch", { name }).getAttribute("aria-checked");
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  restoreMatchMedia();
+});
 
 describe("TvGamePicker", () => {
   it("marks the picked game and names its packs", () => {
@@ -278,5 +288,42 @@ describe("TvGamePicker, in Hebrew", () => {
     );
     expect(screen.getByText("בוחר משחק")).toBeTruthy();
     expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
+  });
+});
+
+/** Mounts with Imposter picked, then the VIP switches to Draw It: the picker's one live pick. */
+function switchPick(reduced: boolean) {
+  stubReducedMotion(reduced);
+  const animate = spyAnimate();
+  const engine = new FakeEngine();
+  const picker = (selectedGameId: string) => (
+    <SoundProvider engine={engine}>
+      <TvGamePicker
+        view={makeHostView({ games: [IMPOSTER, DRAW], selectedGameId })}
+      />
+    </SoundProvider>
+  );
+  const { rerender } = renderLocalized(picker("imposter"));
+  const cuesBeforePick = [...engine.cues];
+  rerender(picker("draw"));
+  return { animate, cuesBeforePick, cues: engine.cues };
+}
+
+describe("TvGamePicker, reduced motion", () => {
+  it("still tapes the pick the moment it changes, and only then", () => {
+    const { cuesBeforePick, cues } = switchPick(true);
+    expect(cuesBeforePick).toEqual([]);
+    expect(cues).toEqual(["tape"]);
+  });
+
+  it("fades the picked card in instead of scaling it", () => {
+    const { animate } = switchPick(true);
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animatedProperties(animate)).toEqual(["opacity"]);
+  });
+
+  it("scales the picked card in when nobody asked for less motion", () => {
+    const { animate } = switchPick(false);
+    expect(animatedProperties(animate)).toEqual(["scale"]);
   });
 });

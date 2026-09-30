@@ -276,7 +276,7 @@ what a no-TV phone shows for it. Built by reading the code, not by re-deriving t
 ### Left open
 
 - ~~**`jingle-start`** (the game-starting jingle) has no no-TV visual counterpart.~~ Closed since: `PlayerApp` routes the "starting" phase to `apps/web/src/screens/PhoneStarting.tsx`, which shows every phone the same game title card the TV shows while the jingle plays, so a no-TV room sees the beat.
-- **Reduced-motion and screen-reader passes on `apps/web/src/screens/` (finale, lobby, game picker)** are likewise out of this task's ownership; only the two opted-in games' `src/ui/` and the kit's `fx/` were walked exhaustively.
+- ~~**Reduced-motion and screen-reader passes on `apps/web/src/screens/` (finale, lobby, game picker)** are likewise out of this task's ownership; only the two opted-in games' `src/ui/` and the kit's `fx/` were walked exhaustively.~~ Closed since (#103): `TvFinalScores`, `PhoneResults`, `TvLobby` and `TvGamePicker` each have reduced-motion tests (same beat clock, opacity fades or an outline flash only, stickers for confetti), and both finale surfaces announce every award and the crown through one shared polite live region, `FinaleAnnouncer.tsx`.
 
 ## Milestones
 
@@ -358,7 +358,7 @@ Save this plan as `plan/0002-game-feel.md`, following the repo's intent/plan con
 - ~~A table mapping each cue to its visual equivalent, and reduced-motion tests per moment.~~ Done
   in `plan/0004-no-tv-mode.md` slice 5, scoped to the two no-TV games and the kit's `fx/`; see
   "Cue-to-visual table (slice 5, no-TV mode)" above. `apps/web/src/screens/` (lobby, game picker,
-  finale) was not re-audited here.
+  finale) was not re-audited here; that pass landed later with #103.
 - Low-end TV stick and Android Go pass (confetti caps, DPR).
 - Six games in a row with no leaks of AudioNodes, timers or listeners.
 - Shake ≤12px, no flashes above 3Hz.

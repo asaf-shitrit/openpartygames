@@ -13,6 +13,12 @@ import {
   makeResultWithAwards,
   makeTiedResult,
 } from "./fixtures/room";
+import {
+  animatedProperties,
+  restoreMatchMedia,
+  spyAnimate,
+  stubReducedMotion,
+} from "./fixtures/motion";
 import { PhoneResults } from "./PhoneResults";
 
 /** These screens read their copy from the dictionary, so every render needs a provider. */
@@ -28,6 +34,8 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, "vibrate");
+  vi.restoreAllMocks();
+  restoreMatchMedia();
 });
 
 function stubVibrate() {
@@ -556,5 +564,92 @@ describe("PhoneResults, Eyes on the TV doodle", () => {
     // The screen doodle draws 2 eyes; the room doodle draws the same 2 eyes plus a 3-face huddle.
     expect(tvCircles).toBe(2);
     expect(roomCircles).toBe(5);
+  });
+});
+
+/** Plays the ceremony for `you` to `untilMs` in 100ms steps, logging each buzz with its step. */
+function runCeremony(reduced: boolean, you: string, untilMs = 20_000) {
+  stubReducedMotion(reduced);
+  const animate = spyAnimate();
+  const vibrate = stubVibrate();
+  vi.useFakeTimers();
+  const { advanceTo, rendered } = setup(makeResultWithAwards(), you, 0);
+  const timeline: string[] = [];
+  for (let ms = 0; ms <= untilMs; ms += 100) {
+    advanceTo(ms);
+    for (const [pattern] of vibrate.mock.calls.slice(timeline.length)) {
+      timeline.push(`${JSON.stringify(pattern)}@${ms}`);
+    }
+  }
+  return { timeline, animate, container: rendered.container };
+}
+
+describe("PhoneResults, reduced motion", () => {
+  it("buzzes my award and my crown on the same clock as the full-motion ceremony", () => {
+    const motion = runCeremony(false, "p2").timeline;
+    cleanup();
+    vi.useRealTimers();
+    const reduced = runCeremony(true, "p2").timeline;
+    // Sam's award is the second (atMs 5000); the crown lands at 19000. Seen a step later,
+    // between the teaser's heartbeats.
+    expect(reduced).toEqual(
+      expect.arrayContaining([
+        "[80,50,80]@5100",
+        "[70,40,70,40,70,40,320]@19100",
+      ]),
+    );
+    expect(reduced).toEqual(motion);
+  });
+
+  it("flashes an outline with each buzz instead of scaling the card", () => {
+    const { animate } = runCeremony(true, "p2");
+    expect(animate).toHaveBeenCalled();
+    expect(animatedProperties(animate)).toEqual(["outline"]);
+  });
+
+  it("pulses the card's scale with each buzz when nobody asked for less motion", () => {
+    const { animate } = runCeremony(false, "p2");
+    expect(animatedProperties(animate)).toEqual(["scale"]);
+  });
+
+  it("gives the winner a sticker burst instead of confetti", () => {
+    const { container } = runCeremony(true, "p2", 19_300);
+    expect(screen.getByText("You win the crown!")).toBeTruthy();
+    expect(container.querySelector("canvas")).toBeNull();
+    expect(container.querySelectorAll(".opg-fx-sticker")).toHaveLength(10);
+  });
+});
+
+/** The ceremony's own live region; the teaser card carries a second, visible one. */
+function announcer(): HTMLElement | undefined {
+  return screen
+    .queryAllByRole("status")
+    .find((el) => el.style.position === "absolute");
+}
+
+describe("PhoneResults, screen reader", () => {
+  it("announces every award as it stamps in, not just mine, then the crown", () => {
+    vi.useFakeTimers();
+    const { advanceTo } = setup(makeResultWithAwards(), "p1", 0);
+    expect(announcer()?.textContent).toBe("");
+
+    advanceTo(2100);
+    expect(announcer()?.textContent).toBe("Word thief goes to Priya.");
+
+    advanceTo(5100);
+    expect(announcer()?.textContent).toBe("Master of disguise goes to Sam.");
+
+    advanceTo(8100);
+    expect(announcer()?.textContent).toBe("Sharpest eye goes to Lee.");
+
+    advanceTo(19_100);
+    expect(announcer()?.textContent).toBe("The crown is decided. Sam wins the crown!");
+    expect(announcer()?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("announces nothing for a game that ended early", () => {
+    vi.useFakeTimers();
+    setup(makeEndedEarlyResult(), "p1", 0);
+    expect(announcer()).toBeUndefined();
   });
 });

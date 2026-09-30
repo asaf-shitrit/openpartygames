@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { CueId, ServerClock, SoundEngine } from "@opg/ui";
 import { SoundProvider } from "@opg/ui";
+import {
+  animatedProperties,
+  restoreMatchMedia,
+  spyAnimate,
+  stubReducedMotion,
+} from "./fixtures/motion";
 import { makeHostView, makePlayer, makeResult } from "./fixtures/room";
 import { TvFinalScores, finaleMusic } from "./TvFinalScores";
 
@@ -21,6 +27,8 @@ const DOV = makePlayer({ id: "p4", name: "Dov", avatar: "toast" });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.restoreAllMocks();
+  restoreMatchMedia();
 });
 
 interface RecordingEngine extends SoundEngine {
@@ -317,6 +325,103 @@ describe("TvFinalScores, in Hebrew", () => {
     window.localStorage.setItem("opg:locale", "he");
     renderLocalized(<TvFinalScores view={makeHostView({ lastResult: null })} />);
     expect(screen.getByText("מחכים לניקוד הסופי")).toBeTruthy();
+  });
+});
+
+const ONE_AWARD = {
+  scores: { p1: 10, p2: 30, p3: 20, p4: 5 },
+  winnerIds: ["p2"],
+  awards: [{ id: "word-thief", playerIds: ["p4"], value: 2 }],
+};
+
+/** Plays the ceremony to `untilMs` in 100ms steps; each cue is logged with the step it landed on. */
+function runCeremony(reduced: boolean, untilMs = 16_000) {
+  stubReducedMotion(reduced);
+  const animate = spyAnimate();
+  vi.useFakeTimers();
+  const { engine, advanceTo, rendered } = setup(ONE_AWARD, 0);
+  const timeline: string[] = [];
+  for (let ms = 0; ms <= untilMs; ms += 100) {
+    advanceTo(ms);
+    for (const cue of engine.cues.slice(timeline.length)) {
+      timeline.push(`${cue}@${ms}`);
+    }
+  }
+  return { timeline, animate, container: rendered.container };
+}
+
+describe("TvFinalScores, reduced motion", () => {
+  it("keeps every beat on the same clock as the full-motion ceremony", () => {
+    const motion = runCeremony(false).timeline;
+    cleanup();
+    vi.useRealTimers();
+    const reduced = runCeremony(true).timeline;
+    // Each beat's atMs (2000, 5000, 8000, 10000, 13000), seen on the next 100ms step.
+    expect(reduced).toEqual([
+      "whoosh@0",
+      "tape@2100",
+      "drumroll@5100",
+      "pop@8100",
+      "pop@10100",
+      "fanfare@13100",
+    ]);
+    expect(reduced).toEqual(motion);
+  });
+
+  it("fades every entrance in instead of sliding, scaling or slamming it", () => {
+    const { animate } = runCeremony(true);
+    expect(animate).toHaveBeenCalled();
+    expect(animatedProperties(animate)).toEqual(["opacity"]);
+  });
+
+  it("moves things on the stage when nobody asked for less motion", () => {
+    const { animate } = runCeremony(false);
+    expect(animatedProperties(animate)).toEqual(
+      expect.arrayContaining(["rotate", "scale", "translate"]),
+    );
+  });
+
+  it("swaps the crown's confetti for a sticker burst", () => {
+    const { container } = runCeremony(true, 13_300);
+    expect(screen.getAllByText("Sam wins the crown!").length).toBeGreaterThan(0);
+    expect(container.querySelector("canvas")).toBeNull();
+    expect(container.querySelectorAll(".opg-fx-sticker")).toHaveLength(10);
+  });
+});
+
+function status(): string | null {
+  return screen.getByRole("status").textContent;
+}
+
+describe("TvFinalScores, screen reader", () => {
+  it("announces each award as it stamps in, then the crown", () => {
+    vi.useFakeTimers();
+    const { advanceTo } = setup(
+      {
+        ...ONE_AWARD,
+        awards: [
+          { id: "word-thief", playerIds: ["p4"], value: 2 },
+          { id: "sharpest-eye", playerIds: ["p1", "p3"], value: 3 },
+        ],
+      },
+      0,
+    );
+    expect(status()).toBe("");
+
+    advanceTo(2100);
+    expect(status()).toBe("Word thief goes to Dov.");
+
+    advanceTo(5100);
+    expect(status()).toBe("Sharpest eye goes to Priya and Lee.");
+
+    advanceTo(16_100);
+    expect(status()).toBe("The crown is decided. Sam wins the crown!");
+  });
+
+  it("keeps the announcement polite, so it never cuts the room's reader off", () => {
+    vi.useFakeTimers();
+    setup(ONE_AWARD, 0);
+    expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
   });
 });
 

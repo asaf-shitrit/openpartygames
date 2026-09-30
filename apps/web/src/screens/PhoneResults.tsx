@@ -35,6 +35,7 @@ import {
   topRank,
 } from "./finale-timeline";
 import type { RankedPlayer } from "./finale-timeline";
+import { countAwardsShown, FinaleAnnouncer } from "./FinaleAnnouncer";
 
 function findPlayerName(
   view: PlayerRoomView,
@@ -64,6 +65,7 @@ interface Stage {
   crownReached: boolean;
   crownLive: boolean;
   settleReached: boolean;
+  awardsShown: number;
   latestMyAwardIndex: number | null;
   latestMyAwardLive: boolean;
 }
@@ -112,6 +114,7 @@ function stageFromMoment(
     crownReached: reached(moment, beats, "crown"),
     crownLive: moment.live && moment.beatId === "crown",
     settleReached: reached(moment, beats, "settle"),
+    awardsShown: countAwardsShown(beats, moment),
     latestMyAwardIndex: latest.index,
     latestMyAwardLive: latest.live,
   };
@@ -843,6 +846,16 @@ function ResultContent(args: ResultContentArgs): ReactNode {
         crownLine,
         gameId: result.gameId,
       })}
+      {/* Visually hidden and out of flow, so it takes no room in this row. */}
+      <FinaleAnnouncer
+        t={t}
+        gameId={result.gameId}
+        awards={awards}
+        players={view.players}
+        awardsShown={stage.awardsShown}
+        crownReached={stage.crownReached}
+        crownLine={crownLine}
+      />
     </div>
   );
 }
