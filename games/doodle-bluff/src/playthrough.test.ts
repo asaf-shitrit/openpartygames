@@ -32,27 +32,31 @@ const AWARD_IDS = ["pen-of-the-people", "master-forger", "sharp-eye", "abstract-
 
 describe("doodle bluff bot playthroughs", () => {
   for (const players of [3, 8]) {
-    it(`finishes a ${players}-player game with a mid-game disconnect and rejoin`, async () => {
-      const content = await CONTENT_SOURCE.loadContent("drawing-prompts", ["pack-doodle-bluff"]);
-      expect(content.kind).toBe("drawing-prompts");
+    for (const sharedScreen of [true, false]) {
+      it(`finishes a ${players}-player game with a mid-game disconnect and rejoin (sharedScreen=${sharedScreen})`, async () => {
+        const content = await CONTENT_SOURCE.loadContent("drawing-prompts", ["pack-doodle-bluff"]);
+        expect(content.kind).toBe("drawing-prompts");
 
-      const result = runBotPlaythrough({
-        game: doodleBluff,
-        content,
-        players,
-        seed: 4000 + players,
-        disconnectRejoin: true,
-        maxSteps: 4000,
+        const result = runBotPlaythrough({
+          game: doodleBluff,
+          content,
+          players,
+          seed: 4000 + players,
+          disconnectRejoin: true,
+          maxSteps: 4000,
+          sharedScreen,
+        });
+
+        expect(result.finished).toBe(true);
+        expect(result.steps).toBeGreaterThan(0);
+        expect(Object.keys(result.scores)).toHaveLength(players);
+        expect(result.rejoinedPlayerId).not.toBeNull();
+        expect(result.hostConnected).toBe(sharedScreen);
+        for (const award of result.awards) {
+          expect(AWARD_IDS).toContain(award.id);
+        }
       });
-
-      expect(result.finished).toBe(true);
-      expect(result.steps).toBeGreaterThan(0);
-      expect(Object.keys(result.scores)).toHaveLength(players);
-      expect(result.rejoinedPlayerId).not.toBeNull();
-      for (const award of result.awards) {
-        expect(AWARD_IDS).toContain(award.id);
-      }
-    });
+    }
   }
 });
 

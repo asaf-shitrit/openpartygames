@@ -289,5 +289,7 @@ export interface PlaythroughResult {
   winnerIds: PlayerId[];
   awards: Award[];
   rejoinedPlayerId: PlayerId | null;
+  /** Whether a host screen is connected when the game ends. A no-TV room never has one. */
+  hostConnected: boolean;
   log: string[];
 }

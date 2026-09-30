@@ -74,6 +74,12 @@ function findFinished(effects: RoomEffect[]): FinishedEffect | null {
   return null;
 }
 
+/** Whether the room has a host screen connected, read from the persisted snapshot. */
+function hostConnectedIn(room: RoomCore): boolean {
+  // The snapshot's data is the engine's JSON state; hostConnected is a top-level boolean in it.
+  return JSON.parse(room.snapshot().data).hostConnected === true;
+}
+
 /** Live game scores, read from the persisted snapshot (works mid-game). */
 function liveScores(
   room: RoomCore,
@@ -110,6 +116,7 @@ function validatePlaythrough(options: PlaythroughOptions): void {
 function openBotSession(options: PlaythroughOptions): BotSession {
   let tokenSeq = 0;
   const newToken = (): string => `tok-${tokenSeq++}`;
+  const sharedScreen = options.sharedScreen ?? true;
   const room = createRoom({
     code: ROOM_CODE,
     hostToken: HOST_TOKEN,
@@ -117,10 +124,13 @@ function openBotSession(options: PlaythroughOptions): BotSession {
     seed: options.seed,
     now: 0,
     newToken,
-    sharedScreen: options.sharedScreen ?? true,
+    sharedScreen,
   });
   const log: string[] = [];
-  room.handle({ kind: "host" }, { t: "host-hello", hostToken: HOST_TOKEN }, 0);
+  // A no-TV room has no host screen, so nothing ever says host-hello.
+  if (sharedScreen) {
+    room.handle({ kind: "host" }, { t: "host-hello", hostToken: HOST_TOKEN }, 0);
+  }
   // start-game requires at least one enabled pack that matches the game's content kind.
   room.setPackCatalog(
     [
@@ -319,6 +329,7 @@ class BotPlaythrough {
       steps: this.steps,
       ...fields,
       rejoinedPlayerId: this.rejoinedPlayerId,
+      hostConnected: hostConnectedIn(this.room),
       log: this.log,
     };
   }

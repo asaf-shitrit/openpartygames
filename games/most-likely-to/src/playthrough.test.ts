@@ -30,28 +30,32 @@ const AWARD_IDS = ["main-character", "crowd-reader", "owns-it", "wild-card"];
 
 describe("most likely to bot playthroughs", () => {
   for (const players of [3, 8]) {
-    it(`finishes a ${players}-player game with a mid-game disconnect and rejoin`, async () => {
-      const content = await CONTENT_SOURCE.loadContent("superlatives", [
-        "pack-most-likely-to",
-      ]);
-      expect(content.kind).toBe("superlatives");
+    for (const sharedScreen of [true, false]) {
+      it(`finishes a ${players}-player game with a mid-game disconnect and rejoin (sharedScreen=${sharedScreen})`, async () => {
+        const content = await CONTENT_SOURCE.loadContent("superlatives", [
+          "pack-most-likely-to",
+        ]);
+        expect(content.kind).toBe("superlatives");
 
-      const result = runBotPlaythrough({
-        game: mostLikelyTo,
-        content,
-        players,
-        seed: 2000 + players,
-        disconnectRejoin: true,
+        const result = runBotPlaythrough({
+          game: mostLikelyTo,
+          content,
+          players,
+          seed: 2000 + players,
+          disconnectRejoin: true,
+          sharedScreen,
+        });
+
+        expect(result.finished).toBe(true);
+        expect(result.steps).toBeGreaterThan(0);
+        expect(Object.keys(result.scores)).toHaveLength(players);
+        expect(result.rejoinedPlayerId).not.toBeNull();
+        expect(result.hostConnected).toBe(sharedScreen);
+        for (const award of result.awards) {
+          expect(AWARD_IDS).toContain(award.id);
+        }
       });
-
-      expect(result.finished).toBe(true);
-      expect(result.steps).toBeGreaterThan(0);
-      expect(Object.keys(result.scores)).toHaveLength(players);
-      expect(result.rejoinedPlayerId).not.toBeNull();
-      for (const award of result.awards) {
-        expect(AWARD_IDS).toContain(award.id);
-      }
-    });
+    }
   }
 
   it("lists the pack through the memory content source", async () => {
