@@ -13,6 +13,7 @@ import {
   Marker,
   PhaseEnter,
   PhoneScreen,
+  phoneRoomCode,
   fitTextSize,
   PhoneStrip,
   PRESSABLE_CLASS,
@@ -955,7 +956,7 @@ export function Phone({
   stage,
 }: PhoneProps) {
   return (
-    <PhoneScreen fit={view.phase === "clues"}>
+    <PhoneScreen fit={view.phase === "clues"} roomCode={phoneRoomCode(room)}>
       <PhaseEnter phaseKey={`${view.wordNumber}:${view.phase}`}>
         {renderPhase({
           view,

@@ -11,6 +11,7 @@ import {
   Marker,
   PhaseEnter,
   PhoneScreen,
+  phoneRoomCode,
   PhoneStrip,
   PRESSABLE_CLASS,
   Timer,
@@ -364,7 +365,7 @@ export function Phone({
     // A shared-screen room fits: header, prompt and list, action. A no-TV room adds the
     // staged prompt/roll-call above that, which makes this screen genuinely long content —
     // let it scroll instead of squeezing the candidate list into a sliver of leftover space.
-    <PhoneScreen fit={view.phase === "vote" && stage === null}>
+    <PhoneScreen fit={view.phase === "vote" && stage === null} roomCode={phoneRoomCode(room)}>
       <PhaseEnter phaseKey={`${view.roundNumber}:${view.phase}`}>
         {renderPhase({
           view,
