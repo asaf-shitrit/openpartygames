@@ -42,3 +42,20 @@ export interface GameUi<
     t: Dictionary,
   ) => { title: string; detail: string } | null;
 }
+
+/**
+ * A timed moment `/dev/moments` replays on its scrubbable clock. Each game's `preview.ts`
+ * exports a list of these beside its previews, naming previews by their `label`.
+ */
+export interface PreviewMoment {
+  /** The label of the host preview the TV shows. */
+  host: string;
+  /** Short picker copy: "caught", "tie", "gallery"… */
+  chip: string;
+  /** The moment's own phase length, in ms. */
+  durationMs: number;
+  /** Labels of the shared-screen phone previews shown beside the TV. */
+  phones: readonly string[];
+  /** Labels of the no-TV phone previews, each staged with the host preview's view. */
+  noTvPhones: readonly string[];
+}

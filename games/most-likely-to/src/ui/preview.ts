@@ -6,6 +6,8 @@ import type {
   PlayerRoomView,
   PlayerSummary,
 } from "@opg/protocol";
+import type { PreviewMoment } from "@opg/ui";
+import { REVEAL_MS } from "../state";
 import type {
   MltHostView,
   MltPlayerView,
@@ -541,4 +543,27 @@ export const mostLikelyToPreviews: MltPreview[] = [
     }),
     stage: stressHostReveal,
   },
+];
+
+function revealMoment(
+  host: string,
+  chip: string,
+  phones: readonly string[],
+  noTvPhones: readonly string[] = [],
+): PreviewMoment {
+  return { host, chip, durationMs: REVEAL_MS, phones, noTvPhones };
+}
+
+/** The reveal previews `/dev/moments` replays, each with the phones watching the same reveal. */
+export const mostLikelyToMoments: PreviewMoment[] = [
+  revealMoment(
+    "Host: reveal picked",
+    "picked",
+    ["Phone: Maya reveal matched", "Phone: Leo reveal missed", "Phone: Dov reveal picked"],
+    ["Phone (no-TV): Priya reveal settled"],
+  ),
+  revealMoment("Host: reveal tie", "tie", ["Phone: Priya reveal tie"]),
+  revealMoment("Host: reveal split", "split", ["Phone: Sam reveal split"]),
+  revealMoment("Host: reveal no votes", "no votes", ["Phone: Noa reveal sat out"]),
+  revealMoment("Host: reveal after kick", "after kick", []),
 ];

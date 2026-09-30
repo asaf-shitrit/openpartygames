@@ -160,7 +160,7 @@ export {
 export { useFullscreen, useScreenWakeLock } from "./screen";
 export type { FullscreenControl } from "./screen";
 
-export type { ServerClock, GameUi } from "./game-ui";
+export type { ServerClock, GameUi, PreviewMoment } from "./game-ui";
 
 export {
   GAP_MS_CAP,

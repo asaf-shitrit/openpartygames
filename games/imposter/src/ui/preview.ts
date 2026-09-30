@@ -6,6 +6,8 @@ import type {
   PlayerRoomView,
   PlayerSummary,
 } from "@opg/protocol";
+import type { PreviewMoment } from "@opg/ui";
+import { LAST_CHANCE_MS, REVEAL_MS, resultDurationMs } from "../state";
 import type { ImposterHostView, ImposterPlayerView } from "../state";
 
 const SERVER_NOW = 1735689600000;
@@ -1068,4 +1070,59 @@ export const imposterPreviews: Array<{
     view: stressHostVote,
     room: hostRoom(stressHostVote, VOTE_DEADLINE, null, STRESS_PLAYERS),
   },
+];
+
+const REVEAL_PHONES = [
+  "Phone: Dov reveal",
+  "Phone: Leo reveal",
+  "Phone: Priya reveal caught",
+  "Phone: Priya reveal free",
+];
+const RESULT_PHONES = [
+  "Phone: Priya result",
+  "Phone: Dov result",
+  "Phone: Priya result stole",
+  "Phone: Priya result nope",
+  "Phone: Dov result spotted",
+  "Phone: Leo result missed",
+  "Phone: Priya result escaped",
+  "Phone: Dov result escaped",
+];
+
+function revealMoment(host: string, chip: string): PreviewMoment {
+  return {
+    host,
+    chip,
+    durationMs: REVEAL_MS,
+    phones: REVEAL_PHONES,
+    noTvPhones: ["Phone (no-TV): Dov reveal settled"],
+  };
+}
+
+function resultMoment(host: string, chip: string, view: ImposterHostView): PreviewMoment {
+  return {
+    host,
+    chip,
+    durationMs: resultDurationMs(view.caught),
+    phones: RESULT_PHONES,
+    noTvPhones: ["Phone (no-TV): Dov result settled"],
+  };
+}
+
+/** The reveal, last-chance and result previews `/dev/moments` replays, in picker order. */
+export const imposterMoments: PreviewMoment[] = [
+  revealMoment("Host: reveal", "caught"),
+  revealMoment("Host: reveal wrong", "wrong"),
+  revealMoment("Host: reveal tie", "tie"),
+  revealMoment("Host: reveal no votes", "no votes"),
+  {
+    host: "Host: last chance typing",
+    chip: "typing",
+    durationMs: LAST_CHANCE_MS,
+    phones: ["Phone: Priya last chance"],
+    noTvPhones: ["Phone (no-TV): Priya last chance"],
+  },
+  resultMoment("Host: result caught got it", "got it", hostResultCaughtGotIt),
+  resultMoment("Host: result caught nope", "nope", hostResultCaughtNope),
+  resultMoment("Host: result escaped", "escaped", hostResultEscaped),
 ];

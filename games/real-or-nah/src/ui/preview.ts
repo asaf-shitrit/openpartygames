@@ -7,6 +7,7 @@ import type {
   PlayerSummary,
 } from "@opg/protocol";
 import type { Fact } from "@opg/sdk";
+import type { PreviewMoment } from "@opg/ui";
 import { RON_REVEAL, revealDurationMs } from "../reveal-plan";
 import {
   planLiesOf,
@@ -994,4 +995,37 @@ export const realOrNahPreviews: Array<{
     view: stressHostRevealOneFooler,
     room: hostRevealRoom(stressHostRevealOneFooler, STRESS_ONE_FOOLER_REVEAL, STRESS_PLAYERS),
   },
+];
+
+function revealMoment(
+  host: string,
+  chip: string,
+  reveal: RonReveal,
+  phones: readonly string[] = [],
+): PreviewMoment {
+  return {
+    host,
+    chip,
+    durationMs: revealDurationMs({ lies: planLiesOf(reveal) }),
+    phones,
+    noTvPhones: [],
+  };
+}
+
+/**
+ * The reveal previews `/dev/moments` replays. Each reveal runs as long as its own lies need;
+ * Real or Nah has no no-TV mode, so no moment has a no-TV phone.
+ */
+export const realOrNahMoments: PreviewMoment[] = [
+  revealMoment("Host: reveal, 3 foolers", "3 foolers", REVEAL, [
+    "Phone: reveal",
+    "Phone: Dov found the truth",
+    "Phone: Dov missed a round",
+    "Phone: Dov was fooled",
+    "Phone: Dov's lie fooled people",
+  ]),
+  revealMoment("Host: reveal with a house lie", "house lie", REVEAL_WITH_HOUSE_LIE),
+  revealMoment("Host: reveal, 0 foolers (duds only)", "duds only", REVEAL_ALL_DUDS),
+  revealMoment("Host: reveal, 2 foolers plus a dud", "2 foolers", REVEAL_TWO_FOOLERS),
+  revealMoment("Host: reveal after a kick", "after a kick", REVEAL_AFTER_KICK),
 ];

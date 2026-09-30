@@ -1,6 +1,8 @@
 // Sample Doodle Bluff screens for previews and UI tests, driven off a fixed server clock.
 // Shape follows games/most-likely-to/src/ui/preview.ts.
 import type { AvatarId, HostRoomView, PlayerId, PlayerRoomView, PlayerSummary } from "@opg/protocol";
+import type { PreviewMoment } from "@opg/ui";
+import { GALLERY_MS, REVEAL_MS } from "../state";
 import type { DoodleHostView, DoodlePlayerView, DoodleReveal } from "../state";
 
 const SERVER_NOW = 1735689600000;
@@ -672,5 +674,30 @@ export const doodleBluffPreviews: DoodleBluffPreview[] = [
       players: STRESS_PLAYERS,
     }),
     stage: stressHostTitle,
+  },
+];
+
+/** The reveal and gallery previews `/dev/moments` replays, each with the phones watching it. */
+export const doodleBluffMoments: PreviewMoment[] = [
+  {
+    host: "Host: reveal found",
+    chip: "found",
+    durationMs: REVEAL_MS,
+    phones: ["Phone: Maya found it", "Phone: Dov fooled nobody", "Phone: Priya artist, found"],
+    noTvPhones: ["Phone (no-TV): Maya reveal settled"],
+  },
+  {
+    host: "Host: reveal nobody found it",
+    chip: "nobody found it",
+    durationMs: REVEAL_MS,
+    phones: ["Phone: Priya artist, nobody found it"],
+    noTvPhones: [],
+  },
+  {
+    host: "Host: gallery",
+    chip: "gallery",
+    durationMs: GALLERY_MS,
+    phones: [],
+    noTvPhones: ["Phone (no-TV): gallery"],
   },
 ];
