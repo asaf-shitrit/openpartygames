@@ -13,7 +13,7 @@ export const MIN_OPTIONS = 4;
 
 export const RON_MIN_PLAYERS = 3;
 export const RON_MAX_PLAYERS = 8;
-export const RON_MINUTES = 15;
+export const RON_MINUTES = 12;
 
 export const POINTS_TRUTH = 1000;
 export const POINTS_PER_FOOL = 500;

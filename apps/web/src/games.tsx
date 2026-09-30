@@ -64,7 +64,7 @@ export const LANDING_GAMES: LandingGame[] = [
       "Write fake answers to real facts. Fool your friends, find the truth.",
     minPlayers: 3,
     maxPlayers: 8,
-    minutes: 15,
+    minutes: 12,
     icon: "cards",
     avatar: "toast",
   },

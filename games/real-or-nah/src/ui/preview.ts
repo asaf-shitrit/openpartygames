@@ -10,6 +10,7 @@ import type { Fact } from "@opg/sdk";
 import { RON_REVEAL, revealDurationMs } from "../reveal-plan";
 import {
   planLiesOf,
+  RON_MINUTES,
   type RonFooledLie,
   type RonHostOption,
   type RonHostView,
@@ -436,7 +437,7 @@ function commonRoom(
         blurb: "Write fake answers to real facts. Fool your friends.",
         minPlayers: 3,
         maxPlayers: 8,
-        minutes: 15,
+        minutes: RON_MINUTES,
         noTv: false,
         hasContentInLanguage: true,
       },

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FxPreset, FxSpec } from "./animate";
-import { fxSpec, playFx } from "./animate";
+import { SHAKE_MAX_PX, fxSpec, playFx } from "./animate";
 
 const ALL_PRESETS: FxPreset[] = [
   "slam",
@@ -59,6 +59,104 @@ function kf(preset: FxPreset, index: number): Keyframe {
 afterEach(() => {
   vi.restoreAllMocks();
   restoreAnimate();
+});
+
+/** Pixel offsets on each axis of a `translate` keyframe ("0 0", "-12px 4px"). */
+function translateOffsets(frame: Keyframe): number[] {
+  return String(frame.translate ?? "0 0")
+    .split(" ")
+    .map((part) => Math.abs(Number.parseFloat(part)));
+}
+
+function maxTranslatePx(spec: FxSpec): number {
+  return Math.max(0, ...spec.keyframes.flatMap(translateOffsets));
+}
+
+/** Monotonic opacity runs in one play-through, counting the jump back to the start on a repeat. */
+function opacityRuns(spec: FxSpec): number {
+  const values = spec.keyframes
+    .filter((frame) => frame.opacity !== undefined)
+    .map((frame) => Number(frame.opacity));
+  const iterations = spec.options.iterations ?? 1;
+  const first = values[0];
+  const looped = iterations > 1 && first !== undefined ? [...values, first] : values;
+  const signs = looped
+    .slice(1)
+    .map((value, index) => Math.sign(value - (looped[index] ?? value)))
+    .filter((sign) => sign !== 0);
+  return signs.filter((sign, index) => index === 0 || sign !== signs[index - 1]).length;
+}
+
+/**
+ * Flashes (a pair of opposing opacity changes) per second, averaged over at least one second,
+ * so a single fade out and back in is one flash however quick it is.
+ */
+function flashesPerSecond(spec: FxSpec): number {
+  const iterations = spec.options.iterations ?? 1;
+  const durationMs = Number(spec.options.duration ?? 0) * iterations;
+  const flashes = Math.floor((opacityRuns(spec) * iterations) / 2);
+  return flashes / Math.max(1, durationMs / 1000);
+}
+
+describe("fx safety limits (plan 0002 slice 6)", () => {
+  it("never shakes further than SHAKE_MAX_PX on either axis", () => {
+    expect(SHAKE_MAX_PX).toBe(12);
+    expect(maxTranslatePx(normal("shake"))).toBe(SHAKE_MAX_PX);
+    expect(maxTranslatePx(normal("shakeSmall"))).toBeLessThanOrEqual(SHAKE_MAX_PX);
+  });
+
+  it("keeps the shake frames it has always played", () => {
+    expect(normal("shake").keyframes.map((frame) => frame.translate)).toEqual([
+      "0 0",
+      "12px 0",
+      "-12px 4px",
+      "9px -3px",
+      "-6px 2px",
+      "3px -1px",
+      "0 0",
+    ]);
+    expect(normal("shakeSmall").keyframes.map((frame) => frame.translate)).toEqual([
+      "0 0",
+      "5px 0",
+      "-5px 2px",
+      "3px -1px",
+      "0 0",
+    ]);
+  });
+
+  it("measures a shake past the limit", () => {
+    const wild: FxSpec = { keyframes: [{ translate: "0 0" }, { translate: "-20px 3px" }], options: {} };
+    expect(maxTranslatePx(wild)).toBeGreaterThan(SHAKE_MAX_PX);
+  });
+
+  it("never flashes faster than 3 Hz, in normal or reduced motion", () => {
+    const rates = ALL_PRESETS.flatMap((preset) =>
+      [false, true].flatMap((reduced) => {
+        const spec = fxSpec(preset, reduced);
+        return spec === null ? [] : [{ preset, reduced, hz: flashesPerSecond(spec) }];
+      }),
+    );
+    expect(rates.length).toBeGreaterThan(ALL_PRESETS.length);
+    expect(rates.filter((rate) => rate.hz > 3)).toEqual([]);
+  });
+
+  it("counts a strobe as a flash rate over 3 Hz", () => {
+    const strobe: FxSpec = {
+      keyframes: [{ opacity: 1 }, { opacity: 0 }, { opacity: 1 }],
+      options: { duration: 200, iterations: 5 },
+    };
+    expect(flashesPerSecond(strobe)).toBe(5);
+    const blink: FxSpec = {
+      keyframes: [{ opacity: 0 }, { opacity: 1 }],
+      options: { duration: 100, iterations: 10 },
+    };
+    expect(flashesPerSecond(blink)).toBe(10);
+  });
+
+  it("counts a single fade as no flash", () => {
+    expect(flashesPerSecond(normal("fadeIn"))).toBe(0);
+    expect(opacityRuns(normal("sneakOut"))).toBe(1);
+  });
 });
 
 describe("fxSpec normal motion", () => {

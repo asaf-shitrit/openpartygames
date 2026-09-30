@@ -388,3 +388,14 @@ export function runBotPlaythrough(
   playthrough.run();
   return playthrough.result();
 }
+
+// ---------- Advertised length ----------
+
+/** How far a game's `minutes` may sit from its nominal length (plan 0002 slice 6). */
+export const MINUTES_TOLERANCE = 0.2;
+
+/** True when `minutes` is within MINUTES_TOLERANCE of `nominalMs`, the length its phase constants add up to. */
+export function minutesMatchLength(minutes: number, nominalMs: number): boolean {
+  const nominalMinutes = nominalMs / 60_000;
+  return Math.abs(minutes - nominalMinutes) <= nominalMinutes * MINUTES_TOLERANCE;
+}
