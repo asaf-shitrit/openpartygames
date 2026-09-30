@@ -1,6 +1,7 @@
 // Fixed 1920x1080 TV stage and the phone column.
 import type { CSSProperties, ReactNode } from "react";
 import { useLayoutEffect, useState } from "react";
+import { RoomCodeContext } from "./room-code";
 
 export interface StageProps {
   children: ReactNode;
@@ -61,33 +62,40 @@ export interface PhoneScreenProps {
    * genuinely a long list and means to scroll.
    */
   fit?: boolean;
+  /**
+   * The room code every PhoneStrip inside shows — set in a no-TV room (see `phoneRoomCode`), so
+   * the rejoin path is on screen at every moment. Omit on a shared screen.
+   */
+  roomCode?: string;
 }
 
 /** Max-width 480px phone column on the paper grid. */
-export function PhoneScreen({ children, style, fit = false }: PhoneScreenProps) {
+export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScreenProps) {
   return (
-    <div
-      className="opg-root opg-grid-phone"
-      style={{
-        minHeight: "100dvh",
-        height: fit ? "100dvh" : undefined,
-        // A clamped screen works by having a flexible middle that gives up space. At 200% text
-        // there comes a point where the middle has nothing left to give, and then the choice is
-        // between an action pushed off the bottom edge and a column that scrolls. Scrolling
-        // wins: the action is still reachable. At any normal size the content fits and this
-        // never engages.
-        overflowY: fit ? "auto" : undefined,
-        width: "100%",
-        maxWidth: 480,
-        margin: "0 auto",
-        padding: "20px 18px 28px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        ...style,
-      }}
-    >
-      {children}
-    </div>
+    <RoomCodeContext.Provider value={roomCode}>
+      <div
+        className="opg-root opg-grid-phone"
+        style={{
+          minHeight: "100dvh",
+          height: fit ? "100dvh" : undefined,
+          // A clamped screen works by having a flexible middle that gives up space. At 200% text
+          // there comes a point where the middle has nothing left to give, and then the choice is
+          // between an action pushed off the bottom edge and a column that scrolls. Scrolling
+          // wins: the action is still reachable. At any normal size the content fits and this
+          // never engages.
+          overflowY: fit ? "auto" : undefined,
+          width: "100%",
+          maxWidth: 480,
+          margin: "0 auto",
+          padding: "20px 18px 28px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    </RoomCodeContext.Provider>
   );
 }

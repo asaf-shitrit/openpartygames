@@ -9,6 +9,7 @@ import { Marker, PRESSABLE_CLASS } from "./primitives";
 import { useSound } from "./audio/SoundProvider";
 import type { SoundStatus } from "./audio/types";
 import { useFullscreen } from "./screen";
+import { useRoomCode } from "./room-code";
 
 function RoomChip({
   code,
@@ -254,13 +255,16 @@ export interface PhoneStripProps {
   /**
    * Shown as a small "Room CODE" line when set — a no-TV room's rejoin path, so anyone can read
    * the code out to a player whose phone died without pausing the game. Omit on a shared screen.
+   * Falls back to the code the surrounding PhoneScreen was given.
    */
   roomCode?: string;
 }
 
 /** Phone in-game top strip: game name, progress, an optional room code, and the timer. */
-export function PhoneStrip({ gameName, progress, right, roomCode }: PhoneStripProps) {
+export function PhoneStrip({ gameName, progress, right, roomCode: ownCode }: PhoneStripProps) {
   const { t } = useLocale();
+  const screenCode = useRoomCode();
+  const roomCode = ownCode ?? screenCode;
   return (
     <div
       style={{

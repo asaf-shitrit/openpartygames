@@ -9,6 +9,7 @@ import type {
   ImposterHostView,
   ImposterPlayerView,
 } from "../state";
+import { imposterPhaseSchema } from "../state";
 import { Phone } from "./Phone";
 import { imposterPreviews } from "./preview";
 
@@ -513,6 +514,30 @@ describe("Phone in Hebrew", () => {
       expect(screen.getByText("החזיקו כדי להציץ")).toBeTruthy();
     } finally {
       window.localStorage.removeItem("opg:locale");
+    }
+  });
+});
+
+describe("room code in the strip", () => {
+  function noTvPhases(): Set<string> {
+    const phases = new Set<string>();
+    for (const { label, view } of phonePreviews()) {
+      if (!playerSample(label).room.sharedScreen) phases.add(view.phase);
+    }
+    return phases;
+  }
+
+  it("has a no-TV preview for every phase", () => {
+    expect(noTvPhases()).toEqual(new Set(imposterPhaseSchema.options));
+  });
+
+  it("shows the room code in a no-TV room and hides it on a shared screen, in every phase", () => {
+    for (const { label } of phonePreviews()) {
+      const { room } = playerSample(label);
+      renderPhone(label, mockSend());
+      const shown = screen.queryByText(`Room ${room.code}`) !== null;
+      expect({ label, shown }).toEqual({ label, shown: !room.sharedScreen });
+      cleanup();
     }
   });
 });

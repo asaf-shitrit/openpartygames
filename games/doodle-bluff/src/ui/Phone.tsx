@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import type { PlayerRoomView } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
-import { Icon, Marker, PhaseEnter, PhoneScreen, PhoneStrip, Timer } from "@opg/ui";
+import { Icon, Marker, PhaseEnter, PhoneScreen, phoneRoomCode, PhoneStrip, Timer } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { DoodleAction, DoodleHostView, DoodlePhase, DoodlePlayerView } from "../state";
@@ -98,7 +98,7 @@ function Strip({ view, deadline, timerStartedAt, clock }: Omit<PhoneProps, "room
 
 export function Phone(props: PhoneProps) {
   return (
-    <PhoneScreen>
+    <PhoneScreen roomCode={phoneRoomCode(props.room)}>
       <Strip view={props.view} deadline={props.deadline} timerStartedAt={props.timerStartedAt} clock={props.clock} />
       <PhaseEnter phaseKey={`${props.view.roundNumber}:${props.view.phase}`}>{renderPhase(props)}</PhaseEnter>
     </PhoneScreen>

@@ -5,7 +5,9 @@ import type { PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodleHostView, DoodlePlayerView } from "../state";
+import { doodlePhaseSchema } from "../state";
 import { Phone } from "./Phone";
+import { doodleBluffPreviews } from "./preview";
 
 afterEach(() => {
   cleanup();
@@ -168,5 +170,38 @@ describe("Phone", () => {
   it("shows no stage in a room with a shared screen", () => {
     renderPhone(playerView({ phase: "vote" }));
     expect(screen.queryByText("The room is voting")).toBeNull();
+  });
+});
+
+function isPlayerView(view: DoodleHostView | DoodlePlayerView): view is DoodlePlayerView {
+  return "myVote" in view;
+}
+
+function phonePreviews() {
+  const previews: Array<{ label: string; view: DoodlePlayerView; room: PlayerRoomView; stage: DoodleHostView | null }> = [];
+  for (const preview of doodleBluffPreviews) {
+    if (preview.room.role !== "player" || !isPlayerView(preview.view)) continue;
+    previews.push({ label: preview.label, view: preview.view, room: preview.room, stage: preview.stage ?? null });
+  }
+  return previews;
+}
+
+describe("room code in the strip", () => {
+  it("has a no-TV preview for every phase", () => {
+    const phases = new Set(phonePreviews().filter((preview) => !preview.room.sharedScreen).map((preview) => preview.view.phase));
+    expect(phases).toEqual(new Set(doodlePhaseSchema.options));
+  });
+
+  it("shows the room code in a no-TV room and hides it on a shared screen, in every phase", () => {
+    for (const { label, view, room: previewRoom, stage } of phonePreviews()) {
+      render(
+        <LocaleProvider>
+          <Phone view={view} room={previewRoom} deadline={previewRoom.game?.deadline ?? null} timerStartedAt={previewRoom.game?.timerStartedAt ?? null} clock={{ now: () => previewRoom.serverNow }} send={vi.fn<(action: DoodleAction) => void>()} stage={stage} />
+        </LocaleProvider>,
+      );
+      const shown = screen.queryByText(`Room ${previewRoom.code}`) !== null;
+      expect({ label, shown }).toEqual({ label, shown: !previewRoom.sharedScreen });
+      cleanup();
+    }
   });
 });

@@ -50,6 +50,16 @@ test("three phones play a full round of Most Likely To with no TV page open", as
   const vip = await findVip(phones);
   await startGame(vip.page, "Most Likely To");
 
+  // The rejoin path: every phone carries the room code in-game, not just in the lobby.
+  await Promise.all(
+    phones.map(async (phone) => {
+      await expect(
+        phone.page.getByRole("button", { name: /Lock in vote/ }),
+      ).toBeVisible({ timeout: 45_000 });
+      await expect(phone.page.getByText(`Room ${code}`)).toBeVisible();
+    }),
+  );
+
   await playOneRoundNoTv(phones);
   await expectNextRoundReady(phones[0] ?? starter);
 

@@ -2,6 +2,7 @@
 export { Stage, PhoneScreen } from "./layout";
 export { SR_ONLY } from "./sr-only";
 export type { StageProps, PhoneScreenProps } from "./layout";
+export { phoneRoomCode } from "./room-code";
 
 export {
   Card,

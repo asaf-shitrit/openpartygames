@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ServerClock } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
 import type { MltAction, MltHostView, MltPlayerView } from "../state";
+import { mltPhaseSchema } from "../state";
 import { Phone } from "./Phone";
 import { mostLikelyToPreviews } from "./preview";
 
@@ -338,5 +339,34 @@ describe("no-TV stage", () => {
   it("renders no stage region in a shared-screen room", () => {
     renderPhone("Phone: Dov vote selecting", mockSend());
     expect(screen.queryByText(/Voted so far/)).toBeNull();
+  });
+});
+
+describe("room code in the strip", () => {
+  function phonePreviews() {
+    return mostLikelyToPreviews.filter(
+      (preview) => preview.surface === "phone" && isPlayerView(preview.view),
+    );
+  }
+
+  it("has a no-TV preview for every phase", () => {
+    const phases = new Set(
+      phonePreviews()
+        .filter((preview) => !preview.room.sharedScreen)
+        .map((preview) => preview.view.phase),
+    );
+    expect(phases).toEqual(new Set(mltPhaseSchema.options));
+  });
+
+  it("shows the room code in a no-TV room and hides it on a shared screen, in every phase", () => {
+    for (const preview of phonePreviews()) {
+      renderPhone(preview.label, mockSend(), preview.stage ?? null);
+      const shown = screen.queryByText(`Room ${preview.room.code}`) !== null;
+      expect({ label: preview.label, shown }).toEqual({
+        label: preview.label,
+        shown: !preview.room.sharedScreen,
+      });
+      cleanup();
+    }
   });
 });

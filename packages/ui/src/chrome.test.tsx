@@ -10,6 +10,8 @@ import type { ReactElement } from "react";
 import userEvent from "@testing-library/user-event";
 import { LocaleProvider } from "@opg/i18n";
 import { HeaderChip, PhoneStrip, PlayerChip, TvHeader } from "./chrome";
+import { PhoneScreen } from "./layout";
+import { phoneRoomCode } from "./room-code";
 import { SoundProvider } from "./audio/SoundProvider";
 import { FakeSoundEngine } from "./fixtures/audio";
 
@@ -261,6 +263,35 @@ describe("PhoneStrip", () => {
   it("omits the room code line on a shared screen", () => {
     renderChrome(<PhoneStrip gameName="Quip Clash" />);
     expect(screen.queryByText(/^Room /)).toBeNull();
+  });
+
+  it("shows the code the surrounding PhoneScreen was given", () => {
+    renderChrome(
+      <PhoneScreen roomCode="BKTZ">
+        <PhoneStrip gameName="Quip Clash" />
+      </PhoneScreen>,
+    );
+    expect(screen.getByText("Room BKTZ")).toBeTruthy();
+  });
+
+  it("prefers its own code over the screen's", () => {
+    renderChrome(
+      <PhoneScreen roomCode="BKTZ">
+        <PhoneStrip gameName="Quip Clash" roomCode="MNPQ" />
+      </PhoneScreen>,
+    );
+    expect(screen.getByText("Room MNPQ")).toBeTruthy();
+    expect(screen.queryByText("Room BKTZ")).toBeNull();
+  });
+});
+
+describe("phoneRoomCode", () => {
+  it("is the room's code in a no-TV room", () => {
+    expect(phoneRoomCode({ code: "BKTZ", sharedScreen: false })).toBe("BKTZ");
+  });
+
+  it("is nothing on a shared screen", () => {
+    expect(phoneRoomCode({ code: "BKTZ", sharedScreen: true })).toBeUndefined();
   });
 });
 

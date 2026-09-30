@@ -8,6 +8,7 @@ import {
   Highlight,
   Marker,
   PhoneScreen,
+  phoneRoomCode,
   PhoneStrip,
   StickyNote,
 } from "@opg/ui";
@@ -206,7 +207,7 @@ export function PhoneWaiting({ view }: { view: PlayerRoomView }) {
       <PhoneStrip
         gameName={waitingGameName(view, t)}
         progress={t.status.inProgress}
-        roomCode={view.sharedScreen ? undefined : view.code}
+        roomCode={phoneRoomCode(view)}
       />
 
       <WaitingHeader name={meName(me, t)} avatar={meAvatar(me)} t={t} />
