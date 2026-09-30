@@ -2,7 +2,12 @@
 // phones do: they read their own playerView and send actions, never poking at state.
 // The clock is fake — it only moves when every bot is waiting, to the next deadline.
 
-import type { GameResultSummary, PlayerId, ServerMessage } from "@opg/protocol";
+import type {
+  ActiveGameView,
+  GameResultSummary,
+  PlayerId,
+  ServerMessage,
+} from "@opg/protocol";
 import { mergeContent } from "./content";
 import { createRng } from "./rng";
 import { createRoom } from "./room";
@@ -98,6 +103,7 @@ function liveScores(
 
 interface BotSession {
   room: RoomCore;
+  sharedScreen: boolean;
   playerIds: PlayerId[];
   tokens: Map<PlayerId, string>;
   log: string[];
@@ -177,12 +183,31 @@ function openBotSession(options: PlaythroughOptions): BotSession {
   }
   room.beginGame(options.content, 0);
   log.push(`started ${options.game.id} with ${options.players} players`);
-  return { room, playerIds, tokens, log };
+  return { room, sharedScreen, playerIds, tokens, log };
+}
+
+/**
+ * The stage a player reads must be the host view, byte for byte, in a no-TV room, and
+ * absent in a shared-screen room (plan/0004-no-tv-mode.md §4). Checked on every view a bot
+ * reads, so every phase a playthrough reaches is covered for every game that runs one.
+ */
+function checkStage(
+  room: RoomCore,
+  sharedScreen: boolean,
+  game: ActiveGameView,
+  clock: number,
+): void {
+  const expected = sharedScreen ? null : (room.hostView(clock).game?.view ?? null);
+  if (JSON.stringify(game.stage) === JSON.stringify(expected)) return;
+  throw new Error(
+    `stage is not the host view (sharedScreen=${sharedScreen}): ${JSON.stringify(game.stage)}`,
+  );
 }
 
 /** One bot playthrough: drives turns, rejoin, deadlines and the step budget. */
 class BotPlaythrough {
   private readonly room: RoomCore;
+  private readonly sharedScreen: boolean;
   private readonly game: AnyGame;
   private readonly playerIds: PlayerId[];
   private readonly tokens: Map<PlayerId, string>;
@@ -204,6 +229,7 @@ class BotPlaythrough {
 
   constructor(options: PlaythroughOptions, session: BotSession) {
     this.room = session.room;
+    this.sharedScreen = session.sharedScreen;
     this.playerIds = session.playerIds;
     this.tokens = session.tokens;
     this.log = session.log;
@@ -281,6 +307,7 @@ class BotPlaythrough {
       if (pid === undefined || pid === this.detachedId) continue;
       const view = this.room.playerView(pid, this.clock);
       if (!view.game) continue;
+      checkStage(this.room, this.sharedScreen, view.game, this.clock);
       const action = this.game.bot(view.game.view, this.botRng);
       if (action === null || action === undefined) continue;
       const res = this.room.handle(
