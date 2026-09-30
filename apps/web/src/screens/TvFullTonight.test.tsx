@@ -30,6 +30,16 @@ describe("TvFullTonight", () => {
     expect(screen.getByText("Rooms already playing keep going.")).toBeTruthy();
   });
 
+  it("links to the README's self-hosting section", () => {
+    setup();
+    const link = screen.getByRole("link", {
+      name: "github.com/asaf-shitrit/openpartygames",
+    });
+    expect(link.getAttribute("href")).toBe(
+      "https://github.com/asaf-shitrit/openpartygames#self-host-on-cloudflare",
+    );
+  });
+
   it("renders in Hebrew", () => {
     window.localStorage.setItem("opg:locale", "he");
     setup();
