@@ -18,6 +18,7 @@ import { picker } from "./he/picker";
 import { landing } from "./he/landing";
 import { status } from "./he/status";
 import { kit } from "./he/kit";
+import { privacy } from "./he/privacy";
 
 export const he: Dictionary = {
   common,
@@ -33,4 +34,5 @@ export const he: Dictionary = {
   landing,
   status,
   kit,
+  privacy,
 };
