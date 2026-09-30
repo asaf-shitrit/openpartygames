@@ -1,0 +1,36 @@
+name: Add superlatives
+description: Submit prompts for a Most Likely To pack
+title: "[Superlatives] "
+labels: ["pack-submission", "superlatives"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prompts for Most Likely To. Each line finishes "Who's most likely to …?", so write only the ending: start lowercase, at most 80 characters, and leave off the question mark. Don't start with "most likely", "who" or "to". Keep it playful — habits, quirks, harmless hypotheticals — and fine for a classroom.
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Pack
+      description: Which pack should these prompts go into?
+      options:
+        - most-likely-everyday
+        - most-likely-friends
+    validations:
+      required: true
+  - type: textarea
+    id: prompts
+    attributes:
+      label: Prompts
+      description: One prompt per line.
+      placeholder: |
+        befriend a pigeon
+        forget where they parked
+    validations:
+      required: true
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: These prompts are my own original content, and I release them under CC0 1.0.
+          required: true

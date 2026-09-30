@@ -1,0 +1,46 @@
+name: Add a drawing prompt
+description: Submit a drawing prompt for a Doodle Bluff pack
+title: "[Drawing prompt] "
+labels: ["pack-submission", "drawing-prompts"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A drawing prompt for Doodle Bluff, plus at least four believable fake titles the game can mix in with the players' guesses. The prompt has to be drawable without writing words: start lowercase, at most 60 characters, no ending punctuation.
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Pack
+      description: Which pack should this prompt go into?
+      options:
+        - doodle-everyday
+        - doodle-absurd
+    validations:
+      required: true
+  - type: input
+    id: prompt
+    attributes:
+      label: Prompt
+      description: Something to draw, at most 60 characters.
+      placeholder: a penguin at a bus stop
+    validations:
+      required: true
+  - type: textarea
+    id: house-titles
+    attributes:
+      label: House titles
+      description: At least four fake titles, one per line. Each at most 60 characters, and none the same as the prompt or each other.
+      placeholder: |
+        a puffin waiting for a train
+        an owl at a taxi rank
+        a seal queueing for ice cream
+        a goose at the post office
+    validations:
+      required: true
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: This prompt and its titles are my own original content, and I release them under CC0 1.0.
+          required: true

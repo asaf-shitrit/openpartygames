@@ -7,6 +7,7 @@ import {
   headingKey,
   parseIssueBody,
 } from "./pack-submission.mjs";
+import { validatePack } from "./pack-rules.mjs";
 
 const WORD_PACK = {
   id: "animals",
@@ -62,7 +63,89 @@ const factsBody = [
   "",
 ].join("\n");
 
+const SUPERLATIVE_PACK = {
+  id: "most-likely-everyday",
+  name: "Everyday",
+  kind: "superlatives",
+  rating: "family",
+  language: "en",
+  license: "CC0-1.0",
+  attribution: "Fixture.",
+  items: [{ id: "befriend-a-pigeon", prompt: "befriend a pigeon" }],
+};
+
+const DRAWING_PACK = {
+  id: "doodle-everyday",
+  name: "Everyday",
+  kind: "drawing-prompts",
+  rating: "family",
+  language: "en",
+  license: "CC0-1.0",
+  attribution: "Fixture.",
+  items: [
+    {
+      id: "cat-riding-a-skateboard",
+      prompt: "a cat riding a skateboard",
+      houseTitles: [
+        "a dog on a scooter",
+        "a squirrel driving a bus",
+        "a hamster in a shopping trolley",
+        "a duck on a unicycle",
+      ],
+    },
+  ],
+};
+
+const superlativesBody = [
+  "### Pack",
+  "",
+  "most-likely-everyday",
+  "",
+  "### Prompts",
+  "",
+  "name their car",
+  "",
+  "befriend a pigeon at the beach",
+  "",
+  "### License",
+  "",
+  "- [x] These prompts are my own original content, and I release them under CC0 1.0.",
+  "",
+].join("\n");
+
+const drawingPromptsBody = [
+  "### Pack",
+  "",
+  "doodle-everyday",
+  "",
+  "### Prompt",
+  "",
+  "a penguin at a bus stop",
+  "",
+  "### House titles",
+  "",
+  "a puffin waiting for a train",
+  "an owl at a taxi rank",
+  "",
+  "a seal queueing for ice cream",
+  "a goose at the post office",
+  "",
+  "### License",
+  "",
+  "- [x] This prompt and its titles are my own original content, and I release them under CC0 1.0.",
+  "",
+].join("\n");
+
 let rootDir: string;
+
+function writePack(folder: string, pack: { id: string }) {
+  fs.mkdirSync(path.join(rootDir, "packs", folder), { recursive: true });
+  fs.writeFileSync(
+    path.join(rootDir, "packs", folder, `${pack.id}.json`),
+    `${JSON.stringify(pack, null, 2)}\n`,
+    "utf8",
+  );
+}
 
 function readPack(folder: string, filename: string) {
   return JSON.parse(
@@ -79,6 +162,8 @@ beforeEach(() => {
     `${JSON.stringify(WORD_PACK, null, 2)}\n`,
     "utf8",
   );
+  writePack("most-likely-to", SUPERLATIVE_PACK);
+  writePack("doodle-bluff", DRAWING_PACK);
 });
 
 afterEach(() => {
@@ -185,5 +270,103 @@ describe("applySubmission", () => {
     expect(() =>
       applySubmission({ body: wordPairsBody, label: "nope", rootDir }),
     ).toThrow(/Unknown label/u);
+  });
+
+  it("appends superlatives to the chosen pack, one per line, with unique ids", () => {
+    const changed = applySubmission({
+      body: superlativesBody,
+      label: "superlatives",
+      rootDir,
+    });
+    expect(changed).toBe("packs/most-likely-to/most-likely-everyday.json");
+    expect(validatePack(readPack("most-likely-to", "most-likely-everyday.json"), {
+      folder: "most-likely-to",
+      filename: "most-likely-everyday.json",
+    })).toEqual([]);
+    expect(readPack("most-likely-to", "most-likely-everyday.json").items).toEqual([
+      { id: "befriend-a-pigeon", prompt: "befriend a pigeon" },
+      { id: "name-their-car", prompt: "name their car" },
+      {
+        id: "befriend-a-pigeon-at-the-beach",
+        prompt: "befriend a pigeon at the beach",
+      },
+    ]);
+  });
+
+  it("rejects a superlative the pack rules forbid and leaves the pack untouched", () => {
+    const badBody = superlativesBody.replace("name their car", "Who names their car?");
+    expect(() =>
+      applySubmission({ body: badBody, label: "superlatives", rootDir }),
+    ).toThrow(/must not start with an uppercase letter/u);
+    expect(readPack("most-likely-to", "most-likely-everyday.json").items).toHaveLength(1);
+  });
+
+  it("rejects a superlatives submission with no prompts", () => {
+    const emptyBody = superlativesBody
+      .replace("name their car", "")
+      .replace("befriend a pigeon at the beach", "");
+    expect(() =>
+      applySubmission({ body: emptyBody, label: "superlatives", rootDir }),
+    ).toThrow(/no prompts found/u);
+  });
+
+  it("appends a drawing prompt with its house titles to the chosen pack", () => {
+    const changed = applySubmission({
+      body: drawingPromptsBody,
+      label: "drawing-prompts",
+      rootDir,
+    });
+    expect(changed).toBe("packs/doodle-bluff/doodle-everyday.json");
+    const pack = readPack("doodle-bluff", "doodle-everyday.json");
+    expect(
+      validatePack(pack, { folder: "doodle-bluff", filename: "doodle-everyday.json" }),
+    ).toEqual([]);
+    expect(pack.items).toHaveLength(2);
+    expect(pack.items[1]).toEqual({
+      id: "penguin-at-a-bus-stop",
+      prompt: "a penguin at a bus stop",
+      houseTitles: [
+        "a puffin waiting for a train",
+        "an owl at a taxi rank",
+        "a seal queueing for ice cream",
+        "a goose at the post office",
+      ],
+    });
+  });
+
+  it("gives a drawing prompt a fresh id when its slug is already taken", () => {
+    const body = drawingPromptsBody.replace(
+      "a penguin at a bus stop",
+      "the cat riding a skateboard",
+    );
+    applySubmission({ body, label: "drawing-prompts", rootDir });
+    const ids = readPack("doodle-bluff", "doodle-everyday.json").items.map(
+      (item: { id: string }) => item.id,
+    );
+    expect(ids).toEqual(["cat-riding-a-skateboard", "cat-riding-a-skateboard-2"]);
+  });
+
+  it("rejects a drawing prompt with fewer than four house titles", () => {
+    const badBody = drawingPromptsBody
+      .replace("a seal queueing for ice cream\n", "")
+      .replace("a goose at the post office\n", "");
+    expect(() =>
+      applySubmission({ body: badBody, label: "drawing-prompts", rootDir }),
+    ).toThrow(/at least 4 entries/u);
+    expect(readPack("doodle-bluff", "doodle-everyday.json").items).toHaveLength(1);
+  });
+
+  it("rejects a drawing prompt with no prompt text", () => {
+    const badBody = drawingPromptsBody.replace("a penguin at a bus stop", "");
+    expect(() =>
+      applySubmission({ body: badBody, label: "drawing-prompts", rootDir }),
+    ).toThrow(/prompt is required/u);
+  });
+
+  it("rejects a pack that is not in the submission's folder", () => {
+    const badBody = superlativesBody.replace("most-likely-everyday", "animals");
+    expect(() =>
+      applySubmission({ body: badBody, label: "superlatives", rootDir }),
+    ).toThrow(/"animals" is not a known pack \(most-likely-everyday\)/u);
   });
 });

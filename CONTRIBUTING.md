@@ -6,7 +6,7 @@ By contributing you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Ways to contribute
 
-- **Content packs.** Add word pairs or facts without touching git. Open the "Add word pairs" or "Add facts" issue form; an Action validates the submission and opens a pull request. You can also edit `packs/` and open a PR yourself.
+- **Content packs.** Add word pairs, facts, superlatives or drawing prompts without touching git. Open the "Add word pairs", "Add facts", "Add superlatives" or "Add a drawing prompt" issue form; an Action validates the submission and opens a pull request. You can also edit `packs/` and open a PR yourself.
 - **New games.** A game is a workspace package under `games/<id>/` built on the Game SDK. Read the SDK section below and mirror an MVP game.
 - **Bugs and ideas.** Open a GitHub issue. For a new game idea, include a working name, one paragraph of rules, player count, the SDK capabilities it needs, and where its content comes from. See [ROADMAP.md](ROADMAP.md).
 
@@ -41,8 +41,8 @@ Packs are JSON files under `packs/`. The rules live in `scripts/pack-rules.mjs`;
 
 - `packs/imposter/*.json` holds word-pair packs (`kind: "word-pairs"`).
 - `packs/real-or-nah/*.json` holds fact packs (`kind: "facts"`).
-- `packs/most-likely-to/*.json` holds superlative prompt packs (`kind: "superlatives"`). There is no issue form for these yet, so send new prompts as a pull request.
-- `packs/doodle-bluff/*.json` holds drawing-prompt packs (`kind: "drawing-prompts"`). There is no issue form for these yet, so send new prompts as a pull request.
+- `packs/most-likely-to/*.json` holds superlative prompt packs (`kind: "superlatives"`).
+- `packs/doodle-bluff/*.json` holds drawing-prompt packs (`kind: "drawing-prompts"`).
 
 Every pack declares:
 
