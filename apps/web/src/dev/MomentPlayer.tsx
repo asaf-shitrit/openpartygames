@@ -1,59 +1,51 @@
-// /dev/moments — replay the Imposter reveal, last-chance and result previews on a
+// /dev/moments — replay each game's reveal, last-chance, result and gallery previews on a
 // scrubbable fake clock. Dev-only.
+//
+// A game opts in by exporting a `PreviewMoment` list from its `preview.ts`, naming previews by
+// label; the player renders them through the same registry the rooms use.
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { HostRoomView, PlayerRoomView } from "@opg/protocol";
 import { Button, Chip, Marker, TvHeader } from "@opg/ui";
-import type { ServerClock } from "@opg/ui";
-import { LAST_CHANCE_MS, REVEAL_MS, resultDurationMs } from "@opg/game-imposter";
-import type {
-  ImposterAction,
-  ImposterHostView,
-  ImposterPlayerView,
-} from "@opg/game-imposter";
-import { imposterUi } from "@opg/game-imposter/ui";
-import { imposterPreviews } from "@opg/game-imposter/preview";
+import type { PreviewMoment, ServerClock } from "@opg/ui";
+import { doodleBluffMoments, doodleBluffPreviews } from "@opg/game-doodle-bluff/preview";
+import { imposterMoments, imposterPreviews } from "@opg/game-imposter/preview";
+import {
+  mostLikelyToMoments,
+  mostLikelyToPreviews,
+} from "@opg/game-most-likely-to/preview";
+import { realOrNahMoments, realOrNahPreviews } from "@opg/game-real-or-nah/preview";
+import { gameUiFor } from "../games";
 import { TvPage } from "../screens/shared";
+import { casesFor } from "./screens";
+import type { HostCase, PhoneCase, PreviewEntry, ScreenCase } from "./screens";
 
-/** A preview as exported by a game package: the surface tag ties the two unions together. */
-export interface PreviewInput {
-  label: string;
-  surface: "host" | "phone";
-  view: ImposterHostView | ImposterPlayerView;
-  room: HostRoomView | PlayerRoomView;
+/** One game's previews and the moments it builds from them. */
+export interface MomentSource {
+  gameId: string;
+  previews: readonly PreviewEntry[];
+  moments: readonly PreviewMoment[];
 }
 
-export interface HostPreview {
-  label: string;
-  surface: "host";
-  view: ImposterHostView;
-  room: HostRoomView;
-}
-
-export interface PhonePreview {
-  label: string;
-  surface: "phone";
-  view: ImposterPlayerView;
-  room: PlayerRoomView;
-}
-
-export type PreviewFixture = HostPreview | PhonePreview;
-
-export type MomentKind = "reveal" | "last-chance" | "result";
+export const MOMENT_SOURCES: readonly MomentSource[] = [
+  { gameId: "imposter", previews: imposterPreviews, moments: imposterMoments },
+  { gameId: "real-or-nah", previews: realOrNahPreviews, moments: realOrNahMoments },
+  { gameId: "most-likely-to", previews: mostLikelyToPreviews, moments: mostLikelyToMoments },
+  { gameId: "doodle-bluff", previews: doodleBluffPreviews, moments: doodleBluffMoments },
+];
 
 export interface DevMoment {
-  /** Stable id, the fixture label. */
+  /** Stable id: the game and the host preview's label. */
   id: string;
+  gameId: string;
   /** Short chip copy: "caught", "wrong", "typing", "got it"… */
   chip: string;
-  fixture: HostPreview;
-  kind: MomentKind;
+  host: HostCase;
+  phones: PhoneCase[];
+  noTvPhones: PhoneCase[];
   /** This moment's own phase length, in ms. */
   durationMs: number;
 }
 
-const REVEAL_PHONE_PREFIX = "phone:";
-const NO_TV_PHONE_PREFIX = "phone (no-tv):";
 const TV_WIDTH = 1920;
 const TV_HEIGHT = 1080;
 const TV_SCALE = 0.5;
@@ -62,146 +54,58 @@ const PHONE_HEIGHT = 844;
 const PHONE_SCALE = 0.45;
 const TICK_MS = 100;
 
-/** The moments offered in the picker, in display order. */
-const MOMENT_DEFS: Array<{ label: string; chip: string; kind: MomentKind }> =
-  [
-    { label: "Host: reveal", chip: "caught", kind: "reveal" },
-    { label: "Host: reveal wrong", chip: "wrong", kind: "reveal" },
-    { label: "Host: reveal tie", chip: "tie", kind: "reveal" },
-    { label: "Host: reveal no votes", chip: "no votes", kind: "reveal" },
-    {
-      label: "Host: last chance typing",
-      chip: "typing",
-      kind: "last-chance",
-    },
-    {
-      label: "Host: result caught got it",
-      chip: "got it",
-      kind: "result",
-    },
-    { label: "Host: result caught nope", chip: "nope", kind: "result" },
-    { label: "Host: result escaped", chip: "escaped", kind: "result" },
-  ];
-
-/** Imposter host views carry `votedIds`; player views do not. */
-function isHostView(
-  view: ImposterHostView | ImposterPlayerView,
-): view is ImposterHostView {
-  return "votedIds" in view;
+function hostCaseOf(cases: ReadonlyMap<string, ScreenCase>, label: string): HostCase | null {
+  const found = cases.get(label);
+  return found?.kind === "game" && found.surface === "host" ? found : null;
 }
 
-/** A host fixture, or null when the preview is not a host preview. */
-function hostFixtureOf(preview: PreviewInput): HostPreview | null {
-  if (preview.surface !== "host") return null;
-  if (preview.room.role !== "host") return null;
-  if (!isHostView(preview.view)) return null;
-  return {
-    label: preview.label,
-    surface: "host",
-    view: preview.view,
-    room: preview.room,
-  };
+function isPhoneCase(found: ScreenCase | undefined): found is PhoneCase {
+  return found?.kind === "game" && found.surface === "phone";
 }
 
-/** A phone fixture, or null when the preview is not a phone preview. */
-function phoneFixtureOf(preview: PreviewInput): PhonePreview | null {
-  if (preview.surface !== "phone") return null;
-  if (preview.room.role !== "player") return null;
-  if (isHostView(preview.view)) return null;
-  return {
-    label: preview.label,
-    surface: "phone",
-    view: preview.view,
-    room: preview.room,
-  };
+function phoneCasesOf(cases: ReadonlyMap<string, ScreenCase>, labels: readonly string[]): PhoneCase[] {
+  return labels.map((label) => cases.get(label)).filter(isPhoneCase);
 }
 
-/** Narrows each loose preview into a surface-tagged fixture, dropping mismatched entries. */
-export function toPreviewFixtures(
-  previews: readonly PreviewInput[],
-): PreviewFixture[] {
-  const fixtures: PreviewFixture[] = [];
-  for (const preview of previews) {
-    const fixture = hostFixtureOf(preview) ?? phoneFixtureOf(preview);
-    if (fixture !== null) fixtures.push(fixture);
-  }
-  return fixtures;
-}
-
-/** This moment kind's own phase length, from the fixture's view. */
-function durationFor(kind: MomentKind, view: ImposterHostView): number {
-  if (kind === "reveal") return REVEAL_MS;
-  if (kind === "last-chance") return LAST_CHANCE_MS;
-  return resultDurationMs(view.caught);
-}
-
-/** One DevMoment per entry in MOMENT_DEFS whose fixture exists, in that order. */
-export function devMoments(fixtures: readonly PreviewFixture[]): DevMoment[] {
-  const hosts = new Map(
-    fixtures
-      .filter((fixture): fixture is HostPreview => fixture.surface === "host")
-      .map((fixture) => [fixture.label, fixture]),
+/** One DevMoment per moment whose host preview exists, in the game's order. */
+export function devMomentsFor(source: MomentSource): DevMoment[] {
+  const cases = new Map(
+    casesFor(source.gameId, source.previews).map((found) => [found.label, found]),
   );
   const moments: DevMoment[] = [];
-  for (const def of MOMENT_DEFS) {
-    const fixture = hosts.get(def.label);
-    if (fixture === undefined) continue;
+  for (const moment of source.moments) {
+    const host = hostCaseOf(cases, moment.host);
+    if (host === null) continue;
     moments.push({
-      id: fixture.label,
-      chip: def.chip,
-      fixture,
-      kind: def.kind,
-      durationMs: durationFor(def.kind, fixture.view),
+      id: `${source.gameId}/${moment.host}`,
+      gameId: source.gameId,
+      chip: moment.chip,
+      host,
+      phones: phoneCasesOf(cases, moment.phones),
+      noTvPhones: phoneCasesOf(cases, moment.noTvPhones),
+      durationMs: moment.durationMs,
     });
   }
   return moments;
 }
 
-/** The label substring that ties a phone fixture to a moment kind. */
-function phoneKeyword(kind: MomentKind): string {
-  if (kind === "reveal") return "reveal";
-  if (kind === "last-chance") return "last chance";
-  return "result";
+/** Every game's moments, game by game. */
+export function devMoments(sources: readonly MomentSource[] = MOMENT_SOURCES): DevMoment[] {
+  return sources.flatMap(devMomentsFor);
 }
 
-function isPhoneFor(fixture: PreviewFixture, kind: MomentKind): fixture is PhonePreview {
-  if (fixture.surface !== "phone") return false;
-  const label = fixture.label.toLowerCase();
-  return (
-    label.startsWith(REVEAL_PHONE_PREFIX) && label.includes(phoneKeyword(kind))
-  );
-}
-
-/** The phone fixtures shown beside the TV for this moment kind. */
-export function phoneFixturesFor(
-  kind: MomentKind,
-  fixtures: readonly PreviewFixture[],
-): PhonePreview[] {
-  return fixtures.filter((fixture): fixture is PhonePreview =>
-    isPhoneFor(fixture, kind),
-  );
-}
-
-function isNoTvFor(fixture: PreviewFixture, kind: MomentKind): fixture is PhonePreview {
-  if (fixture.surface !== "phone") return false;
-  const label = fixture.label.toLowerCase();
-  return label.startsWith(NO_TV_PHONE_PREFIX) && label.includes(phoneKeyword(kind));
-}
-
-/** The no-TV phone fixtures for this moment kind: `preview.ts`'s "Phone (no-TV): …" entries,
- * each carrying the same stage the phone would receive from a real no-TV room. */
-export function noTvFixturesFor(
-  kind: MomentKind,
-  fixtures: readonly PreviewFixture[],
-): PhonePreview[] {
-  return fixtures.filter((fixture): fixture is PhonePreview =>
-    isNoTvFor(fixture, kind),
-  );
+/** The games with at least one moment, in first-seen order. */
+export function momentGameIds(moments: readonly DevMoment[]): string[] {
+  return [...new Set(moments.map((moment) => moment.gameId))];
 }
 
 /** The moment's clock anchor: `timerStartedAt`, or the fixture's server clock. */
-export function anchorFor(fixture: PreviewFixture): number {
+export function anchorFor(fixture: HostCase | PhoneCase): number {
   return fixture.room.game?.timerStartedAt ?? fixture.room.serverNow;
+}
+
+function deadlineOf(fixture: HostCase | PhoneCase): number | null {
+  return fixture.room.game?.deadline ?? null;
 }
 
 /** Elapsed ms, advanced from `playStartedAt` while playing and clamped to 0..durationMs. */
@@ -225,145 +129,118 @@ function ignoreAction(): void {
   /* no server behind the preview */
 }
 
-function TvPreview({
-  fixture,
-  elapsedMs,
-  mountKey,
-}: {
-  fixture: HostPreview;
-  elapsedMs: number;
-  mountKey: string;
-}) {
-  const Host = imposterUi.Host;
-  const clock: ServerClock = { now: () => anchorFor(fixture) + elapsedMs };
+function Missing({ gameId }: { gameId: string }) {
+  return <div style={{ fontSize: 24 }}>No UI registered for {gameId}</div>;
+}
+
+interface FrameProps {
+  /** Which column the frame sits in; tests count frames by it. */
+  surface: "tv" | "phone" | "no-tv";
+  width: number;
+  height: number;
+  scale: number;
+  radius: number;
+  border: string;
+  gridClass: string;
+  children: ReactNode;
+}
+
+/** A surface drawn at its real size and scaled down into the column. */
+function Frame({ surface, width, height, scale, radius, border, gridClass, children }: FrameProps) {
   return (
     <div
+      data-surface={surface}
       style={{
-        width: TV_WIDTH * TV_SCALE,
-        height: TV_HEIGHT * TV_SCALE,
+        width: width * scale,
+        height: height * scale,
         overflow: "hidden",
-        border: "4px solid var(--opg-ink)",
-        borderRadius: 14,
+        border: `4px solid ${border}`,
+        borderRadius: radius,
         flexShrink: 0,
       }}
     >
       <div
-        className="opg-root opg-grid-tv"
-        style={{
-          width: TV_WIDTH,
-          height: TV_HEIGHT,
-          transform: `scale(${TV_SCALE})`,
-          transformOrigin: "top left",
-        }}
+        className={`opg-root ${gridClass}`}
+        style={{ width, height, transform: `scale(${scale})`, transformOrigin: "top left" }}
       >
-        <Host
-          key={mountKey}
-          view={fixture.view}
-          room={fixture.room}
-          deadline={fixture.room.game?.deadline ?? null}
-          timerStartedAt={anchorFor(fixture)}
-          clock={clock}
-        />
+        {children}
       </div>
     </div>
   );
 }
 
-function PhonePreview({
-  fixture,
-  elapsedMs,
-  mountKey,
-}: {
-  fixture: PhonePreview;
+interface SurfaceProps {
+  gameId: string;
   elapsedMs: number;
   mountKey: string;
-}) {
-  const Phone = imposterUi.Phone;
-  const send: (action: ImposterAction) => void = ignoreAction;
+}
+
+function TvPreview({ gameId, fixture, elapsedMs, mountKey }: SurfaceProps & { fixture: HostCase }) {
+  const Ui = gameUiFor(gameId);
   const clock: ServerClock = { now: () => anchorFor(fixture) + elapsedMs };
   return (
-    <div
-      style={{
-        width: PHONE_WIDTH * PHONE_SCALE,
-        height: PHONE_HEIGHT * PHONE_SCALE,
-        overflow: "hidden",
-        border: "4px solid var(--opg-ink)",
-        borderRadius: 18,
-        flexShrink: 0,
-      }}
+    <Frame
+      surface="tv"
+      width={TV_WIDTH}
+      height={TV_HEIGHT}
+      scale={TV_SCALE}
+      radius={14}
+      border="var(--opg-ink)"
+      gridClass="opg-grid-tv"
     >
-      <div
-        className="opg-root opg-grid-phone"
-        style={{
-          width: PHONE_WIDTH,
-          height: PHONE_HEIGHT,
-          transform: `scale(${PHONE_SCALE})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <Phone
+      {Ui === null ? (
+        <Missing gameId={gameId} />
+      ) : (
+        <Ui.Host
           key={mountKey}
           view={fixture.view}
           room={fixture.room}
-          stage={null}
-          deadline={fixture.room.game?.deadline ?? null}
+          deadline={deadlineOf(fixture)}
           timerStartedAt={anchorFor(fixture)}
           clock={clock}
-          send={send}
         />
-      </div>
-    </div>
+      )}
+    </Frame>
   );
 }
 
-/** The no-TV column: same phone fixture, `stage` filled from the host fixture's own view --
+interface PhonePreviewProps extends SurfaceProps {
+  fixture: PhoneCase;
+  /** The host preview a no-TV phone stages, or null beside a shared screen. */
+  staged: HostCase | null;
+}
+
+/** A phone, beside the TV (`stage` null) or on its own with the host view staged above it --
  * exactly what a real no-TV room sends, per `def.hostView(state, ctx)` (plan/0004-no-tv-mode.md §1). */
-function NoTvPreview({
-  fixture,
-  stage,
-  elapsedMs,
-  mountKey,
-}: {
-  fixture: PhonePreview;
-  stage: ImposterHostView;
-  elapsedMs: number;
-  mountKey: string;
-}) {
-  const Phone = imposterUi.Phone;
-  const send: (action: ImposterAction) => void = ignoreAction;
+function PhonePreview({ gameId, fixture, staged, elapsedMs, mountKey }: PhonePreviewProps) {
+  const Ui = gameUiFor(gameId);
+  const noTv = staged !== null;
   const clock: ServerClock = { now: () => anchorFor(fixture) + elapsedMs };
   return (
-    <div
-      style={{
-        width: PHONE_WIDTH * PHONE_SCALE,
-        height: PHONE_HEIGHT * PHONE_SCALE,
-        overflow: "hidden",
-        border: "4px solid var(--opg-marker)",
-        borderRadius: 18,
-        flexShrink: 0,
-      }}
+    <Frame
+      surface={noTv ? "no-tv" : "phone"}
+      width={PHONE_WIDTH}
+      height={PHONE_HEIGHT}
+      scale={PHONE_SCALE}
+      radius={18}
+      border={noTv ? "var(--opg-marker)" : "var(--opg-ink)"}
+      gridClass="opg-grid-phone"
     >
-      <div
-        className="opg-root opg-grid-phone"
-        style={{
-          width: PHONE_WIDTH,
-          height: PHONE_HEIGHT,
-          transform: `scale(${PHONE_SCALE})`,
-          transformOrigin: "top left",
-        }}
-      >
-        <Phone
+      {Ui === null ? (
+        <Missing gameId={gameId} />
+      ) : (
+        <Ui.Phone
           key={mountKey}
           view={fixture.view}
           room={fixture.room}
-          stage={stage}
-          deadline={fixture.room.game?.deadline ?? null}
+          stage={staged?.view ?? null}
+          deadline={deadlineOf(fixture)}
           timerStartedAt={anchorFor(fixture)}
           clock={clock}
-          send={send}
+          send={ignoreAction}
         />
-      </div>
-    </div>
+      )}
+    </Frame>
   );
 }
 
@@ -401,78 +278,103 @@ interface MomentColumnsProps {
 
 /** The TV, shared-screen-phone and no-TV-phone columns for the selected moment. */
 function MomentColumns({ selected, playback, mountKey }: MomentColumnsProps) {
-  const phones = phoneFixturesFor(selected.kind, ALL_FIXTURES);
-  const noTvPhones = noTvFixturesFor(selected.kind, ALL_FIXTURES);
+  const surface = { gameId: selected.gameId, elapsedMs: playback.elapsed, mountKey };
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
       <Column title="TV">
-        <TvPreview
-          fixture={selected.fixture}
-          elapsedMs={playback.elapsed}
-          mountKey={mountKey}
-        />
+        <TvPreview {...surface} fixture={selected.host} />
       </Column>
       <Column title="Phones (shared screen)">
-        {phones.map((fixture) => (
-          <PhonePreview
-            key={fixture.label}
-            fixture={fixture}
-            elapsedMs={playback.elapsed}
-            mountKey={mountKey}
-          />
+        {selected.phones.map((fixture) => (
+          <PhonePreview key={fixture.id} {...surface} fixture={fixture} staged={null} />
         ))}
       </Column>
       <Column title="Phones (no TV)">
-        {noTvPhones.map((fixture) => (
-          <NoTvPreview
-            key={fixture.label}
-            fixture={fixture}
-            stage={selected.fixture.view}
-            elapsedMs={playback.elapsed}
-            mountKey={mountKey}
-          />
+        {selected.noTvPhones.map((fixture) => (
+          <PhonePreview key={fixture.id} {...surface} fixture={fixture} staged={selected.host} />
         ))}
       </Column>
     </div>
   );
 }
 
-function MomentPicker({
-  moments,
-  selectedId,
-  onSelect,
+function PickerChip({
+  label,
+  selected,
+  onClick,
 }: {
-  moments: readonly DevMoment[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      {moments.map((moment) => {
-        const selected = moment.id === selectedId;
-        return (
-          <button
-            key={moment.id}
-            type="button"
-            className="opg-reset"
-            aria-pressed={selected}
-            onClick={() => onSelect(moment.id)}
-            style={{ background: "none", border: "none", padding: 0 }}
-          >
-            <Chip
-              height={56}
-              fontSize={28}
-              style={{
-                background: selected ? "var(--opg-highlight)" : undefined,
-              }}
-            >
-              {selected ? "✓ " : ""}
-              {moment.chip}
-            </Chip>
-          </button>
-        );
-      })}
+    <button
+      type="button"
+      className="opg-reset"
+      aria-pressed={selected}
+      onClick={onClick}
+      style={{ background: "none", border: "none", padding: 0 }}
+    >
+      <Chip
+        height={48}
+        fontSize={24}
+        style={{ background: selected ? "var(--opg-highlight)" : undefined }}
+      >
+        {selected ? "✓ " : ""}
+        {label}
+      </Chip>
+    </button>
+  );
+}
+
+function ChipRow({ children }: { children: ReactNode }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12 }}>
+      {children}
     </div>
+  );
+}
+
+interface PickerProps {
+  moments: readonly DevMoment[];
+  selected: DevMoment;
+  onSelect: (id: string) => void;
+}
+
+/** One chip per game; picking one jumps to that game's first moment. */
+function GamePicker({ moments, selected, onSelect }: PickerProps) {
+  return (
+    <ChipRow>
+      {momentGameIds(moments).map((gameId) => (
+        <PickerChip
+          key={gameId}
+          label={gameId}
+          selected={gameId === selected.gameId}
+          onClick={() => {
+            const first = moments.find((moment) => moment.gameId === gameId);
+            if (first !== undefined) onSelect(first.id);
+          }}
+        />
+      ))}
+    </ChipRow>
+  );
+}
+
+/** One chip per moment of the selected game. */
+function MomentPicker({ moments, selected, onSelect }: PickerProps) {
+  return (
+    <ChipRow>
+      {moments
+        .filter((moment) => moment.gameId === selected.gameId)
+        .map((moment) => (
+          <PickerChip
+            key={moment.id}
+            label={moment.chip}
+            selected={moment.id === selected.id}
+            onClick={() => onSelect(moment.id)}
+          />
+        ))}
+    </ChipRow>
   );
 }
 
@@ -593,7 +495,7 @@ function useMomentPlayback(durationMs: number): Playback {
 }
 
 export interface MomentPlayerProps {
-  /** Moments in the picker. Defaults to the Imposter reveal/last-chance/result host previews. */
+  /** Moments in the picker. Defaults to every game's `preview.ts` moments. */
   moments?: readonly DevMoment[];
 }
 
@@ -607,17 +509,15 @@ function EmptyMoments() {
   );
 }
 
-const ALL_FIXTURES = toPreviewFixtures(imposterPreviews);
+const ALL_MOMENTS = devMoments();
 
-export function MomentPlayer({
-  moments = devMoments(ALL_FIXTURES),
-}: MomentPlayerProps) {
+export function MomentPlayer({ moments = ALL_MOMENTS }: MomentPlayerProps) {
   const [selectedId, setSelectedId] = useState<string | null>(
     () => moments[0]?.id ?? null,
   );
   const selected =
     moments.find((moment) => moment.id === selectedId) ?? moments[0] ?? null;
-  const playback = useMomentPlayback(selected?.durationMs ?? REVEAL_MS);
+  const playback = useMomentPlayback(selected?.durationMs ?? 0);
 
   function select(id: string): void {
     setSelectedId(id);
@@ -629,16 +529,13 @@ export function MomentPlayer({
   const mountKey = `${selected.id}-${playback.generation}`;
 
   return (
-    <TvPage>
+    <TvPage gap={20}>
       <TvHeader variant="brand" />
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-        <Marker size={64}>Moments</Marker>
-        <MomentPicker
-          moments={moments}
-          selectedId={selected.id}
-          onSelect={select}
-        />
+        <Marker size={56}>Moments</Marker>
+        <GamePicker moments={moments} selected={selected} onSelect={select} />
       </div>
+      <MomentPicker moments={moments} selected={selected} onSelect={select} />
       <PlaybackControls
         playing={playback.playing}
         elapsed={playback.elapsed}
