@@ -227,8 +227,10 @@ function VerdictStamp({
   );
 }
 
-/** Fixed-height slot for the guess + verdict so the switch from hero to compact never jumps
- * the word line and points card beneath it. */
+/** Height of the guess + verdict slot while it is the hero, so the tiles and stamp sit centred
+ * in a steady box as they land. Only the hero holds it: the word line and points card appear
+ * with the switch to compact, so nothing sits beneath the slot while it is fixed, and a fixed
+ * compact slot would leave an empty band above "The word was" (issue #93). */
 const GUESS_VERDICT_HEIGHT = 360;
 
 function GuessAndVerdict({
@@ -249,8 +251,9 @@ function GuessAndVerdict({
   const hero = !stage.word;
   return (
     <div
+      data-testid="guess-verdict"
       style={{
-        height: GUESS_VERDICT_HEIGHT,
+        height: hero ? GUESS_VERDICT_HEIGHT : undefined,
         display: "flex",
         flexDirection: "column",
         justifyContent: hero ? "center" : "flex-start",

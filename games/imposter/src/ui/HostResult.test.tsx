@@ -117,6 +117,26 @@ describe("HostResult, caught, staged from the start", () => {
   });
 });
 
+function slotHeight(container: HTMLElement): string | undefined {
+  return container.querySelector<HTMLElement>('[data-testid="guess-verdict"]')
+    ?.style.height;
+}
+
+describe("HostResult, guess and verdict slot", () => {
+  it("holds a fixed height while the guess is the hero", () => {
+    vi.useFakeTimers();
+    const { rendered } = setup("Host: result caught got it", 3600);
+    expect(slotHeight(rendered.container)).toBe("360px");
+  });
+
+  it("shrinks to its content once the word line sits beneath it", () => {
+    vi.useFakeTimers();
+    const { rendered } = setup("Host: result caught got it", 12000);
+    expect(screen.getByText("The word was")).toBeTruthy();
+    expect(slotHeight(rendered.container)).toBe("");
+  });
+});
+
 describe("HostResult, mounted late", () => {
   it("renders the settled state with no cues", () => {
     vi.useFakeTimers();
