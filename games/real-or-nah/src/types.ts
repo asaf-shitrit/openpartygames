@@ -18,7 +18,7 @@ export const RON_MINUTES = 15;
 export const POINTS_TRUTH = 1000;
 export const POINTS_PER_FOOL = 500;
 
-const ronPhaseSchema = z.enum(["write", "vote", "reveal"]);
+export const ronPhaseSchema = z.enum(["write", "vote", "reveal"]);
 
 export type RonPhase = z.infer<typeof ronPhaseSchema>;
 
