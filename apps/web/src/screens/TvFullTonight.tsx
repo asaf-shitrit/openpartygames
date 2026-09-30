@@ -1,7 +1,7 @@
 // design/TVFullTonight.dc.html — shown when the daily room cap is hit.
 import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
-import { GITHUB_LABEL, GITHUB_URL } from "../links";
+import { GITHUB_LABEL, SELF_HOST_URL } from "../links";
 import { Card, Icon, Marker, Tape, TvHeader } from "@opg/ui";
 import { TvPage } from "./shared";
 
@@ -73,7 +73,7 @@ function TonightOptions({ t }: { t: Dictionary }) {
         </div>
         <a
           className="opg-link"
-          href={GITHUB_URL}
+          href={SELF_HOST_URL}
           target="_blank"
           rel="noreferrer"
           style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.3 }}
