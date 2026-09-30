@@ -1,16 +1,15 @@
 #!/usr/bin/env node
 // Turn a pack-submission issue body into a pack change.
 //
-// Usage: node scripts/pack-submission.mjs <issue-body-file> <word-pairs|facts> [packs-root]
+// Usage: node scripts/pack-submission.mjs <issue-body-file> <word-pairs|facts|superlatives|drawing-prompts> [packs-root]
 // The packs root defaults to the repo root; tests and CI override it with the
 // third argument or the OPG_PACKS_ROOT env var.
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isKebabCase, validatePack } from "./pack-rules.mjs";
+import { isKebabCase, normalizeAnswer, validatePack } from "./pack-rules.mjs";
 
-const LABELS = Object.freeze(["word-pairs", "facts"]);
 
 const COMMUNITY_FACTS = Object.freeze({
   id: "community-facts",
@@ -75,10 +74,23 @@ function splitList(value) {
     .filter((entry) => entry !== "");
 }
 
-/** @param {string} value */
-function slugify(value) {
-  const slug = headingKey(value);
-  return isKebabCase(slug) ? slug : "fact";
+/**
+ * "A penguin at a bus stop" -> "penguin-at-a-bus-stop"; text with no latin
+ * letters or digits falls back to `fallback`.
+ * @param {string} value
+ * @param {string} fallback
+ */
+function slugify(value, fallback) {
+  const slug = headingKey(normalizeAnswer(value));
+  return isKebabCase(slug) ? slug : fallback;
+}
+
+/** One entry per non-empty line. @param {string} value */
+function splitLines(value) {
+  return value
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
 /**
@@ -132,7 +144,7 @@ function parseFact(sections, taken) {
   }
 
   return {
-    id: uniqueId(slugify(answer), taken),
+    id: uniqueId(slugify(answer, "fact"), taken),
     prompt,
     answer,
     alternates: splitList(sections.alternates ?? ""),
@@ -160,33 +172,15 @@ function appendToPack({ rootDir, folder, filename, pack, items }) {
   return `packs/${folder}/${filename}`;
 }
 
-/** @param {{ rootDir: string, sections: Record<string, string> }} input */
-function addWordPairs({ rootDir, sections }) {
-  const packId = (sections.pack ?? "").trim();
-  const packs = readPackIds(rootDir);
-  if (!isKebabCase(packId) || !Object.hasOwn(packs, packId)) {
-    throw new Error(
-      `Pack: "${packId}" is not a known pack (${Object.keys(packs).join(", ")})`,
-    );
-  }
-  const filename = `${packId}.json`;
-  const items = parseWordPairs(sections["word-pairs"] ?? "");
-  return appendToPack({
-    rootDir,
-    folder: "imposter",
-    filename,
-    pack: packs[packId],
-    items,
-  });
-}
-
 /**
+ * Read every pack in `packs/<folder>/`, keyed by id.
  * @param {string} rootDir
- * @returns {Record<string, { items: unknown[] }>}
+ * @param {string} folder
+ * @returns {Record<string, { items: { id?: string }[] }>}
  */
-function readPackIds(rootDir) {
-  const dir = path.join(rootDir, "packs", "imposter");
-  /** @type {Record<string, { items: unknown[] }>} */
+function readPacks(rootDir, folder) {
+  const dir = path.join(rootDir, "packs", folder);
+  /** @type {Record<string, { items: { id?: string }[] }>} */
   const packs = {};
   if (!fs.existsSync(dir)) return packs;
   for (const name of fs.readdirSync(dir)) {
@@ -195,6 +189,86 @@ function readPackIds(rootDir) {
     packs[pack.id] = pack;
   }
   return packs;
+}
+
+/**
+ * Append the items `makeItems` builds to the pack the form's "Pack" dropdown names.
+ * @param {{ rootDir: string, sections: Record<string, string>, folder: string, makeItems: (taken: Set<string>) => unknown[] }} input
+ */
+function addToChosenPack({ rootDir, sections, folder, makeItems }) {
+  const packId = (sections.pack ?? "").trim();
+  const packs = readPacks(rootDir, folder);
+  if (!isKebabCase(packId) || !Object.hasOwn(packs, packId)) {
+    throw new Error(
+      `Pack: "${packId}" is not a known pack (${Object.keys(packs).join(", ")})`,
+    );
+  }
+  const pack = packs[packId];
+  const taken = new Set(pack.items.map((item) => item.id));
+  return appendToPack({
+    rootDir,
+    folder,
+    filename: `${packId}.json`,
+    pack,
+    items: makeItems(taken),
+  });
+}
+
+/** @param {{ rootDir: string, sections: Record<string, string> }} input */
+function addWordPairs({ rootDir, sections }) {
+  return addToChosenPack({
+    rootDir,
+    sections,
+    folder: "imposter",
+    makeItems: () => parseWordPairs(sections["word-pairs"] ?? ""),
+  });
+}
+
+/**
+ * @param {string} value
+ * @param {Set<string>} taken
+ */
+function parseSuperlatives(value, taken) {
+  const prompts = splitLines(value);
+  if (prompts.length === 0) throw new Error("Prompts: no prompts found");
+  return prompts.map((prompt) => ({
+    id: uniqueId(slugify(prompt, "prompt"), taken),
+    prompt,
+  }));
+}
+
+/** @param {{ rootDir: string, sections: Record<string, string> }} input */
+function addSuperlatives({ rootDir, sections }) {
+  return addToChosenPack({
+    rootDir,
+    sections,
+    folder: "most-likely-to",
+    makeItems: (taken) => parseSuperlatives(sections.prompts ?? "", taken),
+  });
+}
+
+/**
+ * @param {Record<string, string>} sections
+ * @param {Set<string>} taken
+ */
+function parseDrawingPrompt(sections, taken) {
+  const prompt = sections.prompt ?? "";
+  if (prompt === "") throw new Error("Drawing prompts: a prompt is required");
+  return {
+    id: uniqueId(slugify(prompt, "drawing"), taken),
+    prompt,
+    houseTitles: splitLines(sections["house-titles"] ?? ""),
+  };
+}
+
+/** @param {{ rootDir: string, sections: Record<string, string> }} input */
+function addDrawingPrompts({ rootDir, sections }) {
+  return addToChosenPack({
+    rootDir,
+    sections,
+    folder: "doodle-bluff",
+    makeItems: (taken) => [parseDrawingPrompt(sections, taken)],
+  });
 }
 
 /** @param {{ rootDir: string, sections: Record<string, string> }} input */
@@ -215,20 +289,27 @@ function addFacts({ rootDir, sections }) {
   });
 }
 
+/** How each submission label turns its issue sections into a pack change. */
+const ADD_BY_LABEL = Object.freeze({
+  "word-pairs": addWordPairs,
+  facts: addFacts,
+  superlatives: addSuperlatives,
+  "drawing-prompts": addDrawingPrompts,
+});
+
+const LABELS = Object.freeze(Object.keys(ADD_BY_LABEL));
+
 /**
  * @param {{ body: string, label: string, rootDir: string }} input
  * @returns {string}
  */
 export function applySubmission({ body, label, rootDir }) {
-  if (!LABELS.includes(label)) {
+  if (!Object.hasOwn(ADD_BY_LABEL, label)) {
     throw new Error(
       `Unknown label "${label}"; expected one of ${LABELS.join(", ")}`,
     );
   }
-  const sections = parseIssueBody(body);
-  return label === "word-pairs"
-    ? addWordPairs({ rootDir, sections })
-    : addFacts({ rootDir, sections });
+  return ADD_BY_LABEL[label]({ rootDir, sections: parseIssueBody(body) });
 }
 
 function main() {
@@ -240,7 +321,7 @@ function main() {
 
   if (bodyFile === undefined || label === undefined) {
     console.error(
-      "Usage: node scripts/pack-submission.mjs <issue-body-file> <word-pairs|facts> [packs-root]",
+      "Usage: node scripts/pack-submission.mjs <issue-body-file> <word-pairs|facts|superlatives|drawing-prompts> [packs-root]",
     );
     process.exit(1);
   }

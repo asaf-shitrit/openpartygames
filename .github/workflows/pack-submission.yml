@@ -25,17 +25,13 @@ jobs:
         with:
           script: |
             const labels = context.payload.issue.labels.map((label) => label.name);
-            const kind = labels.includes("word-pairs")
-              ? "word-pairs"
-              : labels.includes("facts")
-                ? "facts"
-                : "";
-            core.setOutput("kind", kind);
+            const kinds = ["word-pairs", "facts", "superlatives", "drawing-prompts"];
+            core.setOutput("kind", kinds.find((kind) => labels.includes(kind)) ?? "");
 
-      - name: Require a word-pairs or facts label
+      - name: Require a submission kind label
         if: steps.meta.outputs.kind == ''
         run: |
-          echo "::error::Add the 'word-pairs' or 'facts' label to this issue."
+          echo "::error::Add a 'word-pairs', 'facts', 'superlatives' or 'drawing-prompts' label to this issue."
           exit 1
 
       - name: Write the issue body to a file
