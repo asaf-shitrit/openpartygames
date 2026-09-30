@@ -1,9 +1,15 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SoundProvider } from "@opg/ui";
 import { LocaleProvider } from "@opg/i18n";
 import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
+import {
+  animatedProperties,
+  restoreMatchMedia,
+  spyAnimate,
+  stubReducedMotion,
+} from "./fixtures/motion";
 import { makeHostView, makePlayer } from "./fixtures/room";
 import { TvLobby } from "./TvLobby";
 
@@ -50,7 +56,11 @@ class FakeEngine implements SoundEngine {
   }
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  restoreMatchMedia();
+});
 
 describe("TvLobby", () => {
   it("shows the room code and a QR code svg", async () => {
@@ -162,5 +172,45 @@ describe("TvLobby", () => {
       </LocaleProvider>,
     );
     expect(engine.cues).toEqual(["pop"]);
+  });
+});
+
+/** Seats Priya, then Sam arrives: the one seat pop the lobby plays. */
+function seatSecondPlayer(reduced: boolean) {
+  stubReducedMotion(reduced);
+  const animate = spyAnimate();
+  const engine = new FakeEngine();
+  const lobby = (players: ReturnType<typeof makePlayer>[]) => (
+    <LocaleProvider>
+      <SoundProvider engine={engine}>
+        <TvLobby view={makeHostView({ players })} />
+      </SoundProvider>
+    </LocaleProvider>
+  );
+  const { rerender } = render(lobby([makePlayer({ id: "p1" })]));
+  const cuesBeforeArrival = [...engine.cues];
+  rerender(
+    lobby([makePlayer({ id: "p1" }), makePlayer({ id: "p2", name: "Sam" })]),
+  );
+  return { animate, cuesBeforeArrival, cues: engine.cues };
+}
+
+describe("TvLobby, reduced motion", () => {
+  it("still pops on the arrival itself, and only then", () => {
+    const { cuesBeforeArrival, cues } = seatSecondPlayer(true);
+    expect(cuesBeforeArrival).toEqual([]);
+    expect(cues).toEqual(["pop"]);
+  });
+
+  it("fades the new seat in instead of scaling it", () => {
+    const { animate } = seatSecondPlayer(true);
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animatedProperties(animate)).toEqual(["opacity"]);
+    expect(screen.getByText("Sam")).toBeTruthy();
+  });
+
+  it("scales the new seat in when nobody asked for less motion", () => {
+    const { animate } = seatSecondPlayer(false);
+    expect(animatedProperties(animate)).toEqual(["scale"]);
   });
 });

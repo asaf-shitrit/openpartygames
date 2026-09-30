@@ -1,5 +1,4 @@
 // design/TVFinalScores.dc.html — lobby results screen after a game, ending in the crown ceremony.
-import type { CSSProperties } from "react";
 import type {
   Award,
   GameResultSummary,
@@ -34,9 +33,10 @@ import type {
   MusicId,
   ServerClock,
 } from "@opg/ui";
-import { format, joinNamesAnd, useLocale } from "@opg/i18n";
+import { joinNamesAnd, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
+import { countAwardsShown, FinaleAnnouncer } from "./FinaleAnnouncer";
 import { PointArrow, TvPage } from "./shared";
 import {
   FINALE_TIMING,
@@ -49,18 +49,6 @@ import {
 import type { RankedPlayer } from "./finale-timeline";
 
 const FALLBACK_CLOCK: ServerClock = { now: () => Date.now() };
-
-const HIDDEN: CSSProperties = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  margin: -1,
-  padding: 0,
-  overflow: "hidden",
-  clip: "rect(0 0 0 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-};
 
 function formatScore(score: number): string {
   return score.toLocaleString("en-US");
@@ -127,14 +115,6 @@ interface Stage {
 
 function isLive(moment: Moment, id: string): boolean {
   return moment.live && moment.beatId === id;
-}
-
-function countAwardsShown(beats: readonly Beat[], moment: Moment): number {
-  let shown = 0;
-  for (let index = 0; index <= moment.index; index += 1) {
-    if (beats[index]?.id.startsWith("award-")) shown += 1;
-  }
-  return shown;
 }
 
 function liveAwardIndex(moment: Moment): number | null {
@@ -634,27 +614,6 @@ function CrownReveal({
   );
 }
 
-function CrownAnnouncer({
-  t,
-  crownReached,
-  crownLine,
-}: {
-  t: Dictionary;
-  crownReached: boolean;
-  crownLine: string | null;
-}) {
-  // A fuller sentence than the on-screen marker, so the two never collide under an exact text match.
-  const text =
-    crownReached && crownLine
-      ? format(t.results.crownAnnounce, { crownLine })
-      : "";
-  return (
-    <output aria-live="polite" style={HIDDEN}>
-      {text}
-    </output>
-  );
-}
-
 function NotCompletedView({
   t,
   view,
@@ -799,8 +758,12 @@ function FinaleBody(props: FinaleBodyProps) {
       ) : (
         <CeremonyLayout {...props} />
       )}
-      <CrownAnnouncer
+      <FinaleAnnouncer
         t={t}
+        gameId={props.gameId}
+        awards={props.awards}
+        players={props.view.players}
+        awardsShown={stage.awardsShown}
         crownReached={stage.crownReached}
         crownLine={crownLine}
       />

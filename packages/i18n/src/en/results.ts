@@ -13,6 +13,8 @@ export const results = {
   crownGoesTo: "And the crown goes to…",
   crownDecided: "The crown is decided",
   crownAnnounce: "The crown is decided. {crownLine}",
+  // Read aloud as each award stamps in on the finale; never shown on screen.
+  awardAnnounce: "{title} goes to {names}.",
   youWinCrown: "You win the crown!",
   crownWins: "{name} wins the crown!",
   crownShares: "{names} share the crown!",
