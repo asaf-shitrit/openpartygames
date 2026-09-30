@@ -20,20 +20,24 @@ const CONTENT: WordPairContent = {
 
 describe("imposter bot playthroughs", () => {
   for (const players of [3, 8]) {
-    it(`finishes a ${players}-player game with a mid-game disconnect and rejoin`, () => {
-      const result = runBotPlaythrough({
-        game: imposter,
-        content: CONTENT,
-        players,
-        seed: 1000 + players,
-        disconnectRejoin: true,
-      });
+    for (const sharedScreen of [true, false]) {
+      it(`finishes a ${players}-player game with a mid-game disconnect and rejoin (sharedScreen=${sharedScreen})`, () => {
+        const result = runBotPlaythrough({
+          game: imposter,
+          content: CONTENT,
+          players,
+          seed: 1000 + players,
+          disconnectRejoin: true,
+          sharedScreen,
+        });
 
-      expect(result.finished).toBe(true);
-      expect(result.steps).toBeGreaterThan(0);
-      expect(Object.keys(result.scores)).toHaveLength(players);
-      expect(result.winnerIds.length).toBeGreaterThan(0);
-      expect(result.rejoinedPlayerId).not.toBeNull();
-    });
+        expect(result.finished).toBe(true);
+        expect(result.steps).toBeGreaterThan(0);
+        expect(Object.keys(result.scores)).toHaveLength(players);
+        expect(result.winnerIds.length).toBeGreaterThan(0);
+        expect(result.rejoinedPlayerId).not.toBeNull();
+        expect(result.hostConnected).toBe(sharedScreen);
+      });
+    }
   }
 });

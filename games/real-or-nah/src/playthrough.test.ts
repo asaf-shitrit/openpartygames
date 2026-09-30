@@ -126,6 +126,21 @@ describe("real-or-nah bot playthroughs", () => {
       expect(Object.keys(result.scores)).toHaveLength(players);
       expect(result.winnerIds.length).toBeGreaterThan(0);
       expect(result.rejoinedPlayerId).not.toBeNull();
+      expect(result.hostConnected).toBe(true);
     });
   }
+
+  // Real or Nah is TV-only: a no-TV room refuses to start it.
+  it("refuses to start in a no-TV room", async () => {
+    const { runBotPlaythrough } = await loadTestingHarness();
+    expect(() =>
+      runBotPlaythrough({
+        game: realOrNah,
+        content: CONTENT,
+        players: 3,
+        seed: 1003,
+        sharedScreen: false,
+      }),
+    ).toThrow(/plays on a shared screen/);
+  });
 });

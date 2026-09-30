@@ -138,6 +138,29 @@ describe("runBotPlaythrough", () => {
     ).toThrow(/plays on a shared screen/);
   });
 
+  it("says hello as the host in a shared-screen room", () => {
+    const result = runBotPlaythrough({
+      game: tapGame,
+      content: wordPairs,
+      players: 3,
+      seed: 9,
+    });
+    expect(result.finished).toBe(true);
+    expect(result.hostConnected).toBe(true);
+  });
+
+  it("finishes a no-TV room with no host socket ever connected", () => {
+    const result = runBotPlaythrough({
+      game: tapGameNoTv,
+      content: wordPairs,
+      players: 3,
+      seed: 10,
+      sharedScreen: false,
+    });
+    expect(result.finished).toBe(true);
+    expect(result.hostConnected).toBe(false);
+  });
+
   // stage is additive on ActiveGameView; bots only ever read `view`, so a no-TV
   // room should play out exactly like a shared-screen one.
   for (const players of [3, 8]) {
@@ -154,6 +177,7 @@ describe("runBotPlaythrough", () => {
         expect(result.finished).toBe(true);
         expect(Object.keys(result.scores)).toHaveLength(players);
         expect(result.rejoinedPlayerId).not.toBeNull();
+        expect(result.hostConnected).toBe(sharedScreen);
       });
     }
   }
