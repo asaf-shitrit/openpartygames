@@ -32,27 +32,37 @@ const SLAM: FxSpec = {
   options: { duration: 420, easing: SLAM_EASE, fill: "both" },
 };
 
+/** Plan 0002 slice 6: no shake moves anything further than this on either axis. */
+export const SHAKE_MAX_PX = 12;
+const SHAKE_SMALL_PX = 5;
+
+/** Horizontal swings as a fraction of the peak; each carries a third as much vertical jitter. */
+const SHAKE_SWINGS = [1, -1, 0.75, -0.5, 0.25];
+const SHAKE_SMALL_SWINGS = [1, -1, 0.6];
+
+function px(value: number): string {
+  return value === 0 ? "0" : `${value}px`;
+}
+
+function shakeStep(peakPx: number, swing: number, index: number): Keyframe {
+  const x = Math.round(peakPx * swing);
+  const y = index === 0 ? 0 : Math.round(-x / 3);
+  return { translate: `${px(x)} ${px(y)}` };
+}
+
+/** A decaying shake from rest to rest, peaking at `peakPx`. */
+function shakeKeyframes(peakPx: number, swings: readonly number[]): Keyframe[] {
+  const steps = swings.map((swing, index) => shakeStep(peakPx, swing, index));
+  return [{ translate: "0 0" }, ...steps, { translate: "0 0" }];
+}
+
 const SHAKE: FxSpec = {
-  keyframes: [
-    { translate: "0 0" },
-    { translate: "12px 0" },
-    { translate: "-12px 4px" },
-    { translate: "9px -3px" },
-    { translate: "-6px 2px" },
-    { translate: "3px -1px" },
-    { translate: "0 0" },
-  ],
+  keyframes: shakeKeyframes(SHAKE_MAX_PX, SHAKE_SWINGS),
   options: { duration: 380, easing: "linear" },
 };
 
 const SHAKE_SMALL: FxSpec = {
-  keyframes: [
-    { translate: "0 0" },
-    { translate: "5px 0" },
-    { translate: "-5px 2px" },
-    { translate: "3px -1px" },
-    { translate: "0 0" },
-  ],
+  keyframes: shakeKeyframes(SHAKE_SMALL_PX, SHAKE_SMALL_SWINGS),
   options: { duration: 300, easing: "linear" },
 };
 

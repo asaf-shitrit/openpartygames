@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { tapGame, tapGameNoTv, TAP_POINTS, TAP_ROUNDS } from "./fixtures/tap-game";
-import { createMemoryContentSource, runBotPlaythrough } from "./testing";
+import { createMemoryContentSource, minutesMatchLength, runBotPlaythrough } from "./testing";
 import type { AnyGame, FactContent, WordPairContent } from "./types";
 
 const wordPairs: WordPairContent = {
@@ -290,5 +290,19 @@ describe("createMemoryContentSource", () => {
   it("returns an empty kind payload when no packs match", async () => {
     const loaded = await source.loadContent("facts", []);
     expect(loaded).toEqual({ kind: "facts", items: [] });
+  });
+});
+
+describe("minutesMatchLength", () => {
+  it("accepts minutes within 20% of the nominal length, either side", () => {
+    expect(minutesMatchLength(10, 10 * 60_000)).toBe(true);
+    expect(minutesMatchLength(12, 10 * 60_000)).toBe(true);
+    expect(minutesMatchLength(8, 10 * 60_000)).toBe(true);
+  });
+
+  it("rejects minutes further than 20% from the nominal length", () => {
+    expect(minutesMatchLength(13, 10 * 60_000)).toBe(false);
+    expect(minutesMatchLength(7, 10 * 60_000)).toBe(false);
+    expect(minutesMatchLength(5, 15 * 60_000)).toBe(false);
   });
 });
