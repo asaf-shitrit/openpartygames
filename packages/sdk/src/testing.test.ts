@@ -161,6 +161,26 @@ describe("runBotPlaythrough", () => {
     expect(result.hostConnected).toBe(false);
   });
 
+  it("throws when a no-TV player's stage is not the host view", () => {
+    // Impure on purpose: each hostView call differs, so the stage a player reads can
+    // never match the host view read a moment later.
+    let calls = 0;
+    const drifting: typeof tapGameNoTv = {
+      ...tapGameNoTv,
+      id: "tap-drift",
+      hostView: (state, meta) => ({ ...tapGameNoTv.hostView(state, meta), calls: calls++ }),
+    };
+    expect(() =>
+      runBotPlaythrough({
+        game: drifting,
+        content: wordPairs,
+        players: 3,
+        seed: 11,
+        sharedScreen: false,
+      }),
+    ).toThrow("stage is not the host view (sharedScreen=false)");
+  });
+
   // stage is additive on ActiveGameView; bots only ever read `view`, so a no-TV
   // room should play out exactly like a shared-screen one.
   for (const players of [3, 8]) {

@@ -1,6 +1,8 @@
-// The no-TV stage is `hostView(state)`, sent verbatim (plan/0004-no-tv-mode.md §4). This is the
-// per-game half of that contract: the host view never composes anything a player view doesn't
-// already carry in public form, and it never lets one player's vote leak through another's.
+// The no-TV stage is `hostView(state)`, sent verbatim (plan/0004-no-tv-mode.md §4). That the
+// stage deep-equals the host view is checked by the SDK bot harness on every view a bot reads,
+// so the no-TV playthrough covers it. This is the per-game half of the contract: the host view
+// never composes anything a player view doesn't already carry in public form, and it never
+// lets one player's vote leak through another's.
 import { describe, expect, it } from "vitest";
 import type { GameContext, SuperlativeContent } from "@opg/sdk";
 import { createRng } from "@opg/sdk";
@@ -57,16 +59,8 @@ function statesToCheck() {
   };
 }
 
-describe("the stage is the host view, never something composed", () => {
+describe("the host view composes nothing a player view lacks", () => {
   for (const [label, state] of Object.entries(statesToCheck())) {
-    it(`${label}: every player's stage deep-equals hostView(state)`, () => {
-      const hostView = buildHostView(state);
-      for (const id of state.playerIds) {
-        const playerViewPlusStage = { ...buildPlayerView(state, id), stage: hostView };
-        expect(playerViewPlusStage.stage).toStrictEqual(hostView);
-      }
-    });
-
     it(`${label}: no view carries a field the others don't already have in public form`, () => {
       const hostView = buildHostView(state);
       for (const id of state.playerIds) {

@@ -1,7 +1,8 @@
-// The no-TV stage is `hostView(state)`, sent verbatim (plan/0004-no-tv-mode.md §4). This is
-// the per-game half of that contract: the stage deep-equals hostView(state) in every phase,
-// and — the rule specific to Imposter — the crew word never reaches the stage before the
-// result, and the imposter's in-progress guess reaches it as a length only, never letters.
+// The no-TV stage is `hostView(state)`, sent verbatim (plan/0004-no-tv-mode.md §4). That the
+// stage deep-equals the host view is checked by the SDK bot harness on every view a bot reads,
+// so the no-TV playthrough covers it. This is the Imposter half of the contract: the crew word
+// never reaches the stage before the result, and the imposter's in-progress guess reaches it
+// as a length only, never letters.
 import { describe, expect, it } from "vitest";
 import type { PlayerId } from "@opg/protocol";
 import type { ImposterState, ImposterWord } from "./state";
@@ -121,16 +122,8 @@ const STATES = {
   "result: escaped": resultEscaped,
 } satisfies Record<string, ImposterState>;
 
-describe("the stage is the host view, never something composed", () => {
+describe("the reveal is public and the same on every view", () => {
   for (const [label, s] of Object.entries(STATES)) {
-    it(`${label}: every player's stage deep-equals hostView(state)`, () => {
-      const hostView = buildHostView(s);
-      for (const id of s.playerIds) {
-        const playerViewPlusStage = { ...buildPlayerView(s, id), stage: hostView };
-        expect(playerViewPlusStage.stage).toStrictEqual(hostView);
-      }
-    });
-
     it(`${label}: the reveal fields, once frozen, are identical everywhere they appear`, () => {
       const hostView = buildHostView(s);
       for (const id of s.playerIds) {
