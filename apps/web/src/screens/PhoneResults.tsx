@@ -29,7 +29,6 @@ import type { Dictionary } from "@opg/i18n";
 import { awardCopyFor, describableAwards } from "../games";
 import {
   crownCopy,
-  crownCueId,
   finaleBeats,
   participantIds,
   rankPlayers,
@@ -882,7 +881,6 @@ export function PhoneResults({ view, clock, footer }: PhoneResultsProps) {
     // Matches the TV's count, so both devices stage the same ceremony.
     awardCount: describableAwards(result?.gameId ?? "", awards, t).length,
     rankedCount: topRank(ranked),
-    crownCue: crownCueId(),
   });
   const moment = useMoment(beats, resultFinishedAt(result), clock);
   const buzz = useBuzz();

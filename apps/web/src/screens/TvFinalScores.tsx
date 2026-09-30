@@ -41,7 +41,6 @@ import { PointArrow, TvPage } from "./shared";
 import {
   FINALE_TIMING,
   crownCopy,
-  crownCueId,
   finaleBeats,
   participantIds,
   rankPlayers,
@@ -888,7 +887,6 @@ export function TvFinalScores({
     awardCount: describableAwards(gameIdOf(result), awards, t).length,
     // The highest rank on screen decides the third and second beats; a tie for first has neither.
     rankedCount: topRank(ranked),
-    crownCue: crownCueId(),
   });
   const moment = useMoment(beats, finishedAtOf(result), clock);
   const play = useCue();
