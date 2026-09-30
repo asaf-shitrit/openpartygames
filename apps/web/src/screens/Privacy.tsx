@@ -1,44 +1,38 @@
 // /privacy — short, plain-language privacy page (TV-style).
+import { useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { GITHUB_URL } from "../links";
 import { Card, Highlight, Marker, TvHeader } from "@opg/ui";
 import { TvPage } from "./shared";
 
-const POINTS = [
-  {
-    title: "No account, no profile",
-    body: "You type a nickname and pick a doodle. That's it. We never ask for an email or a password.",
-  },
-  {
-    title: "No cookies, no ad trackers",
-    body: "We don't set cookies and we don't use advertising trackers. Page counts come from cookieless Cloudflare Web Analytics.",
-  },
-  {
-    title: "Anonymous game stats",
-    body: "We count games started and finished, how many players joined, and how long a game ran. No names, no personal information.",
-  },
-  {
-    title: "Your name and answers stay in the room",
-    body: "Player text is only shown to people in your room while you play, and it is never saved.",
-  },
-  {
-    title: "Room codes and rate limits",
-    body: "When a room is created and when someone joins, we briefly count requests per IP address to stop abuse.",
-  },
-  {
-    title: "Questions or fixes",
-    body: "The code is open source. Privacy questions are welcome as GitHub issues.",
-    link: true,
-  },
+type PrivacyCopy = Dictionary["privacy"];
+
+interface PrivacyPoint {
+  title: keyof PrivacyCopy;
+  body: keyof PrivacyCopy;
+  link?: boolean;
+}
+
+const POINTS: readonly PrivacyPoint[] = [
+  { title: "accountTitle", body: "accountBody" },
+  { title: "cookiesTitle", body: "cookiesBody" },
+  { title: "statsTitle", body: "statsBody" },
+  { title: "roomTextTitle", body: "roomTextBody" },
+  { title: "rateLimitsTitle", body: "rateLimitsBody" },
+  { title: "questionsTitle", body: "questionsBody", link: true },
 ];
 
 export function Privacy() {
+  const { t } = useLocale();
   return (
     <TvPage>
       <TvHeader variant="brand" />
       <Highlight
         style={{ alignSelf: "flex-start", marginTop: 12, padding: "0 14px" }}
       >
-        <Marker level={1} size={96}>Privacy</Marker>
+        <Marker level={1} size={96}>
+          {t.landing.privacy}
+        </Marker>
       </Highlight>
       <div
         style={{
@@ -66,9 +60,9 @@ export function Privacy() {
               color="var(--opg-marker)"
               style={{ lineHeight: 1.15 }}
             >
-              {point.title}
+              {t.privacy[point.title]}
             </Marker>
-            <div style={{ fontSize: 30, lineHeight: 1.35 }}>{point.body}</div>
+            <div style={{ fontSize: 30, lineHeight: 1.35 }}>{t.privacy[point.body]}</div>
             {point.link ? (
               <a
                 className="opg-link"
@@ -77,7 +71,7 @@ export function Privacy() {
                 rel="noreferrer"
                 style={{ fontSize: 30, fontWeight: 700 }}
               >
-                Open source on GitHub
+                {t.landing.openSourceOnGitHub}
               </a>
             ) : null}
           </Card>

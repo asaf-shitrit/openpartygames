@@ -27,6 +27,7 @@ const CONVERTED_FILES = [
   "TvReconnecting.tsx",
   "TvFullTonight.tsx",
   "TvCredits.tsx",
+  "Privacy.tsx",
   "HostApp.tsx",
   "shared.tsx",
 ];
