@@ -16,6 +16,7 @@ export const mostLikelyTo = {
   yourself: "yourself",
   voteLockedIn: "Vote locked in",
   youPicked: "You picked {name}.",
+  totalPoints: "{points} total",
   votedOfTotalPhone: "{voted} of {total} voted",
   youSuffix: " (You)",
   youSuffixLower: " (you)",

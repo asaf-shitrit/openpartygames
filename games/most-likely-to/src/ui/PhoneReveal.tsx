@@ -18,7 +18,7 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
-import { useLocale } from "@opg/i18n";
+import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import {
   REVEAL_MS,
@@ -39,8 +39,10 @@ function ResultCard({
   me,
   cardRef,
   level,
+  t,
 }: {
   level: 1 | 2;
+  t: Dictionary;
   personal: PersonalReveal;
   live: boolean;
   totals: Record<string, number>;
@@ -103,7 +105,7 @@ function ResultCard({
           </Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-            {formatPoints(total)} total
+            {format(t.mostLikelyTo.totalPoints, { points: formatPoints(total) })}
           </div>
         </div>
       </Card>
@@ -249,6 +251,7 @@ export function PhoneReveal(props: PhoneRevealProps) {
           cardRef={cardRef}
           // A no-TV room's stage above already holds the h1 (the prompt).
           level={controlsHeadingLevel(stage !== null)}
+          t={t}
         />
       ) : (
         <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} t={t} />
