@@ -229,7 +229,7 @@ describe("lie validation", () => {
       const state = setup(ctx);
       const only = { ...state, factIndex: state.facts.findIndex((f) => f.id === id) };
       const next = lie(only, "p1", text, ctx);
-      expect(next.lieErrors.p1, text).toBe("truth");
+      expect(`${text}: ${next.lieErrors.p1}`).toBe(`${text}: truth`);
     }
   });
 
