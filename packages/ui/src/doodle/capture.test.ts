@@ -51,7 +51,8 @@ describe("finalizeStroke", () => {
 
 // The pad and the rules share one stroke model, so whatever the pad can produce, the room accepts.
 describe("a captured stroke passes the rules' schema", () => {
-  /** A zigzag across the whole grid, every point a corner simplification must keep. */
+  /** A zigzag across the whole grid, every point a corner simplification must keep. Bounded at the
+   * point cap: the pad does not enforce that cap yet (#126). */
   const zigzag: GridPoint[] = Array.from({ length: MAX_POINTS_PER_STROKE }, (_, i) => [
     (i * 37) % GRID,
     i % 2 === 0 ? 0 : GRID - 1,
