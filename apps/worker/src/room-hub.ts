@@ -312,7 +312,7 @@ export class RoomHub {
     return mergeResults(results);
   }
 
-  private liveCallers(): { players: Set<string>; host: boolean } {
+  private liveCallers(): LiveCallers {
     const players = new Set<string>();
     let host = false;
     for (const socket of this.options.sockets.all()) {
@@ -488,6 +488,12 @@ export class RoomHub {
       deadline === null ? idleCheck : Math.min(deadline, idleCheck),
     );
   }
+}
+
+/** Who still has a socket open. */
+interface LiveCallers {
+  players: Set<string>;
+  host: boolean;
 }
 
 /** One result standing for several, so a batch of changes persists and broadcasts once. */

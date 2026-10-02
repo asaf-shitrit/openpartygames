@@ -582,14 +582,13 @@ describe("RoomHub restore", () => {
   });
 });
 
-describe("RoomHub restore after a crash or deploy", () => {
-  /** Who the persisted room says is connected, by player name. */
-  function connectedNames(harness: HubHarness): string[] {
-    const stored = storedRoom(harness.storage.stored);
-    const players = stored?.players as { name: string; connected: boolean }[];
-    return players.filter((p) => p.connected).map((p) => p.name);
-  }
+/** Who the persisted room says is connected, by player name. */
+function connectedNames(harness: HubHarness): string[] {
+  const players = storedRoom(harness.storage.stored)?.players ?? [];
+  return players.filter((p) => p.connected).map((p) => p.name);
+}
 
+describe("RoomHub restore after a crash or deploy", () => {
   it("marks every seat offline when no socket survived, so the room can go idle", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);
