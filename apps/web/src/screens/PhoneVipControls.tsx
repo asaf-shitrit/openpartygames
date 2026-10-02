@@ -149,6 +149,8 @@ function startDisabledReason(check: DisabledCheck): string | undefined {
   if (isBlocked(selectedGame, sharedScreen)) {
     return format(t.picker.gameNeedsSharedScreen, { game: selectedGame.name });
   }
+  // Turning a pack on cannot help here: the room's language has none to turn on.
+  if (!selectedGame.hasContentInLanguage) return t.common.errorNoLanguagePacks;
   if (playerCount < selectedGame.minPlayers) {
     return format(t.picker.needAtLeastPlayers, {
       count: selectedGame.minPlayers,
