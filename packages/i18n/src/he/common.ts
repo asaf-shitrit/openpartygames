@@ -6,7 +6,7 @@ export const common: Dictionary["common"] = {
   errorRoomFull: "החדר מלא.",
   errorRoomLocked: "החדר נעול.",
   errorNameTaken: "השם הזה תפוס. נסו שם אחר.",
-  errorNameInvalid: "שם חייב להכיל 1–12 תווים.",
+  errorNameInvalid: "שם חייב להכיל \u20661–12\u2069 תווים.",
   errorNotEnoughPlayers: "עדיין אין מספיק שחקנים.",
   errorInvalidAction: "זה לא עבד. בדקו את המשחק והחפיסות.",
   errorGeneric: "משהו השתבש. נסו שוב.",
