@@ -171,7 +171,7 @@ export function PromptText({ prompt, answer, blank, style, level }: PromptTextPr
         const [before, after] = splitBlank(prompt);
         const Tag = level === undefined ? "div" : (`h${level}` as const);
         return (
-                <Tag style={{ whiteSpace: "pre-wrap", margin: 0, ...style }}>
+                <Tag dir="auto" style={{ whiteSpace: "pre-wrap", margin: 0, ...style }}>
                         {before}
                         <BlankSlot answer={answer} blank={blank} />
                         {after}
