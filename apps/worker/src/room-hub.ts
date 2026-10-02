@@ -287,9 +287,40 @@ export class RoomHub {
     this.resumed = true;
     const room = this.room;
     if (!room) return;
-    const result = room.resumeStart(this.options.now());
+    const now = this.options.now();
+    const result = mergeResults([
+      this.reconcileConnections(room, now),
+      room.resumeStart(now),
+    ]);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
+  }
+
+  /**
+   * The snapshot remembers who was connected, but a crash or deploy kills every socket
+   * without a close event reaching the new instance, so a seat can be saved as connected
+   * with nothing behind it. That seat would hold the VIP crown, stall the game's
+   * connected-player checks and keep the room from ever going idle. What survived
+   * hibernation is exactly what `sockets.all()` holds, so the sockets decide.
+   */
+  private reconcileConnections(room: RoomCore, now: number): HandleResult {
+    const live = this.liveCallers();
+    const results = room
+      .playerIds()
+      .map((id) => room.setConnected(id, live.players.has(id), now));
+    results.push(room.setHostConnected(live.host, now));
+    return mergeResults(results);
+  }
+
+  private liveCallers(): { players: Set<string>; host: boolean } {
+    const players = new Set<string>();
+    let host = false;
+    for (const socket of this.options.sockets.all()) {
+      const caller = socket.caller();
+      if (caller.kind === "host") host = true;
+      if (caller.kind === "player") players.add(caller.playerId);
+    }
+    return { players, host };
   }
 
   private async loadPacks(): Promise<PackMeta[]> {
@@ -457,6 +488,15 @@ export class RoomHub {
       deadline === null ? idleCheck : Math.min(deadline, idleCheck),
     );
   }
+}
+
+/** One result standing for several, so a batch of changes persists and broadcasts once. */
+function mergeResults(results: HandleResult[]): HandleResult {
+  return {
+    reply: results.flatMap((r) => r.reply),
+    effects: results.flatMap((r) => r.effects),
+    changed: results.some((r) => r.changed),
+  };
 }
 
 function hasWelcome(reply: ServerMessage[]): boolean {
