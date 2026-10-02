@@ -29,6 +29,7 @@ import {
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { lettersLabel } from "./letters-label";
 import { resultDurationMs, type ImposterHostView } from "../state";
 import {
   hostResultBeats,
@@ -190,6 +191,7 @@ function GuessLine({
         revealed={lettersRevealed(beats, moment)}
         live={moment.live}
         size={tileSize}
+        label={lettersLabel(t, guessLetters, lettersRevealed(beats, moment))}
       />
     </div>
   );

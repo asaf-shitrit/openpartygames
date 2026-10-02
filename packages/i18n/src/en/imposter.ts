@@ -101,6 +101,7 @@ export const imposter = {
     typeCrewWord: "Type the crew's word",
     submitGuess: "Submit guess",
     guessSent: "Guess sent",
+    letters: { one: "1 letter", other: "{count} letters" },
     guessing: "{name} is guessing…",
     caughtStage: "{name} got caught!",
     guessingEllipsis: "Guessing…",
