@@ -23,6 +23,11 @@ import {
 
 // ---------- Text ----------
 
+/** Niqqud and cantillation marks: the same Hebrew word with or without them is one answer. */
+const HEBREW_POINTS = /[\u0591-\u05BD\u05BF-\u05C2\u05C4\u05C5\u05C7]/g;
+/** Apostrophes and the Hebrew geresh join a word ("dont" is "don't"), not split it in two. */
+const APOSTROPHES = /['\u2019\u02BC\u05F3]/g;
+
 /**
  * Mirrors packages/sdk/src/text.ts's normalizeAnswer: lowercase, trim, strip punctuation, drop a
  * leading a/an/the, collapse inner whitespace. Kept local so this game stays independent of the
@@ -30,8 +35,11 @@ import {
  */
 export function normalizeTitle(text: string): string {
   return text
+    .normalize("NFC")
     .toLowerCase()
     .trim()
+    .replace(HEBREW_POINTS, "")
+    .replace(APOSTROPHES, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
