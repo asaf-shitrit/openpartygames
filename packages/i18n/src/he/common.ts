@@ -2,6 +2,7 @@ import type { Dictionary } from "../dictionary";
 
 export const common: Dictionary["common"] = {
   languageLabel: "שפה",
+  documentTitle: "OpenPartyGames: משחקי מסיבה לטלוויזיה ולטלפונים",
   someone: "מישהו",
   errorRoomFull: "החדר מלא.",
   errorRoomLocked: "החדר נעול.",
