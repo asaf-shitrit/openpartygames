@@ -265,6 +265,19 @@ describe("join", () => {
     expect(h.room.playerIds()).toEqual([w.playerId]);
   });
 
+  it("answers a second join from an already-joined caller with its own seat, adding no player", () => {
+    const h = makeRoom();
+    const maya = join(h.room, "Maya", 0);
+    const res = h.room.handle(
+      vip(h.room, maya.playerId),
+      { t: "join", name: "Ghost" },
+      0,
+    );
+    expect(welcomeOf(res.reply)).toEqual(maya);
+    expect(res.changed).toBe(false);
+    expect(h.room.playerIds()).toEqual([maya.playerId]);
+  });
+
   it("rejoins by token keeping id and score", () => {
     const h = makeRoom({ packs: [PACK_FAMILY] });
     const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);

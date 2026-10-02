@@ -444,7 +444,7 @@ class RoomImpl implements RoomCore {
         this.onHostHello(message.hostToken, now, out);
         break;
       case "join":
-        this.onJoin(message, now, out);
+        this.onJoin(caller, message, now, out);
         break;
       case "set-avatar":
         this.onSetAvatar(caller, message.avatar, out);
@@ -806,10 +806,12 @@ class RoomImpl implements RoomCore {
   }
 
   private onJoin(
+    caller: Caller,
     message: Extract<ClientMessage, { t: "join" }>,
     now: number,
     out: Out,
   ): void {
+    if (this.welcomeSeated(caller, out)) return;
     if (
       message.token !== undefined &&
       this.tryRejoin(message.token, now, out)
@@ -817,6 +819,24 @@ class RoomImpl implements RoomCore {
       return;
     }
     this.addPlayer(message.name, now, out);
+  }
+
+  /**
+   * A socket that already holds a seat answers any further join with that same seat. Letting it
+   * add another player would leave the first one connected with no socket behind it, a ghost
+   * that keeps its seat (and maybe the crown) for as long as the room lives.
+   */
+  private welcomeSeated(caller: Caller, out: Out): boolean {
+    const seated =
+      caller.kind === "player" ? this.getPlayer(caller.playerId) : undefined;
+    if (!seated) return false;
+    out.reply.push({
+      t: "welcome",
+      role: "player",
+      playerId: seated.id,
+      token: seated.token,
+    });
+    return true;
   }
 
   /** Reconnects an existing seat; returns false when the token matches nobody. */
