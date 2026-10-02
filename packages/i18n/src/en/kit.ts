@@ -8,6 +8,10 @@ export const kit = {
     /** Spoken once, on entering the final stage — not once per second. */
     finalStageAnnounce: "Almost out of time",
   },
+  switch: {
+    on: "On",
+    off: "Off",
+  },
   sound: {
     on: "Sound on",
     off: "Sound off",

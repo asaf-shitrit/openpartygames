@@ -8,6 +8,10 @@ export const kit: Dictionary["kit"] = {
     leftAlmostOut: "נותרו {time}, כמעט נגמר",
     finalStageAnnounce: "כמעט נגמר הזמן",
   },
+  switch: {
+    on: "פועל",
+    off: "כבוי",
+  },
   sound: {
     on: "קול פועל",
     off: "קול כבוי",

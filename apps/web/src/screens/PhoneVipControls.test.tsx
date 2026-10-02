@@ -518,4 +518,12 @@ describe("PhoneVipControls, in Hebrew", () => {
       screen.getByRole("button", { name: /התחילו את/ }),
     ).toBeTruthy();
   });
+
+  it("labels every switch in Hebrew, not On and Off", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    setup();
+    expect(screen.queryByText("On")).toBeNull();
+    expect(screen.queryByText("Off")).toBeNull();
+    expect(screen.getAllByText(/^(פועל|כבוי)$/).length).toBeGreaterThan(1);
+  });
 });

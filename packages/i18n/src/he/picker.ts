@@ -52,6 +52,6 @@ export const picker: Dictionary["picker"] = {
   endGameConfirm: "לסיים את המשחק לכולם? הניקוד עד עכשיו לא יזכה בכתר.",
   yesEndIt: "כן, סיימו",
   keepPlaying: "המשיכו לשחק",
-  packAccessibleName: "חבילת {pack}",
+  packAccessibleName: "חפיסת {pack}",
   playerCount: { one: "שחקן אחד", other: "{count} שחקנים" },
 };
