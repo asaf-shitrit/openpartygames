@@ -162,20 +162,6 @@ export type { FullscreenControl } from "./screen";
 
 export type { ServerClock, GameUi, PreviewMoment } from "./game-ui";
 
-export {
-  GAP_MS_CAP,
-  GRID,
-  MAX_POINTS_PER_DOODLE,
-  MAX_POINTS_PER_STROKE,
-  MAX_STROKES_PER_DOODLE,
-  MIN_STEP,
-  RDP_EPSILON,
-  REPLAY_MS,
-  STROKE_MS_CAP,
-  TICK_MS,
-  emptyDoodle,
-} from "./doodle/types";
-export type { Doodle, GridPoint, InkIndex, Stroke } from "./doodle/types";
 export { doodleInkNames, DOODLE_INKS } from "./doodle/inks";
 export {
   deltaDecode,

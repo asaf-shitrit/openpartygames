@@ -6,7 +6,7 @@ import { LocaleProvider } from "@opg/i18n";
 import { DoodlePad } from "./DoodlePad";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaDecode } from "./geometry";
-import type { Doodle } from "./types";
+import type { Doodle } from "@opg/sdk";
 import type { ClientRectLike } from "./geometry";
 
 afterEach(cleanup);

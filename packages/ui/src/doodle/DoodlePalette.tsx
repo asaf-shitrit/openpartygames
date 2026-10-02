@@ -3,7 +3,7 @@
 // glyph — never colour alone (CLAUDE.md, design/AVATARS.md).
 import type { CSSProperties } from "react";
 import { format, useLocale } from "@opg/i18n";
-import type { InkIndex } from "./types";
+import type { InkIndex } from "@opg/sdk";
 
 const SWATCH_SIZE = 44;
 

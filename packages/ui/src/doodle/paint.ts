@@ -3,8 +3,8 @@
 // painting can be tested with a plain recording object, no cast required — the exact pattern
 // confetti-paint.ts uses (plan/0003-doodle-bluff.md).
 import { deltaDecode } from "./geometry";
-import type { Doodle, GridPoint, Stroke } from "./types";
-import { GRID } from "./types";
+import type { Doodle, GridPoint, Stroke } from "@opg/sdk";
+import { GRID } from "@opg/sdk";
 
 /** The drawing surface paintDoodle needs; a real CanvasRenderingContext2D satisfies it. */
 export interface DoodleCanvasContext {

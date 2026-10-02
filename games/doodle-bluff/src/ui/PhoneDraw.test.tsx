@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
-import type { Stroke } from "@opg/ui";
+import type { Doodle, Stroke } from "@opg/sdk";
 import { LocaleProvider } from "@opg/i18n";
-import type { Doodle, DoodleAction, DoodlePlayerView } from "../state";
+import type { DoodleAction, DoodlePlayerView } from "../state";
 import type { SentCursors } from "./PhoneDraw";
 import { commitDrawingChange, PhoneDraw, pendingChunks, readMirror, restoreMirror, resyncCursor, storageKey } from "./PhoneDraw";
 

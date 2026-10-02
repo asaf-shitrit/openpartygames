@@ -1,7 +1,6 @@
 // A deterministic scribble a bot submits through the real chunk action, so the chunk path, the
 // `from` check and doodle-done are all exercised by runBotPlaythrough.
-import type { Rng } from "@opg/sdk";
-import { GAP_MS_CAP, GRID, MAX_INK_INDEX, STROKE_MS_CAP, type Stroke } from "./state";
+import { GAP_MS_CAP, GRID, MAX_INK_INDEX, STROKE_MS_CAP, type Rng, type Stroke } from "@opg/sdk";
 
 const BOT_STROKES = 3;
 const BOT_POINTS_PER_STROKE = 8;

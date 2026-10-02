@@ -291,6 +291,9 @@ importers:
       '@opg/protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@opg/sdk':
+        specifier: workspace:*
+        version: link:../sdk
       react:
         specifier: '*'
         version: 19.3.0

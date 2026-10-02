@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { replaySchedule, replayStateAt } from "./replay";
 import type { StrokeWindow } from "./replay";
-import { REPLAY_MS } from "./types";
-import type { Doodle, Stroke } from "./types";
+import { REPLAY_MS } from "./replay";
+import type { Doodle, Stroke } from "@opg/sdk";
 
 function windowAt(schedule: readonly StrokeWindow[], index: number): StrokeWindow {
   const strokeWindow = schedule[index];

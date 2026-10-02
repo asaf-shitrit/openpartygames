@@ -14,7 +14,8 @@
     "@fontsource/atkinson-hyperlegible": "^5.3.0",
     "@fontsource/permanent-marker": "^5.3.0",
     "@opg/i18n": "workspace:*",
-    "@opg/protocol": "workspace:*"
+    "@opg/protocol": "workspace:*",
+    "@opg/sdk": "workspace:*"
   },
   "peerDependencies": {
     "react": "*",

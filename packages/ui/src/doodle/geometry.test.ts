@@ -6,8 +6,8 @@ import {
   gridPointOf,
   simplifyStroke,
 } from "./geometry";
-import { GRID } from "./types";
-import type { Doodle, GridPoint } from "./types";
+import { GRID } from "@opg/sdk";
+import type { Doodle, GridPoint } from "@opg/sdk";
 
 const RECT = { left: 100, top: 200, width: 300, height: 300 };
 

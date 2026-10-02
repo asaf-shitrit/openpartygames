@@ -2,20 +2,20 @@
 // a raw pointer trail into a stored Stroke. No DOM — the pad calls this from its pointerup
 // handler with numbers it already has.
 import { deltaEncode, simplifyStroke } from "./geometry";
-import type { GridPoint, InkIndex, Stroke } from "./types";
-import { GAP_MS_CAP, STROKE_MS_CAP, TICK_MS } from "./types";
+import type { GridPoint, InkIndex, Stroke } from "@opg/sdk";
+import { GAP_MS_CAP, STROKE_MS_CAP, TICK_MS } from "@opg/sdk";
 
 function quantizeAndCap(ms: number, cap: number): number {
   const quantized = Math.round(Math.max(0, ms) / TICK_MS) * TICK_MS;
   return Math.min(quantized, cap);
 }
 
-/** Duration in TICK_MS units, capped at STROKE_MS_CAP. */
+/** Duration in ms, rounded to the nearest TICK_MS and capped at STROKE_MS_CAP. */
 export function captureDuration(ms: number): number {
   return quantizeAndCap(ms, STROKE_MS_CAP);
 }
 
-/** Pause before a stroke, in TICK_MS units, capped at GAP_MS_CAP. */
+/** Pause before a stroke, in ms, rounded to the nearest TICK_MS and capped at GAP_MS_CAP. */
 export function captureGap(ms: number): number {
   return quantizeAndCap(ms, GAP_MS_CAP);
 }
