@@ -494,7 +494,7 @@ function PointRowView({
       }}
     >
       <div
-        style={{ display: "flex", alignItems: "center", gap: 4, width: 264 }}
+        style={{ display: "flex", alignItems: "center", gap: 4, width: 312, flexShrink: 0 }}
       >
         {row.ids.slice(0, 4).map((id) => (
           <Avatar
