@@ -24,6 +24,8 @@ const CARD_STYLE: CSSProperties = {
 
 const RING_WRAP: CSSProperties = {
   position: "relative",
+  // Suspense hangs its 16px caption ~25px below the ring; clear it so the tiles don't cover it.
+  marginBottom: 14,
   width: 168,
   height: 168,
   display: "flex",
