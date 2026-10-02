@@ -514,6 +514,11 @@ class RoomImpl implements RoomCore {
     const playerIds = this.pending.playerIds.filter(
       (id) => this.getPlayer(id) !== undefined,
     );
+    // A kick while the content loaded can leave the roster under the game's minimum.
+    if (playerIds.length < def.minPlayers) {
+      this.abortStartNow(out);
+      return result(out);
+    }
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
     const deadline = def.nextDeadline(state);
     this.game = {
