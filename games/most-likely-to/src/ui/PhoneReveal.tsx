@@ -18,7 +18,7 @@ import {
   useBuzz,
   useMoment,
 } from "@opg/ui";
-import { useLocale } from "@opg/i18n";
+import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import {
   REVEAL_MS,
@@ -47,6 +47,7 @@ function ResultCard({
   me: PlayerId;
   cardRef: RefObject<HTMLDivElement | null>;
 }) {
+  const { t } = useLocale();
   const total = totals[me] ?? 0;
   return (
     <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>
@@ -103,7 +104,7 @@ function ResultCard({
           </Marker>
           <div style={{ fontSize: 19, fontWeight: 700 }}>{personal.sub}</div>
           <div style={{ fontSize: 17, color: "var(--opg-ink-secondary)" }}>
-            {formatPoints(total)} total
+            {format(t.mostLikelyTo.totalPoints, { points: formatPoints(total) })}
           </div>
         </div>
       </Card>

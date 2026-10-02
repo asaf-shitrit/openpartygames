@@ -3,6 +3,7 @@ export const mostLikelyTo = {
   promptPrefix: "Who's most likely to",
   promptOf: "Prompt {round} of {count}",
   voted: "Voted",
+  totalPoints: "{points} total",
   thinking: "Thinking…",
   votedOfTotalTv: "{voted} of {total} voted",
   votedSoFar: "Voted so far ({voted} of {total})",

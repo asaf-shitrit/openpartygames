@@ -6,6 +6,7 @@ export const mostLikelyTo: Dictionary["mostLikelyTo"] = {
   promptOf: "שאלה {round} מתוך {count}",
   voted: "הצביע",
   thinking: "חושב…",
+  totalPoints: "סה\"כ {points}",
   votedOfTotalTv: "{voted} מתוך {total} הצביעו",
   votedSoFar: "הצביעו עד כה ({voted} מתוך {total})",
   stillVotingAlt: "עדיין מצביע: {name}",
