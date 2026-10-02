@@ -2,6 +2,8 @@ import type { Dictionary } from "../dictionary";
 
 export const mostLikelyTo: Dictionary["mostLikelyTo"] = {
   title: "הכי סביר ש...",
+  blurb: "הצביעו מי הכי מתאים לתיאור. מקבלים נקודות על קריאת החדר.",
+  landingBlurb: "הצביעו מי הכי מתאים לתיאור. מקבלים נקודות על קריאת החדר.",
   promptPrefix: "מי הכי סביר",
   promptOf: "שאלה {round} מתוך {count}",
   voted: "הצביע",

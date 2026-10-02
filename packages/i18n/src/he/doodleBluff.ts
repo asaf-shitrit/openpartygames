@@ -2,6 +2,8 @@ import type { Dictionary } from "../dictionary";
 
 export const doodleBluff: Dictionary["doodleBluff"] = {
   title: "קשקוש ובלוף",
+  blurb: "ציירו את המשימה הסודית, כתבו שקר לציורים של האחרים וחפשו את האמת.",
+  landingBlurb: "ציירו את המשימה, כתבו כותרת. בלפו או מצאו את האמיתית.",
   progressDraw: "ציור",
   progressGallery: "הגלריה",
   progressRound: "ציור {round} מתוך {count}",

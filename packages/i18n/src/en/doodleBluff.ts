@@ -1,5 +1,7 @@
 export const doodleBluff = {
   title: "Doodle Bluff",
+  blurb: "Draw the secret prompt, write a lie for everyone else's, and hunt for the truth.",
+  landingBlurb: "Draw the prompt, write a title. Bluff or find the real one.",
   progressDraw: "Draw",
   progressGallery: "The gallery",
   progressRound: "Drawing {round} of {count}",

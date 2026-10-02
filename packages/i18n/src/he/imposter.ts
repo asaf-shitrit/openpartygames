@@ -2,6 +2,8 @@ import type { Dictionary } from "../dictionary";
 
 export const imposter: Dictionary["imposter"] = {
   title: "מתחזה",
+  blurb: "לאחד מכם יש מילת פיתיון. דברו על זה והצביעו על המתחזה.",
+  landingBlurb: "לאחד מכם יש מילת פיתיון. דברו על זה והצביעו על המתחזה.",
   awards: {
     wordThief: "גנב מילים",
     wordThiefDetail: "גנב את המילה {times}",

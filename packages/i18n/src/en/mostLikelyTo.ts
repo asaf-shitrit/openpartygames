@@ -1,5 +1,7 @@
 export const mostLikelyTo = {
   title: "Most Likely To",
+  blurb: "Vote on who fits the prompt. Score by reading the room.",
+  landingBlurb: "Vote on who fits the prompt. Score by reading the room.",
   promptPrefix: "Who's most likely to",
   promptOf: "Prompt {round} of {count}",
   voted: "Voted",

@@ -10,6 +10,7 @@ export {
 export type { Locale, Direction, PluralCategory, PluralForms } from "./locale";
 export { format } from "./format";
 export { placeFor } from "./place";
+export { gameBlurb, gameLandingBlurb, gameName } from "./game-copy";
 export type { FormatParams } from "./format";
 export { en } from "./dictionary";
 export type { Dictionary } from "./dictionary";

@@ -2,6 +2,8 @@ import type { Dictionary } from "../dictionary";
 
 export const realOrNah: Dictionary["realOrNah"] = {
   title: "אמת או לא",
+  blurb: "כתבו תשובות מזויפות לעובדות אמיתיות. בלפו את החברים ומצאו את האמת.",
+  landingBlurb: "כתבו תשובות מזויפות לעובדות אמיתיות. בלפו את החברים ומצאו את האמת.",
   factOf: "עובדה {number} מתוך {count}",
   writeHeading: "כתבו שקר משכנע בטלפון שלכם",
   leftToWrite: "נותרו לכתיבה",
