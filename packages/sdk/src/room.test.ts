@@ -984,6 +984,16 @@ describe("a start that never finished", () => {
     return { h, ids: idsOf(players), vipId };
   }
 
+  it("goes back to the lobby when a kick during the load leaves too few players", () => {
+    const { h, ids, vipId } = startingRoom();
+    h.room.handle(vip(h.room, vipId), { t: "kick", playerId: at(ids, 2) }, 0);
+    const res = h.room.beginGame(CONTENT, 0);
+    const view = h.room.hostView(0);
+    expect(view.phase).toBe("lobby");
+    expect(view.game).toBeNull();
+    expect(noticesOf(res.effects)[0]?.code).toBe("start-failed");
+  });
+
   it("arms a deadline the alarm can fire on", () => {
     const { h } = startingRoom();
     expect(h.room.nextDeadline()).toBe(START_TIMEOUT_MS);

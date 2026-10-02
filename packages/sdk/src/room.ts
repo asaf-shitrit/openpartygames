@@ -503,17 +503,13 @@ class RoomImpl implements RoomCore {
     const out = newOut();
     if (this.phase !== "starting" || !this.pending) return result(out);
     const def = this.gameDef(this.pending.gameId);
-    if (
-      !def ||
-      content.kind !== def.contentKind ||
-      content.items.length === 0
-    ) {
-      this.abortStartNow(out);
-      return result(out);
-    }
     const playerIds = this.pending.playerIds.filter(
       (id) => this.getPlayer(id) !== undefined,
     );
+    if (!this.canBegin(def, content, playerIds)) {
+      this.abortStartNow(out);
+      return result(out);
+    }
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
     const deadline = def.nextDeadline(state);
     this.game = {
@@ -531,6 +527,19 @@ class RoomImpl implements RoomCore {
     this.checkGameOver(now, out);
     this.syncEmpty(now, out);
     return result(out);
+  }
+
+  /**
+   * Whether the loaded content and the players still seated can run this game. A kick while
+   * the content loaded can leave the roster under the game's minimum.
+   */
+  private canBegin(
+    def: AnyGame | undefined,
+    content: GameContent,
+    playerIds: PlayerId[],
+  ): def is AnyGame {
+    if (!def || content.kind !== def.contentKind) return false;
+    return content.items.length > 0 && playerIds.length >= def.minPlayers;
   }
 
   abortStart(now: number): HandleResult {
