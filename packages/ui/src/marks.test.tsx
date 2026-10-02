@@ -46,6 +46,15 @@ describe("Crown", () => {
   });
 });
 
+describe("Tally, in Hebrew", () => {
+  it("keeps the ×N mark in an LTR isolate so it does not paint as N×", () => {
+    const { container } = renderHebrewTally(<Tally count={3} />);
+    const mark = container.querySelector("bdi");
+    expect(mark?.getAttribute("dir")).toBe("ltr");
+    expect(mark?.textContent).toBe("×3");
+  });
+});
+
 describe("Tally", () => {
   it("shows the crown count and a screen-reader label", () => {
     renderTally(<Tally count={3} />);
@@ -73,8 +82,8 @@ describe("Tally", () => {
 
   it("scales the marker count with size", () => {
     const { container } = renderTally(<Tally count={2} size={80} />);
-    const count = screen.getByText("×2");
-    expect(count.style.fontSize).toBe(`${Math.round(80 * 0.75)}px`);
+    const count = screen.getByText("×2").parentElement;
+    expect(count?.style.fontSize).toBe(`${Math.round(80 * 0.75)}px`);
     expect(firstChild(container)).toBeTruthy();
   });
 });
