@@ -6,10 +6,12 @@ import { POINTS_PER_CORRECT_VOTE, POINTS_PER_WORD } from "./state";
 /**
  * Mirrors the plan's `normalizeAnswer`: lowercase, trim, strip punctuation, drop a
  * leading "a"/"an"/"the", collapse inner whitespace. Kept local so games stay
- * independent of the runtime @opg/sdk build.
+ * independent of the runtime @opg/sdk build. Apostrophes (ASCII, curly, Hebrew geresh) are
+ * dropped rather than turned into a space, so "ג'חנון" and "גחנון" are the same guess.
  */
 export function normalizeAnswer(text: string): string {
   let s = text.toLowerCase().trim();
+  s = s.replace(/['\u2018\u2019\u05F3`]/g, "");
   s = s.replace(/[^\p{L}\p{N}\s]/gu, " ");
   s = s.replace(/\s+/g, " ").trim();
   s = s.replace(/^(a|an|the) /, "");
