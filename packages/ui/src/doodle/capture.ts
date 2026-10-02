@@ -10,12 +10,12 @@ function quantizeAndCap(ms: number, cap: number): number {
   return Math.min(quantized, cap);
 }
 
-/** Duration in TICK_MS units, capped at STROKE_MS_CAP. */
+/** Duration in ms, rounded to the nearest TICK_MS and capped at STROKE_MS_CAP. */
 export function captureDuration(ms: number): number {
   return quantizeAndCap(ms, STROKE_MS_CAP);
 }
 
-/** Pause before a stroke, in TICK_MS units, capped at GAP_MS_CAP. */
+/** Pause before a stroke, in ms, rounded to the nearest TICK_MS and capped at GAP_MS_CAP. */
 export function captureGap(ms: number): number {
   return quantizeAndCap(ms, GAP_MS_CAP);
 }
