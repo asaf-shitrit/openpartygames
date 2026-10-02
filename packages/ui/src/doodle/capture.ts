@@ -2,8 +2,8 @@
 // a raw pointer trail into a stored Stroke. No DOM — the pad calls this from its pointerup
 // handler with numbers it already has.
 import { deltaEncode, simplifyStroke } from "./geometry";
-import type { GridPoint, InkIndex, Stroke } from "./types";
-import { GAP_MS_CAP, STROKE_MS_CAP, TICK_MS } from "./types";
+import type { GridPoint, InkIndex, Stroke } from "@opg/sdk";
+import { GAP_MS_CAP, STROKE_MS_CAP, TICK_MS } from "@opg/sdk";
 
 function quantizeAndCap(ms: number, cap: number): number {
   const quantized = Math.round(Math.max(0, ms) / TICK_MS) * TICK_MS;

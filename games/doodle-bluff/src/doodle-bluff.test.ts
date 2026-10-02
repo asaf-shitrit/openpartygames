@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@opg/sdk";
-import type { DrawingPromptContent, GameContext } from "@opg/sdk";
+import type { DrawingPromptContent, GameContext, Stroke } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
   bot,
@@ -19,7 +19,6 @@ import {
   VOTE_MS,
   type DoodleAction,
   type DoodleState,
-  type Stroke,
 } from "./index";
 import { buildHostView, buildPlayerView } from "./views";
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { captureDuration, captureGap, finalizeStroke } from "./capture";
-import { GAP_MS_CAP, STROKE_MS_CAP, TICK_MS } from "./types";
+import { GAP_MS_CAP, GRID, MAX_POINTS_PER_STROKE, STROKE_MS_CAP, strokeSchema, TICK_MS } from "@opg/sdk";
+import type { GridPoint } from "@opg/sdk";
 import { deltaDecode } from "./geometry";
+import { DOODLE_INKS } from "./inks";
 
 describe("captureDuration / captureGap", () => {
   it("quantizes to TICK_MS", () => {
@@ -44,5 +46,21 @@ describe("finalizeStroke", () => {
   it("packs an empty trail to an empty stroke path", () => {
     const stroke = finalizeStroke(0, [], 0, 0);
     expect(stroke.p).toEqual([]);
+  });
+});
+
+// The pad and the rules share one stroke model, so whatever the pad can produce, the room accepts.
+describe("a captured stroke passes the rules' schema", () => {
+  /** A zigzag across the whole grid, every point a corner simplification must keep. */
+  const zigzag: GridPoint[] = Array.from({ length: MAX_POINTS_PER_STROKE }, (_, i) => [
+    (i * 37) % GRID,
+    i % 2 === 0 ? 0 : GRID - 1,
+  ]);
+
+  it("at the point cap, the corners of the grid, the timing caps and every ink", () => {
+    for (let ink = 0; ink < DOODLE_INKS.length; ink += 1) {
+      const stroke = finalizeStroke(ink, zigzag, STROKE_MS_CAP * 10, GAP_MS_CAP * 10);
+      expect(strokeSchema.safeParse(stroke).success).toBe(true);
+    }
   });
 });

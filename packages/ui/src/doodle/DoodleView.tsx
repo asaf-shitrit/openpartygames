@@ -12,8 +12,8 @@ import { DOODLE_INKS } from "./inks";
 import { paintDoodle } from "./paint";
 import type { DoodleCanvasContext, DoodleUpTo } from "./paint";
 import { replaySchedule, replayStateAt } from "./replay";
-import type { Doodle } from "./types";
-import { REPLAY_MS } from "./types";
+import type { Doodle } from "@opg/sdk";
+import { REPLAY_MS } from "./replay";
 
 const MAX_BACKING_RATIO = 2;
 const DEFAULT_SIZE = 320;

@@ -1,8 +1,13 @@
 // Pure geometry over plain numbers: pointer-to-grid mapping, simplification and delta encoding.
 // happy-dom's Element.getBoundingClientRect() returns an all-zero DOMRect, so every caller passes
 // its own rect and these functions never touch the DOM (plan/0003-doodle-bluff.md).
-import type { Doodle, GridPoint } from "./types";
-import { GRID, MIN_STEP, RDP_EPSILON } from "./types";
+import type { Doodle, GridPoint } from "@opg/sdk";
+import { GRID } from "@opg/sdk";
+
+/** Grid units a new pointer sample must move from the last kept one to be kept. */
+export const MIN_STEP = 6;
+/** Ramer–Douglas–Peucker tolerance, in grid units, when simplifying a finished stroke. */
+export const RDP_EPSILON = 4;
 
 /** A plain rect, because happy-dom hands components an all-zero DOMRect. */
 export interface ClientRectLike {

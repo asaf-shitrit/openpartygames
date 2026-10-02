@@ -610,18 +610,15 @@ The maintainer settled ink, drawings per player, replay, the gallery, house titl
 
 **D8 — Scope is slices 1 through 6.** Including the no-TV opt-in, which is why no-TV mode lands first. The human playtest that slice 6 calls for — real phones, a real TV, and the question of whether 130 s is enough to draw two prompts — stays with the maintainer.
 
-**D9 (open, deliberately deferred) — where the stroke model lives.** Slice 1 put it in
+**D9 — where the stroke model lives.** **Decided and done: `packages/sdk/src/doodle.ts`.** Slice 1 put it in
 `packages/ui/src/doodle/types.ts` and slice 3 repeated it in `games/doodle-bluff/src/state.ts`, because
-`apps/worker` imports a game definition and must not pull the UI kit — and therefore React — in with it.
-`@opg/ui` exports only its barrel, so a types-only deep import is not available today.
+`apps/worker` imports a game definition and must not pull the UI kit, and therefore React, in with it. Two copies
+meant the phone could encode a drawing with one set of caps while the server validated it with the other, so a
+guard test held them equal value for value.
 
-Repeating it is a real hazard, not a style question: the phone encodes a drawing with one set of caps and the
-server validates it with the other, and a drift would silently reject drawings with nothing to say so.
-`games/doodle-bluff/src/stroke-model.test.ts` closes that hole by asserting the two agree value for value.
-
-The proper fix is to move the pure model — the types and the caps, not `DOODLE_INKS` and not the
-components — into `packages/sdk`, which is React-free, which `apps/worker` and every game already depend
-on, and which `ROADMAP.md:17` already names as the home of the `canvas` capability. That needs a new
-`packages/ui` → `@opg/sdk` workspace edge, so it is a structural decision rather than a cleanup, and it is
-not worth doing while the game is mid-build. **Do it before Doodle Bluff ships, and delete the guard test
-when it lands.**
+The model (the zod schemas, the `Stroke` and `Doodle` types inferred from them, the caps and `TICK_MS`) now lives
+once in `packages/sdk`, which is React-free, which `apps/worker` and every game already depend on, and which
+`ROADMAP.md` names as the home of the `canvas` capability. `packages/ui` gained an `@opg/sdk` workspace dependency
+and keeps only what the pad and renderer tune (`MIN_STEP`, `RDP_EPSILON`, `REPLAY_MS`) and `DOODLE_INKS`. The guard
+test is gone; `packages/sdk/src/doodle.test.ts` covers the schema and `packages/ui/src/doodle/capture.test.ts`
+checks that what the pad encodes passes it.

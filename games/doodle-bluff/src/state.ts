@@ -1,11 +1,10 @@
 // Doodle Bluff: constants, state and view types. Pure JSON, no classes/Map/Set.
 //
-// A stroke is numbers, never an ImageData, a Path2D or a canvas-produced data URL, matching the
-// `canvas` capability's data model at packages/ui/src/doodle/types.ts. The constants below mirror
-// that file's values; they are kept local (not imported from @opg/ui) so this package stays a pure
-// server-side game with no React in its dependency graph (plan/0003-doodle-bluff.md).
+// Drawings use the canvas capability's stroke model from @opg/sdk, the same one the pad encodes
+// with, so the rules validate exactly what a phone can send.
 import { z, type ZodType } from "zod";
 import type { PlayerId } from "@opg/protocol";
+import { doodleSchema, MAX_STROKES_PER_DOODLE, strokeSchema, type Doodle, type Stroke } from "@opg/sdk";
 
 // ---------- Timing constants ----------
 
@@ -34,57 +33,8 @@ export const POINTS_TRUTH = 1000;
 export const POINTS_PER_FOOL = 500;
 export const POINTS_PER_FOUND = 500;
 
-// ---------- The stroke model (mirrors packages/ui/src/doodle/types.ts) ----------
-
-export const GRID = 1024;
-export const STROKE_MS_CAP = 3000;
-export const GAP_MS_CAP = 1000;
-export const MAX_INK_INDEX = 31;
-
-export const MAX_STROKES_PER_DOODLE = 64;
-export const MAX_POINTS_PER_STROKE = 128;
-export const MAX_POINTS_PER_DOODLE = 1200;
 /** Rules-level sanity bound on one "strokes" action; the frame cap is the hard bound. */
 export const MAX_POINTS_PER_CHUNK = 400;
-
-function inRange(n: number, min: number, max: number): boolean {
-  return n >= min && n <= max;
-}
-
-/** [x0, y0, dx1, dy1, ...]: the first point is absolute, on the grid; later points are deltas. */
-const strokePointsSchema = z
-  .array(z.int())
-  .min(2)
-  .max(MAX_POINTS_PER_STROKE * 2)
-  .refine((p) => p.length % 2 === 0, "odd-length point array")
-  .refine(
-    (p) => inRange(p[0] ?? Number.NaN, 0, GRID - 1) && inRange(p[1] ?? Number.NaN, 0, GRID - 1),
-    "first point out of grid bounds",
-  )
-  .refine((p) => p.slice(2).every((n) => inRange(n, -(GRID - 1), GRID - 1)), "delta out of grid bounds");
-
-export const strokeSchema = z.object({
-  /** Palette index. Decoration only: no rule reads it. */
-  c: z.int().min(0).max(MAX_INK_INDEX),
-  /** Stroke duration in TICK_MS units, capped at STROKE_MS_CAP. */
-  d: z.int().min(0).max(STROKE_MS_CAP),
-  /** Pause before this stroke, in TICK_MS units, capped at GAP_MS_CAP. */
-  g: z.int().min(0).max(GAP_MS_CAP),
-  p: strokePointsSchema,
-});
-
-export type Stroke = z.infer<typeof strokeSchema>;
-
-export const doodleSchema = z.object({
-  v: z.literal(1),
-  s: z.array(strokeSchema).max(MAX_STROKES_PER_DOODLE),
-});
-
-export type Doodle = z.infer<typeof doodleSchema>;
-
-export function emptyDoodle(): Doodle {
-  return { v: 1, s: [] };
-}
 
 /** The two drawing slots a player fills during `draw`, 0 and 1. */
 export type DrawingSlot0or1 = 0 | 1;

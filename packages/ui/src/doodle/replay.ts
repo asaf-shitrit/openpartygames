@@ -1,7 +1,10 @@
 // Replay timing is a stored *shape*, not a wall clock: replaySchedule sums d + g across strokes
 // and scales the total to replayMs, preserving ratios, so a 3-stroke and a 60-stroke drawing both
 // take the same replayMs while the rhythm inside them differs (plan/0003-doodle-bluff.md).
-import type { Doodle } from "./types";
+import type { Doodle } from "@opg/sdk";
+
+/** How long a full drawing takes to replay, however long it took to draw. */
+export const REPLAY_MS = 2200;
 
 export interface StrokeWindow {
   /** Scaled ms into the replay when this stroke starts drawing. */

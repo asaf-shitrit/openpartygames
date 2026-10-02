@@ -1,18 +1,16 @@
 // Pure helpers for Doodle Bluff: none of these touch GameContext, so they are unit-testable
 // without a clock or an rng. Phase transitions that need `ctx` live in index.ts and call these.
 import type { PlayerId } from "@opg/protocol";
+import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, type Doodle, type Stroke } from "@opg/sdk";
 import {
   drawingIdOf,
   MAX_POINTS_PER_CHUNK,
-  MAX_POINTS_PER_DOODLE,
-  MAX_STROKES_PER_DOODLE,
   MIN_OPTIONS,
   MIN_STROKES,
   POINTS_PER_FOOL,
   POINTS_PER_FOUND,
   POINTS_TRUTH,
   TITLE_MAX_LENGTH,
-  type Doodle,
   type DoodleFooledTitle,
   type DoodleGalleryEntry,
   type DoodleOption,
@@ -21,7 +19,6 @@ import {
   type DoodleState,
   type DoodleTitleError,
   type DrawingSlot,
-  type Stroke,
 } from "./state";
 
 // ---------- Text ----------

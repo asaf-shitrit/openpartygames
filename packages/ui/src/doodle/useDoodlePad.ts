@@ -11,8 +11,8 @@ import { deltaEncode, gridPointOf } from "./geometry";
 import type { ClientRectLike } from "./geometry";
 import { paintDoodle } from "./paint";
 import type { DoodleCanvasContext } from "./paint";
-import type { Doodle, GridPoint, InkIndex, Stroke } from "./types";
-import { GRID } from "./types";
+import type { Doodle, GridPoint, InkIndex, Stroke } from "@opg/sdk";
+import { GRID } from "@opg/sdk";
 
 const MAX_BACKING_RATIO = 2;
 const DEFAULT_LINE_WIDTH = 4;

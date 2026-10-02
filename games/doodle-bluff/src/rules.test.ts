@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { emptyDoodle, MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, type Doodle, type Stroke } from "@opg/sdk";
 import {
   addPoints,
   anonymizeAuthor,
@@ -22,19 +23,14 @@ import {
   withoutKey,
 } from "./rules";
 import {
-  emptyDoodle,
   MAX_POINTS_PER_CHUNK,
-  MAX_POINTS_PER_DOODLE,
-  MAX_STROKES_PER_DOODLE,
   MIN_OPTIONS,
   POINTS_PER_FOOL,
   POINTS_PER_FOUND,
   POINTS_TRUTH,
-  type Doodle,
   type DoodleOption,
   type DoodleState,
   type DrawingSlot,
-  type Stroke,
 } from "./state";
 
 function stroke(pointCount: number): Stroke {

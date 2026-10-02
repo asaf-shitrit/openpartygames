@@ -3,7 +3,7 @@ import { paintDoodle } from "./paint";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaEncode } from "./geometry";
 import { DOODLE_INKS } from "./inks";
-import type { Doodle, GridPoint } from "./types";
+import type { Doodle, GridPoint } from "@opg/sdk";
 
 type Call =
   | { op: "save" | "restore" | "beginPath" | "stroke" }

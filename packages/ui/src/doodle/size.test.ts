@@ -2,13 +2,8 @@
 // JSON.stringify output, instead of leaving it an estimate. Deterministic synthetic doodles, not
 // randomness, so the numbers are stable across runs.
 import { describe, expect, it } from "vitest";
-import {
-  GAP_MS_CAP,
-  MAX_POINTS_PER_STROKE,
-  MAX_STROKES_PER_DOODLE,
-  STROKE_MS_CAP,
-} from "./types";
-import type { Doodle, GridPoint, Stroke } from "./types";
+import { GAP_MS_CAP, MAX_POINTS_PER_STROKE, MAX_STROKES_PER_DOODLE, STROKE_MS_CAP } from "@opg/sdk";
+import type { Doodle, GridPoint, Stroke } from "@opg/sdk";
 import { deltaEncode } from "./geometry";
 
 /** A wandering polyline, `length` points, that stays inside the grid. */

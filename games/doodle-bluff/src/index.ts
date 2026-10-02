@@ -1,6 +1,7 @@
 // Doodle Bluff: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
 // The write -> vote -> reveal spine is real-or-nah's, almost unchanged (plan/0003-doodle-bluff.md);
 // what's new is the draw phase up front, the chunked stroke submit, and the artist's own score.
+import { emptyDoodle } from "@opg/sdk";
 import type { DrawingPrompt, DrawingPromptContent, GameContext, GameDefinition, Rng } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import { doodleBluffAwards } from "./awards";
@@ -32,7 +33,6 @@ import {
   DOODLE_MIN_PLAYERS,
   DOODLE_MINUTES,
   DRAW_MS,
-  emptyDoodle,
   GALLERY_MS,
   REVEAL_MS,
   shownCount as shownCountOf,
@@ -50,7 +50,6 @@ import {
 import { buildHostView, buildPlayerView } from "./views";
 
 export type {
-  Doodle,
   DoodleAction,
   DoodleFooledTitle,
   DoodleGalleryEntry,
@@ -66,7 +65,6 @@ export type {
   DoodleState,
   DoodleTitleError,
   DrawingSlot,
-  Stroke,
 } from "./state";
 export {
   doodleActionSchema,
@@ -76,7 +74,6 @@ export {
   doodlePlayerOptionSchema,
   doodlePlayerViewSchema,
   doodleRevealSchema,
-  doodleSchema,
   doodleTitleErrorSchema,
   drawingIdOf,
   DOODLE_MAX_PLAYERS,
@@ -84,8 +81,6 @@ export {
   DOODLE_MINUTES,
   DRAW_MS,
   GALLERY_MS,
-  GAP_MS_CAP,
-  GRID,
   MIN_OPTIONS,
   MIN_STROKES,
   POINTS_PER_FOOL,
@@ -93,8 +88,6 @@ export {
   POINTS_TRUTH,
   REVEAL_MS,
   shownCount,
-  STROKE_MS_CAP,
-  strokeSchema,
   TITLE_MAX_LENGTH,
   TITLE_MS,
   TITLED_MAX,

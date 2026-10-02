@@ -17,10 +17,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
 import { Button, Card, DoodlePad, Icon, PRESSABLE_CLASS } from "@opg/ui";
-import type { Doodle, Stroke } from "@opg/ui";
+import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
-import { doodleSchema, emptyDoodle, MAX_POINTS_PER_CHUNK, type DoodleAction, type DoodlePlayerPrompt, type DoodlePlayerView } from "../state";
+import {
+  MAX_POINTS_PER_CHUNK,
+  type DoodleAction,
+  type DoodlePlayerPrompt,
+  type DoodlePlayerView,
+} from "../state";
 import { ControlsMarker } from "./common";
 
 const TAP_TARGET = 44;

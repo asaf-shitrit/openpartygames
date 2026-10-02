@@ -4,7 +4,7 @@ import { DoodleView } from "./DoodleView";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaEncode } from "./geometry";
 import type { ClientRectLike } from "./geometry";
-import type { Doodle } from "./types";
+import type { Doodle } from "@opg/sdk";
 
 const matchMediaDescriptor = Object.getOwnPropertyDescriptor(window, "matchMedia");
 

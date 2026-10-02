@@ -4,18 +4,15 @@
 // as the TV's host frame and as a no-TV player frame (own view plus `stage`). Drives the real
 // GameDefinition through its real chunk actions, so the numbers come from the view builders.
 import { describe, expect, it } from "vitest";
-import { createRng } from "@opg/sdk";
-import type { DrawingPromptContent, GameContext, GamePlayer } from "@opg/sdk";
+import { createRng, GAP_MS_CAP, STROKE_MS_CAP } from "@opg/sdk";
+import type { DrawingPromptContent, GameContext, GamePlayer, Stroke } from "@opg/sdk";
 import {
   doodleBluff,
   drawingIdOf,
-  GAP_MS_CAP,
-  STROKE_MS_CAP,
   type DoodleHostView,
   type DoodlePhase,
   type DoodlePlayerView,
   type DoodleState,
-  type Stroke,
 } from "@opg/game-doodle-bluff";
 
 const PLAYER_COUNT = 8;
