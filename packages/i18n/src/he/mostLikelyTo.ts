@@ -19,6 +19,7 @@ export const mostLikelyTo: Dictionary["mostLikelyTo"] = {
   voteLockedIn: "ההצבעה ננעלה",
   youPicked: "בחרתם ב{name}.",
   votedOfTotalPhone: "{voted} מתוך {total} הצביעו",
+  totalPoints: "סה\"כ {points}",
   youSuffix: " (אתם)",
   youSuffixLower: " (אתם)",
   votes: { one: "הצבעה אחת", other: "{count} הצבעות" },
