@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodlePad, Icon, PRESSABLE_CLASS } from "@opg/ui";
+import { Button, Card, DoodlePad, Icon, PINNED_BAR_STYLE, PRESSABLE_CLASS, usePinnedBarScrollPadding } from "@opg/ui";
 import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -68,6 +68,17 @@ export type SentCursors = Record<string, number>;
 export function resyncCursor(sentRef: MutableRefObject<SentCursors>, drawingId: string, ackCount: number): void {
   const sent = sentRef.current[drawingId] ?? 0;
   if (ackCount < sent) sentRef.current = { ...sentRef.current, [drawingId]: ackCount };
+}
+
+/**
+ * What a drawing's mirror is filed under: the room, the prompt being drawn and when this game's
+ * drawing began. A drawing id is only "which player, which slot", the same in every game a room
+ * plays, so filed under that alone the first game's last stroke came back as the second game's
+ * first. The prompt told games apart until a later game dealt the same prompt to the same slot;
+ * the draw deadline's start time is new every game and unchanged by a reload within one.
+ */
+export function mirrorScope(roomCode: string, prompt: string, startedAt: number | null): string {
+  return `${roomCode}:${startedAt ?? 0}:${prompt}`;
 }
 
 export function storageKey(code: string, drawingId: string): string {
@@ -150,6 +161,8 @@ function sendChunks({ send, sentRef, drawingId, doodle, canTruncate = false }: S
 export interface PhoneDrawProps {
   view: DoodlePlayerView;
   roomCode: string;
+  /** When this game's draw phase began (its timer's start): new every game, steady across a reload. */
+  startedAt: number | null;
   clock: ServerClock;
   send: (action: DoodleAction) => void;
 }
@@ -165,6 +178,7 @@ interface OneDrawingProps {
   done: boolean;
   clock: ServerClock;
   roomCode: string;
+  startedAt: number | null;
   sentRef: MutableRefObject<SentCursors>;
   send: (action: DoodleAction) => void;
 }
@@ -196,8 +210,11 @@ export function commitDrawingChange({
   sendChunks({ send, sentRef, drawingId, doodle, canTruncate });
 }
 
-function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send }: OneDrawingProps) {
+function OneDrawing({ prompt, active, ack, done, clock, roomCode, startedAt, sentRef, send }: OneDrawingProps) {
   const { drawingId } = prompt;
+  const barRef = useRef<HTMLDivElement>(null);
+  usePinnedBarScrollPadding(active, barRef);
+  const scope = mirrorScope(roomCode, prompt.prompt, startedAt);
   // Computed once, at mount: whether this pad's starting point is known to hold at least
   // everything the room does, so a later shrink from it is a real undo or clear rather than a
   // pad recovering from a lost mirror. True whenever the room has nothing to lose yet (`ack ===
@@ -206,7 +223,7 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   // point, or shrinks it through the pad's own undo/clear, so the one computation covers the
   // whole mount; it does not get revisited as `ack` moves.
   const [{ initialDoodle, canTruncate }] = useState(() => {
-    const restored = restoreMirror(roomCode, drawingId, ack);
+    const restored = restoreMirror(scope, drawingId, ack);
     return { initialDoodle: restored, canTruncate: ack === 0 || restored !== undefined };
   });
   const latestRef = useRef<Doodle>(initialDoodle ?? emptyDoodle());
@@ -224,22 +241,35 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   const onChange = useCallback(
     (doodle: Doodle) => {
       latestRef.current = doodle;
-      commitDrawingChange({ roomCode, drawingId, doodle, sentRef, send, canTruncate });
+      commitDrawingChange({ roomCode: scope, drawingId, doodle, sentRef, send, canTruncate });
     },
-    [canTruncate, drawingId, roomCode, send, sentRef],
+    [canTruncate, drawingId, scope, send, sentRef],
   );
 
   const onSquiggle = useCallback(() => {
+    // Clear first: appending the squiggle over strokes already in the room would keep some of
+    // them, and a plain truncate to the squiggle's length would keep the wrong ones. The clear
+    // is always allowed: the player chose to throw the drawing away, so a pad that lost its
+    // mirror has nothing to protect (the rules still check the truncate against `from`).
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate: true });
     latestRef.current = SQUIGGLE_DOODLE;
-    commitDrawingChange({ roomCode, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate: true });
     send({ type: "doodle-done", drawingId });
-  }, [canTruncate, drawingId, roomCode, send, sentRef]);
+  }, [drawingId, scope, send, sentRef]);
 
   return (
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>
-      <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
-      <DoneButton drawingId={drawingId} done={done} send={send} />
+      {/* The room refuses strokes for a finished drawing, so a pad left live would show ink
+          that never reaches the TV. */}
+      <div inert={done}>
+        <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
+      </div>
       <SquiggleButton done={done} onSquiggle={onSquiggle} />
+      {/* Last in the column on purpose: a pinned bar is held inside its container, so anything
+          after it would end up underneath it at the bottom of the scroll. */}
+      <div ref={barRef} style={PINNED_BAR_STYLE}>
+        <DoneButton drawingId={drawingId} done={done} send={send} />
+      </div>
     </div>
   );
 }
@@ -284,7 +314,7 @@ function SquiggleButton({ done, onSquiggle }: { done: boolean; onSquiggle: () =>
   );
 }
 
-export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
+export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawProps) {
   const { t } = useLocale();
   const prompts = view.myPrompts;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -339,6 +369,7 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
           done={view.myDone[prompt.drawingId] === true}
           clock={clock}
           roomCode={roomCode}
+          startedAt={startedAt}
           sentRef={sentRef}
           send={send}
         />

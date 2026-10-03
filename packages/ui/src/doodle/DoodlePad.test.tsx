@@ -6,6 +6,7 @@ import { LocaleProvider } from "@opg/i18n";
 import { DoodlePad } from "./DoodlePad";
 import type { DoodleCanvasContext } from "./paint";
 import { deltaDecode } from "./geometry";
+import { doodleSchema, MAX_STROKES_PER_DOODLE } from "@opg/sdk";
 import type { Doodle } from "@opg/sdk";
 import type { ClientRectLike } from "./geometry";
 
@@ -355,5 +356,88 @@ describe("DoodlePad, in Hebrew", () => {
     expect(screen.getByRole("radio", { name: "עט אדום" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "בטלו" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "נקו" })).toBeTruthy();
+  });
+});
+
+describe("DoodlePad, at the room's limits", () => {
+  const fullDoodle: Doodle = {
+    v: 1,
+    s: Array.from({ length: MAX_STROKES_PER_DOODLE }, () => ({ c: 0, d: 0, g: 0, p: [10, 10, 40, 40] })),
+  };
+
+  function renderPad(extra: Partial<Parameters<typeof DoodlePad>[0]> = {}) {
+    return renderDoodlePad(
+      <DoodlePad
+        prompt="a cat"
+        clock={steppingClock(0, 50)}
+        rectOf={stubRectOf()}
+        getContext={recordingContext()}
+        {...extra}
+      />,
+    );
+  }
+
+  it("splits a drag longer than the point cap so every emitted doodle passes the schema", () => {
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderPad({ onChange });
+    // happy-dom drops pointer coordinates, so trace a long square loop with the keyboard pen.
+    const canvas = canvasEl();
+    fireEvent.keyDown(canvas, { key: " " });
+    const loop = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
+    for (let i = 0; i < 600; i += 1) fireEvent.keyDown(canvas, { key: loop[i % 4] });
+    fireEvent.keyDown(canvas, { key: " " });
+    const doodle = onChange.mock.calls[0]?.[0];
+    expect(doodleSchema.safeParse(doodle).success).toBe(true);
+    expect(doodle?.s.length).toBeGreaterThan(1);
+  });
+
+  it("one Undo takes back a whole long drag, however many strokes it was split into", () => {
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderPad({ onChange });
+    const canvas = canvasEl();
+    // a short stroke first, then a long one that splits
+    fireEvent.keyDown(canvas, { key: " " });
+    fireEvent.keyDown(canvas, { key: "ArrowRight" });
+    fireEvent.keyDown(canvas, { key: " " });
+    fireEvent.keyDown(canvas, { key: " " });
+    const loop = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
+    for (let i = 0; i < 600; i += 1) fireEvent.keyDown(canvas, { key: loop[i % 4] });
+    fireEvent.keyDown(canvas, { key: " " });
+    const drawn = onChange.mock.calls.at(-1)?.[0];
+    expect(drawn?.s.length).toBeGreaterThan(2);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onChange.mock.calls.at(-1)?.[0].s).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onChange.mock.calls.at(-1)?.[0].s).toHaveLength(0);
+  });
+
+  it("takes no more ink and says so once the doodle holds the most strokes the room accepts", () => {
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderPad({ initialDoodle: fullDoodle, onChange });
+    expect(screen.getByRole("status").textContent).toBe("The page is full. Undo a stroke to keep drawing.");
+    drag(canvasEl(), 1, [
+      { clientX: 0, clientY: 0 },
+      { clientX: 200, clientY: 200 },
+    ]);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("lets the player draw again after undoing from a full doodle", () => {
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderPad({ initialDoodle: fullDoodle, onChange });
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(screen.queryByRole("status")).toBeNull();
+    drag(canvasEl(), 1, [
+      { clientX: 0, clientY: 0 },
+      { clientX: 200, clientY: 200 },
+    ]);
+    expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it("says the page is full in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderPad({ initialDoodle: fullDoodle });
+    expect(screen.getByRole("status").textContent).toBe("הדף מלא. בטלו קו כדי להמשיך לצייר.");
+    window.localStorage.removeItem("opg:locale");
   });
 });

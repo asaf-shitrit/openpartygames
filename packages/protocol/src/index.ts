@@ -294,9 +294,36 @@ export function parseCreateRoomRequest(raw: string): CreateRoomRequest {
   return result.success ? result.data : {};
 }
 
-/** Trims and collapses whitespace; returns null if the name is empty or too long. */
+/**
+ * Format and control characters (zero-width spaces, direction marks, the BOM) plus the blank
+ * glyphs Unicode files as letters or symbols (Braille blank, Hangul fillers). None of them
+ * draws anything, so a name made only of them would seat a player with no visible name.
+ */
+const INVISIBLE_CHARS = /[\p{Cf}\p{Cc}⠀ᅟᅠㅤﾠ]/gu;
+
+/** Whitespace or invisible characters at either end of a name. */
+const EDGE_JUNK = new RegExp(`^[\\s${INVISIBLE_CHARS.source.slice(1, -1)}]+|[\\s${INVISIBLE_CHARS.source.slice(1, -1)}]+$`, "gu");
+
+/**
+ * Collapses whitespace and trims whitespace and invisible characters off both ends; returns
+ * null if the name is empty, invisible or too long. An invisible mark between visible
+ * characters (the joiner in an emoji sequence) stays.
+ */
 export function cleanPlayerName(input: string): string | null {
-  const name = input.replace(/\s+/g, " ").trim();
+  const name = input.replace(/\s+/g, " ").replace(EDGE_JUNK, "");
   if (name.length === 0 || name.length > NAME_MAX_LENGTH) return null;
   return name;
+}
+
+/**
+ * What makes two names "the same name": case, Unicode form and invisible characters ignored,
+ * so "Dana" and "Dana" plus a zero-width space cannot take two seats that look identical.
+ */
+export function playerNameKey(name: string): string {
+  return name
+    .normalize("NFC")
+    .replace(INVISIBLE_CHARS, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }

@@ -11,13 +11,26 @@ import { mltPhaseSchema } from "@opg/game-most-likely-to/views";
 import { realOrNah } from "@opg/game-real-or-nah";
 import { ronPhaseSchema } from "@opg/game-real-or-nah/views";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { SCREENS, timingOf, type PhoneCase } from "./dev/screens";
-import { gameUiFor } from "./games";
+import { gameUiFor, preloadGameUi } from "./games";
 import { LOADING_ATTRIBUTE } from "./loading";
 
 afterEach(cleanup);
+
+// A game's screens are a lazy chunk, and the first import of one can take longer than a
+// `waitFor` allows on a busy machine. Loading them up front keeps the waits below about
+// rendering, not about how loaded the CPU is.
+const PRELOAD_TIMEOUT_MS = 60_000;
+// Even preloaded, the swap from placeholder to screen takes a few frames, which a starved CPU
+// stretches past `waitFor`'s 1s. The wait still ends the moment the screen is in. A test that
+// waits on it needs room to, so the file's test timeout is raised to match.
+const LAZY_LOAD_TIMEOUT_MS = 20_000;
+vi.setConfig({ testTimeout: 2 * LAZY_LOAD_TIMEOUT_MS });
+beforeAll(async () => {
+  await Promise.all(GAMES.map(({ definition }) => preloadGameUi(definition.id)));
+}, PRELOAD_TIMEOUT_MS);
 
 const NO_TV_LABEL = "Phone (no-TV)";
 
@@ -66,7 +79,9 @@ async function phoneText(screen: PhoneCase, withStage: boolean): Promise<string>
       />
     </LocaleProvider>,
   );
-  await waitFor(() => expect(container.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull());
+  await waitFor(() => expect(container.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull(), {
+    timeout: LAZY_LOAD_TIMEOUT_MS,
+  });
   const text = container.textContent ?? "";
   unmount();
   return text;

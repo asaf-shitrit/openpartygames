@@ -1,7 +1,7 @@
 // Pure helpers for Doodle Bluff: none of these touch GameContext, so they are unit-testable
 // without a clock or an rng. Phase transitions that need `ctx` live in index.ts and call these.
 import type { PlayerId } from "@opg/protocol";
-import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, type Doodle, type Stroke } from "@opg/sdk";
+import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, normalizeAnswer, type Doodle, type Stroke } from "@opg/sdk";
 import {
   drawingIdOf,
   MAX_POINTS_PER_CHUNK,
@@ -23,21 +23,8 @@ import {
 
 // ---------- Text ----------
 
-/**
- * Mirrors packages/sdk/src/text.ts's normalizeAnswer: lowercase, trim, strip punctuation, drop a
- * leading a/an/the, collapse inner whitespace. Kept local so this game stays independent of the
- * runtime @opg/sdk build (type imports only), the same choice real-or-nah's normalizeLie makes.
- */
-export function normalizeTitle(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^(?:an?|the)\s+/, "")
-    .trim();
-}
+/** The shared comparison form: see normalizeAnswer in @opg/sdk. */
+export const normalizeTitle = normalizeAnswer;
 
 /** Trim + collapse inner spaces. Length is checked against the result. */
 export function cleanTitle(text: string): string {

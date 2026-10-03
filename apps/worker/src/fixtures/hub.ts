@@ -32,12 +32,20 @@ export const WORD_PACK: PackMeta = {
   itemCount: 2,
 };
 
+/** The seat fields the tests assert on. */
+export interface StoredPlayer {
+  name: string;
+  connected: boolean;
+}
+
 /** The snapshot payload fields the tests assert on. */
 export interface StoredRoom {
   code: string;
   phase: string;
-  players: unknown[];
+  players: StoredPlayer[];
   hostConnected?: boolean;
+  /** The running game's engine state, when a game is on. */
+  game?: { state: { phase: string } } | null;
   emptySince?: number | null;
 }
 
@@ -156,6 +164,7 @@ export class FakeSockets implements HubSockets {
 
 export class FakeStorage implements HubStorage {
   stored: RoomSnapshot | undefined;
+  graceUntil: number | undefined;
   readonly alarms: number[] = [];
   deletions = 0;
   /** Counted, not just kept: a write per frame is the cost a flood is trying to run up. */
@@ -174,8 +183,17 @@ export class FakeStorage implements HubStorage {
     this.writes += 1;
   }
 
+  async getGraceUntil(): Promise<number | undefined> {
+    return this.graceUntil;
+  }
+
+  async setGraceUntil(at: number | null): Promise<void> {
+    this.graceUntil = at ?? undefined;
+  }
+
   async deleteAll(): Promise<void> {
     this.stored = undefined;
+    this.graceUntil = undefined;
     this.deletions += 1;
   }
 
@@ -270,6 +288,29 @@ export function makeHub(snapshot?: RoomSnapshot): HubHarness {
     snapshot,
   );
   return { hub, clock, storage, sockets, content, stats };
+}
+
+/**
+ * The same room in a fresh process: a new hub over the same storage and clock, with none of the
+ * old one's memory and none of its sockets, as after a deploy, a crash or an eviction.
+ */
+export function restartHub(previous: HubHarness): HubHarness {
+  const sockets = new FakeSockets();
+  let tokens = 1000;
+  const hub = new RoomHub(
+    {
+      games: GAMES,
+      content: previous.content,
+      storage: previous.storage,
+      sockets,
+      stats: previous.stats,
+      now: () => previous.clock.now(),
+      newToken: () => `r${++tokens}`,
+      seed: () => 42,
+    },
+    previous.storage.stored,
+  );
+  return { ...previous, hub, sockets };
 }
 
 /** Accepts a new socket the way the Durable Object adapter does. */

@@ -8,7 +8,7 @@
 //
 // invariants.js is owned by another agent's work (e2e/layout/); it is only read here, never
 // edited.
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
 interface Limits {
@@ -115,9 +115,64 @@ async function stableViolations(page: Page, surface: Surface): Promise<Violation
   return first.filter((found) => seenAgain.has(identity(found)));
 }
 
+const PAINTED_PATH = fileURLToPath(new URL("./painted.js", import.meta.url));
+
+declare global {
+  interface Window {
+    opgPainted?: {
+      problems: () => string[];
+      underBanner: (pattern: string) => string[];
+    };
+  }
+}
+
+/**
+ * Content that is in the page but not on screen (see painted.js). The layout invariants run
+ * against every element and still passed when a game's whole TV body collapsed to zero height
+ * under its frame, so this is asked separately, at every in-play check.
+ */
+async function clippedAway(page: Page): Promise<string[]> {
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  const first = await page.evaluate(() => window.opgPainted?.problems() ?? []);
+  if (first.length === 0) return [];
+  // Same two-sample rule as stableViolations: a frame caught mid phase change is not a bug a
+  // player could meet, so only what is still wrong a moment later counts.
+  await page.waitForTimeout(RESCAN_GAP_MS);
+  const second = new Set(await page.evaluate(() => window.opgPainted?.problems() ?? []));
+  return first.filter((problem) => second.has(problem));
+}
+
 export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {
   await page.waitForTimeout(SETTLE_MS);
   await ensureInjected(page);
   const violations = await stableViolations(page, surface);
   expect(violations, `${label}:\n${report(violations)}`).toEqual([]);
+  expect(await clippedAway(page), `${label}: content on the page but not on screen`).toEqual([]);
+}
+
+/**
+ * Asserts `locator` is actually painted where a player would see it, not merely "visible".
+ *
+ * Playwright's own visibility check counts an element with a size and no `visibility: hidden`;
+ * an element whose ancestor collapsed to zero height under `overflow: hidden` has both and is
+ * still not on screen. That is how the TV's whole Doodle Bluff phase body once went missing
+ * with every other assertion green. A hit test at the element's centre finds out: whatever
+ * is really painted there must be the element, or something inside it.
+ */
+export async function expectPainted(locator: Locator, label: string): Promise<void> {
+  await expect(locator, `${label} is in the page`).toBeVisible();
+  const painted = await locator.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return hit !== null && element.contains(hit);
+  });
+  expect(painted, `${label} is painted on screen, not clipped away by a collapsed ancestor`).toBe(true);
+}
+
+/** Text and controls the reconnect banner sits on top of, by comparing rectangles. */
+export async function coveredByBanner(page: Page): Promise<string[]> {
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  return page.evaluate(() => window.opgPainted?.underBanner("Reconnecting") ?? []);
 }

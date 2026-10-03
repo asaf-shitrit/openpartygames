@@ -31,7 +31,7 @@ export function Stage({ children, background = "#2B2B2B" }: StageProps) {
         overflow: "hidden",
       }}
     >
-      <div
+      <main
         className="opg-root opg-grid-tv"
         style={{
           width: 1920,
@@ -43,7 +43,7 @@ export function Stage({ children, background = "#2B2B2B" }: StageProps) {
         }}
       >
         {children}
-      </div>
+      </main>
     </div>
   );
 }
@@ -73,11 +73,15 @@ export interface PhoneScreenProps {
 export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScreenProps) {
   return (
     <RoomCodeContext.Provider value={roomCode}>
-      <div
+      <main
         className="opg-root opg-grid-phone"
         style={{
-          minHeight: "100dvh",
-          height: fit ? "100dvh" : undefined,
+          // The reconnect banner (apps/web) sits fixed over the top and publishes its height
+          // here; the screen starts below it and gives that much of its own height up, so a
+          // `fit` screen's flexible middle absorbs the banner instead of the page growing past
+          // the viewport and pushing the bottom action below the fold.
+          minHeight: "calc(100dvh - var(--opg-banner-h, 0px))",
+          height: fit ? "calc(100dvh - var(--opg-banner-h, 0px))" : undefined,
           // A clamped screen works by having a flexible middle that gives up space. At 200% text
           // there comes a point where the middle has nothing left to give, and then the choice is
           // between an action pushed off the bottom edge and a column that scrolls. Scrolling
@@ -87,6 +91,7 @@ export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScr
           width: "100%",
           maxWidth: 480,
           margin: "0 auto",
+          marginBlockStart: "var(--opg-banner-h, 0px)",
           padding: "20px 18px 28px",
           display: "flex",
           flexDirection: "column",
@@ -95,7 +100,7 @@ export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScr
         }}
       >
         {children}
-      </div>
+      </main>
     </RoomCodeContext.Provider>
   );
 }

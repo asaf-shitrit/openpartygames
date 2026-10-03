@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { ServerClock } from "../game-ui";
-import { finalizeStroke } from "./capture";
+import { doodleIsFull, finalizeStrokes } from "./capture";
 import { deltaEncode, gridPointOf } from "./geometry";
 import type { ClientRectLike } from "./geometry";
 import { paintDoodle } from "./paint";
@@ -44,6 +44,8 @@ interface PointerState {
   live: LiveStroke | null;
   activePointerId: number | null;
   lastEndAt: number | null;
+  /** Strokes each finished drag produced, newest last; one Undo removes a whole drag. */
+  dragSizes: number[];
   keyboardAt: GridPoint;
 }
 
@@ -61,6 +63,10 @@ function setActivePointerField(ref: RefObject<PointerState>, id: number | null):
 
 function setLastEndField(ref: RefObject<PointerState>, at: number | null): void {
   ref.current.lastEndAt = at;
+}
+
+function setDragSizesField(ref: RefObject<PointerState>, sizes: number[]): void {
+  ref.current.dragSizes = sizes;
 }
 
 function setKeyboardAtField(ref: RefObject<PointerState>, at: GridPoint): void {
@@ -89,6 +95,8 @@ export interface DoodlePadHandlers {
 export interface UseDoodlePad {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   strokeCount: number;
+  /** True when the doodle holds as many strokes or points as the room accepts; the pad takes no more ink. */
+  full: boolean;
   selectedInk: InkIndex;
   setSelectedInk: (ink: InkIndex) => void;
   confirmingClear: boolean;
@@ -201,6 +209,7 @@ function usePointerHandlers(options: PointerHandlerOptions): PointerHandlers {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLCanvasElement>) => {
       if (stateRef.current.activePointerId !== null) return; // only the first pointer draws
+      if (doodleIsFull(stateRef.current.strokes)) return; // the room refuses more ink
       setActivePointerField(stateRef, e.pointerId);
       e.currentTarget.setPointerCapture(e.pointerId);
       const at = pointOf(e, e.currentTarget);
@@ -250,7 +259,10 @@ function commitLiveStroke(options: CommitStrokeOptions, pointerId: number): void
   const now = clock.now();
   const gap = lastEndAt === null ? 0 : now - lastEndAt;
   setLastEndField(stateRef, now);
-  commit([...strokes, finalizeStroke(live.ink, live.points, now - live.startedAt, gap)]);
+  const added = finalizeStrokes({ ink: live.ink, points: live.points, durationMs: now - live.startedAt, gapMs: gap }, strokes);
+  if (added.length === 0) return;
+  setDragSizesField(stateRef, [...stateRef.current.dragSizes, added.length]);
+  commit([...strokes, ...added]);
 }
 
 function clampGrid(value: number): number {
@@ -326,8 +338,9 @@ function useKeyboardHandlers(options: KeyboardHandlerOptions): KeyboardHandlers 
   );
 
   const togglePen = useCallback(() => {
-    const { activePointerId, keyboardAt } = stateRef.current;
+    const { activePointerId, keyboardAt, strokes } = stateRef.current;
     if (activePointerId === null) {
+      if (doodleIsFull(strokes)) return; // the room refuses more ink
       setActivePointerField(stateRef, KEYBOARD_POINTER_ID);
       setLiveField(stateRef, { ink: selectedInk, points: [keyboardAt], startedAt: clock.now() });
       setDrawing(true);
@@ -382,7 +395,7 @@ function useKeyboardHandlers(options: KeyboardHandlerOptions): KeyboardHandlers 
 export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
   const { clock, initialDoodle, onChange, rectOf } = options;
   const initialStrokes = [...(initialDoodle?.s ?? [])];
-  const [strokeCount, setStrokeCount] = useState(initialStrokes.length);
+  const [committed, setCommitted] = useState<readonly Stroke[]>(initialStrokes);
   const [selectedInk, setSelectedInk] = useState<InkIndex>(0);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const stateRef = useRef<PointerState>({
@@ -391,13 +404,14 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     activePointerId: null,
     lastEndAt: null,
     keyboardAt: centerPoint(),
+    dragSizes: [],
   });
   const { canvasRef, repaint } = usePadCanvas(stateRef, options);
 
   const commit = useCallback(
     (next: Stroke[]) => {
       setStrokesField(stateRef, next);
-      setStrokeCount(next.length);
+      setCommitted(next);
       onChange?.({ v: 1, s: next });
       repaint();
     },
@@ -425,8 +439,13 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
   };
 
   const undo = useCallback(() => {
-    const { strokes } = stateRef.current;
-    if (strokes.length > 0) commit(strokes.slice(0, -1));
+    const { strokes, dragSizes } = stateRef.current;
+    if (strokes.length === 0) return;
+    // A drag longer than the point cap was stored as several strokes; take it back whole.
+    // Strokes restored from before this pad mounted have no recorded size: one apiece.
+    const size = Math.min(dragSizes.at(-1) ?? 1, strokes.length);
+    setDragSizesField(stateRef, dragSizes.slice(0, -1));
+    commit(strokes.slice(0, strokes.length - size));
   }, [commit, stateRef]);
 
   const clear = useCallback(() => {
@@ -437,6 +456,7 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     }
     setConfirmingClear(false);
     setLastEndField(stateRef, null);
+    setDragSizesField(stateRef, []);
     commit([]);
   }, [commit, confirmingClear, stateRef]);
 
@@ -444,7 +464,8 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
 
   return {
     canvasRef,
-    strokeCount,
+    strokeCount: committed.length,
+    full: doodleIsFull(committed),
     selectedInk,
     setSelectedInk,
     confirmingClear,

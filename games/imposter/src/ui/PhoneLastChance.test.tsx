@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { LocaleProvider } from "@opg/i18n";
-import type { PlayerRoomView } from "@opg/protocol";
+import type { PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { imposterHostViewSchema } from "../state";
 import type { ImposterAction, ImposterHostView } from "../state";
@@ -352,6 +352,48 @@ describe("GuessView in Hebrew", () => {
         { wrapper: LocaleProvider },
       );
       expect(screen.getByLabelText("הניחוש שלכם")).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
+  function renderGuess(me: PlayerSummary | null) {
+    const { view, room } = findPreview("Phone: Priya last chance");
+    const clock: ServerClock = { now: () => room.serverNow };
+    render(
+      <GuessView
+        view={view}
+        players={room.players}
+        me={me}
+        deadline={room.game?.deadline ?? null}
+        timerStartedAt={room.game?.timerStartedAt ?? null}
+        clock={clock}
+        send={vi.fn<(action: ImposterAction) => void>()}
+        stage={null}
+      />,
+      { wrapper: LocaleProvider },
+    );
+    return room;
+  }
+
+  it("names the player's avatar in Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { room } = findPreview("Phone: Priya last chance");
+      const me = room.players.find((p) => p.id === room.you) ?? null;
+      renderGuess(me);
+      expect(screen.getByRole("img", { name: `האווטאר של ${me?.name ?? ""}` })).toBeTruthy();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
+  it("falls back to a Hebrew 'you' when the player is unknown", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderGuess(null);
+      expect(screen.queryByText("You")).toBeNull();
+      expect(screen.getAllByText("אתם").length).toBeGreaterThan(0);
     } finally {
       window.localStorage.removeItem("opg:locale");
     }

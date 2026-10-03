@@ -7,7 +7,17 @@ import type { Doodle, Stroke } from "@opg/sdk";
 import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerView } from "../state";
 import type { SentCursors } from "./PhoneDraw";
-import { commitDrawingChange, PhoneDraw, pendingChunks, readMirror, restoreMirror, resyncCursor, storageKey } from "./PhoneDraw";
+import {
+  commitDrawingChange,
+  PhoneDraw,
+  pendingChunks,
+  mirrorScope,
+  readMirror,
+  restoreMirror,
+  resyncCursor,
+  SQUIGGLE_DOODLE,
+  storageKey,
+} from "./PhoneDraw";
 
 function sentCursorsRef(initial: SentCursors = {}): MutableRefObject<SentCursors> {
   return { current: initial };
@@ -20,6 +30,8 @@ afterEach(() => {
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
+const FIRST_PROMPT = "a cat riding a skateboard";
+const GAME_START = 5000;
 
 function stroke(points: number): Stroke {
   const p: number[] = [0, 0];
@@ -81,10 +93,14 @@ describe("pendingChunks", () => {
   });
 });
 
-function renderDraw(view: DoodlePlayerView, send: (action: DoodleAction) => void = vi.fn<(action: DoodleAction) => void>()) {
+function renderDraw(
+  view: DoodlePlayerView,
+  send: (action: DoodleAction) => void = vi.fn<(action: DoodleAction) => void>(),
+  startedAt: number | null = GAME_START,
+) {
   return render(
     <LocaleProvider>
-      <PhoneDraw view={view} roomCode="BKTZ" clock={CLOCK} send={send} />
+      <PhoneDraw view={view} roomCode="BKTZ" clock={CLOCK} send={send} startedAt={startedAt} />
     </LocaleProvider>,
   );
 }
@@ -126,6 +142,47 @@ describe("PhoneDraw", () => {
     expect(squiggle?.hasAttribute("disabled")).toBe(true);
   });
 
+  it("stops taking ink once that drawing is done, since the room refuses it", () => {
+    const { container } = renderDraw(baseView({ myDone: { "p1:0": true } }));
+    const [canvas] = container.querySelectorAll("canvas");
+    expect(canvas?.closest("[inert]")).not.toBeNull();
+  });
+
+  it("keeps the pad live while the drawing is not done", () => {
+    const { container } = renderDraw(baseView());
+    const [canvas] = container.querySelectorAll("canvas");
+    expect(canvas?.closest("[inert]")).toBeNull();
+  });
+
+  it("the squiggle replaces what was already drawn rather than keeping part of it", () => {
+    window.sessionStorage.setItem(
+      storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), "p1:0"),
+      JSON.stringify({ v: 1, s: [stroke(2), stroke(2), stroke(2)] }),
+    );
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView({ myStrokeCounts: { "p1:0": 3 } }), send);
+    clickSquiggle();
+    const actions = send.mock.calls.map(([action]) => action);
+    expect(actions).toEqual([
+      { type: "truncate", drawingId: "p1:0", from: 3, to: 0 },
+      { type: "strokes", drawingId: "p1:0", from: 0, strokes: SQUIGGLE_DOODLE.s },
+      { type: "doodle-done", drawingId: "p1:0" },
+    ]);
+  });
+
+  it("the squiggle replaces the room's strokes even when this phone lost its mirror", () => {
+    // A rejoin from another phone: the room holds 3 strokes, this pad has none of them.
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView({ myStrokeCounts: { "p1:0": 3 } }), send);
+    clickSquiggle();
+    const actions = send.mock.calls.map(([action]) => action);
+    expect(actions).toEqual([
+      { type: "truncate", drawingId: "p1:0", from: 3, to: 0 },
+      { type: "strokes", drawingId: "p1:0", from: 0, strokes: SQUIGGLE_DOODLE.s },
+      { type: "doodle-done", drawingId: "p1:0" },
+    ]);
+  });
+
   it("shows a waiting state when there are no prompts yet", () => {
     renderDraw(baseView({ myPrompts: [] }));
     expect(screen.getByText("Waiting on your prompts…")).toBeTruthy();
@@ -148,6 +205,38 @@ describe("PhoneDraw", () => {
   });
 });
 
+describe("PhoneDraw in a second game of the same room", () => {
+  it("does not bring back the last game's stroke for the same player and slot", () => {
+    // The previous game's mirror: same room, same drawing id, a different prompt.
+    window.sessionStorage.setItem(
+      storageKey(mirrorScope("BKTZ", "a whale on a bicycle", GAME_START), "p1:0"),
+      JSON.stringify({ v: 1, s: [stroke(2)] }),
+    );
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView(), send);
+    expect(screen.getByText("Your drawing for a cat riding a skateboard: 0 strokes so far")).toBeTruthy();
+    expect(send.mock.calls.filter(([action]) => action.type === "strokes")).toHaveLength(0);
+  });
+});
+
+describe("PhoneDraw when a later game brings the same prompt back", () => {
+  const MIRROR = JSON.stringify({ v: 1, s: [stroke(2)] });
+
+  it("does not restore the earlier game's stroke for the same player, slot and prompt", () => {
+    window.sessionStorage.setItem(storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), "p1:0"), MIRROR);
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView(), send, GAME_START + 600_000);
+    expect(screen.getByText(`Your drawing for ${FIRST_PROMPT}: 0 strokes so far`)).toBeTruthy();
+    expect(send.mock.calls.filter(([action]) => action.type === "strokes")).toHaveLength(0);
+  });
+
+  it("still restores it within the same game, across a reload", () => {
+    window.sessionStorage.setItem(storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), "p1:0"), MIRROR);
+    renderDraw(baseView(), vi.fn<(action: DoodleAction) => void>(), GAME_START);
+    expect(screen.getByText(`Your drawing for ${FIRST_PROMPT}: 1 stroke so far`)).toBeTruthy();
+  });
+});
+
 describe("PhoneDraw after a remount", () => {
   const DRAWING = "p1:0";
 
@@ -156,7 +245,10 @@ describe("PhoneDraw after a remount", () => {
   }
 
   function withMirror(strokes: number): void {
-    window.sessionStorage.setItem(storageKey("BKTZ", DRAWING), JSON.stringify(mirror(strokes)));
+    window.sessionStorage.setItem(
+      storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), DRAWING),
+      JSON.stringify(mirror(strokes)),
+    );
   }
 
   it("resumes at the acked count instead of sending from: 0", () => {

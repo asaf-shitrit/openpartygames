@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { normalizeAnswer as sdkNormalizeAnswer } from "../packages/sdk/src/text";
 import {
   crossPackErrors,
   isKebabCase,
@@ -202,6 +203,33 @@ describe("normalizeAnswer", () => {
 
   it("handles non-strings", () => {
     expect(normalizeAnswer(undefined)).toBe("");
+  });
+});
+
+describe("normalizeAnswer matches the SDK's", () => {
+  const cases = [
+    "  The Giraffe!  ",
+    "an hour",
+    "theater",
+    "the an apple",
+    "laser-pointer!",
+    "שָׁלוֹם",
+    "שלום",
+    "קפוצ'ינו",
+    "ג\u05F3חנון",
+    "Don\u2019t Stop",
+    "\u2018quoted\u2019",
+    "cafe\u0301",
+    "caf\u00e9",
+    "a\u00a0b",
+    "צה\u05F4ל",
+    'צה"ל',
+    'say "שלום" now',
+    "",
+  ];
+
+  it.each(cases)("gives the same answer for %j", (text) => {
+    expect(normalizeAnswer(text)).toBe(sdkNormalizeAnswer(text));
   });
 });
 

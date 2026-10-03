@@ -13,9 +13,11 @@ import {
   PhoneScreen,
   phoneRoomCode,
   PhoneStrip,
+  PINNED_BAR_STYLE,
   PRESSABLE_CLASS,
   Timer,
   useBuzz,
+  usePinnedBarScrollPadding,
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -258,6 +260,8 @@ function VoteLocked(
 function VoteForm(props: SectionProps) {
   const { view, players, me, deadline, clock, send, stage } = props;
   const { t } = useLocale();
+  const barRef = useRef<HTMLDivElement>(null);
+  usePinnedBarScrollPadding(stage !== null, barRef);
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -285,20 +289,22 @@ function VoteForm(props: SectionProps) {
           />
         ))}
       </div>
-      <Button
-        size="lg"
-        fullWidth
-        disabled={pick === null || sent}
-        disabledReason={pick === null ? t.mostLikelyTo.pickSomeoneFirst : undefined}
-        onClick={() => {
-          if (pick === null || sent) return;
-          setSent(true);
-          send({ type: "vote", target: pick });
-        }}
-      >
-        <Icon name="lock" size={22} color="var(--opg-paper)" />
-        <span>{t.mostLikelyTo.lockInVote}</span>
-      </Button>
+      <div ref={barRef} style={lockBarStyle(stage !== null)}>
+        <Button
+          size="lg"
+          fullWidth
+          disabled={pick === null || sent}
+          disabledReason={pick === null ? t.mostLikelyTo.pickSomeoneFirst : undefined}
+          onClick={() => {
+            if (pick === null || sent) return;
+            setSent(true);
+            send({ type: "vote", target: pick });
+          }}
+        >
+          <Icon name="lock" size={22} color="var(--opg-paper)" />
+          <span>{t.mostLikelyTo.lockInVote}</span>
+        </Button>
+      </div>
     </>
   );
 }
@@ -350,6 +356,14 @@ export interface PhoneProps {
   send: (action: MltAction) => void;
   /** The host view, in a no-TV room only; null in a room with a shared screen. */
   stage: MltHostView | null;
+}
+
+/**
+ * In a no-TV room the staged prompt pushes the list past the screen, so the page scrolls; the
+ * lock-in bar then stays pinned to the bottom edge (see PINNED_BAR_STYLE).
+ */
+function lockBarStyle(scrolls: boolean): CSSProperties {
+  return scrolls ? PINNED_BAR_STYLE : {};
 }
 
 export function Phone({

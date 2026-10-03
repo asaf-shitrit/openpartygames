@@ -24,8 +24,18 @@ import type { MatchStats } from "./stats";
 
 /** Snapshot key inside Durable Object storage. */
 export const ROOM_KEY = "room";
+/** Storage key for the end of a restored room's wait for its phones. */
+export const GRACE_KEY = "graceUntil";
 /** A room with no connections and no running game is deleted after this long. */
 export const IDLE_MS = 2 * 60 * 60 * 1000;
+/**
+ * How long a room rebuilt from storage waits for its phones to come back before it counts the
+ * ones with no socket as gone. A deploy drops every socket at once and phones reconnect within
+ * a few seconds (their backoff tops out at 5s), so marking seats offline on the first wake would
+ * hand a game a roster of absentees it then acts on: Imposter skips every speaker and jumps to
+ * the vote, and "everyone connected has voted" closes after the first phone is back.
+ */
+export const RECONNECT_GRACE_MS = 20_000;
 /** Close code sent to kicked and idle sockets. */
 const KICK = 1000;
 
@@ -67,6 +77,9 @@ export interface HubStorage {
   get(): Promise<RoomSnapshot | undefined>;
   put(snapshot: RoomSnapshot): Promise<void>;
   deleteAll(): Promise<void>;
+  /** When a restored room stops waiting for phones; undefined when no wait is outstanding. */
+  getGraceUntil(): Promise<number | undefined>;
+  setGraceUntil(at: number | null): Promise<void>;
   setAlarm(at: number): Promise<void>;
 }
 
@@ -129,6 +142,13 @@ export class RoomHub {
    * rate limits, and costs an honest player nothing.
    */
   private readonly budgets: Map<HubSocket, Budget>;
+  /**
+   * When a restored room stops waiting for phones and reconciles seats against live sockets;
+   * null for a room that was not restored, or once it has. It lives in storage too, because
+   * a process can be gone again before the alarm rings (hibernation, another deploy), and a
+   * wait that restarted with every process would be pushed back forever.
+   */
+  private reconcileAt: number | null;
 
   constructor(options: HubOptions, snapshot?: RoomSnapshot) {
     this.options = options;
@@ -137,6 +157,7 @@ export class RoomHub {
       : null;
     this.resumed = snapshot === undefined;
     this.budgets = new Map();
+    this.reconcileAt = null;
   }
 
   /** True when this room owns the code, so the adapter can 404 every other socket. */
@@ -181,6 +202,8 @@ export class RoomHub {
       contentLanguage,
     });
     this.room = room;
+    // A brand-new room has no seats a crash could have stranded, so it needs no grace.
+    this.resumed = true;
 
     const packs = await this.loadPacks();
     await this.apply(room.setPackCatalog(packs, this.options.now()));
@@ -267,7 +290,8 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    await this.apply(room.tick(now));
+    const reconciled = await this.reconcileWhenDue(room, now);
+    await this.apply(mergeResults([reconciled, room.tick(now)]));
     if (!room.isIdleSince(now, IDLE_MS)) return;
 
     this.room = null;
@@ -287,9 +311,64 @@ export class RoomHub {
     this.resumed = true;
     const room = this.room;
     if (!room) return;
-    const result = room.resumeStart(this.options.now());
+    const now = this.options.now();
+    await this.beginGrace(now);
+    await this.armAlarm();
+    const result = room.resumeStart(now);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
+  }
+
+  /**
+   * Picks up the wait an earlier process began, or begins one: every wake might follow a crash.
+   * The caller books its alarm either way: the wake may be an event that never reaches `apply`,
+   * and an earlier process may have died between storing the wait and booking it.
+   */
+  private async beginGrace(now: number): Promise<void> {
+    const stored = await this.options.storage.getGraceUntil();
+    if (stored !== undefined) {
+      this.reconcileAt = stored;
+      return;
+    }
+    this.reconcileAt = now + RECONNECT_GRACE_MS;
+    await this.options.storage.setGraceUntil(this.reconcileAt);
+  }
+
+  /** Reconciles once the grace is over; an empty result before that. */
+  private async reconcileWhenDue(room: RoomCore, now: number): Promise<HandleResult> {
+    if (this.reconcileAt === null || now < this.reconcileAt) {
+      return mergeResults([]);
+    }
+    this.reconcileAt = null;
+    await this.options.storage.setGraceUntil(null);
+    return this.reconcileConnections(room, now);
+  }
+
+  /**
+   * The snapshot remembers who was connected, but a crash or deploy kills every socket
+   * without a close event reaching the new instance, so a seat can be saved as connected
+   * with nothing behind it. That seat would hold the VIP crown, stall the game's
+   * connected-player checks and keep the room from ever going idle. What survived
+   * hibernation is exactly what `sockets.all()` holds, so the sockets decide.
+   */
+  private reconcileConnections(room: RoomCore, now: number): HandleResult {
+    const live = this.liveCallers();
+    const results = room
+      .playerIds()
+      .map((id) => room.setConnected(id, live.players.has(id), now));
+    results.push(room.setHostConnected(live.host, now));
+    return mergeResults(results);
+  }
+
+  private liveCallers(): LiveCallers {
+    const players = new Set<string>();
+    let host = false;
+    for (const socket of this.options.sockets.all()) {
+      const caller = socket.caller();
+      if (caller.kind === "host") host = true;
+      if (caller.kind === "player") players.add(caller.playerId);
+    }
+    return { players, host };
   }
 
   private async loadPacks(): Promise<PackMeta[]> {
@@ -452,11 +531,26 @@ export class RoomHub {
     if (!room) return;
     const now = this.options.now();
     const deadline = room.nextDeadline();
-    const idleCheck = now + IDLE_MS;
-    await this.options.storage.setAlarm(
-      deadline === null ? idleCheck : Math.min(deadline, idleCheck),
+    const wakes = [deadline, this.reconcileAt, now + IDLE_MS].filter(
+      (at) => at !== null,
     );
+    await this.options.storage.setAlarm(Math.min(...wakes));
   }
+}
+
+/** Who still has a socket open. */
+interface LiveCallers {
+  players: Set<string>;
+  host: boolean;
+}
+
+/** One result standing for several, so a batch of changes persists and broadcasts once. */
+function mergeResults(results: HandleResult[]): HandleResult {
+  return {
+    reply: results.flatMap((r) => r.reply),
+    effects: results.flatMap((r) => r.effects),
+    changed: results.some((r) => r.changed),
+  };
 }
 
 function hasWelcome(reply: ServerMessage[]): boolean {

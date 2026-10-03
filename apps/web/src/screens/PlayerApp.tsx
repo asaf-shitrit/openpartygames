@@ -1,5 +1,5 @@
 // /<CODE> — phone join flow, then the screen for the current phase.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActiveGameView,
   AvatarId,
@@ -14,6 +14,7 @@ import type { Dictionary } from "@opg/i18n";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
+import { takeJoin } from "../join-handoff";
 import { navigate } from "../router";
 import { useRoomGamePreload } from "../useGamePreload";
 import { useRoomSocket } from "../useRoomSocket";
@@ -29,6 +30,7 @@ import { PhoneResults } from "./PhoneResults";
 import { PhoneStarting } from "./PhoneStarting";
 import { PhoneVipControls } from "./PhoneVipControls";
 import { PhoneWaiting } from "./PhoneWaiting";
+import { withLocalizedGames } from "./localize-games";
 
 function playerToken(code: string): string | null {
   try {
@@ -149,8 +151,15 @@ function busyFor(
   return joinRequested && !error;
 }
 
-function errorFor(t: Dictionary, error: RoomSocketError | null): string | null {
+function errorFor(
+  t: Dictionary,
+  error: RoomSocketError | null,
+  joinAsked: boolean,
+): string | null {
   if (!error) return null;
+  // A reload with a token the room no longer honours (the player was removed) makes the socket
+  // try to join with no name at all. Nobody typed a bad name, so there is nothing to scold.
+  if (error.code === "name-invalid" && !joinAsked) return null;
   return errorCopy(t)[error.code];
 }
 
@@ -460,19 +469,37 @@ function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
   return <PhoneReconnectingBanner />;
 }
 
+/**
+ * The name the join form handed over for this room, joined with once the socket exists. A saved
+ * token still goes along with it, so the room puts a player back in their seat when it is
+ * valid and seats them under this name when it is not (they were removed, say).
+ */
+function useHandoffJoin(code: string, socket: RoomSocket): string | null {
+  const [name] = useState(() => takeJoin(code));
+  const sent = useRef(false);
+  useEffect(() => {
+    if (name === null || sent.current) return;
+    sent.current = true;
+    socket.join(name);
+  }, [name, socket]);
+  return name;
+}
+
 export function PlayerApp({ code }: { code: string }) {
   const { t } = useLocale();
   const socket = useRoomSocket({ code, role: "player" });
-  const view = playerViewFrom(socket);
+  const rawView = playerViewFrom(socket);
+  const view = useMemo(() => (rawView ? withLocalizedGames(t, rawView) : null), [rawView, t]);
   const clock = socket.clock;
 
   const playerId = playerIdFor(view, socket);
-  const [joinedName, setJoinedName] = useState("");
-  const [joinRequested, setJoinRequested] = useState(false);
+  const [hadToken] = useState(() => Boolean(playerToken(code)));
+  const handoffName = useHandoffJoin(code, socket);
+  const [joinedName, setJoinedName] = useState(handoffName ?? "");
+  const [joinRequested, setJoinRequested] = useState(handoffName !== null);
   const [pickerOverride, setPickerOverride] = useState<
     "open" | "closed" | null
   >(null);
-  const [hadToken] = useState(() => Boolean(playerToken(code)));
   const [dismissedResultAt, setDismissedResultAt] = useState<number | null>(
     null,
   );
@@ -484,7 +511,7 @@ export function PlayerApp({ code }: { code: string }) {
   useOutlivedError(socket, view);
   const myAvatar = avatarFor(me);
   const myName = nameFor(me, joinedName);
-  const error = errorFor(t, socket.lastError);
+  const error = errorFor(t, socket.lastError, joinRequested);
 
   const donePicker = () => {
     markAvatarPicked(code, playerId);

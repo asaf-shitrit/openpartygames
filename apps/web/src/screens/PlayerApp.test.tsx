@@ -11,6 +11,7 @@ import {
 } from "./fixtures/wakeLock";
 import { makePlayer, makePlayerView } from "./fixtures/room";
 import { realOrNahPreviews } from "@opg/game-real-or-nah/ui";
+import { stashJoin, takeJoin } from "../join-handoff";
 import { PlayerApp } from "./PlayerApp";
 
 function stubRoomInfo(): void {
@@ -62,6 +63,73 @@ function lobbyWithVipElsewhere() {
 }
 
 describe("PlayerApp", () => {
+  it("joins by itself with the name the join form handed over, once", () => {
+    stubRoomInfo();
+    stashJoin("BKTZ", "Zed");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent).toContain(JSON.stringify({ t: "join", name: "Zed" }));
+    expect(takeJoin("BKTZ")).toBeNull();
+  });
+
+  it("joins with the handed-over name even when an old token is saved for the room", () => {
+    // A removed player re-enters the code on "/": the stale token no longer seats them, so
+    // the name they just typed is what joins them, with the token tried first by the room.
+    stubRoomInfo();
+    localStorage.setItem("opg:player:BKTZ", "stale");
+    stashJoin("BKTZ", "Zed");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent).toContain(JSON.stringify({ t: "join", name: "Zed", token: "stale" }));
+  });
+
+  it("does not scold a reload for a name nobody typed", async () => {
+    // A removed player's saved token no longer matches a seat, so the reconnect arrives at the
+    // server as a join with no name and comes back "name-invalid".
+    stubRoomInfo();
+    localStorage.setItem("opg:player:BKTZ", "stale");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    act(() =>
+      socket.receive({ t: "error", code: "name-invalid", message: "Names are 1-12 characters." }),
+    );
+    expect(screen.queryByText("Names are 1–12 characters.")).toBeNull();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Your name"), "Priya");
+    await user.click(screen.getByRole("button", { name: /join/i }));
+    act(() =>
+      socket.receive({ t: "error", code: "name-invalid", message: "Names are 1-12 characters." }),
+    );
+    expect(screen.getByText("Names are 1–12 characters.")).toBeTruthy();
+  });
+
+  it("does not join on its own when nothing was handed over", () => {
+    stubRoomInfo();
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent.some((frame) => frame.includes('"t":"join"'))).toBe(false);
+  });
+
   it("joins from the form, then shows the avatar picker once", async () => {
     stubRoomInfo();
     const user = userEvent.setup();

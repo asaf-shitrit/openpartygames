@@ -75,4 +75,17 @@ describe("PhoneAvatarPicker", () => {
     expect(screen.getByText("You")).toBeTruthy();
     expect(screen.queryByText("Picked")).toBeNull();
   });
+
+  it("names every doodle in Hebrew for a Hebrew screen reader, not by its English id", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      setup();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+    expect(screen.getByRole("img", { name: "דמות טיפה, תפוסה על ידי Sam" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "בחרו בדמות בלוב" })).toBeTruthy();
+    const labels = screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? "");
+    expect(labels.filter((label) => /[A-Za-z]/.test(label))).toEqual([]);
+  });
 });

@@ -1,5 +1,7 @@
 export const doodleBluff = {
   title: "Doodle Bluff",
+  blurb: "Draw the secret prompt, write a lie for everyone else's, and hunt for the truth.",
+  landingBlurb: "Draw the prompt, write a title. Bluff or find the real one.",
   progressDraw: "Draw",
   progressGallery: "The gallery",
   progressRound: "Drawing {round} of {count}",
@@ -46,7 +48,11 @@ export const doodleBluff = {
   titleErrorDuplicate: "Someone already wrote that. Try another.",
   titleErrorInvalid: "Keep it between 1 and 40 characters.",
   yourDrawingSitTight: "Your drawing — sit tight",
-  waitingForMore: "Waiting for {count} more",
+  waitingForMore: {
+    one: "Waiting for 1 more",
+    two: "Waiting for 2 more",
+    other: "Waiting for {count} more",
+  },
   everyonesInReadyToVote: "Everyone's in — get ready to vote",
   giveItAGoodLie: "Give it a good lie",
   yourTitleLabel: "Your title",

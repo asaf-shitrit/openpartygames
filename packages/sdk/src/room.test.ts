@@ -265,6 +265,30 @@ describe("join", () => {
     expect(h.room.playerIds()).toEqual([w.playerId]);
   });
 
+  it("answers a second join from an already-joined caller with its own seat, adding no player", () => {
+    const h = makeRoom();
+    const maya = join(h.room, "Maya", 0);
+    const res = h.room.handle(
+      vip(h.room, maya.playerId),
+      { t: "join", name: "Ghost" },
+      0,
+    );
+    expect(welcomeOf(res.reply)).toEqual(maya);
+    expect(res.changed).toBe(false);
+    expect(h.room.playerIds()).toEqual([maya.playerId]);
+  });
+
+  it("refuses a name that only differs from a seated one by invisible characters or Unicode form", () => {
+    const h = makeRoom();
+    join(h.room, "Dana", 0);
+    join(h.room, "Zoë", 0);
+    for (const lookalike of ["Dana\u200b", "D\u200ban\u200fa", "dana\ufeff", "Zoe\u0308"]) {
+      const res = h.room.handle({ kind: "anonymous" }, { t: "join", name: lookalike }, 0);
+      expect(errorCode(res.reply)).toBe("name-taken");
+    }
+    expect(h.room.playerIds()).toHaveLength(2);
+  });
+
   it("rejoins by token keeping id and score", () => {
     const h = makeRoom({ packs: [PACK_FAMILY] });
     const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);
@@ -983,6 +1007,16 @@ describe("a start that never finished", () => {
     expect(h.room.hostView(0).phase).toBe("starting");
     return { h, ids: idsOf(players), vipId };
   }
+
+  it("goes back to the lobby when a kick during the load leaves too few players", () => {
+    const { h, ids, vipId } = startingRoom();
+    h.room.handle(vip(h.room, vipId), { t: "kick", playerId: at(ids, 2) }, 0);
+    const res = h.room.beginGame(CONTENT, 0);
+    const view = h.room.hostView(0);
+    expect(view.phase).toBe("lobby");
+    expect(view.game).toBeNull();
+    expect(noticesOf(res.effects)[0]?.code).toBe("not-enough-players");
+  });
 
   it("arms a deadline the alarm can fire on", () => {
     const { h } = startingRoom();

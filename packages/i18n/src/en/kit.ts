@@ -8,6 +8,10 @@ export const kit = {
     /** Spoken once, on entering the final stage — not once per second. */
     finalStageAnnounce: "Almost out of time",
   },
+  switch: {
+    on: "On",
+    off: "Off",
+  },
   sound: {
     on: "Sound on",
     off: "Sound off",
@@ -28,6 +32,7 @@ export const kit = {
    */
   crowns: { one: "1 crown", two: "{count} crowns", other: "{count} crowns" },
   doodle: {
+    full: "The page is full. Undo a stroke to keep drawing.",
     undo: "Undo",
     clear: "Clear",
     confirmClear: "Clear the drawing? Tap again to confirm",

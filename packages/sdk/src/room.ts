@@ -7,6 +7,7 @@ import {
   MAX_AWARDS,
   MAX_PLAYERS,
   cleanPlayerName,
+  playerNameKey,
   type ActiveGameView,
   type Award,
   type AvatarId,
@@ -40,8 +41,28 @@ import type {
 } from "./types";
 import { createRng, restoreRng } from "./rng";
 
-const VIP_GRACE_MS = 60_000;
+export const VIP_GRACE_MS = 60_000;
 const MAX_TICK_ITERATIONS = 50;
+
+/** What the VIP is told when a start is abandoned. */
+interface StartNotice {
+  code: ErrorCode;
+  message: string;
+}
+const START_FAILED: StartNotice = {
+  code: "start-failed",
+  message: "That game could not start. Try again.",
+};
+/** A kick during the load left the room short: the VIP can fix that by inviting someone. */
+const SHORT_OF_PLAYERS: StartNotice = {
+  code: "not-enough-players",
+  message: "You need more players to start.",
+};
+
+/** Why a start that cannot begin is abandoned: too few players left, or something else. */
+function startNoticeFor(def: AnyGame, playerIds: PlayerId[]): StartNotice {
+  return playerIds.length < def.minPlayers ? SHORT_OF_PLAYERS : START_FAILED;
+}
 
 /**
  * How long a start may sit in "starting" before the room gives up on it. The phase exists
@@ -444,7 +465,7 @@ class RoomImpl implements RoomCore {
         this.onHostHello(message.hostToken, now, out);
         break;
       case "join":
-        this.onJoin(message, now, out);
+        this.onJoin(caller, message, now, out);
         break;
       case "set-avatar":
         this.onSetAvatar(caller, message.avatar, out);
@@ -503,17 +524,17 @@ class RoomImpl implements RoomCore {
     const out = newOut();
     if (this.phase !== "starting" || !this.pending) return result(out);
     const def = this.gameDef(this.pending.gameId);
-    if (
-      !def ||
-      content.kind !== def.contentKind ||
-      content.items.length === 0
-    ) {
-      this.abortStartNow(out);
-      return result(out);
-    }
     const playerIds = this.pending.playerIds.filter(
       (id) => this.getPlayer(id) !== undefined,
     );
+    if (!def) {
+      this.abortStartNow(out, START_FAILED);
+      return result(out);
+    }
+    if (!this.canBegin(def, content, playerIds)) {
+      this.abortStartNow(out, startNoticeFor(def, playerIds));
+      return result(out);
+    }
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
     const deadline = def.nextDeadline(state);
     this.game = {
@@ -531,6 +552,15 @@ class RoomImpl implements RoomCore {
     this.checkGameOver(now, out);
     this.syncEmpty(now, out);
     return result(out);
+  }
+
+  /**
+   * Whether the loaded content and the players still seated can run this game. A kick while
+   * the content loaded can leave the roster under the game's minimum.
+   */
+  private canBegin(def: AnyGame, content: GameContent, playerIds: PlayerId[]): boolean {
+    if (content.kind !== def.contentKind) return false;
+    return content.items.length > 0 && playerIds.length >= def.minPlayers;
   }
 
   abortStart(now: number): HandleResult {
@@ -562,7 +592,7 @@ class RoomImpl implements RoomCore {
    * the explanation travels as an effect rather than in `out.reply`, which only the sender
    * of the current message would ever see.
    */
-  private abortStartNow(out: Out): void {
+  private abortStartNow(out: Out, notice: StartNotice = START_FAILED): void {
     if (this.phase !== "starting") return;
     this.phase = "lobby";
     this.pending = null;
@@ -573,8 +603,8 @@ class RoomImpl implements RoomCore {
       out.effects.push({
         type: "notify-error",
         playerIds: [this.vipId],
-        code: "start-failed",
-        message: "That game could not start. Try again.",
+        code: notice.code,
+        message: notice.message,
       });
     }
     out.changed = true;
@@ -797,10 +827,12 @@ class RoomImpl implements RoomCore {
   }
 
   private onJoin(
+    caller: Caller,
     message: Extract<ClientMessage, { t: "join" }>,
     now: number,
     out: Out,
   ): void {
+    if (this.welcomeSeated(caller, out)) return;
     if (
       message.token !== undefined &&
       this.tryRejoin(message.token, now, out)
@@ -808,6 +840,24 @@ class RoomImpl implements RoomCore {
       return;
     }
     this.addPlayer(message.name, now, out);
+  }
+
+  /**
+   * A socket that already holds a seat answers any further join with that same seat. Letting it
+   * add another player would leave the first one connected with no socket behind it, a ghost
+   * that keeps its seat (and maybe the crown) for as long as the room lives.
+   */
+  private welcomeSeated(caller: Caller, out: Out): boolean {
+    const seated =
+      caller.kind === "player" ? this.getPlayer(caller.playerId) : undefined;
+    if (!seated) return false;
+    out.reply.push({
+      t: "welcome",
+      role: "player",
+      playerId: seated.id,
+      token: seated.token,
+    });
+    return true;
   }
 
   /** Reconnects an existing seat; returns false when the token matches nobody. */
@@ -836,8 +886,8 @@ class RoomImpl implements RoomCore {
       this.fail(out, "name-invalid", "Pick a name up to 12 characters.");
       return;
     }
-    const lower = name.toLowerCase();
-    if (this.players.some((p) => p.name.toLowerCase() === lower)) {
+    const key = playerNameKey(name);
+    if (this.players.some((p) => playerNameKey(p.name) === key)) {
       this.fail(out, "name-taken", "That name is taken.");
       return;
     }

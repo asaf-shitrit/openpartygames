@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_AWARDS,
   cleanPlayerName,
+  playerNameKey,
   normalizeRoomCode,
   parseClientMessage,
   parseCreateRoomRequest,
@@ -59,9 +60,33 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("  Maya   Lee ")).toBe("Maya Lee");
   });
 
+  it("rejects a name that draws nothing, so no player shows up blank", () => {
+    expect(cleanPlayerName("​")).toBeNull();
+    expect(cleanPlayerName(" ‏‎ ")).toBeNull();
+    expect(cleanPlayerName("⠀ㅤ")).toBeNull();
+    expect(cleanPlayerName("﻿")).toBeNull();
+  });
+
+  it("keeps an invisible mark inside a name, but not at its edges", () => {
+    expect(cleanPlayerName("\u{1F468}\u200d\u{1F469}")).toBe("\u{1F468}\u200d\u{1F469}");
+    expect(cleanPlayerName("\u05d3\u05e0\u05d4\u200f")).toBe("\u05d3\u05e0\u05d4");
+    expect(cleanPlayerName("\u200b Dana \u200b")).toBe("Dana");
+    expect(cleanPlayerName("\u200b\u200b Dana")).toBe("Dana");
+  });
+
   it("rejects empty and overlong names", () => {
     expect(cleanPlayerName("   ")).toBeNull();
     expect(cleanPlayerName("abcdefghijklm")).toBeNull();
+  });
+});
+
+describe("playerNameKey", () => {
+  it("ignores case, invisible characters and Unicode form", () => {
+    expect(playerNameKey("Dana​")).toBe(playerNameKey("DANA"));
+    expect(playerNameKey("Zoë")).toBe(playerNameKey("Zoë"));
+    expect(playerNameKey("Dana")).not.toBe(playerNameKey("Dani"));
+    expect(playerNameKey("\u200b Dana")).toBe(playerNameKey("Dana"));
+    expect(playerNameKey("Da \u200b na")).toBe(playerNameKey("Da na"));
   });
 });
 

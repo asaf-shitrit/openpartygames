@@ -1,5 +1,5 @@
 // /host/<CODE> — the TV stage. Chooses a screen from phase/lobbyScreen.
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { HostRoomView, RoomPhase, RoomView } from "@opg/protocol";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -18,6 +18,7 @@ import {
 import type { ServerClock } from "@opg/ui";
 import { gameUiFor } from "../games";
 import { useRoomGamePreload } from "../useGamePreload";
+import { ApiError, getRoomInfo } from "../api";
 import { Link } from "../router";
 import { useRoomSocket } from "../useRoomSocket";
 import type { RoomSocketError, RoomSocketStatus } from "../useRoomSocket";
@@ -28,6 +29,7 @@ import { TvGamePicker } from "./TvGamePicker";
 import { TvLobby } from "./TvLobby";
 import { TvReconnecting } from "./TvReconnecting";
 import { TvPage } from "./shared";
+import { withLocalizedGames } from "./localize-games";
 
 function MessageScreen({
   title,
@@ -62,7 +64,7 @@ function MessageScreen({
         >
           <Marker size={76} level={1}>{title}</Marker>
           <div style={{ fontSize: 38, lineHeight: 1.35 }}>{body}</div>
-          <Link to="/" style={{ fontSize: 30, fontWeight: 700 }}>
+          <Link to="/" className="opg-link" style={{ fontSize: 30, fontWeight: 700 }}>
             {t.status.backToStart}
           </Link>
         </Card>
@@ -229,7 +231,10 @@ function HostStage({
   const key = screenKey(view);
   useScreenTransitionCue(key);
   return (
-    <PhaseEnter phaseKey={key}>
+    // Full height: every game Host sizes itself `height: 100%` of this frame, and the frame is a
+    // block child of the 1080 stage, so without it that resolves to auto and a game whose body
+    // fills the leftover space (Doodle Bluff) collapses to its header.
+    <PhaseEnter phaseKey={key} style={{ height: "100%" }}>
       <HostScreen view={view} clock={clock} t={t} />
     </PhaseEnter>
   );
@@ -281,7 +286,64 @@ function ownsRoom(
   error: RoomSocketError | null,
 ): boolean {
   if (!hostToken) return false;
-  return error?.code !== "host-token-invalid";
+  return error?.code !== "host-token-invalid" && error?.code !== "room-not-found";
+}
+
+type RoomProbe = "checking" | "exists" | "missing";
+
+async function probeRoom(code: string): Promise<RoomProbe> {
+  try {
+    await getRoomInfo(code);
+    return "exists";
+  } catch (error) {
+    return error instanceof ApiError && error.code === "not-found" ? "missing" : "exists";
+  }
+}
+
+/** Whether the server knows this room code at all; the host token alone cannot say. */
+function useRoomProbe(code: string): RoomProbe {
+  const [probe, setProbe] = useState<{ code: string; result: RoomProbe }>({
+    code,
+    result: "checking",
+  });
+  useEffect(() => {
+    let live = true;
+    const settle = async () => {
+      const result = await probeRoom(code);
+      if (live) setProbe({ code, result });
+    };
+    void settle();
+    return () => {
+      live = false;
+    };
+  }, [code]);
+  return probe.code === code ? probe.result : "checking";
+}
+
+/**
+ * A screen with no claim on this room: either the code names no room at all, or the room
+ * belongs to the screen that created it. Telling those apart is the point, because "open it on
+ * the other screen" sends someone hunting for a screen that does not exist.
+ */
+function NotYourRoom({ code, t }: { code: string; t: Dictionary }) {
+  const probe = useRoomProbe(code);
+  if (probe === "checking") {
+    return (
+      <MessageScreen
+        title={t.status.connectingTitle}
+        body={t.status.connectingFinding}
+        t={t}
+      />
+    );
+  }
+  if (probe === "missing") {
+    return (
+      <MessageScreen title={t.status.roomGoneTitle} body={t.status.roomGoneBody} t={t} />
+    );
+  }
+  return (
+    <MessageScreen title={t.status.otherHostTitle} body={t.status.otherHostBody} t={t} />
+  );
 }
 
 export function HostApp({ code }: { code: string }) {
@@ -295,7 +357,8 @@ export function HostApp({ code }: { code: string }) {
     hostToken,
     enabled: Boolean(hostToken),
   });
-  const view = hostViewOf(socket.view);
+  const rawView = hostViewOf(socket.view);
+  const view = useMemo(() => (rawView ? withLocalizedGames(t, rawView) : null), [rawView, t]);
   const clock = socket.clock;
 
   useScreenWakeLock(true);
@@ -315,11 +378,7 @@ export function HostApp({ code }: { code: string }) {
   if (!ownsRoom(hostToken, socket.lastError)) {
     return (
       <Stage>
-        <MessageScreen
-          title={t.status.otherHostTitle}
-          body={t.status.otherHostBody}
-          t={t}
-        />
+        <NotYourRoom code={code} t={t} />
       </Stage>
     );
   }

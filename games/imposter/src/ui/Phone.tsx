@@ -516,7 +516,7 @@ function WordCard(props: SectionProps) {
       <ClueBanner view={view} players={players} me={me} />
       <div
         ref={wrapRef}
-        style={{ flex: "1 1 0", minHeight: 0, display: "flex", marginTop: 8 }}
+        style={{ flex: "1 1 auto", minHeight: "min-content", display: "flex", marginTop: 8 }}
       >
         <FlipCard
           label={t.imposter.wordPanel.secretCard}

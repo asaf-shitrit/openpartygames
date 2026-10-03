@@ -17,6 +17,13 @@ const CONVERTED_FILES = [
 /** A JSX text node: letters immediately between a closing `>` and an opening `</`. */
 const TEXT_NODE = />[A-Z][^<>{}\n]{1,80}<\//g;
 
+/**
+ * Words typed after a `{expression}`, in the same JSX text run: `{formatPoints(total)} total`.
+ * The text-node rule above only sees a run that opens with a capital right after `>`, so this
+ * shipped as English on a Hebrew phone.
+ */
+const TRAILING_WORDS = /\}\)?\}?[ \t]+[A-Za-z]{3,}(?: [A-Za-z]{2,})*[ \t]*(?:<\/|\n)/g;
+
 function sourceOf(fileName: string): string {
   const url = new URL(fileName, import.meta.url);
   return readFileSync(fileURLToPath(url), "utf8");
@@ -25,6 +32,11 @@ function sourceOf(fileName: string): string {
 describe("no hardcoded copy in the Real or Nah UI", () => {
   it.each(CONVERTED_FILES)("%s has no raw JSX text node", (fileName) => {
     const matches = sourceOf(fileName).match(TEXT_NODE) ?? [];
+    expect(matches).toEqual([]);
+  });
+
+  it.each(CONVERTED_FILES)("%s has no words trailing an expression", (fileName) => {
+    const matches = sourceOf(fileName).match(TRAILING_WORDS) ?? [];
     expect(matches).toEqual([]);
   });
 });

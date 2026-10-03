@@ -376,37 +376,60 @@ const LONG_STAMP_TEXT_LENGTH = 10;
 const SHORT_STAMP_SIZE = 52;
 const LONG_STAMP_SIZE = 40;
 
+/** With more than six players a tile is about 200px wide, so stamps shrink to fit it. */
+const COMPACT_SHORT_STAMP_SIZE = 38;
+const COMPACT_LONG_STAMP_SIZE = 34;
+
 /** Long tile stamps ("Not the imposter") get a smaller size so they never wrap to two lines. */
-function stampSizeFor(text: string): number {
-  return text.length > LONG_STAMP_TEXT_LENGTH
-    ? LONG_STAMP_SIZE
-    : SHORT_STAMP_SIZE;
+function stampSizeFor(text: string, compact: boolean): number {
+  const long = text.length > LONG_STAMP_TEXT_LENGTH;
+  if (compact) return long ? COMPACT_LONG_STAMP_SIZE : COMPACT_SHORT_STAMP_SIZE;
+  return long ? LONG_STAMP_SIZE : SHORT_STAMP_SIZE;
 }
+
+/**
+ * A compact tile cannot hold a long stamp on one line: centred on the first tile it runs off
+ * the left edge of the stage and over the caption. So there it wraps inside the tile's width.
+ */
+function stampWraps(text: string, compact: boolean): boolean {
+  return compact && text.length > LONG_STAMP_TEXT_LENGTH;
+}
+
+const WRAPPED_STAMP: CSSProperties = {
+  whiteSpace: "normal",
+  textAlign: "center",
+  justifyContent: "center",
+  padding: "2px 8px",
+};
 
 function TileStampBadge({
   stamp,
   shakeRef,
+  compact,
 }: {
   stamp: TileStamp;
   shakeRef: RefObject<HTMLElement | null>;
+  compact: boolean;
 }) {
+  const wraps = stampWraps(stamp.text, compact);
   return (
     <div
       style={{
         position: "absolute",
         left: 0,
         right: 0,
-        top: -38,
+        top: wraps ? -56 : -38,
         display: "flex",
         justifyContent: "center",
-        whiteSpace: "nowrap",
+        whiteSpace: wraps ? "normal" : "nowrap",
       }}
     >
       <SlamStamp
         live={stamp.live}
         shake={stamp.shake}
         shakeRef={shakeRef}
-        size={stampSizeFor(stamp.text)}
+        size={stampSizeFor(stamp.text, compact)}
+        style={wraps ? WRAPPED_STAMP : undefined}
       >
         {stamp.text}
       </SlamStamp>
@@ -433,11 +456,21 @@ function voteLabel(t: Dictionary, shown: number): string {
   return format(pickPluralByCount(shown, t.imposter.reveal.votes), { count: shown });
 }
 
-function TallyRow({ count, shown }: { count: number; shown: number }) {
+/**
+ * Scratches beside the label need ~290px for seven votes, which a compact (200px) tile cannot
+ * give: the label wrapped past the tile. Compact tiles stack the label under the scratches.
+ */
+function TallyRow({ count, shown, compact }: { count: number; shown: number; compact: boolean }) {
   const { t } = useLocale();
   return (
-    <div style={{ height: 60, display: "flex", alignItems: "center", gap: 12 }}>
-      <TallyScratch count={count} drawn={shown} size={50} />
+    <div
+      style={
+        compact
+          ? { height: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }
+          : { height: 60, display: "flex", alignItems: "center", gap: 12 }
+      }
+    >
+      <TallyScratch count={count} drawn={shown} size={50} label={voteLabel(t, shown)} />
       <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
         {voteLabel(t, shown)}
       </div>
@@ -450,19 +483,23 @@ function VoterRow({
   shown,
   live,
   players,
+  compact,
 }: {
   voters: PlayerId[];
   shown: number;
   live: boolean;
   players: PlayerSummary[];
+  compact: boolean;
 }) {
+  // Four avatars plus a "+N" are wider than a compact tile.
+  const cap = compact ? 3 : 4;
   return (
     <div style={{ height: 44, display: "flex", alignItems: "center", gap: 6 }}>
-      {voters.slice(0, Math.min(shown, 4)).map((voterId) => (
+      {voters.slice(0, Math.min(shown, cap)).map((voterId) => (
         <VoterAvatar key={voterId} players={players} id={voterId} live={live} />
       ))}
-      {shown > 4 ? (
-        <div style={{ fontSize: 28, fontWeight: 700 }}>+{shown - 4}</div>
+      {shown > cap ? (
+        <div style={{ fontSize: 28, fontWeight: 700 }}><bdi dir="ltr">+{shown - cap}</bdi></div>
       ) : null}
     </div>
   );
@@ -489,15 +526,16 @@ function RevealTile(props: RevealTileProps) {
         <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.1 }}>
           {nameOf(t, props.players, id)}
         </div>
-        <TallyRow count={voters.length} shown={shown} />
+        <TallyRow count={voters.length} shown={shown} compact={compact} />
         <VoterRow
           voters={voters}
           shown={shown}
           live={live}
           players={props.players}
+          compact={compact}
         />
         {props.stamp === null ? null : (
-          <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} />
+          <TileStampBadge stamp={props.stamp} shakeRef={props.shakeRef} compact={compact} />
         )}
         {props.footprints ? (
           <div style={{ position: "absolute", insetInlineEnd: -22, bottom: -22 }}>
@@ -531,6 +569,9 @@ function RevealTileRow(props: RevealTileRowProps) {
         alignItems: "flex-end",
         justifyContent: "space-between",
         gap: 24,
+        // Compact tiles hang a two-line stamp ~56px above their top edge; this keeps it clear
+        // of the "And the imposter is…" caption.
+        marginTop: compact ? 56 : 0,
       }}
     >
       {view.playerIds.map((id, index) => (

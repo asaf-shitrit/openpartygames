@@ -289,6 +289,23 @@ describe("TvGamePicker, in Hebrew", () => {
     expect(screen.getByText("בוחר משחק")).toBeTruthy();
     expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
   });
+
+  it("labels the pack switches in Hebrew, not On and Off", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderLocalized(
+      <TvGamePicker
+        view={makeHostView({
+          games: [IMPOSTER, DRAW],
+          selectedGameId: "imposter",
+          packs: [makePack({ id: "a", enabled: true }), makePack({ id: "b", enabled: false })],
+        })}
+      />,
+    );
+    expect(screen.queryByText("On")).toBeNull();
+    expect(screen.queryByText("Off")).toBeNull();
+    expect(screen.getAllByText("פועל").length).toBe(1);
+    expect(screen.getAllByText("כבוי").length).toBe(1);
+  });
 });
 
 /** Mounts with Imposter picked, then the VIP switches to Draw It: the picker's one live pick. */
