@@ -631,6 +631,26 @@ describe("RoomHub restore after a crash or deploy", () => {
     expect(restored.storage.alarms.at(-1)).toBe(born + RECONNECT_GRACE_MS);
   });
 
+  it("books the end of the grace when the first wake is an anonymous socket closing", async () => {
+    const lobby = await makeLobby();
+    const restored = restartHub(lobby);
+    const born = restored.clock.now();
+
+    await restored.hub.close(accept(restored));
+
+    expect(restored.storage.alarms.at(-1)).toBe(born + RECONNECT_GRACE_MS);
+  });
+
+  it("books the end of the grace when the first wake is a frame the hub refuses", async () => {
+    const lobby = await makeLobby();
+    const restored = restartHub(lobby);
+    const born = restored.clock.now();
+
+    await restored.hub.message(accept(restored), "not json");
+
+    expect(restored.storage.alarms.at(-1)).toBe(born + RECONNECT_GRACE_MS);
+  });
+
   it("keeps the seats whose sockets survived hibernation", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);
