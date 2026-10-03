@@ -39,14 +39,19 @@ const strokePointsSchema = z
     if (at !== null) ctx.addIssue({ code: "custom", message: `point ${at} walks off the grid` });
   });
 
+function onGrid(x: number, y: number): boolean {
+  return inRange(x, 0, GRID - 1) && inRange(y, 0, GRID - 1);
+}
+
 /** Index of the first point whose running position leaves the grid, or null when all stay on it. */
 function firstOffGridPoint(p: readonly number[]): number | null {
-  let x = 0;
-  let y = 0;
-  for (let i = 0; i < p.length; i += 2) {
-    x = i === 0 ? (p[0] ?? 0) : x + (p[i] ?? 0);
-    y = i === 0 ? (p[1] ?? 0) : y + (p[i + 1] ?? 0);
-    if (!inRange(x, 0, GRID - 1) || !inRange(y, 0, GRID - 1)) return i / 2;
+  let x = p[0] ?? 0;
+  let y = p[1] ?? 0;
+  if (!onGrid(x, y)) return 0;
+  for (let i = 2; i < p.length; i += 2) {
+    x += p[i] ?? 0;
+    y += p[i + 1] ?? 0;
+    if (!onGrid(x, y)) return i / 2;
   }
   return null;
 }
