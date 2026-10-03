@@ -336,8 +336,8 @@ describe("PhoneVipControls", () => {
 
   it("says so when a game has no packs", () => {
     setup({ packs: [] });
-    expect(screen.getByText("No packs for this game yet.")).toBeTruthy();
-    expect(screen.getByText("Turn on at least one pack")).toBeTruthy();
+    expect(screen.getAllByText("No packs for this game yet.")).toHaveLength(2);
+    expect(screen.queryByText("Turn on at least one pack")).toBeNull();
   });
 
   it("pluralizes the player count", () => {
@@ -537,5 +537,20 @@ describe("PhoneVipControls, in Hebrew", () => {
     expect(screen.queryByText("On")).toBeNull();
     expect(screen.queryByText("Off")).toBeNull();
     expect(screen.getAllByText(/^(פועל|כבוי)$/).length).toBeGreaterThan(1);
+  });
+});
+
+describe("PhoneVipControls in Hebrew", () => {
+  it("labels every switch in Hebrew, not the kit's English On/Off", () => {
+    window.history.replaceState(null, "", "/?lang=he");
+    try {
+      setup();
+      expect(screen.queryByText("On")).toBeNull();
+      expect(screen.queryByText("Off")).toBeNull();
+      expect(screen.getAllByText("פועל").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("כבוי").length).toBeGreaterThan(0);
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
   });
 });

@@ -49,7 +49,11 @@ export function PromptLine({ prompt, size, level }: PromptLineProps) {
   return (
     <Tag style={{ margin: 0, fontSize: size, lineHeight: 1.25, fontWeight: 700 }}>
       {t.mostLikelyTo.promptPrefix}{" "}
-      <Highlight style={{ padding: "0 4px" }}>{prompt}</Highlight>?
+      {/* The "?" lives inside the inline-block highlight: outside it, a line break is allowed
+          between the box and the "?", which stranded it on a line of its own. */}
+      <Highlight style={{ padding: "0 4px" }}>{prompt}
+        <span>?</span>
+      </Highlight>
     </Tag>
   );
 }

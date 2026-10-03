@@ -8,7 +8,7 @@
 //
 // invariants.js is owned by another agent's work (e2e/layout/); it is only read here, never
 // edited.
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { fileURLToPath } from "node:url";
 
 interface Limits {
@@ -120,4 +120,23 @@ export async function assertLayout(page: Page, surface: Surface, label: string):
   await ensureInjected(page);
   const violations = await stableViolations(page, surface);
   expect(violations, `${label}:\n${report(violations)}`).toEqual([]);
+}
+
+/**
+ * Asserts `locator` is actually painted where a player would see it, not merely "visible".
+ *
+ * Playwright's own visibility check counts an element with a size and no `visibility: hidden`;
+ * an element whose ancestor collapsed to zero height under `overflow: hidden` has both and is
+ * still not on screen. That is how the TV's whole Doodle Bluff phase body once went missing
+ * with every other assertion green. A hit test at the element's centre finds out: whatever
+ * is really painted there must be the element, or something inside it.
+ */
+export async function expectPainted(locator: Locator, label: string): Promise<void> {
+  await expect(locator, `${label} is in the page`).toBeVisible();
+  const painted = await locator.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    return hit !== null && element.contains(hit);
+  });
+  expect(painted, `${label} is painted on screen, not clipped away by a collapsed ancestor`).toBe(true);
 }

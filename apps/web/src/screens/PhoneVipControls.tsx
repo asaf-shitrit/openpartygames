@@ -141,10 +141,12 @@ interface DisabledCheck {
   sharedScreen: boolean;
   playerCount: number;
   packCount: number;
+  /** Every pack the room could turn on for this game, enabled or not. */
+  packTotal: number;
 }
 
 function startDisabledReason(check: DisabledCheck): string | undefined {
-  const { t, selectedGame, sharedScreen, playerCount, packCount } = check;
+  const { t, selectedGame, sharedScreen, playerCount, packCount, packTotal } = check;
   if (!selectedGame) return t.picker.pickGameFirst;
   if (isBlocked(selectedGame, sharedScreen)) {
     return format(t.picker.gameNeedsSharedScreen, { game: selectedGame.name });
@@ -156,6 +158,8 @@ function startDisabledReason(check: DisabledCheck): string | undefined {
       count: selectedGame.minPlayers,
     });
   }
+  // Nothing to turn on (a Hebrew room has no Real or Nah pack) is not "turn one on".
+  if (packTotal === 0) return t.picker.noPacksYet;
   if (packCount === 0) return t.picker.turnOnPack;
   return undefined;
 }
@@ -1133,6 +1137,7 @@ export function PhoneVipControls({
     sharedScreen: view.sharedScreen,
     playerCount: readyCount,
     packCount: enabledPacks.length,
+    packTotal: view.packs.length,
   });
   const blockedGameNames = view.games
     .filter((g) => isBlocked(g, view.sharedScreen))

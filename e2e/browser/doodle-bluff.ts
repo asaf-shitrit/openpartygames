@@ -8,7 +8,7 @@
 // player has acted (games/doodle-bluff/src/index.ts's advanceDrawIfReady / advanceTitleIfReady /
 // advanceVoteIfReady), so driving every phone keeps this from ever depending on a deadline.
 import { expect, type Browser, type Page } from "@playwright/test";
-import { assertLayout } from "./layout-check";
+import { assertLayout, expectPainted } from "./layout-check";
 import { joinPhone, newPhonePage, repeat, type Phone } from "./harness";
 
 // shownCount(3 players) = min(2 * 3, TITLED_MAX) = 6 (games/doodle-bluff/src/state.ts)
@@ -65,6 +65,7 @@ async function squiggleBoth(page: Page): Promise<void> {
 export async function playDoodleDraw(tv: Page, phones: Phone[]): Promise<void> {
   await expect(tv.getByText("Everyone is drawing")).toBeVisible({ timeout: 45_000 });
   await assertLayout(tv, "tv", "doodle-bluff draw phase (tv)");
+  await expectPainted(tv.getByText("Everyone is drawing"), "the TV draw phase heading");
   const [artist, ...rest] = phones;
   if (artist === undefined) throw new Error("no phones to draw with");
   await drawForReal(artist.page);
@@ -99,6 +100,7 @@ async function voteIfNotArtist(phone: Phone): Promise<void> {
 async function playRound(tv: Page, phones: Phone[], vip: Phone): Promise<void> {
   await expect(tv.getByText("Who's written")).toBeVisible({ timeout: 45_000 });
   await assertLayout(tv, "tv", "doodle-bluff title phase (tv)");
+  await expectPainted(tv.getByText("Who's written"), "the TV title phase heading");
   await Promise.all(phones.map((phone) => titleIfNotArtist(phone)));
   await expect(tv.getByText("Which title is real?")).toBeVisible({ timeout: 45_000 });
   await assertLayout(tv, "tv", "doodle-bluff vote phase (tv)");

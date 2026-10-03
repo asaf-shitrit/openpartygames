@@ -367,6 +367,17 @@ describe("happy path and scoring", () => {
     }
   });
 
+  it("caught + a Hebrew guess typed with niqqud matches the plain word", () => {
+    const pointed: WordPairContent = {
+      kind: "word-pairs",
+      items: [{ crew: "שלום", decoy: "ברכה" }],
+    };
+    const c = makeCtx({ n: 4, seed: 12, content: pointed });
+    const state = setup(c);
+    const result = playWord(state, c, votesCaught(state), "שָׁלוֹם");
+    expect(result.guessCorrect).toBe(true);
+  });
+
   it("caught + missing guess counts as wrong", () => {
     const c = makeCtx({ n: 4, seed: 13, content: ONE_PAIR });
     const state = setup(c);

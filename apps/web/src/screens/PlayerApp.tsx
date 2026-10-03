@@ -1,5 +1,5 @@
 // /<CODE> — phone join flow, then the screen for the current phase.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActiveGameView,
   AvatarId,
@@ -14,6 +14,7 @@ import type { Dictionary } from "@opg/i18n";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
 import { VipGameBar } from "./VipGameBar";
+import { takeJoin } from "../join-handoff";
 import { navigate } from "../router";
 import { useRoomGamePreload } from "../useGamePreload";
 import { useRoomSocket } from "../useRoomSocket";
@@ -461,6 +462,24 @@ function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
   return <PhoneReconnectingBanner />;
 }
 
+/**
+ * The name the join form handed over for this room, joined with once the socket exists. A
+ * player with a seat here already is reconnecting, so the stale hand-off is discarded.
+ */
+function useHandoffJoin(code: string, hadToken: boolean, socket: RoomSocket): string | null {
+  const [name] = useState(() => {
+    const handed = takeJoin(code);
+    return hadToken ? null : handed;
+  });
+  const sent = useRef(false);
+  useEffect(() => {
+    if (name === null || sent.current) return;
+    sent.current = true;
+    socket.join(name);
+  }, [name, socket]);
+  return name;
+}
+
 export function PlayerApp({ code }: { code: string }) {
   const { t } = useLocale();
   const socket = useRoomSocket({ code, role: "player" });
@@ -469,12 +488,13 @@ export function PlayerApp({ code }: { code: string }) {
   const clock = socket.clock;
 
   const playerId = playerIdFor(view, socket);
-  const [joinedName, setJoinedName] = useState("");
-  const [joinRequested, setJoinRequested] = useState(false);
+  const [hadToken] = useState(() => Boolean(playerToken(code)));
+  const handoffName = useHandoffJoin(code, hadToken, socket);
+  const [joinedName, setJoinedName] = useState(handoffName ?? "");
+  const [joinRequested, setJoinRequested] = useState(handoffName !== null);
   const [pickerOverride, setPickerOverride] = useState<
     "open" | "closed" | null
   >(null);
-  const [hadToken] = useState(() => Boolean(playerToken(code)));
   const [dismissedResultAt, setDismissedResultAt] = useState<number | null>(
     null,
   );
