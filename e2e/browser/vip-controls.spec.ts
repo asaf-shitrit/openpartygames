@@ -45,3 +45,28 @@ test("the VIP skips a phase and ends the game for everyone", async ({
 
   await Promise.all(phones.map((phone) => phone.context.close()));
 });
+
+test("a removed player who reloads gets a clean join form, not a name error", async ({
+  page,
+  browser,
+}) => {
+  const code = await startRoom(page);
+  await expectTvLobby(page, code);
+
+  const phones = await joinPhones(browser, page, code, ["Ava", "Ben", "Cleo"]);
+  const vip = await findVip(phones);
+  const victim = phones.find((phone) => phone !== vip);
+  if (!victim) throw new Error("expected a non-VIP phone");
+
+  await vip.page.getByRole("button", { name: `Kick ${victim.name}` }).click();
+  await vip.page.getByRole("button", { name: "Yes, remove" }).click();
+  await expect(victim.page.getByText("You were removed")).toBeVisible();
+
+  // The saved token no longer matches a seat, so the reload's socket joins with no name.
+  await victim.page.reload();
+  await expect(victim.page.getByLabel("Your name")).toBeVisible();
+  await victim.page.waitForTimeout(1500);
+  await expect(victim.page.getByText(/Names are 1/)).toHaveCount(0);
+
+  await Promise.all(phones.map((phone) => phone.context.close()));
+});
