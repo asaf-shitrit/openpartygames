@@ -1,7 +1,7 @@
 // Doodle Bluff: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
 // The write -> vote -> reveal spine is real-or-nah's, almost unchanged (plan/0003-doodle-bluff.md);
 // what's new is the draw phase up front, the chunked stroke submit, and the artist's own score.
-import { emptyDoodle } from "@opg/sdk";
+import { emptyDoodle, pullInDeadline } from "@opg/sdk";
 import type { DrawingPrompt, DrawingPromptContent, GameContext, GameDefinition, Rng } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import { doodleBluffAwards } from "./awards";
@@ -258,12 +258,6 @@ function mayTitle(state: DoodleState, playerId: PlayerId, drawing: DrawingSlot):
   );
 }
 
-function allTitlesSubmitted(state: DoodleState, drawing: DrawingSlot, ctx: Ctx): boolean {
-  const connected = ctx.connectedIds.filter((id) => nonArtistIds(state, drawing.artistId).includes(id));
-  if (connected.length === 0) return false;
-  return connected.every((id) => state.titles[id] !== undefined);
-}
-
 function applyTitle(state: DoodleState, playerId: PlayerId, text: string, ctx: Ctx): DoodleState {
   const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
   if (drawing === undefined || !mayTitle(state, playerId, drawing)) return state;
@@ -272,8 +266,7 @@ function applyTitle(state: DoodleState, playerId: PlayerId, text: string, ctx: C
   if (error !== null) return { ...state, titleErrors: { ...state.titleErrors, [playerId]: error } };
   const titles = { ...state.titles, [playerId]: cleaned };
   const titleErrors = withoutKey(state.titleErrors, playerId);
-  const next = { ...state, titles, titleErrors };
-  return allTitlesSubmitted(next, drawing, ctx) ? startVote(next, ctx) : next;
+  return settleRound({ ...state, titles, titleErrors }, ctx);
 }
 
 function buildOptions(state: DoodleState, drawing: DrawingSlot, ctx: Ctx): DoodleOption[] {
@@ -310,10 +303,28 @@ function mayVote(state: DoodleState, playerId: PlayerId, drawing: DrawingSlot): 
   );
 }
 
-function allVotesSubmitted(state: DoodleState, drawing: DrawingSlot, ctx: Ctx): boolean {
-  const connected = ctx.connectedIds.filter((id) => nonArtistIds(state, drawing.artistId).includes(id));
-  if (connected.length === 0) return false;
-  return connected.every((id) => !canVoteOption(state.options, id) || state.votes[id] !== undefined);
+/** Whether a non-artist has nothing left to do: a title is in, or a vote is in (or none is possible). */
+function isDone(state: DoodleState, playerId: PlayerId): boolean {
+  if (state.phase === "title") return state.titles[playerId] !== undefined;
+  return !canVoteOption(state.options, playerId) || state.votes[playerId] !== undefined;
+}
+
+/**
+ * Ends the title or vote phase once every non-artist is done. When only players who are not
+ * connected are missing it does not end at once (a locked phone must keep its title or vote):
+ * it pulls the deadline in to LEFT_PLAYER_GRACE_MS, so a returning player can still count. A
+ * server restart does not start this clock: the worker keeps seats "connected" for 20s after one.
+ */
+function settleRound(state: DoodleState, ctx: Ctx): DoodleState {
+  if (state.phase !== "title" && state.phase !== "vote") return state;
+  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
+  if (drawing === undefined) return state;
+  const others = nonArtistIds(state, drawing.artistId);
+  const connected = others.filter((id) => ctx.connectedIds.includes(id));
+  if (connected.length === 0) return state;
+  if (others.every((id) => isDone(state, id))) return state.phase === "title" ? startVote(state, ctx) : startReveal(state, ctx);
+  if (connected.every((id) => isDone(state, id))) return pullInDeadline(state, ctx.now);
+  return state;
 }
 
 function applyVote(state: DoodleState, playerId: PlayerId, optionId: string, ctx: Ctx): DoodleState {
@@ -321,8 +332,7 @@ function applyVote(state: DoodleState, playerId: PlayerId, optionId: string, ctx
   if (drawing === undefined || !mayVote(state, playerId, drawing)) return state;
   const option = pickedOption(state, playerId, optionId);
   if (option === undefined) return state;
-  const next = { ...state, votes: { ...state.votes, [playerId]: option.id } };
-  return allVotesSubmitted(next, drawing, ctx) ? startReveal(next, ctx) : next;
+  return settleRound({ ...state, votes: { ...state.votes, [playerId]: option.id } }, ctx);
 }
 
 function startReveal(state: DoodleState, ctx: Ctx): DoodleState {
@@ -390,24 +400,20 @@ function advanceDrawIfReady(state: DoodleState, ctx: Ctx): DoodleState {
   return allConnectedDrawingsDone(state, ctx) ? endDraw(state, ctx) : state;
 }
 
-function advanceTitleIfReady(state: DoodleState, ctx: Ctx): DoodleState {
-  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
-  if (drawing === undefined) return state;
-  return allTitlesSubmitted(state, drawing, ctx) ? startVote(state, ctx) : state;
-}
-
-function advanceVoteIfReady(state: DoodleState, ctx: Ctx): DoodleState {
-  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
-  if (drawing === undefined) return state;
-  return allVotesSubmitted(state, drawing, ctx) ? startReveal(state, ctx) : state;
-}
-
 /** After a kick, ends the current phase early once whoever remains is all done. */
 function advanceIfReady(state: DoodleState, ctx: Ctx): DoodleState {
   if (state.phase === "draw") return advanceDrawIfReady(state, ctx);
-  if (state.phase === "title") return advanceTitleIfReady(state, ctx);
-  if (state.phase === "vote") return advanceVoteIfReady(state, ctx);
-  return state;
+  return settleRound(state, ctx);
+}
+
+/** A connection flip can leave only absent players to act: start the grace clock. */
+export function onPlayersChanged(state: DoodleState, ctx: Ctx): DoodleState {
+  if (state.finished || (state.phase !== "title" && state.phase !== "vote")) return state;
+  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
+  if (drawing === undefined) return state;
+  const connected = nonArtistIds(state, drawing.artistId).filter((id) => ctx.connectedIds.includes(id));
+  if (connected.length === 0 || !connected.every((id) => isDone(state, id))) return state;
+  return pullInDeadline(state, ctx.now);
 }
 
 export function onPlayerRemoved(state: DoodleState, playerId: PlayerId, ctx: Ctx): DoodleState {
@@ -490,6 +496,7 @@ export const doodleBluff: GameDefinition<
   nextDeadline,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   hostView: (state) => buildHostView(state),
   playerView: (state, playerId) => buildPlayerView(state, playerId),
   isOver,

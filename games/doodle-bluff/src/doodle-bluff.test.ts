@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRng } from "@opg/sdk";
+import { createRng, LEFT_PLAYER_GRACE_MS } from "@opg/sdk";
 import type { DrawingPromptContent, GameContext, Stroke } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
@@ -12,6 +12,7 @@ import {
   onAction,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   REVEAL_MS,
   scores,
   setup,
@@ -432,6 +433,114 @@ describe("vote phase", () => {
     const { ctx, state } = inVotePhase(4);
     const afterDeadline = onDeadline(state, { ...ctx, now: BASE_NOW + VOTE_MS });
     expect(afterDeadline.phase).toBe("reveal");
+  });
+});
+
+describe("left-player grace", () => {
+  function titlePhase(n = 4) {
+    const ctx = makeCtx({ n, seed: 7 });
+    const state = finishAllDrawings(setup(ctx), ctx);
+    return { ctx, state, artistId: currentArtistId(state) };
+  }
+
+  function nonArtists(ctx: GameContext<DrawingPromptContent>, artistId: PlayerId) {
+    return ctx.players.map((p) => p.id).filter((id) => id !== artistId);
+  }
+
+  it("title: pulls the deadline in when only disconnected players are missing", () => {
+    const { ctx, state, artistId } = titlePhase(4);
+    const [a, b] = nonArtists(ctx, artistId);
+    if (a === undefined || b === undefined) throw new Error("need titlers");
+    const away = { ...ctx, connectedIds: [artistId, a] };
+    const next = send(state, away, a, { type: "title", text: "only me" });
+    // The other two non-artists are gone: not closed at once, but pulled in.
+    expect(next.phase).toBe("title");
+    expect(next.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+    expect(onDeadline(next, { ...away, now: next.deadline ?? 0 }).phase).toBe("vote");
+  });
+
+  it("title: pulls in when the last connected holdout disconnects", () => {
+    const { ctx, state, artistId } = titlePhase(4);
+    const [a, b, c] = nonArtists(ctx, artistId);
+    if (a === undefined || b === undefined || c === undefined) throw new Error("need titlers");
+    let next = send(state, ctx, a, { type: "title", text: "from a" });
+    next = send(next, ctx, b, { type: "title", text: "from b" });
+    expect(next.deadline).toBe(BASE_NOW + TITLE_MS);
+    const gone = { ...ctx, now: BASE_NOW + 4000, connectedIds: [artistId, a, b] };
+    const pulled = onPlayersChanged(next, gone);
+    expect(pulled.phase).toBe("title");
+    expect(pulled.deadline).toBe(BASE_NOW + 4000 + LEFT_PLAYER_GRACE_MS);
+    expect(onPlayersChanged(next, ctx)).toBe(next);
+  });
+
+  it("title: counts a holdout who reconnects and titles inside the grace", () => {
+    const { ctx, state, artistId } = titlePhase(4);
+    const [a, b, c] = nonArtists(ctx, artistId);
+    if (a === undefined || b === undefined || c === undefined) throw new Error("need titlers");
+    const away = { ...ctx, connectedIds: [artistId, a, b] };
+    let next = send(state, away, a, { type: "title", text: "from a" });
+    next = send(next, away, b, { type: "title", text: "from b" });
+    expect(next.phase).toBe("title");
+    const back = { ...ctx, now: BASE_NOW + 3000 };
+    next = send(next, back, c, { type: "title", text: "from c" });
+    expect(next.phase).toBe("vote");
+    expect(next.titles[c]).toBe("from c");
+  });
+
+  function votePhase(n = 4) {
+    const ctx = makeCtx({ n, seed: 7 });
+    const drawn = finishAllDrawings(setup(ctx), ctx);
+    const state = titleAsEveryNonArtist(drawn, ctx);
+    return { ctx, state, artistId: currentArtistId(state) };
+  }
+
+  function voteFor(state: DoodleState, ctx: GameContext<DrawingPromptContent>, voter: PlayerId) {
+    const option = (state.options ?? []).find((o) => o.authorId !== voter);
+    if (option === undefined) throw new Error("need a pickable option");
+    return send(state, ctx, voter, { type: "vote", optionId: option.id });
+  }
+
+  it("vote: pulls the deadline in when only disconnected players are missing", () => {
+    const { ctx, state, artistId } = votePhase(4);
+    const [a] = nonArtists(ctx, artistId);
+    if (a === undefined) throw new Error("need a voter");
+    const away = { ...ctx, connectedIds: [artistId, a] };
+    const next = voteFor(state, away, a);
+    expect(next.phase).toBe("vote");
+    expect(next.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+    expect(onDeadline(next, { ...away, now: next.deadline ?? 0 }).phase).toBe("reveal");
+  });
+
+  it("vote: pulls in when the last connected holdout disconnects, never pushes a nearer deadline out", () => {
+    const { ctx, state, artistId } = votePhase(4);
+    const [a, b, c] = nonArtists(ctx, artistId);
+    if (a === undefined || b === undefined || c === undefined) throw new Error("need voters");
+    let next = voteFor(state, ctx, a);
+    next = voteFor(next, ctx, b);
+    const gone = { ...ctx, now: BASE_NOW + 5000, connectedIds: [artistId, a, b] };
+    const pulled = onPlayersChanged(next, gone);
+    expect(pulled.deadline).toBe(BASE_NOW + 5000 + LEFT_PLAYER_GRACE_MS);
+    const late = { ...gone, now: BASE_NOW + VOTE_MS - 1000 };
+    expect(onPlayersChanged(next, late)).toBe(next);
+  });
+
+  it("vote: counts a holdout who reconnects and votes inside the grace", () => {
+    const { ctx, state, artistId } = votePhase(4);
+    const [a, b, c] = nonArtists(ctx, artistId);
+    if (a === undefined || b === undefined || c === undefined) throw new Error("need voters");
+    const away = { ...ctx, connectedIds: [artistId, a, b] };
+    let next = voteFor(state, away, a);
+    next = voteFor(next, away, b);
+    expect(next.phase).toBe("vote");
+    next = voteFor(next, { ...ctx, now: BASE_NOW + 3000 }, c);
+    expect(next.phase).toBe("reveal");
+    expect(next.votes[c]).toBeDefined();
+  });
+
+  it("ignores connection flips outside the title and vote phases", () => {
+    const ctx = makeCtx({ n: 3 });
+    const drawing = setup(ctx);
+    expect(onPlayersChanged(drawing, { ...ctx, connectedIds: [] })).toBe(drawing);
   });
 });
 
