@@ -12,7 +12,7 @@ export const lobby: Dictionary["lobby"] = {
   watchTv: "תסתכלו על הטלוויזיה.",
   theVip: "ה-VIP",
   picked: "{name} בחר",
-  playersRange: "{min}–{max} שחקנים · כ-{minutes} דקות",
+  playersRange: "\u2066{min}–{max}\u2069 שחקנים · כ-{minutes} דקות",
   playsOnSharedScreen: "המשחק מתנהל על מסך משותף.",
   escapeNoAlt: "{name} יכול להוסיף מסך משותף.",
   escapeWithAlt: "{name} יכול לבחור ב{names}, או להוסיף מסך משותף.",

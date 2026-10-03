@@ -508,7 +508,7 @@ function PointRowView({
         ))}
         {row.ids.length > 4 ? (
           <div style={{ fontSize: 28, fontWeight: 700 }}>
-            +{row.ids.length - 4}
+            <bdi dir="ltr">+{row.ids.length - 4}</bdi>
           </div>
         ) : null}
       </div>
