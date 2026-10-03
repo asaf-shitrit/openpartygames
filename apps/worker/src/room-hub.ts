@@ -310,21 +310,26 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    await this.beginGrace(now);
+    if (await this.beginGrace(now)) await this.armAlarm();
     const result = room.resumeStart(now);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
   }
 
-  /** Picks up the wait an earlier process began, or begins one: every wake might follow a crash. */
-  private async beginGrace(now: number): Promise<void> {
+  /**
+   * Picks up the wait an earlier process began, or begins one: every wake might follow a crash.
+   * True when it began one, which then needs an alarm: the wake may be an event that never
+   * reaches `apply`, and the alarm already booked can be hours away.
+   */
+  private async beginGrace(now: number): Promise<boolean> {
     const stored = await this.options.storage.getGraceUntil();
     if (stored !== undefined) {
       this.reconcileAt = stored;
-      return;
+      return false;
     }
     this.reconcileAt = now + RECONNECT_GRACE_MS;
     await this.options.storage.setGraceUntil(this.reconcileAt);
+    return true;
   }
 
   /** Reconciles once the grace is over; an empty result before that. */

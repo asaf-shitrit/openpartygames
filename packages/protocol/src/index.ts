@@ -301,11 +301,17 @@ export function parseCreateRoomRequest(raw: string): CreateRoomRequest {
  */
 const INVISIBLE_CHARS = /[\p{Cf}\p{Cc}⠀ᅟᅠㅤﾠ]/gu;
 
-/** Trims and collapses whitespace; returns null if the name is empty, invisible or too long. */
+/** Whitespace or invisible characters at either end of a name. */
+const EDGE_JUNK = new RegExp(`^[\\s${INVISIBLE_CHARS.source.slice(1, -1)}]+|[\\s${INVISIBLE_CHARS.source.slice(1, -1)}]+$`, "gu");
+
+/**
+ * Collapses whitespace and trims whitespace and invisible characters off both ends; returns
+ * null if the name is empty, invisible or too long. An invisible mark between visible
+ * characters (the joiner in an emoji sequence) stays.
+ */
 export function cleanPlayerName(input: string): string | null {
-  const name = input.replace(/\s+/g, " ").trim();
+  const name = input.replace(/\s+/g, " ").replace(EDGE_JUNK, "");
   if (name.length === 0 || name.length > NAME_MAX_LENGTH) return null;
-  if (name.replace(INVISIBLE_CHARS, "").trim().length === 0) return null;
   return name;
 }
 
@@ -314,5 +320,10 @@ export function cleanPlayerName(input: string): string | null {
  * so "Dana" and "Dana" plus a zero-width space cannot take two seats that look identical.
  */
 export function playerNameKey(name: string): string {
-  return name.normalize("NFC").replace(INVISIBLE_CHARS, "").toLowerCase();
+  return name
+    .normalize("NFC")
+    .replace(INVISIBLE_CHARS, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
