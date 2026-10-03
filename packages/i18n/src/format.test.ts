@@ -33,4 +33,16 @@ describe("format", () => {
     expect(format("{name} בחר", { name: "Dana" })).toBe("Dana בחר");
     expect(format("a{name}", { name: "Dana" })).toBe("aDana");
   });
+
+  it("hyphenates only a real prefix run at the start of a word", () => {
+    expect(format("שלום{name}", { name: "Dana" })).toBe("שלוםDana");
+    expect(format("מחכים ל{name}", { name: "Dana" })).toBe("מחכים ל-Dana");
+    expect(format("(וב{name})", { name: "Dana" })).toBe("(וב-Dana)");
+    expect(format("{a} ו{b}", { a: "x", b: "Sam" })).toBe("x ו-Sam");
+  });
+
+  it("hyphenates before accented Latin and before an LTR isolate", () => {
+    expect(format("ל{name}", { name: "Émile" })).toBe("ל-Émile");
+    expect(format("ל{name}", { name: "\u2066+5\u2069" })).toBe("ל-\u2066+5\u2069");
+  });
 });
