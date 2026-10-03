@@ -17,7 +17,12 @@ function hyphenFor(prefix: string | undefined, value: string): string {
   return prefix !== undefined && STARTS_LATIN_OR_DIGIT.test(value) ? "-" : "";
 }
 
-const PLACEHOLDER = /((?<![\u05D0-\u05EA])[\u05D5\u05D1\u05DC\u05D4\u05DE\u05E9\u05DB]{1,3})?\{(\w+)\}/g;
+/**
+ * One prefix letter, or one of the few pairs that are only ever prefixes. Pairs that are also
+ * whole words (של, מה, כמה, כמו, שלו, מול) are left out on purpose: "של{name}" is the word "of".
+ */
+const PREFIX_RUN = "[\\u05D5\\u05D1\\u05DC\\u05D4\\u05DE\\u05E9\\u05DB]|\\u05D5\\u05D1|\\u05D5\\u05DC|\\u05D5\\u05DE|\\u05D5\\u05E9|\\u05D5\\u05DB|\\u05D5\\u05D4|\\u05DB\\u05E9";
+const PLACEHOLDER = new RegExp(`((?<![\\u05D0-\\u05EA])(?:${PREFIX_RUN})(?![\\u05D0-\\u05EA]))?\\{(\\w+)\\}`, "g");
 
 export function format(template: string, params?: FormatParams): string {
   if (!params) return template;
