@@ -172,7 +172,7 @@ export {
   simplifyStroke,
 } from "./doodle/geometry";
 export type { ClientRectLike, DoodleBounds } from "./doodle/geometry";
-export { captureDuration, captureGap, finalizeStroke } from "./doodle/capture";
+export { captureDuration, captureGap } from "./doodle/capture";
 export { paintDoodle } from "./doodle/paint";
 export type { DoodleBox, DoodleCanvasContext, DoodleUpTo } from "./doodle/paint";
 export { replaySchedule, replayStateAt } from "./doodle/replay";

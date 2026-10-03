@@ -115,7 +115,6 @@ async function stableViolations(page: Page, surface: Surface): Promise<Violation
   return first.filter((found) => seenAgain.has(identity(found)));
 }
 
-
 const PAINTED_PATH = fileURLToPath(new URL("./painted.js", import.meta.url));
 
 declare global {
