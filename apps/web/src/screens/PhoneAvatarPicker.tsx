@@ -50,7 +50,7 @@ function TakenTile({
         id={id}
         size={52}
         faded
-        alt={format(t.avatarPicker.takenAlt, { id, owner })}
+        alt={format(t.avatarPicker.takenAlt, { id: t.avatarPicker.names[id], owner })}
       />
       <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.15 }}>
         {t.avatarPicker.taken}
@@ -81,7 +81,7 @@ function pickTileLook(picked: boolean): { background: string; border: string } {
 }
 
 function IdleArt({ id, t }: { id: AvatarId; t: Dictionary }) {
-  return <Avatar id={id} size={72} alt={format(t.avatarPicker.chooseAlt, { id })} />;
+  return <Avatar id={id} size={72} alt={format(t.avatarPicker.chooseAlt, { id: t.avatarPicker.names[id] })} />;
 }
 
 function PickedArt({ id, t }: { id: AvatarId; t: Dictionary }) {
@@ -93,7 +93,7 @@ function PickedArt({ id, t }: { id: AvatarId; t: Dictionary }) {
         color="var(--opg-marker)"
         style={{ position: "absolute", insetInlineEnd: 6, top: 6 }}
       />
-      <Avatar id={id} size={66} alt={format(t.avatarPicker.chooseAlt, { id })} />
+      <Avatar id={id} size={66} alt={format(t.avatarPicker.chooseAlt, { id: t.avatarPicker.names[id] })} />
       <div
         style={{
           fontSize: 16,
@@ -134,7 +134,7 @@ function PickTile({
       // it never reaches the button's own text content — every screen reader in practice
       // still announces it (aria-label on a nested role="img" contributes to name-from-content
       // per the accessible-name spec), but say it here too, unambiguously.
-      aria-label={format(t.avatarPicker.chooseAlt, { id })}
+      aria-label={format(t.avatarPicker.chooseAlt, { id: t.avatarPicker.names[id] })}
       style={{
         position: "relative",
         height: 120,

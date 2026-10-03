@@ -7,6 +7,7 @@ import type { PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { anchorAt, Card, LetterTiles, Marker, Suspense, Timer } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
+import { lettersLabel } from "../letters-label";
 import { LAST_CHANCE_MS, POINTS_PER_WORD, type ImposterHostView } from "../../state";
 import { nameOf } from "./common";
 
@@ -79,7 +80,12 @@ export function StageLastChance({
           <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} />
         </div>
       </div>
-      <LetterTiles length={guessLength} live size={34} />
+      <LetterTiles
+        length={guessLength}
+        live
+        size={34}
+        label={lettersLabel(t, guessLength, 0)}
+      />
       <div
         style={{
           fontSize: 16,

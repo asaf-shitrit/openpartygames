@@ -173,6 +173,16 @@ function Tile({
   );
 }
 
+/**
+ * The word's own reading direction, so tiles run the way its letters do: the page is RTL in
+ * Hebrew, but an English guess ("ZEBRA") on that page would otherwise fill from the right and
+ * read backwards. Undefined when only a length is known: the row then follows the page.
+ */
+function directionOf(letters: string): "ltr" | "rtl" | undefined {
+  if (letters === "") return undefined;
+  return /[֐-׿]/.test(letters) ? "rtl" : "ltr";
+}
+
 export function LetterTiles({
   length,
   letters = "",
@@ -197,6 +207,7 @@ export function LetterTiles({
   return (
     <figure
       aria-label={accessibleLabel}
+      dir={directionOf(letters)}
       style={{
         display: "flex",
         gap: Math.round(tileSize * TILE_GAP_RATIO),

@@ -230,6 +230,9 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   );
 
   const onSquiggle = useCallback(() => {
+    // Clear first: appending the squiggle over strokes already in the room would keep some of
+    // them, and a plain truncate to the squiggle's length would keep the wrong ones.
+    commitDrawingChange({ roomCode, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate });
     latestRef.current = SQUIGGLE_DOODLE;
     commitDrawingChange({ roomCode, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
     send({ type: "doodle-done", drawingId });
@@ -237,7 +240,11 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
 
   return (
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>
-      <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
+      {/* The room refuses strokes for a finished drawing, so a pad left live would show ink
+          that never reaches the TV. */}
+      <div inert={done}>
+        <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
+      </div>
       <DoneButton drawingId={drawingId} done={done} send={send} />
       <SquiggleButton done={done} onSquiggle={onSquiggle} />
     </div>

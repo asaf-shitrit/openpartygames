@@ -8,8 +8,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { imposterPreviews } from "@opg/game-imposter/preview";
+import { preloadGameUi } from "../games";
 import { LOADING_ATTRIBUTE } from "../loading";
 import {
   MOMENT_SOURCES,
@@ -31,6 +32,19 @@ afterEach(cleanup);
 
 const DEV_MOMENTS = devMoments();
 
+// A game's screens are a lazy chunk, and the first import of one can take longer than a
+// `waitFor` allows on a busy machine. Loading them up front keeps the waits below about
+// rendering, not about how loaded the CPU is.
+const PRELOAD_TIMEOUT_MS = 60_000;
+// Even preloaded, the swap from placeholder to screen takes a few frames, which a starved CPU
+// stretches past `waitFor`'s 1s. The wait still ends the moment the screen is in. A test that
+// waits on it needs room to, so the file's test timeout is raised to match.
+const LAZY_LOAD_TIMEOUT_MS = 20_000;
+vi.setConfig({ testTimeout: 2 * LAZY_LOAD_TIMEOUT_MS });
+beforeAll(async () => {
+  await Promise.all(momentGameIds(DEV_MOMENTS).map((id) => preloadGameUi(id)));
+}, PRELOAD_TIMEOUT_MS);
+
 function momentOf(gameId: string, chip: string): DevMoment {
   const found = DEV_MOMENTS.find(
     (moment) => moment.gameId === gameId && moment.chip === chip,
@@ -48,9 +62,12 @@ function renderMoments(moments: readonly DevMoment[]) {
 
 /** Waits until every lazily loaded game screen has swapped in for its placeholder. */
 async function screensLoaded(): Promise<void> {
-  await waitFor(() => {
-    expect(document.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull();
-  });
+  await waitFor(
+    () => {
+      expect(document.querySelector(`[${LOADING_ATTRIBUTE}]`)).toBeNull();
+    },
+    { timeout: LAZY_LOAD_TIMEOUT_MS },
+  );
 }
 
 /** A picker chip, selected ("✓ …") or not. */

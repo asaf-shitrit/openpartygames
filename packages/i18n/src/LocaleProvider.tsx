@@ -49,11 +49,14 @@ export function initialLocale(): Locale {
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const dir = directionFor(locale);
+  const t = dictionaryFor(locale);
 
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = dir;
-  }, [locale, dir]);
+    // A Hebrew screen reader announces the tab title first; it should not be English.
+    document.title = t.common.documentTitle;
+  }, [locale, dir, t]);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
@@ -65,8 +68,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<LocaleValue>(
-    () => ({ locale, dir, t: dictionaryFor(locale), setLocale }),
-    [locale, dir, setLocale],
+    () => ({ locale, dir, t, setLocale }),
+    [locale, dir, t, setLocale],
   );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;

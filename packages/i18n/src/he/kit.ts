@@ -8,6 +8,10 @@ export const kit: Dictionary["kit"] = {
     leftAlmostOut: "נותרו {time}, כמעט נגמר",
     finalStageAnnounce: "כמעט נגמר הזמן",
   },
+  switch: {
+    on: "פועל",
+    off: "כבוי",
+  },
   sound: {
     on: "קול פועל",
     off: "קול כבוי",
@@ -23,6 +27,7 @@ export const kit: Dictionary["kit"] = {
   playerAvatarAlt: "האווטאר של {name}",
   crowns: { one: "כתר אחד", two: "שני כתרים", other: "{count} כתרים" },
   doodle: {
+    full: "הדף מלא. בטלו קו כדי להמשיך לצייר.",
     undo: "בטלו",
     clear: "נקו",
     confirmClear: "למחוק את הציור? הקישו שוב לאישור",

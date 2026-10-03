@@ -2,7 +2,7 @@
 // way to ask for it. The locale is never guessed from `navigator.language`: direction is set
 // on the document, so picking Hebrew mirrors every screen, and that should be a choice.
 import { LOCALES, LOCALE_NAMES, useLocale } from "@opg/i18n";
-import type { Dictionary } from "@opg/i18n";
+import type { Dictionary, Locale } from "@opg/i18n";
 
 /** A language names itself in its own language, so `LOCALE_NAMES` is never translated. */
 export function LanguagePicker({ t }: { t: Dictionary }) {
@@ -32,6 +32,7 @@ export function LanguagePicker({ t }: { t: Dictionary }) {
       {LOCALES.map((option) => (
         <LanguageOption
           key={option}
+          lang={option}
           name={LOCALE_NAMES[option]}
           selected={option === locale}
           onSelect={() => {
@@ -44,15 +45,17 @@ export function LanguagePicker({ t }: { t: Dictionary }) {
 }
 
 interface LanguageOptionProps {
+  lang: Locale;
   name: string;
   selected: boolean;
   onSelect: () => void;
 }
 
 /** Selected state reads from the ink weight and `aria-pressed`, never from colour alone. */
-function LanguageOption({ name, selected, onSelect }: LanguageOptionProps) {
+function LanguageOption({ lang, name, selected, onSelect }: LanguageOptionProps) {
   return (
     <button
+      lang={lang}
       type="button"
       aria-pressed={selected}
       onClick={onSelect}

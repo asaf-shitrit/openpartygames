@@ -294,9 +294,17 @@ export function parseCreateRoomRequest(raw: string): CreateRoomRequest {
   return result.success ? result.data : {};
 }
 
-/** Trims and collapses whitespace; returns null if the name is empty or too long. */
+/**
+ * Format and control characters (zero-width spaces, direction marks, the BOM) plus the blank
+ * glyphs Unicode files as letters or symbols (Braille blank, Hangul fillers). None of them
+ * draws anything, so a name made only of them would seat a player with no visible name.
+ */
+const INVISIBLE_CHARS = /[\p{Cf}\p{Cc}⠀ᅟᅠㅤﾠ]/gu;
+
+/** Trims and collapses whitespace; returns null if the name is empty, invisible or too long. */
 export function cleanPlayerName(input: string): string | null {
   const name = input.replace(/\s+/g, " ").trim();
   if (name.length === 0 || name.length > NAME_MAX_LENGTH) return null;
+  if (name.replace(INVISIBLE_CHARS, "").trim().length === 0) return null;
   return name;
 }

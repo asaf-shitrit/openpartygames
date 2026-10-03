@@ -33,10 +33,16 @@ export const WORD_PACK: PackMeta = {
 };
 
 /** The snapshot payload fields the tests assert on. */
+/** The seat fields the tests assert on. */
+export interface StoredPlayer {
+  name: string;
+  connected: boolean;
+}
+
 export interface StoredRoom {
   code: string;
   phase: string;
-  players: unknown[];
+  players: StoredPlayer[];
   hostConnected?: boolean;
   emptySince?: number | null;
 }

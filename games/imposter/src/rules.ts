@@ -3,18 +3,7 @@ import type { PlayerId } from "@opg/protocol";
 import type { ImposterWord } from "./state";
 import { POINTS_PER_CORRECT_VOTE, POINTS_PER_WORD } from "./state";
 
-/**
- * Mirrors the plan's `normalizeAnswer`: lowercase, trim, strip punctuation, drop a
- * leading "a"/"an"/"the", collapse inner whitespace. Kept local so games stay
- * independent of the runtime @opg/sdk build.
- */
-export function normalizeAnswer(text: string): string {
-  let s = text.toLowerCase().trim();
-  s = s.replace(/[^\p{L}\p{N}\s]/gu, " ");
-  s = s.replace(/\s+/g, " ").trim();
-  s = s.replace(/^(a|an|the) /, "");
-  return s.replace(/\s+/g, " ").trim();
-}
+export { normalizeAnswer } from "@opg/sdk";
 
 /** targetId -> voters. */
 export function tallyVotes(votes: Record<PlayerId, PlayerId>) {

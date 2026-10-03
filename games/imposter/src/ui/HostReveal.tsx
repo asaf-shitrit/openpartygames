@@ -437,7 +437,7 @@ function TallyRow({ count, shown }: { count: number; shown: number }) {
   const { t } = useLocale();
   return (
     <div style={{ height: 60, display: "flex", alignItems: "center", gap: 12 }}>
-      <TallyScratch count={count} drawn={shown} size={50} />
+      <TallyScratch count={count} drawn={shown} size={50} label={voteLabel(t, shown)} />
       <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
         {voteLabel(t, shown)}
       </div>
@@ -462,7 +462,7 @@ function VoterRow({
         <VoterAvatar key={voterId} players={players} id={voterId} live={live} />
       ))}
       {shown > 4 ? (
-        <div style={{ fontSize: 28, fontWeight: 700 }}>+{shown - 4}</div>
+        <div style={{ fontSize: 28, fontWeight: 700 }}><bdi dir="ltr">+{shown - 4}</bdi></div>
       ) : null}
     </div>
   );

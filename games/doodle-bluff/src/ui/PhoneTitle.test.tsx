@@ -94,4 +94,16 @@ describe("PhoneTitle", () => {
     expect(screen.getByText("תמציאו שקר טוב")).toBeTruthy();
     expect(screen.getByText("שלחו כותרת")).toBeTruthy();
   });
+
+  it("says how many titles are still missing, with Hebrew's own one and two", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    const { rerender } = renderTitle(baseView({ isArtist: true, titledCount: 2 }));
+    expect(screen.getByText("מחכים לעוד אחד")).toBeTruthy();
+    rerender(
+      <LocaleProvider>
+        <PhoneTitle view={baseView({ isArtist: true, titledCount: 1 })} clock={CLOCK} send={vi.fn<(action: DoodleAction) => void>()} />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("מחכים לעוד שניים")).toBeTruthy();
+  });
 });

@@ -441,8 +441,9 @@ export interface SwitchProps {
   onChange?: (checked: boolean) => void;
   /** Accessible name for the switch itself. */
   label?: string;
-  onLabel?: string;
-  offLabel?: string;
+  /** The visible state text. Required: the kit has no language of its own to default to. */
+  onLabel: string;
+  offLabel: string;
   /** Track height; knob and width scale with it. */
   size?: number;
   /**
@@ -484,8 +485,8 @@ export function Switch({
   checked,
   onChange,
   label,
-  onLabel = "On",
-  offLabel = "Off",
+  onLabel,
+  offLabel,
   size = 42,
   labelFontSize = 18,
   disabled = false,
