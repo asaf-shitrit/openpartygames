@@ -13,6 +13,8 @@ export interface DoodlePaletteProps {
   selected: InkIndex;
   onSelect: (ink: InkIndex) => void;
   name: string;
+  /** Extra layout for the row, e.g. a flex basis when it shares a toolbar. */
+  style?: CSSProperties;
 }
 
 function swatchStyle(ink: string, selected: boolean): CSSProperties {
@@ -86,7 +88,7 @@ function Swatch({
   );
 }
 
-export function DoodlePalette({ inks, inkNames, selected, onSelect, name }: DoodlePaletteProps) {
+export function DoodlePalette({ inks, inkNames, selected, onSelect, name, style }: DoodlePaletteProps) {
   const { t } = useLocale();
   return (
     <div
@@ -101,6 +103,7 @@ export function DoodlePalette({ inks, inkNames, selected, onSelect, name }: Dood
         // has to give. At any normal size they still sit on one line.
         flexWrap: "wrap",
         gap: 8,
+        ...style,
       }}
     >
       {inks.map((ink, index) => (
