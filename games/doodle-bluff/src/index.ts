@@ -311,6 +311,20 @@ function isDone(state: DoodleState, playerId: PlayerId): boolean {
   return !canVoteOption(state.options, playerId) || state.votes[playerId] !== undefined;
 }
 
+/** The non-artists of the title or vote on stage and which of them are connected, or null when there is nobody to wait for. */
+function roundPlayers(state: DoodleState, ctx: Ctx): { others: PlayerId[]; connected: PlayerId[] } | null {
+  if (state.phase !== "title" && state.phase !== "vote") return null;
+  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
+  if (drawing === undefined) return null;
+  const others = nonArtistIds(state, drawing.artistId);
+  const connected = others.filter((id) => ctx.connectedIds.includes(id));
+  return connected.length === 0 ? null : { others, connected };
+}
+
+function closeRound(state: DoodleState, ctx: Ctx): DoodleState {
+  return state.phase === "title" ? startVote(state, ctx) : startReveal(state, ctx);
+}
+
 /**
  * Ends the title or vote phase once every non-artist is done. When only players who are not
  * connected are missing it does not end at once (a locked phone must keep its title or vote):
@@ -318,15 +332,10 @@ function isDone(state: DoodleState, playerId: PlayerId): boolean {
  * server restart does not start this clock: the worker keeps seats "connected" for 20s after one.
  */
 function settleRound(state: DoodleState, ctx: Ctx): DoodleState {
-  if (state.phase !== "title" && state.phase !== "vote") return state;
-  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
-  if (drawing === undefined) return state;
-  const others = nonArtistIds(state, drawing.artistId);
-  const connected = others.filter((id) => ctx.connectedIds.includes(id));
-  if (connected.length === 0) return state;
-  if (others.every((id) => isDone(state, id))) return state.phase === "title" ? startVote(state, ctx) : startReveal(state, ctx);
-  if (connected.every((id) => isDone(state, id))) return pullInDeadline(state, ctx.now);
-  return state;
+  const round = roundPlayers(state, ctx);
+  if (round === null) return state;
+  if (round.others.every((id) => isDone(state, id))) return closeRound(state, ctx);
+  return round.connected.every((id) => isDone(state, id)) ? pullInDeadline(state, ctx.now) : state;
 }
 
 function applyVote(state: DoodleState, playerId: PlayerId, optionId: string, ctx: Ctx): DoodleState {
@@ -410,11 +419,8 @@ function advanceIfReady(state: DoodleState, ctx: Ctx): DoodleState {
 
 /** A connection flip can leave only absent players to act: start the grace clock. */
 export function onPlayersChanged(state: DoodleState, ctx: Ctx): DoodleState {
-  if (state.finished || (state.phase !== "title" && state.phase !== "vote")) return state;
-  const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
-  if (drawing === undefined) return state;
-  const connected = nonArtistIds(state, drawing.artistId).filter((id) => ctx.connectedIds.includes(id));
-  if (connected.length === 0 || !connected.every((id) => isDone(state, id))) return state;
+  const round = roundPlayers(state, ctx);
+  if (round === null || !round.connected.every((id) => isDone(state, id))) return state;
   return pullInDeadline(state, ctx.now);
 }
 
