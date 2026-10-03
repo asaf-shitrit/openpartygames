@@ -598,10 +598,12 @@ describe("left-player grace", () => {
     expect(next.votes[c]).toBeDefined();
   });
 
-  it("ignores connection flips outside the title and vote phases", () => {
-    const ctx = makeCtx({ n: 3 });
-    const drawing = setup(ctx);
-    expect(onPlayersChanged(drawing, { ...ctx, connectedIds: [] })).toBe(drawing);
+  it("ignores connection flips in the reveal", () => {
+    const ctx = makeCtx({ n: 3, seed: 3 });
+    const titled = titleAsEveryNonArtist(finishAllDrawings(setup(ctx), ctx), ctx);
+    const revealing = voteAsEveryNonArtist(titled, ctx);
+    expect(revealing.phase).toBe("reveal");
+    expect(onPlayersChanged(revealing, { ...ctx, connectedIds: [] })).toBe(revealing);
   });
 });
 
