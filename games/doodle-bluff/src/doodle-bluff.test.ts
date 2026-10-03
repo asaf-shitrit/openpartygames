@@ -539,6 +539,15 @@ describe("left-player grace", () => {
     expect(state.drawings[drawingIdOf("p3", 0)]?.doodle.s.length).toBeGreaterThan(0);
   });
 
+  it("draw: the game's start in the player view does not move when the deadline is pulled in", () => {
+    const ctx = makeCtx({ n: 3 });
+    const state = drawnByTwo(ctx);
+    const pulled = onPlayersChanged(state, { ...ctx, now: BASE_NOW + 4000, connectedIds: ["p1", "p2"] });
+    expect(pulled.deadline).not.toBe(state.deadline);
+    expect(buildPlayerView(state, "p1").gameStartedAt).toBe(BASE_NOW);
+    expect(buildPlayerView(pulled, "p1").gameStartedAt).toBe(BASE_NOW);
+  });
+
   function votePhase(n = 4) {
     const ctx = makeCtx({ n, seed: 7 });
     const drawn = finishAllDrawings(setup(ctx), ctx);

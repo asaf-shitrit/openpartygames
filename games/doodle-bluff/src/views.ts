@@ -129,6 +129,7 @@ export function buildPlayerView(state: DoodleState, playerId: PlayerId): DoodleP
   const drawing = currentDrawing(state);
   return {
     phase: state.phase,
+    gameStartedAt: state.startedAt,
     playerCount: state.playerIds.length,
     myPrompts: myPromptsOf(state, playerId),
     myStrokeCounts: myStrokeCountsOf(state, playerId),

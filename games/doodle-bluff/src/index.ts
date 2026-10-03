@@ -128,6 +128,7 @@ export function setup(ctx: Ctx): DoodleState {
   const { drawings, drawOrder } = empty ? { drawings: {}, drawOrder: [] } : buildDrawings(playerIds, items);
   return {
     phase: "draw",
+    startedAt: ctx.now,
     playerIds,
     drawings,
     drawOrder,
