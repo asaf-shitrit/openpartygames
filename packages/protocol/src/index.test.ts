@@ -67,9 +67,11 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("﻿")).toBeNull();
   });
 
-  it("keeps a visible name that carries an invisible mark", () => {
-    expect(cleanPlayerName("דנה‏")).toBe("דנה‏");
-    expect(cleanPlayerName("👨‍👩")).toBe("👨‍👩");
+  it("keeps an invisible mark inside a name, but not at its edges", () => {
+    expect(cleanPlayerName("\u{1F468}\u200d\u{1F469}")).toBe("\u{1F468}\u200d\u{1F469}");
+    expect(cleanPlayerName("\u05d3\u05e0\u05d4\u200f")).toBe("\u05d3\u05e0\u05d4");
+    expect(cleanPlayerName("\u200b Dana \u200b")).toBe("Dana");
+    expect(cleanPlayerName("\u200b\u200b Dana")).toBe("Dana");
   });
 
   it("rejects empty and overlong names", () => {
@@ -83,6 +85,8 @@ describe("playerNameKey", () => {
     expect(playerNameKey("Dana​")).toBe(playerNameKey("DANA"));
     expect(playerNameKey("Zoë")).toBe(playerNameKey("Zoë"));
     expect(playerNameKey("Dana")).not.toBe(playerNameKey("Dani"));
+    expect(playerNameKey("\u200b Dana")).toBe(playerNameKey("Dana"));
+    expect(playerNameKey("Da \u200b na")).toBe(playerNameKey("Da na"));
   });
 });
 
