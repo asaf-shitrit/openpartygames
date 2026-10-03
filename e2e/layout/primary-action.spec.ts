@@ -3,36 +3,55 @@
 // A no-TV Most Likely To ballot stacks the staged prompt above the candidate list, so the page
 // scrolls, and "Lock in vote" used to sit past the bottom edge: a player who picked a name had to
 // scroll to find the button that sends it. No layout invariant objected, because a scrolling page
-// is allowed to run long. This asks the narrower question: at rest, is the last button on the
-// screen (the lock-in) fully inside the viewport?
+// is allowed to run long. This asks the narrower question: at rest, is the lock-in button fully
+// inside the viewport?
+//
+// Screens are chosen by what they are (a no-TV phone ballot of this game), not by preview index,
+// and the button is found by its accessible name in the locale under test. If either goes
+// missing the test fails rather than quietly measuring some other screen.
 import { expect, test } from "@playwright/test";
+import { DICTIONARIES } from "../../packages/i18n/src/dictionaries";
+import type { Locale } from "../../packages/i18n/src/locale";
+import { SCREENS } from "../../apps/web/src/dev/screens";
 
-const BALLOTS = ["most-likely-to/14", "most-likely-to/21"];
+const BALLOTS = SCREENS.filter(
+  (screen) =>
+    screen.gameId === "most-likely-to" &&
+    screen.surface === "phone" &&
+    screen.label.startsWith("Phone (no-TV)") &&
+    /vote selecting|ballot/.test(screen.label),
+);
 const SIZES = [
   { width: 360, height: 640 },
   { width: 390, height: 844 },
   { width: 430, height: 932 },
 ];
 
-for (const id of BALLOTS) {
+test("there are no-TV ballots to measure", () => {
+  // Both the plain and the worst-case (8 long names) ballot.
+  expect(BALLOTS.length).toBeGreaterThanOrEqual(2);
+});
+
+for (const ballot of BALLOTS) {
   for (const size of SIZES) {
-    test(`${id} keeps its lock-in button in view at ${size.width}x${size.height}`, async ({
+    test(`${ballot.id} keeps its lock-in button in view at ${size.width}x${size.height}`, async ({
       page,
     }) => {
       await page.setViewportSize(size);
-      await page.goto(`/dev/screens?id=${encodeURIComponent(id)}`);
-      await page.waitForFunction((screen) => document.body.dataset.screen === screen, id);
+      await page.goto(`/dev/screens?id=${encodeURIComponent(ballot.id)}`);
+      await page.waitForFunction((screen) => document.body.dataset.screen === screen, ballot.id);
       await page.evaluate(() => document.fonts.ready);
-      const box = await page.evaluate(() => {
-        const buttons = [...document.querySelectorAll("#root button")];
-        const rect = buttons.at(-1)?.getBoundingClientRect();
-        return rect === undefined
-          ? null
-          : { top: rect.top, bottom: rect.bottom, height: window.innerHeight };
+      const stored = await page.evaluate(() => localStorage.getItem("opg:locale"));
+      const locale: Locale = stored === "he" ? "he" : "en";
+      const name = DICTIONARIES[locale].mostLikelyTo.lockInVote;
+      const lockIn = page.getByRole("button", { name });
+      await expect(lockIn, `${ballot.id} renders a "${name}" button`).toHaveCount(1);
+      const box = await lockIn.evaluate((el) => {
+        const rect = el.getBoundingClientRect();
+        return { top: rect.top, bottom: rect.bottom, height: window.innerHeight };
       });
-      expect(box, "the ballot renders a button").not.toBeNull();
-      expect(box?.top ?? -1).toBeGreaterThanOrEqual(0);
-      expect(box?.bottom ?? Infinity).toBeLessThanOrEqual(box?.height ?? 0);
+      expect(box.top).toBeGreaterThanOrEqual(0);
+      expect(box.bottom).toBeLessThanOrEqual(box.height);
     });
   }
 }
