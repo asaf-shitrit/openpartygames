@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodlePad, Icon, PRESSABLE_CLASS } from "@opg/ui";
+import { Button, Card, DoodlePad, Icon, PINNED_BAR_STYLE, PRESSABLE_CLASS, usePinnedBarScrollPadding } from "@opg/ui";
 import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -209,6 +209,7 @@ export function commitDrawingChange({
 
 function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send }: OneDrawingProps) {
   const { drawingId } = prompt;
+  usePinnedBarScrollPadding(active);
   const scope = mirrorScope(roomCode, prompt.prompt);
   // Computed once, at mount: whether this pad's starting point is known to hold at least
   // everything the room does, so a later shrink from it is a real undo or clear rather than a
@@ -257,8 +258,12 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
       <div inert={done}>
         <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
       </div>
-      <DoneButton drawingId={drawingId} done={done} send={send} />
       <SquiggleButton done={done} onSquiggle={onSquiggle} />
+      {/* Last in the column on purpose: a pinned bar is held inside its container, so anything
+          after it would end up underneath it at the bottom of the scroll. */}
+      <div style={PINNED_BAR_STYLE}>
+        <DoneButton drawingId={drawingId} done={done} send={send} />
+      </div>
     </div>
   );
 }
