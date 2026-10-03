@@ -9,6 +9,7 @@ import {
   FakeSocket,
   joinPlayer,
   makeHub,
+  restartHub,
   send,
   storedRoom,
   welcomedPlayerId,
@@ -611,6 +612,7 @@ describe("RoomHub restore after a crash or deploy", () => {
   it("marks every seat offline once the grace is over, so the room can go idle", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);
+    await restored.hub.alarm();
     restored.clock.advance(PAST_GRACE_MS);
 
     await restored.hub.alarm();
@@ -636,6 +638,7 @@ describe("RoomHub restore after a crash or deploy", () => {
     survivor.setCaller({ kind: "player", playerId: welcomedPlayerId(lobby.bo) ?? "" });
     const hostSocket = accept(restored);
     hostSocket.setCaller({ kind: "host" });
+    await restored.hub.alarm();
     restored.clock.advance(PAST_GRACE_MS);
 
     await restored.hub.alarm();
@@ -649,6 +652,7 @@ describe("RoomHub restore after a crash or deploy", () => {
     const restored = makeHub(lobby.storage.stored);
     const bo = accept(restored);
     bo.setCaller({ kind: "player", playerId: welcomedPlayerId(lobby.bo) ?? "" });
+    await restored.hub.alarm();
     restored.clock.advance(PAST_GRACE_MS);
     await restored.hub.alarm();
     expect(bo.lastPlayerView()?.vipId).toBe(welcomedPlayerId(lobby.ada));
@@ -657,6 +661,19 @@ describe("RoomHub restore after a crash or deploy", () => {
     await restored.hub.alarm();
 
     expect(bo.lastPlayerView()?.vipId).toBe(welcomedPlayerId(lobby.bo));
+  });
+
+  it("still reconciles when each process lives too briefly to see the grace out", async () => {
+    const lobby = await makeLobby();
+    const first = restartHub(lobby);
+    await first.hub.alarm();
+    // The alarm that wakes the next process comes in a fresh instance, as after hibernation.
+    first.clock.advance(PAST_GRACE_MS);
+    const second = restartHub(first);
+
+    await second.hub.alarm();
+
+    expect(connectedNames(second)).toEqual([]);
   });
 
   it("does not end an Imposter clue round when the first phone back wakes the room", async () => {
