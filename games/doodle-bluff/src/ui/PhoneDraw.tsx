@@ -71,14 +71,14 @@ export function resyncCursor(sentRef: MutableRefObject<SentCursors>, drawingId: 
 }
 
 /**
- * What a drawing's mirror is filed under: the room and the prompt being drawn. A drawing id is
- * only "which player, which slot", so it is the same in every game a room plays; filed under
- * the id alone, the first game's last stroke came back as the second game's first, on a
- * different prompt, and was sent to the room as part of the new drawing. The prompt is what
- * differs between games, and a reload mid-draw still lands on the same one.
+ * What a drawing's mirror is filed under: the room, the prompt being drawn and when this game's
+ * drawing began. A drawing id is only "which player, which slot", the same in every game a room
+ * plays, so filed under that alone the first game's last stroke came back as the second game's
+ * first. The prompt told games apart until a later game dealt the same prompt to the same slot;
+ * the draw deadline's start time is new every game and unchanged by a reload within one.
  */
-export function mirrorScope(roomCode: string, prompt: string): string {
-  return `${roomCode}:${prompt}`;
+export function mirrorScope(roomCode: string, prompt: string, startedAt: number | null): string {
+  return `${roomCode}:${startedAt ?? 0}:${prompt}`;
 }
 
 export function storageKey(code: string, drawingId: string): string {
@@ -161,6 +161,8 @@ function sendChunks({ send, sentRef, drawingId, doodle, canTruncate = false }: S
 export interface PhoneDrawProps {
   view: DoodlePlayerView;
   roomCode: string;
+  /** When this game's draw phase began (its timer's start): new every game, steady across a reload. */
+  startedAt: number | null;
   clock: ServerClock;
   send: (action: DoodleAction) => void;
 }
@@ -176,6 +178,7 @@ interface OneDrawingProps {
   done: boolean;
   clock: ServerClock;
   roomCode: string;
+  startedAt: number | null;
   sentRef: MutableRefObject<SentCursors>;
   send: (action: DoodleAction) => void;
 }
@@ -207,9 +210,9 @@ export function commitDrawingChange({
   sendChunks({ send, sentRef, drawingId, doodle, canTruncate });
 }
 
-function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send }: OneDrawingProps) {
+function OneDrawing({ prompt, active, ack, done, clock, roomCode, startedAt, sentRef, send }: OneDrawingProps) {
   const { drawingId } = prompt;
-  const scope = mirrorScope(roomCode, prompt.prompt);
+  const scope = mirrorScope(roomCode, prompt.prompt, startedAt);
   // Computed once, at mount: whether this pad's starting point is known to hold at least
   // everything the room does, so a later shrink from it is a real undo or clear rather than a
   // pad recovering from a lost mirror. True whenever the room has nothing to lose yet (`ack ===
@@ -303,7 +306,7 @@ function SquiggleButton({ done, onSquiggle }: { done: boolean; onSquiggle: () =>
   );
 }
 
-export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
+export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawProps) {
   const { t } = useLocale();
   const prompts = view.myPrompts;
   const [activeIndex, setActiveIndex] = useState(0);
@@ -358,6 +361,7 @@ export function PhoneDraw({ view, roomCode, clock, send }: PhoneDrawProps) {
           done={view.myDone[prompt.drawingId] === true}
           clock={clock}
           roomCode={roomCode}
+          startedAt={startedAt}
           sentRef={sentRef}
           send={send}
         />
