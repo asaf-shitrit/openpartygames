@@ -391,6 +391,26 @@ describe("DoodlePad, at the room's limits", () => {
     expect(doodle?.s.length).toBeGreaterThan(1);
   });
 
+  it("one Undo takes back a whole long drag, however many strokes it was split into", () => {
+    const onChange = vi.fn<(doodle: Doodle) => void>();
+    renderPad({ onChange });
+    const canvas = canvasEl();
+    // a short stroke first, then a long one that splits
+    fireEvent.keyDown(canvas, { key: " " });
+    fireEvent.keyDown(canvas, { key: "ArrowRight" });
+    fireEvent.keyDown(canvas, { key: " " });
+    fireEvent.keyDown(canvas, { key: " " });
+    const loop = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
+    for (let i = 0; i < 600; i += 1) fireEvent.keyDown(canvas, { key: loop[i % 4] });
+    fireEvent.keyDown(canvas, { key: " " });
+    const drawn = onChange.mock.calls.at(-1)?.[0];
+    expect(drawn?.s.length).toBeGreaterThan(2);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onChange.mock.calls.at(-1)?.[0].s).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(onChange.mock.calls.at(-1)?.[0].s).toHaveLength(0);
+  });
+
   it("takes no more ink and says so once the doodle holds the most strokes the room accepts", () => {
     const onChange = vi.fn<(doodle: Doodle) => void>();
     renderPad({ initialDoodle: fullDoodle, onChange });
