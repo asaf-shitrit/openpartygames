@@ -470,14 +470,12 @@ function ReconnectOverlay({ status }: { status: RoomSocketStatus }) {
 }
 
 /**
- * The name the join form handed over for this room, joined with once the socket exists. A
- * player with a seat here already is reconnecting, so the stale hand-off is discarded.
+ * The name the join form handed over for this room, joined with once the socket exists. A saved
+ * token still goes along with it, so the room puts a player back in their seat when it is
+ * valid and seats them under this name when it is not (they were removed, say).
  */
-function useHandoffJoin(code: string, hadToken: boolean, socket: RoomSocket): string | null {
-  const [name] = useState(() => {
-    const handed = takeJoin(code);
-    return hadToken ? null : handed;
-  });
+function useHandoffJoin(code: string, socket: RoomSocket): string | null {
+  const [name] = useState(() => takeJoin(code));
   const sent = useRef(false);
   useEffect(() => {
     if (name === null || sent.current) return;
@@ -496,7 +494,7 @@ export function PlayerApp({ code }: { code: string }) {
 
   const playerId = playerIdFor(view, socket);
   const [hadToken] = useState(() => Boolean(playerToken(code)));
-  const handoffName = useHandoffJoin(code, hadToken, socket);
+  const handoffName = useHandoffJoin(code, socket);
   const [joinedName, setJoinedName] = useState(handoffName ?? "");
   const [joinRequested, setJoinRequested] = useState(handoffName !== null);
   const [pickerOverride, setPickerOverride] = useState<

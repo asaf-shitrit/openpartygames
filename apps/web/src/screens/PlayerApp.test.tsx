@@ -77,6 +77,22 @@ describe("PlayerApp", () => {
     expect(takeJoin("BKTZ")).toBeNull();
   });
 
+  it("joins with the handed-over name even when an old token is saved for the room", () => {
+    // A removed player re-enters the code on "/": the stale token no longer seats them, so
+    // the name they just typed is what joins them, with the token tried first by the room.
+    stubRoomInfo();
+    localStorage.setItem("opg:player:BKTZ", "stale");
+    stashJoin("BKTZ", "Zed");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent).toContain(JSON.stringify({ t: "join", name: "Zed", token: "stale" }));
+  });
+
   it("does not scold a reload for a name nobody typed", async () => {
     // A removed player's saved token no longer matches a seat, so the reconnect arrives at the
     // server as a join with no name and comes back "name-invalid".
