@@ -108,6 +108,19 @@ describe("PhoneReveal, mounted late", () => {
 });
 
 describe("PhoneReveal, card copy", () => {
+  it("running total reads in Hebrew when the locale is Hebrew", () => {
+    vi.useFakeTimers();
+    stubVibrate();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      setup("Phone: Maya reveal matched", 11200);
+      expect(screen.getByText("סה\"כ 2,000")).toBeTruthy();
+      expect(screen.queryByText(/total/)).toBeNull();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
   it("matched: the vote matched the top pick", () => {
     vi.useFakeTimers();
     stubVibrate();

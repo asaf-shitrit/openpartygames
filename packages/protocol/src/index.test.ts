@@ -59,6 +59,18 @@ describe("cleanPlayerName", () => {
     expect(cleanPlayerName("  Maya   Lee ")).toBe("Maya Lee");
   });
 
+  it("rejects a name that draws nothing, so no player shows up blank", () => {
+    expect(cleanPlayerName("​")).toBeNull();
+    expect(cleanPlayerName(" ‏‎ ")).toBeNull();
+    expect(cleanPlayerName("⠀ㅤ")).toBeNull();
+    expect(cleanPlayerName("﻿")).toBeNull();
+  });
+
+  it("keeps a visible name that carries an invisible mark", () => {
+    expect(cleanPlayerName("דנה‏")).toBe("דנה‏");
+    expect(cleanPlayerName("👨‍👩")).toBe("👨‍👩");
+  });
+
   it("rejects empty and overlong names", () => {
     expect(cleanPlayerName("   ")).toBeNull();
     expect(cleanPlayerName("abcdefghijklm")).toBeNull();

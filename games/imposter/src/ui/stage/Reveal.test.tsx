@@ -116,6 +116,23 @@ describe("StageReveal, caught", () => {
   });
 });
 
+describe("StageReveal, in Hebrew", () => {
+  it("names the tally marks in Hebrew, not English", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      setup("Host: reveal", 11200);
+      const labels = Array.from(document.querySelectorAll("svg[aria-label]")).map(
+        (el) => el.getAttribute("aria-label") ?? "",
+      );
+      expect(labels.length).toBeGreaterThan(0);
+      for (const label of labels) expect(label).not.toMatch(/votes?\b/);
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+});
+
 describe("StageReveal, wrong accusation", () => {
   it("stamps the accused row first, then the real imposter's row at unmask", () => {
     vi.useFakeTimers();

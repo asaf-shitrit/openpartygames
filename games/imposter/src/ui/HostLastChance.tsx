@@ -14,6 +14,7 @@ import {
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { lettersLabel } from "./letters-label";
 import { LAST_CHANCE_MS, POINTS_PER_WORD, type ImposterHostView } from "../state";
 
 function findPlayer(
@@ -108,7 +109,12 @@ function TypingCard({
         alt={avatarLabel(t, players, view.imposterId)}
       />
       <TypingStatus imposter={imposter} guessLength={guessLength} />
-      <LetterTiles length={guessLength} live size={64} />
+      <LetterTiles
+        length={guessLength}
+        live
+        size={64}
+        label={lettersLabel(t, guessLength, 0)}
+      />
     </div>
   );
 }

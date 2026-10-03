@@ -189,7 +189,7 @@ function RestRow({
       </div>
       {voted ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-          <TallyScratch count={total} drawn={shown} size={20} />
+          <TallyScratch count={total} drawn={shown} size={20} label={voteLabel(t, shown)} />
           <div style={{ fontSize: 16, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
       ) : (
@@ -281,7 +281,7 @@ function FocusRow({ id, shown, total, voters, badge, suspenseStartedAt, clock, p
             gap: 6,
           }}
         >
-          <TallyScratch count={total} drawn={shown} size={22} />
+          <TallyScratch count={total} drawn={shown} size={22} label={voteLabel(t, shown)} />
           <div style={{ fontSize: 18, fontWeight: 700 }}>{voteLabel(t, shown)}</div>
         </div>
       </div>

@@ -17,6 +17,7 @@ import {
   Timer,
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
+import type { Dictionary } from "@opg/i18n";
 import { MAX_GUESS_LENGTH, POINTS_PER_WORD } from "../state";
 import type { ImposterAction, ImposterHostView, ImposterPlayerView } from "../state";
 import type { SectionProps } from "./Phone";
@@ -44,8 +45,8 @@ function money(value: number): string {
   return value.toLocaleString("en-US");
 }
 
-function avatarAlt(me: PlayerSummary | null): string | undefined {
-  return me === null ? undefined : `${me.name}'s avatar`;
+function avatarAlt(t: Dictionary, me: PlayerSummary | null): string | undefined {
+  return me === null ? undefined : format(t.imposter.avatarAlt, { name: me.name });
 }
 
 function meName(me: PlayerSummary | null): string {
@@ -57,9 +58,10 @@ function meAvatarId(me: PlayerSummary | null) {
 }
 
 function MeRow({ me }: { me: PlayerSummary | null }) {
+  const { t } = useLocale();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(me)} />
+      <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(t, me)} />
       <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(me)}</div>
     </div>
   );
