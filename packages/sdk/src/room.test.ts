@@ -278,6 +278,17 @@ describe("join", () => {
     expect(h.room.playerIds()).toEqual([maya.playerId]);
   });
 
+  it("refuses a name that only differs from a seated one by invisible characters or Unicode form", () => {
+    const h = makeRoom();
+    join(h.room, "Dana", 0);
+    join(h.room, "Zoë", 0);
+    for (const lookalike of ["Dana\u200b", "D\u200ban\u200fa", "dana\ufeff", "Zoe\u0308"]) {
+      const res = h.room.handle({ kind: "anonymous" }, { t: "join", name: lookalike }, 0);
+      expect(errorCode(res.reply)).toBe("name-taken");
+    }
+    expect(h.room.playerIds()).toHaveLength(2);
+  });
+
   it("rejoins by token keeping id and score", () => {
     const h = makeRoom({ packs: [PACK_FAMILY] });
     const players = joinMany(h.room, ["Maya", "Leo", "Nia"], 0);

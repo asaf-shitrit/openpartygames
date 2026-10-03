@@ -7,6 +7,7 @@ import {
   MAX_AWARDS,
   MAX_PLAYERS,
   cleanPlayerName,
+  playerNameKey,
   type ActiveGameView,
   type Award,
   type AvatarId,
@@ -865,8 +866,8 @@ class RoomImpl implements RoomCore {
       this.fail(out, "name-invalid", "Pick a name up to 12 characters.");
       return;
     }
-    const lower = name.toLowerCase();
-    if (this.players.some((p) => p.name.toLowerCase() === lower)) {
+    const key = playerNameKey(name);
+    if (this.players.some((p) => playerNameKey(p.name) === key)) {
       this.fail(out, "name-taken", "That name is taken.");
       return;
     }
