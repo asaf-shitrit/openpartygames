@@ -448,15 +448,15 @@ describe("vote phase", () => {
   });
 });
 
+function nonArtists(ctx: GameContext<DrawingPromptContent>, artistId: PlayerId) {
+  return ctx.players.map((p) => p.id).filter((id) => id !== artistId);
+}
+
 describe("left-player grace", () => {
   function titlePhase(n = 4) {
     const ctx = makeCtx({ n, seed: 7 });
     const state = finishAllDrawings(setup(ctx), ctx);
     return { ctx, state, artistId: currentArtistId(state) };
-  }
-
-  function nonArtists(ctx: GameContext<DrawingPromptContent>, artistId: PlayerId) {
-    return ctx.players.map((p) => p.id).filter((id) => id !== artistId);
   }
 
   it("title: pulls the deadline in when only disconnected players are missing", () => {
