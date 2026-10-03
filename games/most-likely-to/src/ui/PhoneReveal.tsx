@@ -49,6 +49,7 @@ function ResultCard({
   me: PlayerId;
   cardRef: RefObject<HTMLDivElement | null>;
 }) {
+  const { t } = useLocale();
   const total = totals[me] ?? 0;
   return (
     <div ref={cardRef} style={{ flexGrow: 1, display: "flex" }}>

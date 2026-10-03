@@ -71,6 +71,28 @@ describe("StageLastChance", () => {
     }
   });
 
+  it("labels the tiles in the room's language, not English", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      const { view, room } = hostSample("Host: last chance");
+      const clock: ServerClock = { now: () => room.serverNow };
+      render(
+        <StageLastChance
+          view={view}
+          players={room.players}
+          deadline={room.game?.deadline ?? null}
+          timerStartedAt={room.game?.timerStartedAt ?? null}
+          clock={clock}
+        />,
+        { wrapper: LocaleProvider },
+      );
+      const label = screen.getByRole("figure").getAttribute("aria-label") ?? "";
+      expect(label).toBe(`${view.guessLength} אותיות`);
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
   it("names the caught player and the steal amount", () => {
     const { view, room } = hostSample("Host: last chance");
     const clock: ServerClock = { now: () => room.serverNow };

@@ -582,6 +582,38 @@ describe("RoomHub restore", () => {
   });
 });
 
+/** Who the persisted room says is connected, by player name. */
+function connectedNames(harness: HubHarness): string[] {
+  const players = storedRoom(harness.storage.stored)?.players ?? [];
+  return players.filter((p) => p.connected).map((p) => p.name);
+}
+
+describe("RoomHub restore after a crash or deploy", () => {
+  it("marks every seat offline when no socket survived, so the room can go idle", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+
+    await restored.hub.alarm();
+
+    expect(connectedNames(restored)).toEqual([]);
+    expect(storedRoom(restored.storage.stored)?.hostConnected).toBe(false);
+  });
+
+  it("keeps the seats whose sockets survived hibernation", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+    const survivor = accept(restored);
+    survivor.setCaller({ kind: "player", playerId: welcomedPlayerId(lobby.bo) ?? "" });
+    const hostSocket = accept(restored);
+    hostSocket.setCaller({ kind: "host" });
+
+    await restored.hub.alarm();
+
+    expect(connectedNames(restored)).toEqual(["Bo"]);
+    expect(storedRoom(restored.storage.stored)?.hostConnected).toBe(true);
+  });
+});
+
 /** Error codes a socket has been sent, oldest first. */
 function errorsIn(socket: FakeSocket): string[] {
   return socket.sent
