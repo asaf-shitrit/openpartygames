@@ -278,6 +278,8 @@ interface TimerRingProps {
   showProgress: boolean;
   drainStyle: RingDrainStyle | null;
   staticFraction: number | null;
+  /** Changes whenever the timer is re-anchored, so the drain animation restarts from scratch. */
+  restartKey: string;
 }
 
 /** The track circle, plus an optional draining progress circle on top of it. */
@@ -287,6 +289,7 @@ function TimerRing({
   showProgress,
   drainStyle,
   staticFraction,
+  restartKey,
 }: TimerRingProps) {
   const progressStyle =
     drainStyle ??
@@ -304,6 +307,10 @@ function TimerRing({
       <path d={RING_PATH} fill="#FFFFFF" strokeLinecap="round" {...ring} />
       {showProgress && (
         <path
+          // A CSS animation whose duration and delay change in place keeps its old start time and
+          // lands at an arbitrary fraction. A new key (a pulled-in, re-anchored deadline) starts
+          // a fresh animation at the right place instead.
+          key={restartKey}
           d={RING_PATH}
           fill="none"
           strokeLinecap="round"
@@ -373,6 +380,7 @@ export function Timer({
           showProgress={hasProgress(startedAt, deadline)}
           drainStyle={drainStyle}
           staticFraction={staticFraction}
+          restartKey={`${startedAt ?? ""}:${deadline ?? ""}`}
         />
         <div ref={digitsRef} style={digitStyle(big, stage)}>
           {formatLeft(seconds)}
