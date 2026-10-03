@@ -140,3 +140,29 @@ export async function expectPainted(locator: Locator, label: string): Promise<vo
   });
   expect(painted, `${label} is painted on screen, not clipped away by a collapsed ancestor`).toBe(true);
 }
+
+/**
+ * Text and controls the reconnect banner sits on top of, found by hit-testing: an element is
+ * covered when the banner is what the browser would hand a tap at its centre, ignoring the
+ * banner's own `pointer-events: none` by comparing rectangles instead.
+ */
+export async function coveredByBanner(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const banner = Array.from(document.querySelectorAll("output")).find((o) => /Reconnecting/.test(o.textContent ?? "")) ?? null;
+    if (banner === null) return ["no banner on the page"];
+    const box = banner.getBoundingClientRect();
+    const covered: string[] = [];
+    for (const element of Array.from(document.querySelectorAll("body *"))) {
+      if (banner.contains(element)) continue;
+      const isControl = element.matches("button, a, input, textarea, [role=button]");
+      const isText = element.children.length === 0 && (element.textContent ?? "").trim() !== "";
+      if (!isControl && !isText) continue;
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+      const overlaps =
+        rect.left < box.right && rect.right > box.left && rect.top < box.bottom && rect.bottom > box.top;
+      if (overlaps) covered.push((element.textContent ?? element.tagName).trim().slice(0, 40));
+    }
+    return covered;
+  });
+}

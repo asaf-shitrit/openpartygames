@@ -5,9 +5,11 @@ import {
   expectTvLobby,
   findVip,
   joinPhones,
+  newPhonePage,
   startGame,
   startRoom,
 } from "./harness";
+import { coveredByBanner } from "./layout-check";
 import { playOneFact } from "./real-or-nah";
 
 test("a phone reloads mid-game and rejoins with its seat", async ({
@@ -46,4 +48,55 @@ test("a phone reloads mid-game and rejoins with its seat", async ({
   ).toBeVisible();
 
   await Promise.all(phones.map((phone) => phone.context.close()));
+});
+
+test("the reconnect banner covers nothing the player needs, at every phone size", async ({
+  page,
+  browser,
+}) => {
+  const code = await startRoom(page);
+  await expectTvLobby(page, code);
+
+  // Ben's socket is proxied so the test can sever it, the way a dropped mobile connection
+  // would, and keep it down. setOffline would not do: Chromium leaves an open WebSocket up.
+  let severed = false;
+  const live: { close: () => void }[] = [];
+  const { context, page: ben } = await newPhonePage(browser);
+  await ben.routeWebSocket(/\/ws\//, (ws) => {
+    if (severed) {
+      ws.close();
+      return;
+    }
+    const server = ws.connectToServer();
+    ws.onMessage((message) => server.send(message));
+    server.onMessage((message) => ws.send(message));
+    ws.onClose(() => server.close());
+    server.onClose(() => ws.close());
+    live.push({ close: () => ws.close() });
+  });
+  await ben.goto(`/${code}`);
+  await ben.getByLabel("Your name").fill("Ben");
+  await ben.getByRole("button", { name: "Join" }).click();
+  await ben.getByRole("button", { name: "That's me" }).click();
+  const others = await joinPhones(browser, page, code, ["Ava", "Cleo"]);
+  const vip = await findVip([...others, { name: "Ben", context, page: ben }]);
+  await startGame(vip.page, "Most Likely To");
+  await expect(ben.getByRole("button", { name: /Lock in vote/ })).toBeVisible({ timeout: 45_000 });
+
+  severed = true;
+  live.forEach((socket) => socket.close());
+  await expect(ben.getByText(/Reconnecting/)).toBeVisible({ timeout: 20_000 });
+
+  for (const size of [
+    { width: 360, height: 640 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
+    await ben.setViewportSize(size);
+    await ben.evaluate(() => window.scrollTo(0, 0));
+    expect(await coveredByBanner(ben), `at ${size.width}x${size.height}`).toEqual([]);
+  }
+
+  await context.close();
+  await Promise.all(others.map((phone) => phone.context.close()));
 });

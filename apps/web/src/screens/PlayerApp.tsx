@@ -551,6 +551,7 @@ export function PlayerApp({ code }: { code: string }) {
   const showResults = showsResults(view, dismissedResultAt);
   return (
     <>
+      <ReconnectOverlay status={socket.status} />
       <PhaseEnter phaseKey={playerScreenKey(view, showPicker, showResults)}>
         <PlayerStage
           view={view}
@@ -564,7 +565,6 @@ export function PlayerApp({ code }: { code: string }) {
           onNextRound={() => setDismissedResultAt(finishedAtOf(view))}
         />
       </PhaseEnter>
-      <ReconnectOverlay status={socket.status} />
     </>
   );
 }
