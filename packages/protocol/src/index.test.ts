@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_AWARDS,
   cleanPlayerName,
+  playerNameKey,
   normalizeRoomCode,
   parseClientMessage,
   parseCreateRoomRequest,
@@ -74,6 +75,14 @@ describe("cleanPlayerName", () => {
   it("rejects empty and overlong names", () => {
     expect(cleanPlayerName("   ")).toBeNull();
     expect(cleanPlayerName("abcdefghijklm")).toBeNull();
+  });
+});
+
+describe("playerNameKey", () => {
+  it("ignores case, invisible characters and Unicode form", () => {
+    expect(playerNameKey("Dana​")).toBe(playerNameKey("DANA"));
+    expect(playerNameKey("Zoë")).toBe(playerNameKey("Zoë"));
+    expect(playerNameKey("Dana")).not.toBe(playerNameKey("Dani"));
   });
 });
 
