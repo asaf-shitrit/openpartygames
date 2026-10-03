@@ -96,8 +96,14 @@ export function createRouter(
       return apiError("bad-request", 400);
     }
     const route = apiRoute(pathname);
-    return route ? handleApi(route, request, deps) : deps.assets.fetch(request);
+    if (route) return handleApi(route, request, deps);
+    return isApiPath(pathname) ? apiError("not-found", 404) : deps.assets.fetch(request);
   };
+}
+
+/** Paths the Worker owns: an unknown one is a 404, never the SPA shell. */
+function isApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/") || pathname.startsWith("/ws/");
 }
 
 function apiRoute(pathname: string): ApiRoute | null {

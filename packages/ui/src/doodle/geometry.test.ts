@@ -6,7 +6,7 @@ import {
   gridPointOf,
   simplifyStroke,
 } from "./geometry";
-import { GRID } from "@opg/sdk";
+import { GRID, strokeSchema } from "@opg/sdk";
 import type { Doodle, GridPoint } from "@opg/sdk";
 
 const RECT = { left: 100, top: 200, width: 300, height: 300 };
@@ -143,5 +143,21 @@ describe("doodleBounds", () => {
       [[900, 10], [850, 40]],
     ]);
     expect(doodleBounds(doodle)).toEqual({ minX: 10, minY: 10, maxX: 900, maxY: 900 });
+  });
+});
+
+describe("the pad's output against the stroke schema", () => {
+  it("stays valid when the pointer leaves the box in every direction", () => {
+    const pointer: [number, number][] = [
+      [-500, -500],
+      [250, 350],
+      [9000, -40],
+      [9000, 9000],
+      [-30, 9000],
+    ];
+    const points = pointer.map(([x, y]) => gridPointOf(x, y, RECT));
+    const stroke = { c: 0, d: 100, g: 0, p: deltaEncode(simplifyStroke(points)) };
+
+    expect(strokeSchema.safeParse(stroke).success).toBe(true);
   });
 });
