@@ -128,6 +128,7 @@ export function setup(ctx: Ctx): DoodleState {
   const { drawings, drawOrder } = empty ? { drawings: {}, drawOrder: [] } : buildDrawings(playerIds, items);
   return {
     phase: "draw",
+    startedAt: ctx.now,
     playerIds,
     drawings,
     drawOrder,
@@ -155,6 +156,17 @@ function allConnectedDrawingsDone(state: DoodleState, ctx: Ctx): boolean {
   const connected = ctx.connectedIds.filter((id) => state.playerIds.includes(id));
   if (connected.length === 0) return false;
   return connected.every((id) => isDoneDrawing(state, id));
+}
+
+/**
+ * Ends the draw phase once every drawer is done. When only disconnected drawers are missing
+ * it pulls the deadline in to LEFT_PLAYER_GRACE_MS instead (a phone that blinks off keeps its
+ * drawing, and can still finish it if it comes back in time).
+ */
+function settleDraw(state: DoodleState, ctx: Ctx): DoodleState {
+  if (state.phase !== "draw") return state;
+  if (state.playerIds.length > 0 && state.playerIds.every((id) => isDoneDrawing(state, id))) return endDraw(state, ctx);
+  return allConnectedDrawingsDone(state, ctx) ? pullInDeadline(state, ctx.now) : state;
 }
 
 function applyStrokes(
@@ -197,7 +209,7 @@ function applyDoodleDone(state: DoodleState, playerId: PlayerId, drawingId: stri
   const drawing = state.drawings[drawingId];
   if (drawing === undefined || drawing.artistId !== playerId || drawing.done) return state;
   const next = { ...state, drawings: { ...state.drawings, [drawingId]: { ...drawing, done: true } } };
-  return allConnectedDrawingsDone(next, ctx) ? endDraw(next, ctx) : next;
+  return settleDraw(next, ctx);
 }
 
 function endDraw(state: DoodleState, ctx: Ctx): DoodleState {
@@ -407,18 +419,15 @@ export function onDeadline(state: DoodleState, ctx: Ctx): DoodleState {
   return DEADLINE_HANDLERS[state.phase](state, ctx);
 }
 
-function advanceDrawIfReady(state: DoodleState, ctx: Ctx): DoodleState {
-  return allConnectedDrawingsDone(state, ctx) ? endDraw(state, ctx) : state;
-}
-
 /** After a kick, ends the current phase early once whoever remains is all done. */
 function advanceIfReady(state: DoodleState, ctx: Ctx): DoodleState {
-  if (state.phase === "draw") return advanceDrawIfReady(state, ctx);
+  if (state.phase === "draw") return settleDraw(state, ctx);
   return settleRound(state, ctx);
 }
 
 /** A connection flip can leave only absent players to act: start the grace clock. */
 export function onPlayersChanged(state: DoodleState, ctx: Ctx): DoodleState {
+  if (state.phase === "draw") return allConnectedDrawingsDone(state, ctx) ? pullInDeadline(state, ctx.now) : state;
   const round = roundPlayers(state, ctx);
   if (round === null || !round.connected.every((id) => isDone(state, id))) return state;
   return pullInDeadline(state, ctx.now);
