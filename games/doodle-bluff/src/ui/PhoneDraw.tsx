@@ -400,7 +400,16 @@ export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawP
               type="button"
               className={`opg-reset ${PRESSABLE_CLASS}`}
               onClick={() => setActiveIndex((i) => (i + 1) % prompts.length)}
-              style={{ minHeight: TAP_TARGET, padding: "0 8px", fontWeight: 700 }}
+              style={{
+                minHeight: TAP_TARGET,
+                padding: "0 12px",
+                fontWeight: 700,
+                fontSize: 16,
+                background: "var(--opg-card)",
+                color: "var(--opg-ink)",
+                border: "3px solid var(--opg-ink)",
+                borderRadius: "var(--opg-radius-button)",
+              }}
             >
               {t.doodleBluff.nextDrawing}
             </button>
