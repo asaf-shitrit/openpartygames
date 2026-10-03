@@ -23,9 +23,13 @@ afterEach(() => {
   document.documentElement.style.scrollPaddingBottom = "";
 });
 
-function barOfHeight(height: number): { current: HTMLElement } {
+function resizeTo(el: HTMLElement, height: number): void {
+  el.getBoundingClientRect = () => new DOMRect(0, 0, 0, height);
+}
+
+function barOfHeight(height: number) {
   const el = document.createElement("div");
-  el.getBoundingClientRect = () => ({ height }) as DOMRect;
+  resizeTo(el, height);
   return { current: el };
 }
 
@@ -40,7 +44,7 @@ describe("usePinnedBarScrollPadding", () => {
   it("follows the bar when it grows", () => {
     const bar = barOfHeight(90);
     renderHook(() => usePinnedBarScrollPadding(true, bar));
-    bar.current.getBoundingClientRect = () => ({ height: 200 }) as DOMRect;
+    resizeTo(bar.current, 200);
     OBSERVED[0]?.();
     expect(document.documentElement.style.scrollPaddingBottom).toBe("208px");
   });
