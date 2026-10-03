@@ -26,6 +26,14 @@ import type { MatchStats } from "./stats";
 export const ROOM_KEY = "room";
 /** A room with no connections and no running game is deleted after this long. */
 export const IDLE_MS = 2 * 60 * 60 * 1000;
+/**
+ * How long a room rebuilt from storage waits for its phones to come back before it counts the
+ * ones with no socket as gone. A deploy drops every socket at once and phones reconnect within
+ * a few seconds (their backoff tops out at 5s), so marking seats offline on the first wake would
+ * hand a game a roster of absentees it then acts on: Imposter skips every speaker and jumps to
+ * the vote, and "everyone connected has voted" closes after the first phone is back.
+ */
+export const RECONNECT_GRACE_MS = 20_000;
 /** Close code sent to kicked and idle sockets. */
 const KICK = 1000;
 
@@ -129,6 +137,12 @@ export class RoomHub {
    * rate limits, and costs an honest player nothing.
    */
   private readonly budgets: Map<HubSocket, Budget>;
+  /**
+   * When a restored room stops waiting for phones and reconciles seats against live sockets;
+   * null for a room that was not restored, or once it has. Not persisted: a restart before it
+   * fires restores the room again and starts a fresh wait.
+   */
+  private reconcileAt: number | null;
 
   constructor(options: HubOptions, snapshot?: RoomSnapshot) {
     this.options = options;
@@ -137,6 +151,7 @@ export class RoomHub {
       : null;
     this.resumed = snapshot === undefined;
     this.budgets = new Map();
+    this.reconcileAt = snapshot ? options.now() + RECONNECT_GRACE_MS : null;
   }
 
   /** True when this room owns the code, so the adapter can 404 every other socket. */
@@ -267,7 +282,7 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    await this.apply(room.tick(now));
+    await this.apply(mergeResults([this.reconcileWhenDue(room, now), room.tick(now)]));
     if (!room.isIdleSince(now, IDLE_MS)) return;
 
     this.room = null;
@@ -288,12 +303,18 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    const result = mergeResults([
-      this.reconcileConnections(room, now),
-      room.resumeStart(now),
-    ]);
+    const result = room.resumeStart(now);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
+  }
+
+  /** Reconciles once the grace is over; an empty result before that. */
+  private reconcileWhenDue(room: RoomCore, now: number): HandleResult {
+    if (this.reconcileAt === null || now < this.reconcileAt) {
+      return mergeResults([]);
+    }
+    this.reconcileAt = null;
+    return this.reconcileConnections(room, now);
   }
 
   /**
@@ -483,10 +504,10 @@ export class RoomHub {
     if (!room) return;
     const now = this.options.now();
     const deadline = room.nextDeadline();
-    const idleCheck = now + IDLE_MS;
-    await this.options.storage.setAlarm(
-      deadline === null ? idleCheck : Math.min(deadline, idleCheck),
+    const wakes = [deadline, this.reconcileAt, now + IDLE_MS].filter(
+      (at) => at !== null,
     );
+    await this.options.storage.setAlarm(Math.min(...wakes));
   }
 }
 

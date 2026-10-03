@@ -16,7 +16,9 @@ import {
   type HubHarness,
 } from "./fixtures/hub";
 import { BURST, REFILL_PER_SECOND } from "./message-budget";
-import { IDLE_MS, type OpenedSocket } from "./room-hub";
+import { IDLE_MS, RECONNECT_GRACE_MS, type OpenedSocket } from "./room-hub";
+import { WORD_CHECK_MS } from "@opg/game-imposter/views";
+import { VIP_GRACE_MS } from "@opg/sdk";
 
 interface Lobby extends HubHarness {
   host: FakeSocket;
@@ -588,15 +590,43 @@ function connectedNames(harness: HubHarness): string[] {
   return players.filter((p) => p.connected).map((p) => p.name);
 }
 
+/** Past the grace a restored room gives phones to come back before it counts them gone. */
+const PAST_GRACE_MS = RECONNECT_GRACE_MS + 1;
+
+/** The Imposter phase the persisted room is in, or null when no game is running. */
+function gamePhase(harness: HubHarness): string | null {
+  return storedRoom(harness.storage.stored)?.game?.state.phase ?? null;
+}
+
 describe("RoomHub restore after a crash or deploy", () => {
-  it("marks every seat offline when no socket survived, so the room can go idle", async () => {
+  it("leaves every seat as saved until the grace is over", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);
 
     await restored.hub.alarm();
 
+    expect(connectedNames(restored)).toEqual(["Ada", "Bo", "Cy"]);
+  });
+
+  it("marks every seat offline once the grace is over, so the room can go idle", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+    restored.clock.advance(PAST_GRACE_MS);
+
+    await restored.hub.alarm();
+
     expect(connectedNames(restored)).toEqual([]);
     expect(storedRoom(restored.storage.stored)?.hostConnected).toBe(false);
+  });
+
+  it("arms an alarm for the end of the grace", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+    const born = restored.clock.now();
+
+    await restored.hub.alarm();
+
+    expect(restored.storage.alarms.at(-1)).toBe(born + RECONNECT_GRACE_MS);
   });
 
   it("keeps the seats whose sockets survived hibernation", async () => {
@@ -606,11 +636,43 @@ describe("RoomHub restore after a crash or deploy", () => {
     survivor.setCaller({ kind: "player", playerId: welcomedPlayerId(lobby.bo) ?? "" });
     const hostSocket = accept(restored);
     hostSocket.setCaller({ kind: "host" });
+    restored.clock.advance(PAST_GRACE_MS);
 
     await restored.hub.alarm();
 
     expect(connectedNames(restored)).toEqual(["Bo"]);
     expect(storedRoom(restored.storage.stored)?.hostConnected).toBe(true);
+  });
+
+  it("hands the crown on when the VIP never came back", async () => {
+    const lobby = await makeLobby();
+    const restored = makeHub(lobby.storage.stored);
+    const bo = accept(restored);
+    bo.setCaller({ kind: "player", playerId: welcomedPlayerId(lobby.bo) ?? "" });
+    restored.clock.advance(PAST_GRACE_MS);
+    await restored.hub.alarm();
+    expect(bo.lastPlayerView()?.vipId).toBe(welcomedPlayerId(lobby.ada));
+
+    restored.clock.advance(VIP_GRACE_MS);
+    await restored.hub.alarm();
+
+    expect(bo.lastPlayerView()?.vipId).toBe(welcomedPlayerId(lobby.bo));
+  });
+
+  it("does not end an Imposter clue round when the first phone back wakes the room", async () => {
+    const lobby = await makeLobby();
+    await send(lobby.hub, lobby.ada, { t: "start-game" });
+    lobby.clock.advance(WORD_CHECK_MS + 1);
+    await lobby.hub.alarm();
+    expect(gamePhase(lobby)).toBe("clues");
+    const token = welcomedToken(lobby.bo) ?? "";
+
+    const restored = makeHub(lobby.storage.stored);
+    const phone = accept(restored);
+    await send(restored.hub, phone, { t: "join", name: "Bo", token });
+
+    expect(gamePhase(restored)).toBe("clues");
+    expect(connectedNames(restored)).toEqual(["Ada", "Bo", "Cy"]);
   });
 });
 
