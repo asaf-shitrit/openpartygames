@@ -499,6 +499,46 @@ describe("left-player grace", () => {
     expect(next.titles[c]).toBe("from c");
   });
 
+  function drawnByTwo(ctx: GameContext<DrawingPromptContent>) {
+    let state = setup(ctx);
+    for (const id of ["p1", "p2"]) {
+      state = finishDrawing(state, ctx, id, 0);
+      state = finishDrawing(state, ctx, id, 1);
+    }
+    return state;
+  }
+
+  it("draw: pulls the deadline in when only disconnected drawers are missing", () => {
+    const away = makeCtx({ n: 3, connected: ["p1", "p2"] });
+    const state = drawnByTwo(away);
+    expect(state.phase).toBe("draw");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+    expect(onDeadline(state, { ...away, now: state.deadline ?? 0 }).phase).toBe("title");
+  });
+
+  it("draw: pulls in when the last connected holdout disconnects, and a later flip is a no-op", () => {
+    const ctx = makeCtx({ n: 3 });
+    const state = drawnByTwo(ctx);
+    expect(state.deadline).toBe(BASE_NOW + DRAW_MS);
+    const gone = { ...ctx, now: BASE_NOW + 4000, connectedIds: ["p1", "p2"] };
+    const pulled = onPlayersChanged(state, gone);
+    expect(pulled.phase).toBe("draw");
+    expect(pulled.deadline).toBe(BASE_NOW + 4000 + LEFT_PLAYER_GRACE_MS);
+    expect(onPlayersChanged(pulled, { ...gone, now: BASE_NOW + 5000 })).toBe(pulled);
+    expect(onPlayersChanged(state, ctx)).toBe(state);
+  });
+
+  it("draw: a drawer who reconnects inside the grace keeps their drawing and can finish", () => {
+    const away = makeCtx({ n: 3, connected: ["p1", "p2"] });
+    let state = drawnByTwo(away);
+    const back = { ...away, now: BASE_NOW + 3000, connectedIds: ["p1", "p2", "p3"] };
+    state = finishDrawing(state, back, "p3", 0);
+    expect(state.phase).toBe("draw");
+    state = finishDrawing(state, back, "p3", 1);
+    expect(state.phase).toBe("title");
+    expect(state.drawings[drawingIdOf("p3", 0)]?.doodle.s.length).toBeGreaterThan(0);
+  });
+
   function votePhase(n = 4) {
     const ctx = makeCtx({ n, seed: 7 });
     const drawn = finishAllDrawings(setup(ctx), ctx);
