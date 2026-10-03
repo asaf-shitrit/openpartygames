@@ -484,6 +484,7 @@ describe("RoomHub.alarm", () => {
 
     expect(lobby.storage.deletions).toBe(1);
     expect(lobby.storage.stored).toBeUndefined();
+    expect(lobby.storage.alarmAt).toBeUndefined();
     expect(stranger.closed).toEqual({ code: 1000, reason: "idle" });
   });
 });

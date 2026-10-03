@@ -157,6 +157,7 @@ function hubStorage(ctx: DurableObjectState): HubStorage {
       else await ctx.storage.put(GRACE_KEY, at);
     },
     setAlarm: (at) => ctx.storage.setAlarm(at),
+    deleteAlarm: () => ctx.storage.deleteAlarm(),
   };
 }
 
