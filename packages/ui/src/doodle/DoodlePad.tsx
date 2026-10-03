@@ -174,6 +174,7 @@ export function DoodlePad({
   const {
     canvasRef,
     strokeCount,
+    full,
     selectedInk,
     setSelectedInk,
     confirmingClear,
@@ -201,6 +202,7 @@ export function DoodlePad({
       <span id={labelId} style={SR_ONLY} aria-live="polite">
         {statusFor(keyboardDrawing, prompt, strokeCount, t.kit)}
       </span>
+      {full ? <output style={{ fontSize: 16, fontWeight: 700 }}>{t.kit.doodle.full}</output> : null}
       <span id={instructionsId} style={SR_ONLY}>
         {t.kit.doodle.keyboardInstructions}
       </span>

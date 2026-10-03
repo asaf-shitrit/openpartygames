@@ -271,9 +271,13 @@ describe("HostReveal, the fact's blank", () => {
  */
 const SETTLED_MS = 18250;
 
-/** The row a cell belongs to: each cell is a direct child of its row (see `rowStyle`). */
-function rowTextOf(cell: HTMLElement): string {
-  return (cell.parentElement?.textContent ?? "").replace(/\s+/g, " ");
+/**
+ * The row a cell belongs to: each cell is a direct child of its row (see `rowStyle`). A points
+ * cell wraps its number in a <bdi>, so the text node found there is one level below its cell.
+ */
+function rowTextOf(found: HTMLElement): string {
+  const cell = found.tagName === "BDI" ? found.parentElement : found;
+  return (cell?.parentElement?.textContent ?? "").replace(/\s+/g, " ");
 }
 
 describe("HostReveal, every lie carries its own outcome", () => {

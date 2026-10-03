@@ -132,7 +132,7 @@ describe("PhoneReveal, Hebrew locale", () => {
     window.localStorage.setItem("opg:locale", "he");
     setup("Phone: reveal", 21999);
     expect(screen.getByText("השקר של Maya תפס אתכם")).toBeTruthy();
-    expect(screen.getByText("רימיתם את Sam וNoa!")).toBeTruthy();
+    expect(screen.getByText("רימיתם את Sam ו-Noa!")).toBeTruthy();
     expect(screen.getByText(/^האמת: emus$/)).toBeTruthy();
     window.localStorage.removeItem("opg:locale");
   });

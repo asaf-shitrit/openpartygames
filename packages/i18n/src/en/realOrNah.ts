@@ -1,5 +1,7 @@
 export const realOrNah = {
   title: "Real or Nah",
+  blurb: "Write fake answers to real facts. Fool your friends, find the truth.",
+  landingBlurb: "Write fake answers to real facts. Fool your friends, find the truth.",
   factOf: "Fact {number} of {count}",
   writeHeading: "Write a believable lie on your phone",
   leftToWrite: "left to write",

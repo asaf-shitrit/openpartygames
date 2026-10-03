@@ -28,6 +28,7 @@ import { TvGamePicker } from "./TvGamePicker";
 import { TvLobby } from "./TvLobby";
 import { TvReconnecting } from "./TvReconnecting";
 import { TvPage } from "./shared";
+import { withLocalizedGames } from "./localize-games";
 
 function MessageScreen({
   title,
@@ -229,7 +230,10 @@ function HostStage({
   const key = screenKey(view);
   useScreenTransitionCue(key);
   return (
-    <PhaseEnter phaseKey={key}>
+    // Full height: every game Host sizes itself `height: 100%` of this frame, and the frame is a
+    // block child of the 1080 stage, so without it that resolves to auto and a game whose body
+    // fills the leftover space (Doodle Bluff) collapses to its header.
+    <PhaseEnter phaseKey={key} style={{ height: "100%" }}>
       <HostScreen view={view} clock={clock} t={t} />
     </PhaseEnter>
   );
@@ -295,7 +299,8 @@ export function HostApp({ code }: { code: string }) {
     hostToken,
     enabled: Boolean(hostToken),
   });
-  const view = hostViewOf(socket.view);
+  const rawView = hostViewOf(socket.view);
+  const view = useMemo(() => (rawView ? withLocalizedGames(t, rawView) : null), [rawView, t]);
   const clock = socket.clock;
 
   useScreenWakeLock(true);

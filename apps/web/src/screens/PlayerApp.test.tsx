@@ -11,6 +11,7 @@ import {
 } from "./fixtures/wakeLock";
 import { makePlayer, makePlayerView } from "./fixtures/room";
 import { realOrNahPreviews } from "@opg/game-real-or-nah/ui";
+import { stashJoin, takeJoin } from "../join-handoff";
 import { PlayerApp } from "./PlayerApp";
 
 function stubRoomInfo(): void {
@@ -62,6 +63,32 @@ function lobbyWithVipElsewhere() {
 }
 
 describe("PlayerApp", () => {
+  it("joins by itself with the name the join form handed over, once", () => {
+    stubRoomInfo();
+    stashJoin("BKTZ", "Zed");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent).toContain(JSON.stringify({ t: "join", name: "Zed" }));
+    expect(takeJoin("BKTZ")).toBeNull();
+  });
+
+  it("does not join on its own when nothing was handed over", () => {
+    stubRoomInfo();
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    expect(socket.sent.some((frame) => frame.includes('"t":"join"'))).toBe(false);
+  });
+
   it("joins from the form, then shows the avatar picker once", async () => {
     stubRoomInfo();
     const user = userEvent.setup();

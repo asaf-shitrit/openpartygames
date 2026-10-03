@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isCaught, revealOutcome, tallyVotes, topVoted } from "./rules";
+import {
+  isCaught,
+  normalizeAnswer,
+  revealOutcome,
+  tallyVotes,
+  topVoted,
+} from "./rules";
 
 const A = "a";
 const B = "b";
@@ -66,5 +72,23 @@ describe("revealOutcome", () => {
 
   it("is no-votes when nobody got a vote", () => {
     expect(revealOutcome({}, C, IDS)).toEqual({ kind: "no-votes" });
+  });
+});
+
+describe("normalizeAnswer", () => {
+  it("treats a word typed without its apostrophe as the same word", () => {
+    expect(normalizeAnswer("קפוצינו")).toBe(normalizeAnswer("קפוצ'ינו"));
+    expect(normalizeAnswer("גחנון")).toBe(normalizeAnswer("ג'חנון"));
+    expect(normalizeAnswer("dont")).toBe(normalizeAnswer("Don't"));
+  });
+
+  it("treats every apostrophe the phone keyboards type as the same one", () => {
+    const plain = normalizeAnswer("ג'חנון");
+    expect(normalizeAnswer("ג\u05F3חנון")).toBe(plain);
+    expect(normalizeAnswer("ג\u2019חנון")).toBe(plain);
+  });
+
+  it("still splits words on other punctuation", () => {
+    expect(normalizeAnswer("ice-cream")).toBe("ice cream");
   });
 });

@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import type { PlayerSummary } from "@opg/protocol";
-import { avatarOf, findPlayer, nameOf } from "./common";
+import { render } from "@testing-library/react";
+import { avatarOf, findPlayer, nameOf, PromptText } from "./common";
 
 const MAYA: PlayerSummary = {
   id: "maya",
@@ -50,5 +51,12 @@ describe("avatarOf", () => {
 
   it("is null when nobody matches", () => {
     expect(avatarOf(PLAYERS, "ghost")).toBeNull();
+  });
+});
+
+describe("PromptText", () => {
+  it("lets the prompt's own language set its direction, so an English fact keeps its full stop in a Hebrew room", () => {
+    const { container } = render(<PromptText prompt="In 1932, emus won ____." answer="emus" />);
+    expect(container.firstElementChild?.getAttribute("dir")).toBe("auto");
   });
 });

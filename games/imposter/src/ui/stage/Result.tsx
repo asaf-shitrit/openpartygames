@@ -22,6 +22,7 @@ import {
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { lettersLabel } from "../letters-label";
 import { resultDurationMs, type ImposterHostView } from "../../state";
 import {
   hostResultBeats,
@@ -196,6 +197,7 @@ function GuessLine({
         revealed={revealed}
         live
         size={GUESS_TILE_SIZE}
+        label={lettersLabel(t, length, revealed)}
         style={{ flexWrap: "wrap", rowGap: 6 }}
       />
     </div>

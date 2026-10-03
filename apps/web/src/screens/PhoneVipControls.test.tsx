@@ -233,6 +233,18 @@ describe("PhoneVipControls", () => {
     expect(screen.getByText("Turn on at least one pack")).toBeTruthy();
   });
 
+  it("says why start is off when the game has nothing in the room's language", () => {
+    setup({
+      games: [makeGame({ hasContentInLanguage: false })],
+      packs: [],
+    });
+    expect(
+      screen.getByRole("button", { name: /start imposter/i }),
+    ).toHaveProperty("disabled", true);
+    expect(screen.getByText(en.common.errorNoLanguagePacks)).toBeTruthy();
+    expect(screen.queryByText("Turn on at least one pack")).toBeNull();
+  });
+
   it("shows all three games and lets the third be picked", async () => {
     const { handlers, user } = setup({
       games: [
@@ -324,8 +336,8 @@ describe("PhoneVipControls", () => {
 
   it("says so when a game has no packs", () => {
     setup({ packs: [] });
-    expect(screen.getByText("No packs for this game yet.")).toBeTruthy();
-    expect(screen.getByText("Turn on at least one pack")).toBeTruthy();
+    expect(screen.getAllByText("No packs for this game yet.")).toHaveLength(2);
+    expect(screen.queryByText("Turn on at least one pack")).toBeNull();
   });
 
   it("pluralizes the player count", () => {
@@ -517,5 +529,28 @@ describe("PhoneVipControls, in Hebrew", () => {
     expect(
       screen.getByRole("button", { name: /התחילו את/ }),
     ).toBeTruthy();
+  });
+
+  it("labels every switch in Hebrew, not On and Off", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    setup();
+    expect(screen.queryByText("On")).toBeNull();
+    expect(screen.queryByText("Off")).toBeNull();
+    expect(screen.getAllByText(/^(פועל|כבוי)$/).length).toBeGreaterThan(1);
+  });
+});
+
+describe("PhoneVipControls in Hebrew", () => {
+  it("labels every switch in Hebrew, not the kit's English On/Off", () => {
+    window.history.replaceState(null, "", "/?lang=he");
+    try {
+      setup();
+      expect(screen.queryByText("On")).toBeNull();
+      expect(screen.queryByText("Off")).toBeNull();
+      expect(screen.getAllByText("פועל").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("כבוי").length).toBeGreaterThan(0);
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
   });
 });

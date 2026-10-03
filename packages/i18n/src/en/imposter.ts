@@ -1,5 +1,7 @@
 export const imposter = {
   title: "Imposter",
+  blurb: "One of you has a decoy word. Talk it out, vote them out.",
+  landingBlurb: "One of you has a decoy word. Talk it out, vote them out.",
   awards: {
     wordThief: "Word thief",
     wordThiefDetail: "Stole the word {times}",
@@ -101,6 +103,7 @@ export const imposter = {
     typeCrewWord: "Type the crew's word",
     submitGuess: "Submit guess",
     guessSent: "Guess sent",
+    letters: { one: "1 letter", other: "{count} letters" },
     guessing: "{name} is guessing…",
     caughtStage: "{name} got caught!",
     guessingEllipsis: "Guessing…",

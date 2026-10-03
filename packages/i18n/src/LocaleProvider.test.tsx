@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { he } from "./he";
 import { initialLocale, LocaleProvider, useLocale } from "./LocaleProvider";
 
 function setLocation(search: string): void {
@@ -113,6 +114,7 @@ describe("LocaleProvider", () => {
     expect(screen.getByTestId("dir").textContent).toBe("rtl");
     expect(screen.getByTestId("text").textContent).toBe("הצטרפו");
     expect(document.documentElement.dir).toBe("rtl");
+    expect(document.title).toBe(he.common.documentTitle);
     expect(window.localStorage.getItem("opg:locale")).toBe("he");
   });
 

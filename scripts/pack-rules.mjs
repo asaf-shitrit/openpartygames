@@ -54,15 +54,24 @@ const isArray = (value) => Array.isArray(value);
 /** Code points of the text, so limits count characters instead of UTF-16 units. */
 const codePoints = (text) => Array.from(text);
 
-/** Lowercase, strip punctuation, drop a leading article, collapse whitespace. */
+// A copy of packages/sdk/src/text.ts: this file cannot import TypeScript, and
+// scripts/pack-rules.test.ts fails if the two ever give different answers.
+const HEBREW_POINTS = /[\u0591-\u05BD\u05BF-\u05C2\u05C4\u05C5\u05C7]/g;
+const APOSTROPHES = /['\u2018\u2019\u02BC\u05F3`]/g;
+
+/** NFC, lowercase, drop Hebrew points and apostrophes, strip punctuation, drop a leading article, collapse whitespace. */
 export function normalizeAnswer(text) {
   if (!isText(text)) return "";
   return text
+    .normalize("NFC")
     .toLowerCase()
+    .trim()
+    .replace(HEBREW_POINTS, "")
+    .replace(APOSTROPHES, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .replace(/\s+/gu, " ")
     .trim()
     .replace(/^(?:a|an|the)\s+/u, "")
-    .replace(/\s+/gu, " ")
     .trim();
 }
 

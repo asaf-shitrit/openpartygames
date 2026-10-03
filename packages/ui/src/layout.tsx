@@ -31,7 +31,7 @@ export function Stage({ children, background = "#2B2B2B" }: StageProps) {
         overflow: "hidden",
       }}
     >
-      <div
+      <main
         className="opg-root opg-grid-tv"
         style={{
           width: 1920,
@@ -43,7 +43,7 @@ export function Stage({ children, background = "#2B2B2B" }: StageProps) {
         }}
       >
         {children}
-      </div>
+      </main>
     </div>
   );
 }
@@ -73,7 +73,7 @@ export interface PhoneScreenProps {
 export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScreenProps) {
   return (
     <RoomCodeContext.Provider value={roomCode}>
-      <div
+      <main
         className="opg-root opg-grid-phone"
         style={{
           minHeight: "100dvh",
@@ -95,7 +95,7 @@ export function PhoneScreen({ children, style, fit = false, roomCode }: PhoneScr
         }}
       >
         {children}
-      </div>
+      </main>
     </RoomCodeContext.Provider>
   );
 }

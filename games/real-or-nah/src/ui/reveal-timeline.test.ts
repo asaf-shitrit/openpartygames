@@ -332,7 +332,7 @@ describe("personalRevealCards", () => {
     // a word from the dictionary and the headline carries no digit at all.
     expect(standings?.headline).toBe("אתם במקום השלישי");
     expect(standings?.headline).not.toMatch(/\d/);
-    expect(standings?.sub).toBe("+0 בעובדה הזו");
+    expect(standings?.sub).toBe("\u2066+0\u2069 בעובדה הזו");
 
     const authored = personalRevealCards(he, {
       segments,
@@ -342,7 +342,7 @@ describe("personalRevealCards", () => {
       standingsOrdinal: 1,
       myPointsThisFact: 1000,
     }).find((c) => c.id === "author-fooled");
-    expect(authored?.headline).toBe("רימיתם את Sam וNoa!");
+    expect(authored?.headline).toBe("רימיתם את Sam ו-Noa!");
   });
 });
 

@@ -128,7 +128,7 @@ function LieRow({ title, players, look, t }: { title: DoodleFooledTitle; players
       <FooledAvatars ids={title.fooledIds} players={players} look={look} t={t} />
       {title.points > 0 ? (
         <Marker size={look.text} color="var(--opg-marker)">
-          +{title.points.toLocaleString("en-US")}
+          <bdi dir="ltr">+{title.points.toLocaleString("en-US")}</bdi>
         </Marker>
       ) : null}
     </Card>
@@ -191,7 +191,7 @@ function TruthSection({ view, players, shown, look, t }: { view: DoodleHostView;
       <h2 style={{ margin: 0, fontSize: look.text, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--opg-ink-secondary)" }}>
         {t.doodleBluff.theRealTitle}
       </h2>
-      <Highlight style={{ padding: "0 12px", minWidth: 0 }}>
+      <Highlight style={{ padding: "0 12px", minWidth: 0, alignSelf: "flex-start" }}>
         <span style={{ fontSize: look.truth, fontWeight: 700, lineHeight: 1.2, overflowWrap: "anywhere" }}>{reveal.prompt}</span>
       </Highlight>
       <FindersLine foundByIds={reveal.foundByIds} players={players} look={look} t={t} />

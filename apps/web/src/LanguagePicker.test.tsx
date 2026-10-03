@@ -25,6 +25,12 @@ describe("LanguagePicker", () => {
     expect(screen.getByRole("button", { name: "עברית" })).toBeTruthy();
   });
 
+  it("tags each name with its own language so a screen reader uses the right voice", () => {
+    renderPicker();
+    expect(screen.getByRole("button", { name: "English" }).getAttribute("lang")).toBe("en");
+    expect(screen.getByRole("button", { name: "עברית" }).getAttribute("lang")).toBe("he");
+  });
+
   it("marks the current language pressed, not just coloured", () => {
     renderPicker();
     expect(

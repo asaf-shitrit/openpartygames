@@ -50,7 +50,7 @@ export function Tally({ count, size = 40, style }: TallyProps) {
                 style={{ fontSize: Math.round(size * 0.75), lineHeight: 1 }}
                 aria-hidden="true"
             >
-                ×{count}
+                <bdi dir="ltr">×{count}</bdi>
             </div>
             <span
                 style={{
