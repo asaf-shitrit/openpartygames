@@ -44,12 +44,6 @@ import { createRng, restoreRng } from "./rng";
 export const VIP_GRACE_MS = 60_000;
 const MAX_TICK_ITERATIONS = 50;
 
-/**
- * How long a start may sit in "starting" before the room gives up on it. The phase exists
- * only while the adapter fetches content, which is one D1 read, so anything past this is a
- * start that will never arrive — most often because a deploy restarted the Durable Object
- * and took the in-flight load with it.
- */
 /** What the VIP is told when a start is abandoned. */
 interface StartNotice {
   code: ErrorCode;
@@ -71,6 +65,12 @@ function startNoticeFor(def: AnyGame | undefined, playerIds: PlayerId[]): StartN
   return short ? SHORT_OF_PLAYERS : START_FAILED;
 }
 
+/**
+ * How long a start may sit in "starting" before the room gives up on it. The phase exists
+ * only while the adapter fetches content, which is one D1 read, so anything past this is a
+ * start that will never arrive — most often because a deploy restarted the Durable Object
+ * and took the in-flight load with it.
+ */
 export const START_TIMEOUT_MS = 15_000;
 
 interface PlayerRecord {
