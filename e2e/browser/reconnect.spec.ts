@@ -59,7 +59,9 @@ async function expectBannerClear(
   if (size === undefined) return;
   await page.setViewportSize(size);
   await page.evaluate(() => window.scrollTo(0, 0));
-  expect(await coveredByBanner(page), `at ${size.width}x${size.height}`).toEqual([]);
+  // Polled: after a resize the banner re-measures on its next ResizeObserver callback, so the
+  // screen moves down a frame later. A banner that keeps covering something still fails here.
+  await expect.poll(() => coveredByBanner(page), { message: `at ${size.width}x${size.height}`, timeout: 2_000 }).toEqual([]);
   // A screen built to fit the phone must give the banner room out of its own flexible middle:
   // the ballot's Lock in button stays on screen, with the screen ending inside the viewport.
   const lockIn = await page.getByRole("button", { name: /Lock in vote/ }).boundingBox();
