@@ -506,8 +506,6 @@ function PackRow({
         {ratingLabel(t, pack.rating)}
       </Chip>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={enabled}
         size={30}
         onLabel={t.kit.switch.on}
@@ -641,8 +639,6 @@ function SharedScreenToggle({
         </div>
       </div>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={shown}
         size={30}
         onLabel={t.kit.switch.on}
@@ -710,8 +706,6 @@ function LockCard({
         </div>
       </div>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={checked}
         size={30}
         onLabel={t.kit.switch.on}

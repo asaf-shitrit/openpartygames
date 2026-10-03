@@ -32,8 +32,6 @@ export const picker = {
     "{game} plays on a shared screen. Turn that on to start it.",
   needAtLeastPlayers: "Need at least {count} players",
   turnOnPack: "Turn on at least one pack",
-  switchOn: "On",
-  switchOff: "Off",
   startGame: "Start game",
   startNamedGame: "Start {game}",
   startingGame: "Starting…",

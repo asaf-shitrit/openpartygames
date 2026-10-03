@@ -33,8 +33,6 @@ export const picker: Dictionary["picker"] = {
   gameNeedsSharedScreen: "{game} משחק שדורש מסך משותף. הפעילו אותו כדי להתחיל.",
   needAtLeastPlayers: "צריך לפחות {count} שחקנים",
   turnOnPack: "הפעילו לפחות חפיסה אחת",
-  switchOn: "פועל",
-  switchOff: "כבוי",
   startGame: "התחילו משחק",
   startNamedGame: "התחילו את {game}",
   startingGame: "מתחילים…",
