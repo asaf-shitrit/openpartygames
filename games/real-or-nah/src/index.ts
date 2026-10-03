@@ -1,5 +1,6 @@
 import { z, type ZodType } from "zod";
 // Real or Nah: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
+import { normalizeAnswer } from "@opg/sdk";
 import type {
   Fact,
   FactContent,
@@ -78,29 +79,8 @@ type Ctx = GameContext<FactContent>;
 
 // ---------- Text ----------
 
-/** Niqqud and cantillation marks: the same Hebrew word with or without them is one answer. */
-const HEBREW_POINTS = /[\u0591-\u05BD\u05BF-\u05C2\u05C4\u05C5\u05C7]/g;
-/** Apostrophes and the Hebrew geresh join a word ("dont" is "don't"), not split it in two. */
-const APOSTROPHES = /['\u2019\u02BC\u05F3]/g;
-
-/**
- * Mirrors the plan's normalize: lowercase, trim, strip punctuation, drop a leading
- * a/an/the, collapse inner whitespace. Kept local so games stay independent of the
- * runtime @opg/sdk build (type imports only).
- */
-export function normalizeLie(text: string): string {
-  return text
-    .normalize("NFC")
-    .toLowerCase()
-    .trim()
-    .replace(HEBREW_POINTS, "")
-    .replace(APOSTROPHES, "")
-    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^(?:an?|the)\s+/, "")
-    .trim();
-}
+/** The shared comparison form: see normalizeAnswer in @opg/sdk. */
+export const normalizeLie = normalizeAnswer;
 
 /** Trim + collapse inner spaces. Length is checked against the result. */
 function cleanLie(text: string): string {
