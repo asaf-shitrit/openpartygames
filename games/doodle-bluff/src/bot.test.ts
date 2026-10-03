@@ -9,8 +9,13 @@ function pointCount(strokes: readonly Stroke[]): number {
   return strokes.reduce((sum, s) => sum + s.p.length / 2, 0);
 }
 
+interface Visited {
+  xs: number[];
+  ys: number[];
+}
+
 /** Every absolute position the strokes visit. */
-function visited(strokes: readonly Stroke[]): { xs: number[]; ys: number[] } {
+function visited(strokes: readonly Stroke[]): Visited {
   const xs: number[] = [];
   const ys: number[] = [];
   for (const s of strokes) {
