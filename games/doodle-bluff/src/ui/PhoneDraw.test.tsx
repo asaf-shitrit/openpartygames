@@ -7,7 +7,16 @@ import type { Doodle, Stroke } from "@opg/sdk";
 import { LocaleProvider } from "@opg/i18n";
 import type { DoodleAction, DoodlePlayerView } from "../state";
 import type { SentCursors } from "./PhoneDraw";
-import { commitDrawingChange, PhoneDraw, pendingChunks, readMirror, restoreMirror, resyncCursor, storageKey } from "./PhoneDraw";
+import {
+  commitDrawingChange,
+  PhoneDraw,
+  pendingChunks,
+  readMirror,
+  restoreMirror,
+  resyncCursor,
+  SQUIGGLE_DOODLE,
+  storageKey,
+} from "./PhoneDraw";
 
 function sentCursorsRef(initial: SentCursors = {}): MutableRefObject<SentCursors> {
   return { current: initial };
@@ -124,6 +133,34 @@ describe("PhoneDraw", () => {
     renderDraw(baseView({ myDone: { "p1:0": true } }));
     const [squiggle] = screen.getAllByText("Can't draw? Send a squiggle");
     expect(squiggle?.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("stops taking ink once that drawing is done, since the room refuses it", () => {
+    const { container } = renderDraw(baseView({ myDone: { "p1:0": true } }));
+    const [canvas] = container.querySelectorAll("canvas");
+    expect(canvas?.closest("[inert]")).not.toBeNull();
+  });
+
+  it("keeps the pad live while the drawing is not done", () => {
+    const { container } = renderDraw(baseView());
+    const [canvas] = container.querySelectorAll("canvas");
+    expect(canvas?.closest("[inert]")).toBeNull();
+  });
+
+  it("the squiggle replaces what was already drawn rather than keeping part of it", () => {
+    window.sessionStorage.setItem(
+      storageKey("BKTZ", "p1:0"),
+      JSON.stringify({ v: 1, s: [stroke(2), stroke(2), stroke(2)] }),
+    );
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView({ myStrokeCounts: { "p1:0": 3 } }), send);
+    clickSquiggle();
+    const actions = send.mock.calls.map(([action]) => action);
+    expect(actions).toEqual([
+      { type: "truncate", drawingId: "p1:0", from: 3, to: 0 },
+      { type: "strokes", drawingId: "p1:0", from: 0, strokes: SQUIGGLE_DOODLE.s },
+      { type: "doodle-done", drawingId: "p1:0" },
+    ]);
   });
 
   it("shows a waiting state when there are no prompts yet", () => {

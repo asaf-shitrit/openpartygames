@@ -82,6 +82,18 @@ describe("normalizeTitle and cleanTitle", () => {
     expect(normalizeTitle("a   Cat   Riding   a Skateboard")).toBe("cat riding a skateboard");
   });
 
+  it("reads a Hebrew title the same with or without niqqud", () => {
+    expect(normalizeTitle("שָׁלוֹם")).toBe(normalizeTitle("שלום"));
+    expect(titleErrorOf("שלום", {}, "p1", "שָׁלוֹם")).toBe("truth");
+    expect(titleErrorOf("x", { p2: "גירפה" }, "p1", "גִּירָפָה")).toBe("duplicate");
+  });
+
+  it("joins a word at an apostrophe and composes a decomposed accent", () => {
+    expect(normalizeTitle("don't stop")).toBe(normalizeTitle("dont stop"));
+    expect(normalizeTitle("it\u2019s")).toBe("its");
+    expect(normalizeTitle("cafe\u0301")).toBe(normalizeTitle("caf\u00e9"));
+  });
+
   it("cleanTitle trims and collapses inner whitespace only", () => {
     expect(cleanTitle("  a   dog  ")).toBe("a dog");
   });
