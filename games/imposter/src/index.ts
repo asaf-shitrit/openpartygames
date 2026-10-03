@@ -1,5 +1,6 @@
 import { z, type ZodType } from "zod";
 // Imposter: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
+import { pullInDeadline } from "@opg/sdk";
 import type {
   GameContext,
   GameDefinition,
@@ -363,6 +364,20 @@ function allConnectedVoted(state: ImposterState, ctx: Ctx): boolean {
   return connected.every((id) => state.votes[id] !== undefined);
 }
 
+/**
+ * Closes the vote once everyone has voted. When only players who are not connected are
+ * missing it does not close at once (a locked phone must keep its vote): it pulls the
+ * deadline in to LEFT_PLAYER_GRACE_MS instead, so a returning player can still count.
+ */
+function settleVote(state: ImposterState, ctx: Ctx): ImposterState {
+  const everyoneVoted =
+    state.playerIds.length > 0 &&
+    state.playerIds.every((id) => state.votes[id] !== undefined);
+  if (everyoneVoted) return startReveal(state, ctx);
+  if (allConnectedVoted(state, ctx)) return pullInDeadline(state, ctx.now);
+  return state;
+}
+
 // ---------- GameDefinition hooks ----------
 
 function applyDone(
@@ -387,8 +402,7 @@ function applyVote(
   if (target === playerId) return state;
   if (!state.playerIds.includes(target)) return state;
   const votes = { ...state.votes, [playerId]: target };
-  const next = { ...state, votes };
-  return allConnectedVoted(next, ctx) ? startReveal(next, ctx) : next;
+  return settleVote({ ...state, votes }, ctx);
 }
 
 function applyGuess(
@@ -554,8 +568,7 @@ function continueAfterRemoval(
   ctx: Ctx,
 ): ImposterState {
   if (state.phase === "clues") return resumeClues(base, state, playerId, ctx);
-  if (state.phase === "vote" && allConnectedVoted(base, ctx))
-    return startReveal(base, ctx);
+  if (state.phase === "vote") return settleVote(base, ctx);
   return base;
 }
 
@@ -602,13 +615,19 @@ export function onPlayerRemoved(
 }
 
 /**
- * A locked phone or a backgrounded tab must not hold the room: if the current speaker just
- * disconnected, their turn passes the same way a timeout used to. Anyone else's connection
- * flipping, or a reconnect, is a no-op here — findSpeaker already skips disconnected
- * players once their turn comes up.
+ * A locked phone or a backgrounded tab must not hold the room. If the current speaker just
+ * disconnected, their turn passes the same way a timeout used to. During the vote, once
+ * only disconnected players are left to vote, the deadline is pulled in to a short grace.
+ * Anyone else's connection flipping, or a reconnect, is a no-op here: findSpeaker already
+ * skips disconnected players once their turn comes up.
  */
 export function onPlayersChanged(state: ImposterState, ctx: Ctx): ImposterState {
-  if (state.finished || state.phase !== "clues") return state;
+  if (state.finished) return state;
+  if (state.phase === "vote")
+    return allConnectedVoted(state, ctx)
+      ? pullInDeadline(state, ctx.now)
+      : state;
+  if (state.phase !== "clues") return state;
   const speaker = state.clueOrder[state.clueIndex];
   if (speaker === undefined || ctx.connectedIds.includes(speaker)) return state;
   return advanceSpeaker(state, ctx);
