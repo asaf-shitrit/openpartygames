@@ -474,7 +474,7 @@ The gallery is an in-game `gallery` phase before `isOver`, not part of the platf
 | Empty or over-length title | `titleError: "invalid"` (`games/real-or-nah/src/index.ts:436`–`:447`) |
 | A player who submits no title | No option, no fooling points. They may still vote |
 | Thin ballot at 3 players | Topped up with house titles, as above |
-| Only the artist is connected for a round | No titles can arrive; the round is skipped on the deadline |
+| Only the artist is connected for a round | No titles can arrive; the round is skipped on the deadline. A skipped round does not count toward `TITLED_MAX` or the round number, so the shown count holds |
 | Fewer than `minPlayers` remain | RoomCore already ends the game (`plan/0001-platform-mvp.md:55`) |
 | Deploy mid-drawing | Sockets drop, the snapshot holds accepted chunks, the phone reconnects and re-sends from `myStrokeCounts` (`plan/0001-platform-mvp.md:22`, `CLAUDE.md`) |
 | A chunk with a stale `drawingId` (a late frame after the phase moved on) | No-op, same state, no broadcast |

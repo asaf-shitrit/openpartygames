@@ -282,7 +282,9 @@ function startVote(state: DoodleState, ctx: Ctx): DoodleState {
   const drawing = state.currentDrawingId === null ? undefined : state.drawings[state.currentDrawingId];
   if (drawing === undefined) return startNextRound(state, ctx);
   const others = nonArtistIds(state, drawing.artistId).filter((id) => ctx.connectedIds.includes(id));
-  if (others.length === 0) return startNextRound(state, ctx);
+  // The round never reached a ballot, so it does not count toward TITLED_MAX: the plan's
+  // "shown count holds" (plan/0003, edge cases) applies, and the room still gets a full set.
+  if (others.length === 0) return startNextRound({ ...state, shownCount: state.shownCount - 1 }, ctx);
   return { ...state, phase: "vote", options: buildOptions(state, drawing, ctx), deadline: ctx.now + VOTE_MS };
 }
 

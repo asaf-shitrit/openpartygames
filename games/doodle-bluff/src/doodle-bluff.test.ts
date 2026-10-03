@@ -397,6 +397,18 @@ describe("title phase", () => {
     expect(afterDeadline.phase === "vote" || afterDeadline.phase === "reveal").toBe(false);
     expect(afterDeadline.history).toEqual([]);
   });
+
+  it("a round skipped for want of titlers does not use up a slot of the shown cap", () => {
+    // plan/0003: "the shown count holds". The cap counts drawings that reached a ballot, so
+    // the next round is number 1 and the room still gets its full set.
+    const { ctx, state } = inTitlePhase(3);
+    expect(state.shownCount).toBe(1);
+    const soloCtx = { ...ctx, connectedIds: [currentArtistId(state)], now: BASE_NOW + TITLE_MS };
+    const afterDeadline = onDeadline(state, soloCtx);
+    expect(afterDeadline.phase).toBe("title");
+    expect(afterDeadline.shownCount).toBe(1);
+    expect(buildPlayerView(afterDeadline, "p1").roundNumber).toBe(1);
+  });
 });
 
 describe("vote phase", () => {
