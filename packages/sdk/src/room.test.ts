@@ -1015,7 +1015,7 @@ describe("a start that never finished", () => {
     const view = h.room.hostView(0);
     expect(view.phase).toBe("lobby");
     expect(view.game).toBeNull();
-    expect(noticesOf(res.effects)[0]?.code).toBe("start-failed");
+    expect(noticesOf(res.effects)[0]?.code).toBe("not-enough-players");
   });
 
   it("arms a deadline the alarm can fire on", () => {
