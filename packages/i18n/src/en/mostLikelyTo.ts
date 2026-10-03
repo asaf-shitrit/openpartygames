@@ -18,7 +18,6 @@ export const mostLikelyTo = {
   youPicked: "You picked {name}.",
   totalPoints: "{points} total",
   votedOfTotalPhone: "{voted} of {total} voted",
-  totalPoints: "{points} total",
   youSuffix: " (You)",
   youSuffixLower: " (you)",
   votes: { one: "{count} vote", other: "{count} votes" },
