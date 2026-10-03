@@ -37,6 +37,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("PhoneJoin, in Hebrew", () => {
+  it("lays the code boxes out left to right, so the code reads as it was typed", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderForm();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+    // The page is RTL; without its own direction the first letter lands in the rightmost box
+    // and "BKTZ" paints as "ZTKB". happy-dom has no layout, so assert the direction itself.
+    const boxes = document.querySelector(".opg-code-field [aria-hidden='true']");
+    expect(boxes?.getAttribute("dir")).toBe("ltr");
+  });
+});
+
 describe("PhoneJoin", () => {
   it("requires a 4-letter room code", async () => {
     const fetchMock = vi.fn<typeof fetch>();

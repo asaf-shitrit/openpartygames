@@ -1,5 +1,7 @@
 export const imposter = {
   title: "Imposter",
+  blurb: "One of you has a decoy word. Talk it out, vote them out.",
+  landingBlurb: "One of you has a decoy word. Talk it out, vote them out.",
   awards: {
     wordThief: "Word thief",
     wordThiefDetail: "Stole the word {times}",

@@ -422,7 +422,7 @@ function PointsCell({ points, shown }: { points: number; shown: boolean }) {
   if (!shown) return <div />;
   return (
     <Marker size={34} color="var(--opg-marker)" style={{ justifySelf: "end" }}>
-      +{points.toLocaleString("en-US")}
+      <bdi dir="ltr">+{points.toLocaleString("en-US")}</bdi>
     </Marker>
   );
 }

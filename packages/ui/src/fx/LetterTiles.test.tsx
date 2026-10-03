@@ -23,6 +23,23 @@ describe("tileSizeFor", () => {
   });
 });
 
+describe("LetterTiles direction", () => {
+  it("lays English letters out left to right even on a right-to-left page", () => {
+    render(<LetterTiles length={5} letters="ZEBRA" revealed={5} live={false} />);
+    expect(screen.getByRole("figure").getAttribute("dir")).toBe("ltr");
+  });
+
+  it("lays Hebrew letters out right to left", () => {
+    render(<LetterTiles length={4} letters="זברה" revealed={4} live={false} />);
+    expect(screen.getByRole("figure").getAttribute("dir")).toBe("rtl");
+  });
+
+  it("follows the page when it is only told a length", () => {
+    render(<LetterTiles length={4} live={false} />);
+    expect(screen.getByRole("figure").hasAttribute("dir")).toBe(false);
+  });
+});
+
 describe("LetterTiles", () => {
   it("renders one tile per length, capped at 40", () => {
     const { container } = render(<LetterTiles length={60} live={false} />);

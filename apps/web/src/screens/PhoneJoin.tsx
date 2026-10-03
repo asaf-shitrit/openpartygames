@@ -95,6 +95,8 @@ function ScreenHeader({ t }: { t: Dictionary }) {
 function CodeCells({ code }: { code: string }) {
   return (
     <div
+      // A room code is Latin letters read left to right whatever the page direction.
+      dir="ltr"
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(4, minmax(0, 1fr))",

@@ -151,6 +151,8 @@ function startDisabledReason(check: DisabledCheck): string | undefined {
   if (isBlocked(selectedGame, sharedScreen)) {
     return format(t.picker.gameNeedsSharedScreen, { game: selectedGame.name });
   }
+  // Turning a pack on cannot help here: the room's language has none to turn on.
+  if (!selectedGame.hasContentInLanguage) return t.common.errorNoLanguagePacks;
   if (playerCount < selectedGame.minPlayers) {
     return format(t.picker.needAtLeastPlayers, {
       count: selectedGame.minPlayers,
@@ -504,10 +506,10 @@ function PackRow({
         {ratingLabel(t, pack.rating)}
       </Chip>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={enabled}
         size={30}
+        onLabel={t.kit.switch.on}
+        offLabel={t.kit.switch.off}
         label={format(t.picker.packAccessibleName, { pack: pack.name })}
         onChange={(next) => {
           setEnabled(next);
@@ -637,10 +639,10 @@ function SharedScreenToggle({
         </div>
       </div>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={shown}
         size={30}
+        onLabel={t.kit.switch.on}
+        offLabel={t.kit.switch.off}
         label={t.picker.addSharedScreen}
         onChange={(next) => {
           setShown(next);
@@ -704,10 +706,10 @@ function LockCard({
         </div>
       </div>
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={checked}
         size={30}
+        onLabel={t.kit.switch.on}
+        offLabel={t.kit.switch.off}
         label={t.picker.lockRoom}
         onChange={(next) => {
           setChecked(next);

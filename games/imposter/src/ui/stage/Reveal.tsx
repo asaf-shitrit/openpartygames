@@ -241,7 +241,7 @@ function VoterAvatars({
         />
       ))}
       {drawnVoters.length > VOTER_ROW_MAX ? (
-        <div style={{ fontSize: 15, fontWeight: 700 }}>+{drawnVoters.length - VOTER_ROW_MAX}</div>
+        <div style={{ fontSize: 15, fontWeight: 700 }}><bdi dir="ltr">+{drawnVoters.length - VOTER_ROW_MAX}</bdi></div>
       ) : null}
     </div>
   );

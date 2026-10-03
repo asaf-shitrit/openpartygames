@@ -17,4 +17,20 @@ describe("format", () => {
   it("leaves an unmatched placeholder untouched", () => {
     expect(format("{missing}", {})).toBe("{missing}");
   });
+
+  it("hyphenates a Hebrew prefix letter glued to a Latin or digit value", () => {
+    expect(format("התור עובר ל{name}", { name: "Dana" })).toBe("התור עובר ל-Dana");
+    expect(format("{a} ו{b}", { a: "אבי", b: "Sam2" })).toBe("אבי ו-Sam2");
+    expect(format("בחרתם ב{name}.", { name: "7up" })).toBe("בחרתם ב-7up.");
+  });
+
+  it("leaves a Hebrew prefix alone before a Hebrew value or an existing hyphen", () => {
+    expect(format("התור עובר ל{name}", { name: "דנה" })).toBe("התור עובר לדנה");
+    expect(format("החדר בחר ב{name}", { name: "ה-VIP" })).toBe("החדר בחר בה-VIP");
+  });
+
+  it("does not hyphenate after a space or in English text", () => {
+    expect(format("{name} בחר", { name: "Dana" })).toBe("Dana בחר");
+    expect(format("a{name}", { name: "Dana" })).toBe("aDana");
+  });
 });

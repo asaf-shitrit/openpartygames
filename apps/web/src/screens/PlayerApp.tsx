@@ -1,5 +1,5 @@
 // /<CODE> — phone join flow, then the screen for the current phase.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActiveGameView,
   AvatarId,
@@ -30,6 +30,7 @@ import { PhoneResults } from "./PhoneResults";
 import { PhoneStarting } from "./PhoneStarting";
 import { PhoneVipControls } from "./PhoneVipControls";
 import { PhoneWaiting } from "./PhoneWaiting";
+import { withLocalizedGames } from "./localize-games";
 
 function playerToken(code: string): string | null {
   try {
@@ -482,7 +483,8 @@ function useHandoffJoin(code: string, hadToken: boolean, socket: RoomSocket): st
 export function PlayerApp({ code }: { code: string }) {
   const { t } = useLocale();
   const socket = useRoomSocket({ code, role: "player" });
-  const view = playerViewFrom(socket);
+  const rawView = playerViewFrom(socket);
+  const view = useMemo(() => (rawView ? withLocalizedGames(t, rawView) : null), [rawView, t]);
   const clock = socket.clock;
 
   const playerId = playerIdFor(view, socket);

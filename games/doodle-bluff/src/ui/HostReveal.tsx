@@ -128,7 +128,7 @@ function LieRow({ title, players, look, t }: { title: DoodleFooledTitle; players
       <FooledAvatars ids={title.fooledIds} players={players} look={look} t={t} />
       {title.points > 0 ? (
         <Marker size={look.text} color="var(--opg-marker)">
-          +{title.points.toLocaleString("en-US")}
+          <bdi dir="ltr">+{title.points.toLocaleString("en-US")}</bdi>
         </Marker>
       ) : null}
     </Card>

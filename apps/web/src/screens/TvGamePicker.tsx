@@ -270,11 +270,11 @@ function PackRow({
         the previous state, with no `onChange`, still let it be focused and pressed.
       */}
       <Switch
-        onLabel={t.picker.switchOn}
-        offLabel={t.picker.switchOff}
         checked={pack.enabled}
         size={42}
         labelFontSize={28}
+        onLabel={t.kit.switch.on}
+        offLabel={t.kit.switch.off}
         label={format(t.picker.packAccessibleName, { pack: pack.name })}
         disabled
       />

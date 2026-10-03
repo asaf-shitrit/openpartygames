@@ -36,6 +36,13 @@ const CONVERTED_FILES = [
 const TEXT_NODE = />[A-Z][^<>{}\n]{1,80}<\//g;
 
 /**
+ * Words typed after a `{expression}`, in the same JSX text run: `{formatPoints(total)} total`.
+ * The text-node rule above only sees a run that opens with a capital right after `>`, so this
+ * shipped as English on a Hebrew phone.
+ */
+const TRAILING_WORDS = /\}\)?\}?[ \t]+[A-Za-z]{3,}(?: [A-Za-z]{2,})*[ \t]*(?:<\/|\n)/g;
+
+/**
  * A sentence handed to a prop that ends up on screen or in a screen reader. This is the
  * half the text-node check cannot see, and the half that hides best: the UI kit shipped a
  * whole screen's worth of English in `aria-label`s and `title`s precisely because nothing
@@ -86,6 +93,11 @@ function sourceOf(fileName: string): string {
 describe("no hardcoded copy in the platform screens", () => {
   it.each(CONVERTED_FILES)("%s has no raw JSX text node", (fileName) => {
     const matches = sourceOf(fileName).match(TEXT_NODE) ?? [];
+    expect(matches).toEqual([]);
+  });
+
+  it.each(CONVERTED_FILES)("%s has no words trailing an expression", (fileName) => {
+    const matches = sourceOf(fileName).match(TRAILING_WORDS) ?? [];
     expect(matches).toEqual([]);
   });
 

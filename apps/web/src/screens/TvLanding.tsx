@@ -1,6 +1,6 @@
 // design/TVLanding.dc.html — the host landing screen.
 import { useState } from "react";
-import { format, useLocale } from "@opg/i18n";
+import { format, gameLandingBlurb, gameName, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { ApiError, createRoom } from "../api";
 import { LANDING_GAMES } from "../games";
@@ -106,6 +106,7 @@ function LandingHero({
  * story-card look, since the grid only earns its keep once there is a second row to save.
  */
 function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }) {
+  const { t } = useLocale();
   const wide = LANDING_GAMES.length <= 2;
   return (
     <div
@@ -138,11 +139,11 @@ function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }
               gap: 16,
             }}
           >
-            <Marker size={wide ? 56 : 38}>{game.name}</Marker>
+            <Marker size={wide ? 56 : 38}>{gameName(t, game.id, game.name)}</Marker>
             <Avatar id={game.avatar} size={wide ? 76 : 48} />
           </div>
           <div style={{ fontSize: wide ? 30 : 28, lineHeight: 1.3 }}>
-            {game.blurb}
+            {gameLandingBlurb(t, game.id, game.blurb)}
           </div>
           <div
             style={{

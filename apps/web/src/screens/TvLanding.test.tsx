@@ -213,4 +213,17 @@ describe("TvLanding", () => {
       window.localStorage.removeItem("opg:locale");
     }
   });
+
+  it("names the showcase games in Hebrew, with Hebrew blurbs", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      renderLanding();
+      expect(screen.getByText("מתחזה")).toBeTruthy();
+      expect(screen.getByText("אמת או לא")).toBeTruthy();
+      expect(screen.queryByText("Imposter")).toBeNull();
+      expect(screen.queryByText(/decoy word/)).toBeNull();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
 });
