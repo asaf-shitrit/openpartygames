@@ -43,7 +43,7 @@ export const picker: Dictionary["picker"] = {
   shareAriaLabel: "שתפו את הקישור להצטרפות לחדר",
   linkCopied: "הקישור הועתק",
   scanOrTap: "סרקו, או הקישו כדי לשתף",
-  pickingGame: "— תורך לבחור משחק",
+  pickingGame: "— בחירת המשחק",
   startsFromPhone: "התחלת המשחק מהטלפון של {vip} · {players}",
   theVip: "ה-VIP",
   vipControlsAriaLabel: "בקרות VIP",

@@ -40,7 +40,7 @@ export const imposter: Dictionary["imposter"] = {
     sayClueOutLoud: "תגידו רמז אחד בקול",
     listenClosely: "תקשיבו טוב. המתחזה מבלף.",
     done: "הרמז נאמר",
-    speaking: "בדיבור",
+    speaking: "עכשיו בתור",
     upNext: "בתור הבא",
     upNextBang: "אתם הבאים בתור!",
     upAfter: "אתם אחרי {name}",

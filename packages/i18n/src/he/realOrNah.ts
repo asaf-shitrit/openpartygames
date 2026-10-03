@@ -76,7 +76,7 @@ export const realOrNah: Dictionary["realOrNah"] = {
     truthFinderDetail: "גילוי של {answers}",
     greatestHit: "הלהיט הגדול",
     greatestHitDetail: "שקר אחד רימה {people}",
-    mostTrusting: "האמון המלא",
+    mostTrusting: "לב תמים",
     mostTrustingDetail: "אמון ב{lies}",
     people: { one: "אדם אחד", other: "{count} אנשים" },
     answers: { one: "תשובה אמיתית אחת", other: "{count} תשובות אמיתיות" },

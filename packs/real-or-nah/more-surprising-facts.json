@@ -15,9 +15,9 @@
         "the sun"
       ],
       "decoys": [
-        "wind",
         "river",
-        "moon"
+        "moon",
+        "crowds"
       ],
       "source": {
         "title": "Eiffel Tower",
@@ -345,7 +345,7 @@
     },
     {
       "id": "astronaut-taller",
-      "prompt": "In space, astronauts can grow about 2.5 cm ____ within a month.",
+      "prompt": "In space, astronauts grow a little ____ within a month.",
       "answer": "taller",
       "alternates": [
         "higher"
