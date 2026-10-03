@@ -1,4 +1,5 @@
 // design/PhoneReconnecting.dc.html — the reconnect state, as a whole screen and as a banner.
+import { useLayoutEffect, useRef } from "react";
 import type { AvatarId } from "@opg/protocol";
 import { useLocale } from "@opg/i18n";
 import { Button, Highlight, Marker, PhoneScreen, PlayerChip } from "@opg/ui";
@@ -10,18 +11,34 @@ import { Icon } from "@opg/ui";
  * every in-progress draft on a phone is local `useState`: the imposter's vote, a half-typed
  * guess, the lie a player is still wording. Mobile browsers close the socket whenever the tab
  * goes to the background, so unmounting the game here would cost a player their round for
- * glancing at a text message. It takes no taps and takes its own row, so it covers nothing.
+ * glancing at a text message. It takes no taps, and the screen under it starts below it, so it covers nothing.
  */
 export function PhoneReconnectingBanner() {
   const { t } = useLocale();
+  const ref = useRef<HTMLOutputElement | null>(null);
+  // Publish the banner's height so every PhoneScreen can start below it (see layout.tsx); the
+  // banner stays fixed, so showing or hiding it moves the screen once and nothing else.
+  useLayoutEffect(() => {
+    const banner = ref.current;
+    if (banner === null) return undefined;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--opg-banner-h", `${banner.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(banner);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--opg-banner-h");
+    };
+  }, []);
   return (
     <output
+      ref={ref}
       aria-live="polite"
       style={{
-        // Sticky, not fixed: it takes its own row above the screen, so it never sits on the
-        // game's title or the first thing a player reads, and still follows a scrolled page.
-        position: "sticky",
+        position: "fixed",
         insetBlockStart: 0,
+        insetInline: 0,
         zIndex: 10,
         display: "flex",
         justifyContent: "center",
