@@ -26,6 +26,6 @@ export const results: Dictionary["results"] = {
   secondPlaceBang: "מקום שני!",
   thirdPlaceLabel: "מקום שלישי",
   secondPlaceLabel: "מקום שני",
-  picksNextGame: "בתור לבחור את המשחק הבא מהטלפון",
+  picksNextGame: "— תורך לבחור את המשחק הבא מהטלפון",
   waitingOnVip: "מחכים ל{vip} לבחירת המשחק הבא",
 };

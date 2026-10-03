@@ -302,7 +302,7 @@ describe("TvGamePicker, in Hebrew", () => {
         })}
       />,
     );
-    expect(screen.getByText("בתור לבחור משחק")).toBeTruthy();
+    expect(screen.getByText("— תורך לבחור משחק")).toBeTruthy();
     expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
   });
 

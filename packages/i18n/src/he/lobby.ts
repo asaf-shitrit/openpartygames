@@ -25,5 +25,5 @@ export const lobby: Dictionary["lobby"] = {
   openSeat: "מקום פנוי",
   playersOfMax: "{count} מתוך {max} שחקנים",
   waitingForFirst: "ממתינים לשחקן הראשון שיצטרף",
-  vipPicksFromPhone: "ה-VIP, בתור לבחור את המשחק מהטלפון",
+  vipPicksFromPhone: "— ה-VIP. תורך לבחור את המשחק מהטלפון",
 };
