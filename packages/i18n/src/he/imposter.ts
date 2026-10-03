@@ -85,7 +85,7 @@ export const imposter: Dictionary["imposter"] = {
     youVotedFor: "הצבעתם על {name}.",
     youVoted: "הצבעתם.",
     waitingOthers: "מחכים שהשאר יצביעו.",
-    votedSoFar: "{count} הצביעו עד כה",
+    votedSoFar: "הצביעו עד כה: {count}",
     whoHasVotedLabel: "מי הצביע",
     ofTotal: "{voted} מתוך {total}",
   },

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ServerClock } from "@opg/ui";
 import { Button, Card, DoodleView, Icon, TextInput } from "@opg/ui";
-import { format, useLocale } from "@opg/i18n";
+import { format, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { ControlsMarker } from "./common";
 import { TITLE_MAX_LENGTH, type DoodleAction, type DoodlePlayerView, type DoodleTitleError } from "../state";
@@ -36,7 +36,7 @@ function DrawingCard({ view, clock, t }: { view: DoodlePlayerView; clock: Server
 
 function WaitingLine({ waiting, t }: { waiting: number; t: Dictionary }) {
   return (
-    <>{waiting > 0 ? format(t.doodleBluff.waitingForMore, { count: waiting }) : t.doodleBluff.everyonesInReadyToVote}</>
+    <>{waiting > 0 ? format(pickPluralByCount(waiting, t.doodleBluff.waitingForMore), { count: waiting }) : t.doodleBluff.everyonesInReadyToVote}</>
   );
 }
 
