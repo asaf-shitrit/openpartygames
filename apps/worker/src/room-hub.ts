@@ -81,6 +81,8 @@ export interface HubStorage {
   getGraceUntil(): Promise<number | undefined>;
   setGraceUntil(at: number | null): Promise<void>;
   setAlarm(at: number): Promise<void>;
+  /** deleteAll() leaves an armed alarm in place, so a swept room clears it separately. */
+  deleteAlarm(): Promise<void>;
 }
 
 /** Where finished games are recorded. */
@@ -296,6 +298,7 @@ export class RoomHub {
 
     this.room = null;
     for (const socket of this.options.sockets.all()) socket.close(KICK, "idle");
+    await this.options.storage.deleteAlarm();
     await this.options.storage.deleteAll();
   }
 
