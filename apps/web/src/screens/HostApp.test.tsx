@@ -103,17 +103,50 @@ async function flushMusicClaims(): Promise<void> {
   });
 }
 
+function stubRoomInfo(exists: boolean): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn<typeof fetch>(async () =>
+      exists
+        ? Response.json({
+            code: "BKTZ",
+            exists: true,
+            locked: false,
+            inGame: false,
+            playerCount: 1,
+            joinable: true,
+          })
+        : Response.json({ error: "not-found" }, { status: 404 }),
+    ),
+  );
+}
+
 describe("HostApp", () => {
-  it("explains that the room is hosted elsewhere when there is no host token", () => {
+  it("explains that the room is hosted elsewhere when there is no host token", async () => {
+    stubRoomInfo(true);
     render(
       <LocaleProvider>
         <HostApp code="BKTZ" />
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("This room is hosted on another screen"),
+      await screen.findByText("This room is hosted on another screen"),
     ).toBeTruthy();
     expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
+  it("says the room does not exist, not that another screen has it, for an unknown code", async () => {
+    stubRoomInfo(false);
+    render(
+      <LocaleProvider>
+        <HostApp code="ZZZZ" />
+      </LocaleProvider>,
+    );
+    expect(await screen.findByText("This room doesn't exist")).toBeTruthy();
+    expect(screen.queryByText("This room is hosted on another screen")).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to the start screen" }).className).toBe(
+      "opg-link",
+    );
   });
 
   it("says storage is blocked, not that another screen has the room", () => {
@@ -136,7 +169,8 @@ describe("HostApp", () => {
     expect(FakeWebSocket.instances).toHaveLength(0);
   });
 
-  it("explains the same when the host token is rejected", () => {
+  it("explains the same when the host token is rejected", async () => {
+    stubRoomInfo(true);
     localStorage.setItem("opg:host:BKTZ", "tok");
     render(
       <LocaleProvider>
@@ -152,7 +186,7 @@ describe("HostApp", () => {
       }),
     );
     expect(
-      screen.getByText("This room is hosted on another screen"),
+      await screen.findByText("This room is hosted on another screen"),
     ).toBeTruthy();
   });
 

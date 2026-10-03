@@ -77,6 +77,31 @@ describe("PlayerApp", () => {
     expect(takeJoin("BKTZ")).toBeNull();
   });
 
+  it("does not scold a reload for a name nobody typed", async () => {
+    // A removed player's saved token no longer matches a seat, so the reconnect arrives at the
+    // server as a join with no name and comes back "name-invalid".
+    stubRoomInfo();
+    localStorage.setItem("opg:player:BKTZ", "stale");
+    render(
+      <LocaleProvider>
+        <PlayerApp code="BKTZ" />
+      </LocaleProvider>,
+    );
+    const socket = lastSocket();
+    act(() => socket.open());
+    act(() =>
+      socket.receive({ t: "error", code: "name-invalid", message: "Names are 1-12 characters." }),
+    );
+    expect(screen.queryByText("Names are 1–12 characters.")).toBeNull();
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Your name"), "Priya");
+    await user.click(screen.getByRole("button", { name: /join/i }));
+    act(() =>
+      socket.receive({ t: "error", code: "name-invalid", message: "Names are 1-12 characters." }),
+    );
+    expect(screen.getByText("Names are 1–12 characters.")).toBeTruthy();
+  });
+
   it("does not join on its own when nothing was handed over", () => {
     stubRoomInfo();
     render(

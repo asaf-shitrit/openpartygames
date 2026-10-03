@@ -11,6 +11,7 @@ import {
   commitDrawingChange,
   PhoneDraw,
   pendingChunks,
+  mirrorScope,
   readMirror,
   restoreMirror,
   resyncCursor,
@@ -29,6 +30,7 @@ afterEach(() => {
 });
 
 const CLOCK: ServerClock = { now: () => 1000 };
+const FIRST_PROMPT = "a cat riding a skateboard";
 
 function stroke(points: number): Stroke {
   const p: number[] = [0, 0];
@@ -149,7 +151,7 @@ describe("PhoneDraw", () => {
 
   it("the squiggle replaces what was already drawn rather than keeping part of it", () => {
     window.sessionStorage.setItem(
-      storageKey("BKTZ", "p1:0"),
+      storageKey(mirrorScope("BKTZ", FIRST_PROMPT), "p1:0"),
       JSON.stringify({ v: 1, s: [stroke(2), stroke(2), stroke(2)] }),
     );
     const send = vi.fn<(action: DoodleAction) => void>();
@@ -185,6 +187,20 @@ describe("PhoneDraw", () => {
   });
 });
 
+describe("PhoneDraw in a second game of the same room", () => {
+  it("does not bring back the last game's stroke for the same player and slot", () => {
+    // The previous game's mirror: same room, same drawing id, a different prompt.
+    window.sessionStorage.setItem(
+      storageKey(mirrorScope("BKTZ", "a whale on a bicycle"), "p1:0"),
+      JSON.stringify({ v: 1, s: [stroke(2)] }),
+    );
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView(), send);
+    expect(screen.getByText("Your drawing for a cat riding a skateboard: 0 strokes so far")).toBeTruthy();
+    expect(send.mock.calls.filter(([action]) => action.type === "strokes")).toHaveLength(0);
+  });
+});
+
 describe("PhoneDraw after a remount", () => {
   const DRAWING = "p1:0";
 
@@ -193,7 +209,10 @@ describe("PhoneDraw after a remount", () => {
   }
 
   function withMirror(strokes: number): void {
-    window.sessionStorage.setItem(storageKey("BKTZ", DRAWING), JSON.stringify(mirror(strokes)));
+    window.sessionStorage.setItem(
+      storageKey(mirrorScope("BKTZ", FIRST_PROMPT), DRAWING),
+      JSON.stringify(mirror(strokes)),
+    );
   }
 
   it("resumes at the acked count instead of sending from: 0", () => {

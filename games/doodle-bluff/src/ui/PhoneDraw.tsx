@@ -70,6 +70,17 @@ export function resyncCursor(sentRef: MutableRefObject<SentCursors>, drawingId: 
   if (ackCount < sent) sentRef.current = { ...sentRef.current, [drawingId]: ackCount };
 }
 
+/**
+ * What a drawing's mirror is filed under: the room and the prompt being drawn. A drawing id is
+ * only "which player, which slot", so it is the same in every game a room plays; filed under
+ * the id alone, the first game's last stroke came back as the second game's first, on a
+ * different prompt, and was sent to the room as part of the new drawing. The prompt is what
+ * differs between games, and a reload mid-draw still lands on the same one.
+ */
+export function mirrorScope(roomCode: string, prompt: string): string {
+  return `${roomCode}:${prompt}`;
+}
+
 export function storageKey(code: string, drawingId: string): string {
   return `opg:doodle:${code}:${drawingId}`;
 }
@@ -198,6 +209,7 @@ export function commitDrawingChange({
 
 function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send }: OneDrawingProps) {
   const { drawingId } = prompt;
+  const scope = mirrorScope(roomCode, prompt.prompt);
   // Computed once, at mount: whether this pad's starting point is known to hold at least
   // everything the room does, so a later shrink from it is a real undo or clear rather than a
   // pad recovering from a lost mirror. True whenever the room has nothing to lose yet (`ack ===
@@ -206,7 +218,7 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   // point, or shrinks it through the pad's own undo/clear, so the one computation covers the
   // whole mount; it does not get revisited as `ack` moves.
   const [{ initialDoodle, canTruncate }] = useState(() => {
-    const restored = restoreMirror(roomCode, drawingId, ack);
+    const restored = restoreMirror(scope, drawingId, ack);
     return { initialDoodle: restored, canTruncate: ack === 0 || restored !== undefined };
   });
   const latestRef = useRef<Doodle>(initialDoodle ?? emptyDoodle());
@@ -224,19 +236,19 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, sentRef, send 
   const onChange = useCallback(
     (doodle: Doodle) => {
       latestRef.current = doodle;
-      commitDrawingChange({ roomCode, drawingId, doodle, sentRef, send, canTruncate });
+      commitDrawingChange({ roomCode: scope, drawingId, doodle, sentRef, send, canTruncate });
     },
-    [canTruncate, drawingId, roomCode, send, sentRef],
+    [canTruncate, drawingId, scope, send, sentRef],
   );
 
   const onSquiggle = useCallback(() => {
     // Clear first: appending the squiggle over strokes already in the room would keep some of
     // them, and a plain truncate to the squiggle's length would keep the wrong ones.
-    commitDrawingChange({ roomCode, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate });
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate });
     latestRef.current = SQUIGGLE_DOODLE;
-    commitDrawingChange({ roomCode, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
     send({ type: "doodle-done", drawingId });
-  }, [canTruncate, drawingId, roomCode, send, sentRef]);
+  }, [canTruncate, drawingId, scope, send, sentRef]);
 
   return (
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>
