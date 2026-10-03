@@ -13,9 +13,11 @@ import {
   PhoneScreen,
   phoneRoomCode,
   PhoneStrip,
+  PINNED_BAR_STYLE,
   PRESSABLE_CLASS,
   Timer,
   useBuzz,
+  usePinnedBarScrollPadding,
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -258,7 +260,8 @@ function VoteLocked(
 function VoteForm(props: SectionProps) {
   const { view, players, me, deadline, clock, send, stage } = props;
   const { t } = useLocale();
-  useLockBarScrollPadding(stage !== null);
+  const barRef = useRef<HTMLDivElement>(null);
+  usePinnedBarScrollPadding(stage !== null, barRef);
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -286,7 +289,7 @@ function VoteForm(props: SectionProps) {
           />
         ))}
       </div>
-      <div style={lockBarStyle(stage !== null)}>
+      <div ref={barRef} style={lockBarStyle(stage !== null)}>
         <Button
           size="lg"
           fullWidth
@@ -357,37 +360,10 @@ export interface PhoneProps {
 
 /**
  * In a no-TV room the staged prompt pushes the list past the screen, so the page scrolls; the
- * lock-in bar then stays pinned to the bottom edge on an opaque paper strip. It sits in the
- * column's flow, so scrolling to the end never leaves a candidate underneath it.
+ * lock-in bar then stays pinned to the bottom edge (see PINNED_BAR_STYLE).
  */
 function lockBarStyle(scrolls: boolean): CSSProperties {
-  if (!scrolls) return {};
-  return {
-    position: "sticky",
-    bottom: 0,
-    zIndex: 2,
-    background: "var(--opg-paper)",
-    margin: "0 -18px -28px",
-    padding: "10px 18px 16px",
-  };
-}
-
-const LOCK_BAR_SCROLL_PADDING = "120px";
-
-/**
- * While the pinned lock-in bar is up, tell the page's scroller to stop short of it, so a row
- * scrolled or focused into view lands above the bar and not underneath it.
- */
-function useLockBarScrollPadding(pinned: boolean): void {
-  useEffect(() => {
-    if (!pinned) return undefined;
-    const root = document.documentElement;
-    const before = root.style.scrollPaddingBottom;
-    root.style.scrollPaddingBottom = LOCK_BAR_SCROLL_PADDING;
-    return () => {
-      root.style.scrollPaddingBottom = before;
-    };
-  }, [pinned]);
+  return scrolls ? PINNED_BAR_STYLE : {};
 }
 
 export function Phone({

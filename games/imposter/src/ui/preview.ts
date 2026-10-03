@@ -700,6 +700,26 @@ const stressHostVote: ImposterHostView = {
   votedIds: ["stress-0", "stress-2", "stress-3"],
 };
 
+/**
+ * Seven of eight vote out the first player to join, who is a crew member: the leftmost tile
+ * carries both the longest tally ("7 votes", seven scratches, "+3" voters) and the long
+ * "Not the imposter" stamp, while the real imposter's stamp lands on the tile beside it.
+ */
+const stressHostRevealWrong: ImposterHostView = {
+  ...hostReveal,
+  playerIds: STRESS_IDS,
+  clueOrder: STRESS_IDS,
+  totals: STRESS_TOTALS,
+  doneSpeakerIds: STRESS_IDS,
+  votedIds: STRESS_IDS,
+  tally: {
+    "stress-0": STRESS_IDS.slice(1),
+    "stress-1": ["stress-0"],
+  },
+  imposterId: "stress-1",
+  caught: false,
+};
+
 /** The screen from #24: the imposter reading a long decoy word on their own turn. */
 const stressPhoneImposterTurn: ImposterPlayerView = {
   ...phoneYourTurn,
@@ -1069,6 +1089,12 @@ export const imposterPreviews: Array<{
     surface: "host",
     view: stressHostVote,
     room: hostRoom(stressHostVote, VOTE_DEADLINE, null, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, reveal wrong (7 votes on the first of 8 players)",
+    surface: "host",
+    view: stressHostRevealWrong,
+    room: hostRoom(stressHostRevealWrong, REVEAL_DEADLINE, null, STRESS_PLAYERS),
   },
 ];
 
