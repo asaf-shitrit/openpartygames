@@ -1,6 +1,6 @@
 // Reconnect mid-game: a phone reloads during the write phase and rejoins by
 // token, then the same fact keeps going through the real UI.
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   expectTvLobby,
   findVip,
@@ -50,6 +50,19 @@ test("a phone reloads mid-game and rejoins with its seat", async ({
   await Promise.all(phones.map((phone) => phone.context.close()));
 });
 
+/** Resizes `page` through `sizes` in turn and asserts the banner sits on nothing at each. */
+async function expectBannerClear(
+  page: Page,
+  sizes: { width: number; height: number }[],
+): Promise<void> {
+  const [size, ...rest] = sizes;
+  if (size === undefined) return;
+  await page.setViewportSize(size);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(await coveredByBanner(page), `at ${size.width}x${size.height}`).toEqual([]);
+  await expectBannerClear(page, rest);
+}
+
 test("the reconnect banner covers nothing the player needs, at every phone size", async ({
   page,
   browser,
@@ -60,18 +73,22 @@ test("the reconnect banner covers nothing the player needs, at every phone size"
   // Ben's socket is proxied so the test can sever it, the way a dropped mobile connection
   // would, and keep it down. setOffline would not do: Chromium leaves an open WebSocket up.
   let severed = false;
-  const live: { close: () => void }[] = [];
+  const live: { close: () => Promise<void> }[] = [];
   const { context, page: ben } = await newPhonePage(browser);
   await ben.routeWebSocket(/\/ws\//, (ws) => {
     if (severed) {
-      ws.close();
+      void ws.close();
       return;
     }
     const server = ws.connectToServer();
     ws.onMessage((message) => server.send(message));
     server.onMessage((message) => ws.send(message));
-    ws.onClose(() => server.close());
-    server.onClose(() => ws.close());
+    ws.onClose(() => {
+      void server.close();
+    });
+    server.onClose(() => {
+      void ws.close();
+    });
     live.push({ close: () => ws.close() });
   });
   await ben.goto(`/${code}`);
@@ -84,18 +101,14 @@ test("the reconnect banner covers nothing the player needs, at every phone size"
   await expect(ben.getByRole("button", { name: /Lock in vote/ })).toBeVisible({ timeout: 45_000 });
 
   severed = true;
-  live.forEach((socket) => socket.close());
+  await Promise.all(live.map((socket) => socket.close()));
   await expect(ben.getByText(/Reconnecting/)).toBeVisible({ timeout: 20_000 });
 
-  for (const size of [
+  await expectBannerClear(ben, [
     { width: 360, height: 640 },
     { width: 390, height: 844 },
     { width: 430, height: 932 },
-  ]) {
-    await ben.setViewportSize(size);
-    await ben.evaluate(() => window.scrollTo(0, 0));
-    expect(await coveredByBanner(ben), `at ${size.width}x${size.height}`).toEqual([]);
-  }
+  ]);
 
   await context.close();
   await Promise.all(others.map((phone) => phone.context.close()));

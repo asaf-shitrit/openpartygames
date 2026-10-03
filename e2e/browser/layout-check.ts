@@ -116,70 +116,26 @@ async function stableViolations(page: Page, surface: Surface): Promise<Violation
 }
 
 
+const PAINTED_PATH = fileURLToPath(new URL("./painted.js", import.meta.url));
+
+declare global {
+  interface Window {
+    opgPainted?: {
+      problems: () => string[];
+      underBanner: (pattern: string) => string[];
+    };
+  }
+}
+
 /**
- * Words that are in the page but clipped out of sight: every pixel of the text lies outside
- * an ancestor that clips (`overflow: hidden` or `clip`) and cannot scroll. This is the shape
- * of the bug where a game's whole TV body collapsed to zero height under its frame: every
- * element was "visible" to Playwright and to the invariants, and nothing was on screen.
- *
- * Headings are held to a stricter test as well, a hit test at their centre, since a screen
- * with its heading gone is a screen nobody can read however the rest is laid out.
+ * Content that is in the page but not on screen (see painted.js). The layout invariants run
+ * against every element and still passed when a game's whole TV body collapsed to zero height
+ * under its frame, so this is asked separately, at every in-play check.
  */
 async function clippedAway(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const out: string[] = [];
-    const clips = (element: Element): boolean => {
-      const { overflowX, overflowY } = getComputedStyle(element);
-      return [overflowX, overflowY].some((value) => value === "hidden" || value === "clip");
-    };
-    const outside = (inner: DOMRect, outer: DOMRect): boolean =>
-      inner.right <= outer.left ||
-      inner.left >= outer.right ||
-      inner.bottom <= outer.top ||
-      inner.top >= outer.bottom;
-    const clippedBy = (element: Element): boolean => {
-      const rect = element.getBoundingClientRect();
-      for (let up = element.parentElement; up !== null; up = up.parentElement) {
-        if (clips(up) && outside(rect, up.getBoundingClientRect())) return true;
-      }
-      return false;
-    };
-    const stuck = (element: Element): boolean => {
-      for (let up: Element | null = element; up !== null; up = up.parentElement) {
-        const { position } = getComputedStyle(up);
-        if (position === "fixed" || position === "sticky") return true;
-      }
-      return false;
-    };
-    for (const element of Array.from(document.querySelectorAll("body *"))) {
-      if (element.children.length > 0) continue;
-      const text = (element.textContent ?? "").trim();
-      if (text === "") continue;
-      const rect = element.getBoundingClientRect();
-      // Screen-reader-only text is a 1px box on purpose.
-      if (rect.width < 4 || rect.height < 4) continue;
-      const style = getComputedStyle(element);
-      if (style.visibility === "hidden" || style.display === "none" || Number(style.opacity) === 0) continue;
-      if (element.closest("[aria-hidden='true'], [hidden]") !== null) continue;
-      if (clippedBy(element)) out.push(`clipped away: "${text.slice(0, 40)}"`);
-    }
-    for (const heading of Array.from(document.querySelectorAll("h1, h2, h3, [role='heading']"))) {
-      const rect = heading.getBoundingClientRect();
-      if (rect.width < 4 || rect.height < 4) continue;
-      if (getComputedStyle(heading).opacity === "0") continue;
-      const x = rect.x + rect.width / 2;
-      const y = rect.y + rect.height / 2;
-      // Below the fold of a page that scrolls is not clipped, and neither is what slides
-      // under a sticky footer or banner: both are the page doing its job.
-      if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
-      const hit = document.elementFromPoint(x, y);
-      if (hit !== null && stuck(hit)) continue;
-      if (hit === null || !(heading.contains(hit) || hit.contains(heading))) {
-        out.push(`heading not painted: "${(heading.textContent ?? "").trim().slice(0, 40)}"`);
-      }
-    }
-    return out;
-  });
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  return page.evaluate(() => window.opgPainted?.problems() ?? []);
 }
 
 export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {
@@ -209,28 +165,9 @@ export async function expectPainted(locator: Locator, label: string): Promise<vo
   expect(painted, `${label} is painted on screen, not clipped away by a collapsed ancestor`).toBe(true);
 }
 
-/**
- * Text and controls the reconnect banner sits on top of, found by hit-testing: an element is
- * covered when the banner is what the browser would hand a tap at its centre, ignoring the
- * banner's own `pointer-events: none` by comparing rectangles instead.
- */
+/** Text and controls the reconnect banner sits on top of, by comparing rectangles. */
 export async function coveredByBanner(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const banner = Array.from(document.querySelectorAll("output")).find((o) => /Reconnecting/.test(o.textContent ?? "")) ?? null;
-    if (banner === null) return ["no banner on the page"];
-    const box = banner.getBoundingClientRect();
-    const covered: string[] = [];
-    for (const element of Array.from(document.querySelectorAll("body *"))) {
-      if (banner.contains(element)) continue;
-      const isControl = element.matches("button, a, input, textarea, [role=button]");
-      const isText = element.children.length === 0 && (element.textContent ?? "").trim() !== "";
-      if (!isControl && !isText) continue;
-      const rect = element.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) continue;
-      const overlaps =
-        rect.left < box.right && rect.right > box.left && rect.top < box.bottom && rect.bottom > box.top;
-      if (overlaps) covered.push((element.textContent ?? element.tagName).trim().slice(0, 40));
-    }
-    return covered;
-  });
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  return page.evaluate(() => window.opgPainted?.underBanner("Reconnecting") ?? []);
 }

@@ -291,6 +291,15 @@ function ownsRoom(
 
 type RoomProbe = "checking" | "exists" | "missing";
 
+async function probeRoom(code: string): Promise<RoomProbe> {
+  try {
+    await getRoomInfo(code);
+    return "exists";
+  } catch (error) {
+    return error instanceof ApiError && error.code === "not-found" ? "missing" : "exists";
+  }
+}
+
 /** Whether the server knows this room code at all; the host token alone cannot say. */
 function useRoomProbe(code: string): RoomProbe {
   const [probe, setProbe] = useState<{ code: string; result: RoomProbe }>({
@@ -299,15 +308,11 @@ function useRoomProbe(code: string): RoomProbe {
   });
   useEffect(() => {
     let live = true;
-    getRoomInfo(code).then(
-      () => live && setProbe({ code, result: "exists" }),
-      (error: unknown) =>
-        live &&
-        setProbe({
-          code,
-          result: error instanceof ApiError && error.code === "not-found" ? "missing" : "exists",
-        }),
-    );
+    const settle = async () => {
+      const result = await probeRoom(code);
+      if (live) setProbe({ code, result });
+    };
+    void settle();
     return () => {
       live = false;
     };
