@@ -64,6 +64,16 @@ describe("titlesShown", () => {
   });
 });
 
+function hebrewArtistSub(foundByCount: number): string {
+  return personalReveal(he, {
+    isArtist: true,
+    myVote: null,
+    truthOptionId: "o1",
+    myPoints: 1000,
+    foundByCount,
+  }).sub;
+}
+
 describe("personalReveal", () => {
   it("artist, nobody found it", () => {
     const result = personalReveal(en, {
@@ -88,6 +98,12 @@ describe("personalReveal", () => {
     expect(result.headline).toBe("They found you!");
     expect(result.sub).toContain("2 players");
     expect(result.celebrate).toBe(true);
+  });
+
+  it("artist, found by one or several players, in Hebrew: the verb agrees with the count", () => {
+    expect(hebrewArtistSub(1)).toContain("על ידי שחקן אחד");
+    expect(hebrewArtistSub(3)).toContain("על ידי 3 שחקנים");
+    expect(hebrewArtistSub(1)).not.toMatch(/אחד גילו/);
   });
 
   it("voter who sat out", () => {

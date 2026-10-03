@@ -49,8 +49,8 @@ function avatarAlt(t: Dictionary, me: PlayerSummary | null): string | undefined 
   return me === null ? undefined : format(t.imposter.avatarAlt, { name: me.name });
 }
 
-function meName(me: PlayerSummary | null): string {
-  return me?.name ?? "You";
+function meName(t: Dictionary, me: PlayerSummary | null): string {
+  return me?.name ?? t.imposter.meFallback;
 }
 
 function meAvatarId(me: PlayerSummary | null) {
@@ -62,7 +62,7 @@ function MeRow({ me }: { me: PlayerSummary | null }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       <Avatar id={meAvatarId(me)} size={50} alt={avatarAlt(t, me)} />
-      <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(me)}</div>
+      <div style={{ fontSize: 21, fontWeight: 700 }}>{meName(t, me)}</div>
     </div>
   );
 }

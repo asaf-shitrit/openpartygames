@@ -28,6 +28,7 @@ import { TvGamePicker } from "./TvGamePicker";
 import { TvLobby } from "./TvLobby";
 import { TvReconnecting } from "./TvReconnecting";
 import { TvPage } from "./shared";
+import { withLocalizedGames } from "./localize-games";
 
 function MessageScreen({
   title,
@@ -298,7 +299,8 @@ export function HostApp({ code }: { code: string }) {
     hostToken,
     enabled: Boolean(hostToken),
   });
-  const view = hostViewOf(socket.view);
+  const rawView = hostViewOf(socket.view);
+  const view = useMemo(() => (rawView ? withLocalizedGames(t, rawView) : null), [rawView, t]);
   const clock = socket.clock;
 
   useScreenWakeLock(true);

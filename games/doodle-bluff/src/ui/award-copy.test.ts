@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { en } from "@opg/i18n";
+import { en, he } from "@opg/i18n";
 import type { Award } from "@opg/protocol";
 import { doodleBluffAwardCopy } from "./award-copy";
 
@@ -17,6 +17,15 @@ describe("doodleBluffAwardCopy", () => {
       title: "Pen of the people",
       detail: "4 people found your real titles",
     });
+  });
+
+  it("pen-of-the-people in Hebrew: nothing plural is asked to agree with a single person", () => {
+    expect(doodleBluffAwardCopy(award("pen-of-the-people", 1), he)?.detail).toBe(
+      "הכותרות האמיתיות שלכם נמצאו על ידי אדם אחד",
+    );
+    expect(doodleBluffAwardCopy(award("pen-of-the-people", 4), he)?.detail).toBe(
+      "הכותרות האמיתיות שלכם נמצאו על ידי 4 אנשים",
+    );
   });
 
   it("master-forger: singular and plural", () => {

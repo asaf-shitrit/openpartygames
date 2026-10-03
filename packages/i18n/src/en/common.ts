@@ -1,5 +1,6 @@
 export const common = {
   languageLabel: "Language",
+  documentTitle: "OpenPartyGames: party games for your TV and phones",
   someone: "Someone",
   errorRoomFull: "That room is full.",
   errorRoomLocked: "That room is locked.",

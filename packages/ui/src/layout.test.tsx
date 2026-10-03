@@ -55,6 +55,24 @@ describe("Stage", () => {
   });
 });
 
+describe("main landmark", () => {
+  it("is the one landmark a TV screen and a phone screen each expose", () => {
+    render(
+      <Stage>
+        <div>tv</div>
+      </Stage>,
+    );
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+    cleanup();
+    render(
+      <PhoneScreen>
+        <div>phone</div>
+      </PhoneScreen>,
+    );
+    expect(screen.getAllByRole("main")).toHaveLength(1);
+  });
+});
+
 describe("PhoneScreen", () => {
   it("renders a phone column with the grid class", () => {
     const { container } = render(<PhoneScreen>phone</PhoneScreen>);

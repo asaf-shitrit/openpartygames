@@ -428,7 +428,7 @@ describe("HostApp", () => {
     );
     const socket = connectHost();
     showState(socket, makeHostView({ phase: "starting" }));
-    expect(screen.getByText("מתחילים את Imposter…")).toBeTruthy();
+    expect(screen.getByText("מתחילים את מתחזה…")).toBeTruthy();
     expect(screen.getByText("תתכוננו. הסיבוב הראשון בדרך.")).toBeTruthy();
   });
 });

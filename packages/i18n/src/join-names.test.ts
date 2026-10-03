@@ -10,7 +10,7 @@ describe("joinNamesAnd", () => {
 
   it("joins two names with the locale conjunction", () => {
     expect(joinNamesAnd(en.common, ["Ava", "Bo"])).toBe("Ava and Bo");
-    expect(joinNamesAnd(he.common, ["Ava", "Bo"])).toBe("Ava וBo");
+    expect(joinNamesAnd(he.common, ["Ava", "Bo"])).toBe("Ava ו-Bo");
   });
 
   it("joins three or more names with a comma list and a final conjunction", () => {

@@ -348,14 +348,14 @@ describe("Chip", () => {
 
 describe("Switch", () => {
   it("carries the shared pressable class", () => {
-    render(<Switch checked={false} label="Sound" />);
+    render(<Switch checked={false} label="Sound" onLabel="On" offLabel="Off" />);
     expect(screen.getByRole("switch", { name: "Sound" }).className).toBe(
       "opg-pressable",
     );
   });
 
   it("reports its off state as text and aria-checked", () => {
-    render(<Switch checked={false} label="Sound" />);
+    render(<Switch checked={false} label="Sound" onLabel="On" offLabel="Off" />);
     const sw = screen.getByRole("switch", { name: "Sound" });
     expect(sw.getAttribute("aria-checked")).toBe("false");
     expect(screen.getByText("Off")).toBeTruthy();
@@ -370,13 +370,13 @@ describe("Switch", () => {
 
   it("asks for the flipped value on click", async () => {
     const onChange = vi.fn<(value: boolean) => void>();
-    render(<Switch checked={false} label="Sound" onChange={onChange} />);
+    render(<Switch checked={false} label="Sound" onLabel="On" offLabel="Off" onChange={onChange} />);
     await userEvent.click(screen.getByRole("switch", { name: "Sound" }));
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
   it("does nothing when there is no onChange handler", async () => {
-    render(<Switch checked={false} label="Sound" />);
+    render(<Switch checked={false} label="Sound" onLabel="On" offLabel="Off" />);
     await userEvent.click(screen.getByRole("switch", { name: "Sound" }));
     expect(screen.getByText("Off")).toBeTruthy();
   });
@@ -384,7 +384,7 @@ describe("Switch", () => {
   it("blocks interaction when disabled", async () => {
     const onChange = vi.fn<(value: boolean) => void>();
     render(
-      <Switch checked={false} disabled label="Sound" onChange={onChange} />,
+      <Switch checked={false} disabled label="Sound" onLabel="On" offLabel="Off" onChange={onChange} />,
     );
     const sw = screen.getByRole("switch", { name: "Sound" });
     expect(sw).toHaveProperty("disabled", true);
@@ -393,7 +393,7 @@ describe("Switch", () => {
   });
 
   it("scales the track with size and enforces a 44px hit area", () => {
-    render(<Switch checked label="Sound" size={30} />);
+    render(<Switch checked label="Sound" onLabel="On" offLabel="Off" size={30} />);
     const sw = screen.getByRole("switch", { name: "Sound" });
     expect(sw.style.minHeight).toBe("44px");
     const track = firstChild(sw);
