@@ -60,6 +60,16 @@ async function expectBannerClear(
   await page.setViewportSize(size);
   await page.evaluate(() => window.scrollTo(0, 0));
   expect(await coveredByBanner(page), `at ${size.width}x${size.height}`).toEqual([]);
+  // A screen built to fit the phone must give the banner room out of its own flexible middle:
+  // the ballot's Lock in button stays on screen, with the screen ending inside the viewport.
+  const lockIn = await page.getByRole("button", { name: /Lock in vote/ }).boundingBox();
+  const height = await page.evaluate(() => window.innerHeight);
+  expect(lockIn, `Lock in at ${size.width}x${size.height}`).not.toBeNull();
+  expect((lockIn?.y ?? 0) + (lockIn?.height ?? 0), `Lock in bottom at ${size.height}`).toBeLessThanOrEqual(height);
+  expect(
+    await page.evaluate(() => document.querySelector("main")?.getBoundingClientRect().bottom ?? 0),
+    `screen bottom at ${size.height}`,
+  ).toBeLessThanOrEqual(height);
   await expectBannerClear(page, rest);
 }
 

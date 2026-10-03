@@ -142,7 +142,6 @@ describe("App routing", () => {
     expect(
       await screen.findByText("This room is hosted on another screen"),
     ).toBeTruthy();
-    vi.unstubAllGlobals();
   });
 
   it("renders the credits page", () => {

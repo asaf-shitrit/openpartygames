@@ -49,8 +49,8 @@ function GalleryPhase({ stage, clock, players }: { stage: DoodleHostView | null;
 }
 
 function controlsFor(props: PhoneProps): ReactNode {
-  const { view, room, clock, send } = props;
-  if (view.phase === "draw") return <PhoneDraw view={view} roomCode={room.code} clock={clock} send={send} />;
+  const { view, room, clock, send, timerStartedAt } = props;
+  if (view.phase === "draw") return <PhoneDraw view={view} roomCode={room.code} startedAt={timerStartedAt} clock={clock} send={send} />;
   if (view.phase === "title") return <PhoneTitle view={view} clock={clock} send={send} />;
   return <PhoneVote view={view} clock={clock} send={send} />;
 }
