@@ -28,6 +28,7 @@ export const picker = {
   kickConfirmYes: "Yes, remove",
   cancel: "Cancel",
   pickGameFirst: "Pick a game first",
+  noContentInLanguage: "No content in this language yet",
   gameNeedsSharedScreen:
     "{game} plays on a shared screen. Turn that on to start it.",
   needAtLeastPlayers: "Need at least {count} players",

@@ -30,6 +30,7 @@ export const picker: Dictionary["picker"] = {
   kickConfirmYes: "כן, הוציאו",
   cancel: "ביטול",
   pickGameFirst: "בחרו משחק קודם",
+  noContentInLanguage: "אין עדיין תוכן בשפה הזו",
   gameNeedsSharedScreen: "{game} משחק שדורש מסך משותף. הפעילו אותו כדי להתחיל.",
   needAtLeastPlayers: "צריך לפחות {count} שחקנים",
   turnOnPack: "הפעילו לפחות חפיסה אחת",
