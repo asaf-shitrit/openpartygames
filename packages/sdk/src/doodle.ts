@@ -33,7 +33,23 @@ const strokePointsSchema = z
     (p) => inRange(p[0] ?? Number.NaN, 0, GRID - 1) && inRange(p[1] ?? Number.NaN, 0, GRID - 1),
     "first point out of grid bounds",
   )
-  .refine((p) => p.slice(2).every((n) => inRange(n, -(GRID - 1), GRID - 1)), "delta out of grid bounds");
+  .refine((p) => p.slice(2).every((n) => inRange(n, -(GRID - 1), GRID - 1)), "delta out of grid bounds")
+  .superRefine((p, ctx) => {
+    const at = firstOffGridPoint(p);
+    if (at !== null) ctx.addIssue({ code: "custom", message: `point ${at} walks off the grid` });
+  });
+
+/** Index of the first point whose running position leaves the grid, or null when all stay on it. */
+function firstOffGridPoint(p: readonly number[]): number | null {
+  let x = 0;
+  let y = 0;
+  for (let i = 0; i < p.length; i += 2) {
+    x = i === 0 ? (p[0] ?? 0) : x + (p[i] ?? 0);
+    y = i === 0 ? (p[1] ?? 0) : y + (p[i + 1] ?? 0);
+    if (!inRange(x, 0, GRID - 1) || !inRange(y, 0, GRID - 1)) return i / 2;
+  }
+  return null;
+}
 
 export const strokeSchema = z.object({
   /** Palette index. Decoration only: no rule reads it. */

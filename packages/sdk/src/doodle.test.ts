@@ -23,6 +23,11 @@ describe("strokeSchema", () => {
     expect(strokeSchema.safeParse(atCaps).success).toBe(true);
   });
 
+  it("accepts a path that touches every grid edge", () => {
+    const p = [0, 0, GRID - 1, GRID - 1, -(GRID - 1), 0, GRID - 1, -(GRID - 1)];
+    expect(strokeSchema.safeParse(stroke({ p })).success).toBe(true);
+  });
+
   it.each([
     ["an ink past the palette range", stroke({ c: MAX_INK_INDEX + 1 })],
     ["a duration over the cap", stroke({ d: STROKE_MS_CAP + 1 })],
@@ -31,6 +36,9 @@ describe("strokeSchema", () => {
     ["an odd-length point list", stroke({ p: [5, 5, 1] })],
     ["a first point off the grid", stroke({ p: [GRID, 0] })],
     ["a delta longer than the grid", stroke({ p: [0, 0, GRID, 0] })],
+    ["a path that walks off the right edge", stroke({ p: [GRID - 1, 0, 1, 0] })],
+    ["a path that walks off the top edge", stroke({ p: [5, 5, 0, -6] })],
+    ["a path that drifts off after many small steps", stroke({ p: [900, 500, 50, 0, 50, 0, 50, 0] })],
     ["a fractional coordinate", stroke({ p: [0.5, 0] })],
     ["too many points", stroke({ p: Array.from({ length: (MAX_POINTS_PER_STROKE + 1) * 2 }, () => 0) })],
   ])("refuses %s", (_label, bad) => {
