@@ -2,14 +2,29 @@
 // `from` check and doodle-done are all exercised by runBotPlaythrough.
 import { GAP_MS_CAP, GRID, MAX_INK_INDEX, STROKE_MS_CAP, type Rng, type Stroke } from "@opg/sdk";
 
-const BOT_STROKES = 3;
-const BOT_POINTS_PER_STROKE = 8;
-const BOT_STEP = 20;
+const BOT_STROKES = 5;
+const BOT_POINTS_PER_STROKE = 40;
+const BOT_STEP = 70;
+/** Strokes start away from the edges, so a long walk has room before it has to turn back. */
+const BOT_MARGIN = 200;
+
+/** A step of up to BOT_STEP either way that keeps `at` inside the grid. */
+function botStep(rng: Rng, at: number): number {
+  const lo = Math.max(-BOT_STEP, -at);
+  const hi = Math.min(BOT_STEP, GRID - 1 - at);
+  return lo + rng.int(hi - lo + 1);
+}
 
 function botStroke(rng: Rng): Stroke {
-  const p: number[] = [rng.int(GRID), rng.int(GRID)];
+  let x = BOT_MARGIN + rng.int(GRID - 2 * BOT_MARGIN);
+  let y = BOT_MARGIN + rng.int(GRID - 2 * BOT_MARGIN);
+  const p: number[] = [x, y];
   for (let i = 1; i < BOT_POINTS_PER_STROKE; i += 1) {
-    p.push(rng.int(2 * BOT_STEP + 1) - BOT_STEP, rng.int(2 * BOT_STEP + 1) - BOT_STEP);
+    const dx = botStep(rng, x);
+    const dy = botStep(rng, y);
+    x += dx;
+    y += dy;
+    p.push(dx, dy);
   }
   return {
     c: rng.int(MAX_INK_INDEX + 1),
@@ -19,7 +34,7 @@ function botStroke(rng: Rng): Stroke {
   };
 }
 
-/** Three strokes of eight points each, well under every cap. */
+/** Five strokes of forty points each, on the grid and well under every cap. */
 export function botDoodle(rng: Rng): Stroke[] {
   const strokes: Stroke[] = [];
   for (let i = 0; i < BOT_STROKES; i += 1) strokes.push(botStroke(rng));

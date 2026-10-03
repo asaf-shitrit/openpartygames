@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LEFT_PLAYER_GRACE_MS } from "@opg/sdk";
 import type { Fact, FactContent, GameContext, Rng } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
@@ -16,6 +17,7 @@ import {
   onAction,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   planLiesOf,
   revealDurationMs,
   revealPlan,
@@ -323,20 +325,18 @@ describe("options", () => {
 });
 
 describe("early phase ends", () => {
-  it("ends write when every connected player has submitted", () => {
-    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
-    let state = setup(ctx);
-    state = lie(state, "p1", "giraffe", ctx);
+  it("ends write at once when every player has submitted", () => {
+    const ctx = makeCtx({ n: 2 });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
     expect(state.phase).toBe("write");
     state = lie(state, "p2", "hippos", ctx);
     expect(state.phase).toBe("vote");
     expect(state.deadline).toBe(BASE_NOW + VOTE_MS);
   });
 
-  it("ends vote when every connected player who can pick has picked", () => {
-    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
-    let state = setup(ctx);
-    state = lie(state, "p1", "giraffe", ctx);
+  it("ends vote at once when every player who can pick has picked", () => {
+    const ctx = makeCtx({ n: 2 });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
     state = onDeadline(state, ctx);
     expect(state.phase).toBe("vote");
     const truthId = optionIdByText(state, "emus");
@@ -349,6 +349,84 @@ describe("early phase ends", () => {
       BASE_NOW +
         revealDurationMs({ lies: planLiesOf(state.reveal ?? { lies: [] }) }),
     );
+  });
+});
+
+describe("left-player grace", () => {
+  function toVote(ctx: GameContext<FactContent>): RonState {
+    const written = lie(setup(ctx), "p1", "giraffe", ctx);
+    return onDeadline(written, ctx);
+  }
+
+  it("write: pulls the deadline in when only disconnected players are missing", () => {
+    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
+    expect(state.phase).toBe("write");
+    state = lie(state, "p2", "hippos", ctx);
+    expect(state.phase).toBe("write");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+    const due = { ...ctx, now: state.deadline ?? 0 };
+    expect(onDeadline(state, due).phase).toBe("vote");
+  });
+
+  it("vote: pulls the deadline in when only disconnected players are missing", () => {
+    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
+    let state = toVote(ctx);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
+    expect(state.phase).toBe("vote");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+  });
+
+  it("vote: pulls in when the last connected holdout disconnects", () => {
+    const ctx = makeCtx({ n: 3 });
+    let state = toVote(ctx);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
+    expect(state.deadline).toBe(BASE_NOW + VOTE_MS);
+    const gone = { ...ctx, now: BASE_NOW + 4000, connectedIds: ["p1", "p2"] };
+    const next = onPlayersChanged(state, gone);
+    expect(next.phase).toBe("vote");
+    expect(next.deadline).toBe(BASE_NOW + 4000 + LEFT_PLAYER_GRACE_MS);
+    const stillThere = { ...ctx, connectedIds: ["p1", "p2", "p3"] };
+    expect(onPlayersChanged(state, stillThere)).toBe(state);
+  });
+
+  it("write: pulls in when the last connected writer is the one left", () => {
+    const ctx = makeCtx({ n: 3 });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
+    state = lie(state, "p2", "hippos", ctx);
+    expect(state.deadline).toBe(BASE_NOW + WRITE_MS);
+    const gone = { ...ctx, now: BASE_NOW + 1000, connectedIds: ["p1", "p2"] };
+    expect(onPlayersChanged(state, gone).deadline).toBe(
+      BASE_NOW + 1000 + LEFT_PLAYER_GRACE_MS,
+    );
+  });
+
+  it("counts a holdout who reconnects and picks inside the grace", () => {
+    const away = makeCtx({ n: 3, connected: ["p1", "p2"] });
+    let state = toVote(away);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, away);
+    state = pick(state, "p2", truthId, away);
+    expect(state.phase).toBe("vote");
+    const back = { ...away, now: BASE_NOW + 3000, connectedIds: ["p1", "p2", "p3"] };
+    expect(onPlayersChanged(state, back)).toBe(state);
+    state = pick(state, "p3", truthId, back);
+    expect(state.phase).toBe("reveal");
+    expect(state.votes.p3).toBe(truthId);
+  });
+
+  it("never pushes a nearer deadline out and ignores other phases", () => {
+    const ctx = makeCtx({ n: 3 });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
+    state = lie(state, "p2", "hippos", ctx);
+    const late = { ...ctx, now: BASE_NOW + WRITE_MS - 1000, connectedIds: ["p1", "p2"] };
+    expect(onPlayersChanged(state, late)).toBe(state);
+    const reveal = { ...state, phase: "reveal" as const };
+    expect(onPlayersChanged(reveal, late)).toBe(reveal);
   });
 });
 
@@ -582,21 +660,32 @@ describe("onPlayerRemoved edges", () => {
   });
 
   it("starts the vote when the removed player was the last one writing", () => {
-    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
+    const ctx = makeCtx({ n: 3 });
     let state = lie(setup(ctx), "p1", "giraffe", ctx);
+    state = lie(state, "p3", "hippos", ctx);
     expect(state.phase).toBe("write");
     state = onPlayerRemoved(state, "p2", ctx);
     expect(state.phase).toBe("vote");
     expect(state.options?.some((o) => o.text === "giraffe")).toBe(true);
   });
 
+  it("pulls the write phase in when the removed player was the last connected one writing", () => {
+    const ctx = makeCtx({ n: 3, connected: ["p1", "p2"] });
+    let state = lie(setup(ctx), "p1", "giraffe", ctx);
+    state = onPlayerRemoved(state, "p2", ctx);
+    expect(state.phase).toBe("write");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+  });
+
   it("starts the reveal when the removed player was the last one voting", () => {
-    const ctx = makeCtx({ n: 4, connected: ["p1", "p2"] });
+    const ctx = makeCtx({ n: 3 });
     let state = lie(setup(ctx), "p1", "giraffe", ctx);
     state = onDeadline(state, ctx);
-    state = pick(state, "p1", optionIdByText(state, "emus"), ctx);
+    const truthId = optionIdByText(state, "emus");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", truthId, ctx);
     expect(state.phase).toBe("vote");
-    state = onPlayerRemoved(state, "p2", ctx);
+    state = onPlayerRemoved(state, "p3", ctx);
     expect(state.phase).toBe("reveal");
     expect(state.reveal?.lies.map((l) => l.authorId)).toEqual(["p1"]);
   });

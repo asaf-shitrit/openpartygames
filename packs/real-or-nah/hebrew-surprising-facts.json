@@ -1,0 +1,333 @@
+{
+  "id": "hebrew-surprising-facts",
+  "name": "עובדות מפתיעות",
+  "kind": "facts",
+  "rating": "family",
+  "language": "he",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "עובדות שנוסחו מחדש מערכים בוויקיפדיה העברית (CC BY-SA 4.0); כל פריט מקשר למקור שלו.",
+  "items": [
+    {
+      "id": "polar-bear-skin-he",
+      "prompt": "מתחת לפרווה הלבנה, העור של דוב הקוטב הוא ____.",
+      "answer": "שחור",
+      "alternates": [
+        "שחורה"
+      ],
+      "decoys": [
+        "ורוד",
+        "לבן",
+        "אפור"
+      ],
+      "source": {
+        "title": "דוב קוטב",
+        "url": "https://he.wikipedia.org/wiki/%D7%93%D7%95%D7%91_%D7%A7%D7%95%D7%98%D7%91"
+      }
+    },
+    {
+      "id": "octopus-hearts-he",
+      "prompt": "לתמנון יש ____ לבבות.",
+      "answer": "שלושה",
+      "alternates": [
+        "3",
+        "שלוש"
+      ],
+      "decoys": [
+        "שניים",
+        "חמישה",
+        "תשעה"
+      ],
+      "source": {
+        "title": "תמנון",
+        "url": "https://he.wikipedia.org/wiki/%D7%AA%D7%9E%D7%A0%D7%95%D7%9F"
+      }
+    },
+    {
+      "id": "giraffe-neck-he",
+      "prompt": "לג'ירפה יש בצוואר ____ חוליות, כמו לרוב היונקים.",
+      "answer": "שבע",
+      "alternates": [
+        "7"
+      ],
+      "decoys": [
+        "שלוש",
+        "שתים עשרה",
+        "עשרים"
+      ],
+      "source": {
+        "title": "ג'ירפה",
+        "url": "https://he.wikipedia.org/wiki/%D7%92'%D7%99%D7%A8%D7%A4%D7%94"
+      }
+    },
+    {
+      "id": "drip-irrigation-he",
+      "prompt": "את הטפטפת להשקיה המציא מהנדס מ____.",
+      "answer": "ישראל",
+      "alternates": [
+        "ישראלי"
+      ],
+      "decoys": [
+        "הולנד",
+        "ספרד",
+        "מצרים"
+      ],
+      "source": {
+        "title": "השקיה בטפטוף",
+        "url": "https://he.wikipedia.org/wiki/%D7%94%D7%A9%D7%A7%D7%99%D7%94_%D7%91%D7%98%D7%A4%D7%98%D7%95%D7%A3"
+      }
+    },
+    {
+      "id": "ben-yehuda-ice-cream",
+      "prompt": "אליעזר בן-יהודה המציא את המילה ____.",
+      "answer": "גלידה",
+      "alternates": ["בובה", "אופניים"],
+      "decoys": [
+        "פיצה",
+        "שוקולד",
+        "חומוס"
+      ],
+      "source": {
+        "title": "אליעזר בן-יהודה",
+        "url": "https://he.wikipedia.org/wiki/%D7%90%D7%9C%D7%99%D7%A2%D7%96%D7%A8_%D7%91%D7%9F-%D7%99%D7%94%D7%95%D7%93%D7%94"
+      }
+    },
+    {
+      "id": "kinneret-lake",
+      "prompt": "הכנרת היא ימה, כלומר ____ מים מתוקים.",
+      "answer": "אגם",
+      "alternates": [],
+      "decoys": [
+        "נהר",
+        "מפרץ",
+        "בריכה"
+      ],
+      "source": {
+        "title": "הכנרת",
+        "url": "https://he.wikipedia.org/wiki/%D7%94%D7%9B%D7%A0%D7%A8%D7%AA"
+      }
+    },
+    {
+      "id": "lego-name-he",
+      "prompt": "השם לגו בא מדנית ופירושו \"שחקו ____\".",
+      "answer": "היטב",
+      "alternates": [
+        "טוב"
+      ],
+      "decoys": [
+        "הרבה",
+        "יחד",
+        "בשקט"
+      ],
+      "source": {
+        "title": "לגו",
+        "url": "https://he.wikipedia.org/wiki/%D7%9C%D7%92%D7%95"
+      }
+    },
+    {
+      "id": "platypus-eggs-he",
+      "prompt": "ברווזן הוא יונק שמטיל ____.",
+      "answer": "ביצים",
+      "alternates": [
+        "ביצה"
+      ],
+      "decoys": [
+        "גורים",
+        "זחלים",
+        "זרעים"
+      ],
+      "source": {
+        "title": "ברווזן",
+        "url": "https://he.wikipedia.org/wiki/%D7%A4%D7%9C%D7%98%D7%99%D7%A4%D7%95%D7%A1"
+      }
+    },
+    {
+      "id": "pineapple-flowers",
+      "prompt": "פרי האננס מתפתח מתפרחת שלמה של ____.",
+      "answer": "פרחים",
+      "alternates": [
+        "פרח"
+      ],
+      "decoys": [
+        "עלים",
+        "שורשים",
+        "ענפים"
+      ],
+      "source": {
+        "title": "אננס",
+        "url": "https://he.wikipedia.org/wiki/%D7%90%D7%A0%D7%A0%D7%A1"
+      }
+    },
+    {
+      "id": "pineapple-name",
+      "prompt": "השם אננס בא ממילה טופית שפירושה \"פרי ____\".",
+      "answer": "טוב",
+      "alternates": [],
+      "decoys": [
+        "מתוק",
+        "קוצני",
+        "זהב"
+      ],
+      "source": {
+        "title": "אננס",
+        "url": "https://he.wikipedia.org/wiki/%D7%90%D7%A0%D7%A0%D7%A1"
+      }
+    },
+    {
+      "id": "disk-on-key-israel",
+      "prompt": "את הדיסק און קי פיתחה לראשונה חברה מ____.",
+      "answer": "ישראל",
+      "alternates": [
+        "ישראלית"
+      ],
+      "decoys": [
+        "יפן",
+        "גרמניה",
+        "קוריאה"
+      ],
+      "source": {
+        "title": "דיסק און קי",
+        "url": "https://he.wikipedia.org/wiki/%D7%93%D7%99%D7%A1%D7%A7_%D7%90%D7%95%D7%9F_%D7%A7%D7%99"
+      }
+    },
+    {
+      "id": "bee-dance-he",
+      "prompt": "דבורים מספרות זו לזו איפה יש פרחים באמצעות ____.",
+      "answer": "ריקוד",
+      "alternates": [
+        "מחול",
+        "ריקוד הדבורה",
+        "ריקודים"
+      ],
+      "decoys": [
+        "שירה",
+        "ציור",
+        "סימני עשן"
+      ],
+      "source": {
+        "title": "ריקוד הדבורה",
+        "url": "https://he.wikipedia.org/wiki/%D7%A8%D7%99%D7%A7%D7%95%D7%93_%D7%94%D7%93%D7%91%D7%95%D7%A8%D7%94"
+      }
+    },
+    {
+      "id": "camel-hump-he",
+      "prompt": "בדבשת של הגמל הוא אוגר ____, לא מים.",
+      "answer": "שומן",
+      "alternates": [
+        "שומנים"
+      ],
+      "decoys": [
+        "חלב",
+        "אוויר",
+        "חול"
+      ],
+      "source": {
+        "title": "גמל",
+        "url": "https://he.wikipedia.org/wiki/%D7%92%D7%9E%D7%9C"
+      }
+    },
+    {
+      "id": "pacman-pizza-he",
+      "prompt": "היוצר של פק-מן קיבל השראה מפיצה שחסר בה ____.",
+      "answer": "משולש",
+      "alternates": [
+        "משולש אחד",
+        "פרוסה"
+      ],
+      "decoys": [
+        "זית",
+        "קצה",
+        "גבינה"
+      ],
+      "source": {
+        "title": "פק-מן",
+        "url": "https://he.wikipedia.org/wiki/%D7%A4%D7%A7-%D7%9E%D7%9F"
+      }
+    },
+    {
+      "id": "venus-spin-he",
+      "prompt": "נוגה מסתובב סביב עצמו הפוך מכדור הארץ: ממזרח ל____.",
+      "answer": "מערב",
+      "alternates": [
+        "המערב"
+      ],
+      "decoys": [
+        "צפון",
+        "דרום",
+        "מרכז"
+      ],
+      "source": {
+        "title": "נוגה",
+        "url": "https://he.wikipedia.org/wiki/%D7%A0%D7%95%D7%92%D7%94"
+      }
+    },
+    {
+      "id": "tomato-vegetable-he",
+      "prompt": "בשנת 1893 קבע בית משפט בארצות הברית שעגבנייה היא ____.",
+      "answer": "ירק",
+      "alternates": [
+        "ירקות"
+      ],
+      "decoys": [
+        "פרי",
+        "תבלין",
+        "אגוז"
+      ],
+      "source": {
+        "title": "עגבנייה",
+        "url": "https://he.wikipedia.org/wiki/%D7%A2%D7%92%D7%91%D7%A0%D7%99%D7%99%D7%94"
+      }
+    },
+    {
+      "id": "antarctica-desert-he",
+      "prompt": "המדבר הגדול ביותר בעולם הוא ____.",
+      "answer": "אנטארקטיקה",
+      "alternates": [
+        "אנטרקטיקה"
+      ],
+      "decoys": [
+        "סהרה",
+        "גובי",
+        "הנגב"
+      ],
+      "source": {
+        "title": "אנטארקטיקה",
+        "url": "https://he.wikipedia.org/wiki/%D7%90%D7%A0%D7%98%D7%90%D7%A8%D7%A7%D7%98%D7%99%D7%A7%D7%94"
+      }
+    },
+    {
+      "id": "dead-sea-salt",
+      "prompt": "ים המלח מלוח פי ____ מהים התיכון.",
+      "answer": "עשרה",
+      "alternates": [
+        "10",
+        "עשר"
+      ],
+      "decoys": [
+        "שניים",
+        "שלושה",
+        "מאה"
+      ],
+      "source": {
+        "title": "ים המלח",
+        "url": "https://he.wikipedia.org/wiki/%D7%99%D7%9D_%D7%94%D7%9E%D7%9C%D7%97"
+      }
+    },
+    {
+      "id": "banana-herb",
+      "prompt": "מבחינה בוטנית, הבננה מוגדרת כ____ ולא כעץ.",
+      "answer": "עשב",
+      "alternates": [
+        "עשבים"
+      ],
+      "decoys": [
+        "שיח",
+        "סחלב",
+        "קקטוס"
+      ],
+      "source": {
+        "title": "בננה",
+        "url": "https://he.wikipedia.org/wiki/%D7%91%D7%A0%D7%A0%D7%94"
+      }
+    }
+  ]
+}

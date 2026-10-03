@@ -20,6 +20,7 @@ import {
   PRESSABLE_CLASS,
   Switch,
 } from "@opg/ui";
+import type { IconName } from "@opg/ui";
 import { format, joinNamesOr, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { QrCode } from "./shared";
@@ -307,14 +308,7 @@ function PlayerRow({
   );
 }
 
-function GameButtonReason({
-  t,
-  blocked,
-}: {
-  t: Dictionary;
-  blocked: boolean;
-}) {
-  if (!blocked) return null;
+function ReasonLine({ icon, text }: { icon: IconName; text: string }) {
   return (
     <div
       style={{
@@ -327,11 +321,26 @@ function GameButtonReason({
         lineHeight: 1.25,
       }}
     >
-      <Icon name="monitor" size={18} />
-      <div style={{ minWidth: 0, overflowWrap: "break-word" }}>
-        {t.picker.sharedScreenOnly}
-      </div>
+      <Icon name={icon} size={18} />
+      <div style={{ minWidth: 0, overflowWrap: "break-word" }}>{text}</div>
     </div>
+  );
+}
+
+function GameButtonReason({
+  t,
+  blocked,
+  noContent,
+}: {
+  t: Dictionary;
+  blocked: boolean;
+  noContent: boolean;
+}) {
+  return (
+    <>
+      {blocked ? <ReasonLine icon="monitor" text={t.picker.sharedScreenOnly} /> : null}
+      {noContent ? <ReasonLine icon="cards" text={t.picker.noContentInLanguage} /> : null}
+    </>
   );
 }
 
@@ -345,9 +354,12 @@ function GameButton({
   t: Dictionary;
   game: GameSummary;
   selected: boolean;
+  /** Needs a shared screen the room does not have. */
   blocked: boolean;
   onPick: (id: string) => void;
 }) {
+  // Still pickable, like a blocked game: the start button explains what is missing.
+  const noContent = !game.hasContentInLanguage;
   return (
     <button
       type="button"
@@ -362,7 +374,7 @@ function GameButton({
         flexDirection: "column",
         gap: 4,
         textAlign: "start",
-        opacity: blocked ? 0.45 : 1,
+        opacity: blocked || noContent ? 0.45 : 1,
         background: selected ? "var(--opg-highlight-soft)" : "var(--opg-card)",
         border: selected
           ? "4px solid var(--opg-ink)"
@@ -415,7 +427,7 @@ function GameButton({
       >
         {format(t.picker.aboutMinutes, { minutes: game.minutes })}
       </div>
-      <GameButtonReason t={t} blocked={blocked} />
+      <GameButtonReason t={t} blocked={blocked} noContent={noContent} />
     </button>
   );
 }

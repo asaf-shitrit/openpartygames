@@ -1,0 +1,568 @@
+{
+  "id": "more-surprising-facts",
+  "name": "More surprising facts",
+  "kind": "facts",
+  "rating": "family",
+  "language": "en",
+  "license": "CC-BY-SA-4.0",
+  "attribution": "Facts paraphrased from Wikipedia articles (CC BY-SA 4.0); each item links its source.",
+  "items": [
+    {
+      "id": "eiffel-lean",
+      "prompt": "On hot days, the top of the Eiffel Tower leans away from the ____ by up to 18 cm.",
+      "answer": "sun",
+      "alternates": [
+        "the sun"
+      ],
+      "decoys": [
+        "wind",
+        "river",
+        "moon"
+      ],
+      "source": {
+        "title": "Eiffel Tower",
+        "url": "https://en.wikipedia.org/wiki/Eiffel_Tower"
+      }
+    },
+    {
+      "id": "tomato-vegetable",
+      "prompt": "In 1893, the US Supreme Court ruled the tomato counts as a ____ for tariff purposes.",
+      "answer": "vegetable",
+      "alternates": [
+        "vegetables",
+        "veggie"
+      ],
+      "decoys": [
+        "fruit",
+        "spice",
+        "herb"
+      ],
+      "source": {
+        "title": "Nix v. Hedden",
+        "url": "https://en.wikipedia.org/wiki/Nix_v._Hedden"
+      }
+    },
+    {
+      "id": "great-stink",
+      "prompt": "London's smelly summer of 1858 is known as the Great ____.",
+      "answer": "stink",
+      "alternates": [
+        "the great stink"
+      ],
+      "decoys": [
+        "fog",
+        "sneeze",
+        "sweat"
+      ],
+      "source": {
+        "title": "Great Stink",
+        "url": "https://en.wikipedia.org/wiki/Great_Stink"
+      }
+    },
+    {
+      "id": "owl-parliament",
+      "prompt": "A group of owls is called a ____.",
+      "answer": "parliament",
+      "alternates": [
+        "parliament of owls"
+      ],
+      "decoys": [
+        "council",
+        "senate",
+        "congress"
+      ],
+      "source": {
+        "title": "List of English terms of venery, by animal",
+        "url": "https://en.wikipedia.org/wiki/List_of_English_terms_of_venery,_by_animal"
+      }
+    },
+    {
+      "id": "otter-paws",
+      "prompt": "Sleeping sea otters sometimes hold ____ with each other.",
+      "answer": "paws",
+      "alternates": [
+        "paw",
+        "hands",
+        "hand"
+      ],
+      "decoys": [
+        "tails",
+        "whiskers",
+        "flippers"
+      ],
+      "source": {
+        "title": "Sea otter",
+        "url": "https://en.wikipedia.org/wiki/Sea_otter"
+      }
+    },
+    {
+      "id": "polar-bear-skin",
+      "prompt": "Under all that white fur, a polar bear's skin is ____.",
+      "answer": "black",
+      "alternates": [],
+      "decoys": [
+        "pink",
+        "white",
+        "grey"
+      ],
+      "source": {
+        "title": "Polar bear",
+        "url": "https://en.wikipedia.org/wiki/Polar_bear"
+      }
+    },
+    {
+      "id": "waggle-dance",
+      "prompt": "Honey bees tell each other where flowers are by doing a ____ dance.",
+      "answer": "waggle",
+      "alternates": [],
+      "decoys": [
+        "twirl",
+        "zigzag",
+        "shimmy"
+      ],
+      "source": {
+        "title": "Waggle dance",
+        "url": "https://en.wikipedia.org/wiki/Waggle_dance"
+      }
+    },
+    {
+      "id": "banana-berry",
+      "prompt": "Botanically speaking, a banana counts as a ____.",
+      "answer": "berry",
+      "alternates": [
+        "berries"
+      ],
+      "decoys": [
+        "nut",
+        "vegetable",
+        "grain"
+      ],
+      "source": {
+        "title": "Berry (botany)",
+        "url": "https://en.wikipedia.org/wiki/Berry_(botany)"
+      }
+    },
+    {
+      "id": "butterfly-feet",
+      "prompt": "Butterflies can taste with their ____.",
+      "answer": "feet",
+      "alternates": [
+        "foot",
+        "legs"
+      ],
+      "decoys": [
+        "wings",
+        "eyes",
+        "antennae"
+      ],
+      "source": {
+        "title": "Butterfly",
+        "url": "https://en.wikipedia.org/wiki/Butterfly"
+      }
+    },
+    {
+      "id": "venus-sunrise",
+      "prompt": "On Venus, the Sun would rise in the ____.",
+      "answer": "west",
+      "alternates": [
+        "the west"
+      ],
+      "decoys": [
+        "east",
+        "north",
+        "south"
+      ],
+      "source": {
+        "title": "Venus",
+        "url": "https://en.wikipedia.org/wiki/Venus"
+      }
+    },
+    {
+      "id": "mars-sunset",
+      "prompt": "Sunsets on Mars are typically a shade of ____.",
+      "answer": "blue",
+      "alternates": [
+        "blue hues"
+      ],
+      "decoys": [
+        "green",
+        "purple",
+        "yellow"
+      ],
+      "source": {
+        "title": "Sunset",
+        "url": "https://en.wikipedia.org/wiki/Sunset"
+      }
+    },
+    {
+      "id": "pluto-name",
+      "prompt": "Pluto was named by an 11-year-old girl from ____, England.",
+      "answer": "Oxford",
+      "alternates": [],
+      "decoys": [
+        "Bristol",
+        "Leeds",
+        "Brighton"
+      ],
+      "source": {
+        "title": "Venetia Burney",
+        "url": "https://en.wikipedia.org/wiki/Venetia_Burney"
+      }
+    },
+    {
+      "id": "lego-name",
+      "prompt": "The name LEGO comes from Danish words meaning \"play ____\".",
+      "answer": "well",
+      "alternates": [],
+      "decoys": [
+        "fair",
+        "more",
+        "together"
+      ],
+      "source": {
+        "title": "Lego",
+        "url": "https://en.wikipedia.org/wiki/Lego"
+      }
+    },
+    {
+      "id": "post-it-glue",
+      "prompt": "Post-it notes began as a failed try at a super-strong ____.",
+      "answer": "glue",
+      "alternates": [
+        "adhesive"
+      ],
+      "decoys": [
+        "paper",
+        "tape",
+        "magnet"
+      ],
+      "source": {
+        "title": "Post-it note",
+        "url": "https://en.wikipedia.org/wiki/Post-it_note"
+      }
+    },
+    {
+      "id": "bubble-wrap-wallpaper",
+      "prompt": "Bubble Wrap began as an attempt at three-dimensional plastic ____.",
+      "answer": "wallpaper",
+      "alternates": [
+        "wall paper"
+      ],
+      "decoys": [
+        "curtains",
+        "umbrellas",
+        "tablecloths"
+      ],
+      "source": {
+        "title": "Bubble wrap",
+        "url": "https://en.wikipedia.org/wiki/Bubble_wrap"
+      }
+    },
+    {
+      "id": "tardigrade-water-bear",
+      "prompt": "Tiny tardigrades, nicknamed \"water ____\", have survived outer space.",
+      "answer": "bears",
+      "alternates": [
+        "bear"
+      ],
+      "decoys": [
+        "fleas",
+        "wolves",
+        "snails"
+      ],
+      "source": {
+        "title": "Tardigrade",
+        "url": "https://en.wikipedia.org/wiki/Tardigrade"
+      }
+    },
+    {
+      "id": "hawaiian-alphabet",
+      "prompt": "The Hawaiian alphabet has just ____ letters.",
+      "answer": "13",
+      "alternates": [
+        "thirteen"
+      ],
+      "decoys": [
+        "9",
+        "19",
+        "26"
+      ],
+      "source": {
+        "title": "Hawaiian alphabet",
+        "url": "https://en.wikipedia.org/wiki/Hawaiian_alphabet"
+      }
+    },
+    {
+      "id": "spaghetti-trees",
+      "prompt": "In 1957, the BBC aired an April Fools' report on harvesting ____ from trees.",
+      "answer": "spaghetti",
+      "alternates": [
+        "pasta"
+      ],
+      "decoys": [
+        "chocolate",
+        "cheese",
+        "marshmallows"
+      ],
+      "source": {
+        "title": "Spaghetti-tree hoax",
+        "url": "https://en.wikipedia.org/wiki/Spaghetti-tree_hoax"
+      }
+    },
+    {
+      "id": "echidna-puggle",
+      "prompt": "A baby echidna is called a ____.",
+      "answer": "puggle",
+      "alternates": [
+        "puggles"
+      ],
+      "decoys": [
+        "joey",
+        "kit",
+        "cub"
+      ],
+      "source": {
+        "title": "Echidna",
+        "url": "https://en.wikipedia.org/wiki/Echidna"
+      }
+    },
+    {
+      "id": "platypus-eggs",
+      "prompt": "The platypus is a mammal that lays ____.",
+      "answer": "eggs",
+      "alternates": [
+        "egg"
+      ],
+      "decoys": [
+        "pups",
+        "larvae",
+        "seeds"
+      ],
+      "source": {
+        "title": "Platypus",
+        "url": "https://en.wikipedia.org/wiki/Platypus"
+      }
+    },
+    {
+      "id": "astronaut-taller",
+      "prompt": "In space, astronauts can grow about 2.5 cm ____ within a month.",
+      "answer": "taller",
+      "alternates": [
+        "higher"
+      ],
+      "decoys": [
+        "shorter",
+        "wider",
+        "heavier"
+      ],
+      "source": {
+        "title": "Effect of spaceflight on the human body",
+        "url": "https://en.wikipedia.org/wiki/Effect_of_spaceflight_on_the_human_body"
+      }
+    },
+    {
+      "id": "cocoa-money",
+      "prompt": "Before the Spanish conquest, cocoa beans were used as ____ in Mesoamerica.",
+      "answer": "money",
+      "alternates": [
+        "currency",
+        "cash"
+      ],
+      "decoys": [
+        "jewelry",
+        "paint",
+        "candles"
+      ],
+      "source": {
+        "title": "Cocoa bean",
+        "url": "https://en.wikipedia.org/wiki/Cocoa_bean"
+      }
+    },
+    {
+      "id": "popsicle-age",
+      "prompt": "Frank Epperson said he invented the Popsicle by accident at age ____.",
+      "answer": "11",
+      "alternates": [
+        "eleven"
+      ],
+      "decoys": [
+        "7",
+        "15",
+        "22"
+      ],
+      "source": {
+        "title": "Ice pop",
+        "url": "https://en.wikipedia.org/wiki/Ice_pop"
+      }
+    },
+    {
+      "id": "pine-apple",
+      "prompt": "In the 1300s, \"pine apple\" was the English word for a pine ____.",
+      "answer": "cone",
+      "alternates": [
+        "pine cone",
+        "pinecone",
+        "cones"
+      ],
+      "decoys": [
+        "needle",
+        "branch",
+        "log"
+      ],
+      "source": {
+        "title": "Pineapple",
+        "url": "https://en.wikipedia.org/wiki/Pineapple"
+      }
+    },
+    {
+      "id": "rubik-month",
+      "prompt": "It took Ernő Rubik about a ____ to solve his own cube the first time.",
+      "answer": "month",
+      "alternates": [
+        "a month"
+      ],
+      "decoys": [
+        "day",
+        "week",
+        "year"
+      ],
+      "source": {
+        "title": "Rubik's Cube",
+        "url": "https://en.wikipedia.org/wiki/Rubik%27s_Cube"
+      }
+    },
+    {
+      "id": "pacman-pizza",
+      "prompt": "Pac-Man's creator said the character was inspired by a pizza with a missing ____.",
+      "answer": "slice",
+      "alternates": [
+        "slices",
+        "piece"
+      ],
+      "decoys": [
+        "olive",
+        "topping",
+        "crust"
+      ],
+      "source": {
+        "title": "Pac-Man",
+        "url": "https://en.wikipedia.org/wiki/Pac-Man"
+      }
+    },
+    {
+      "id": "mario-landlord",
+      "prompt": "Mario was named after Mario Segale, Nintendo of America's warehouse ____.",
+      "answer": "landlord",
+      "alternates": [
+        "land lord"
+      ],
+      "decoys": [
+        "janitor",
+        "driver",
+        "accountant"
+      ],
+      "source": {
+        "title": "Mario",
+        "url": "https://en.wikipedia.org/wiki/Mario"
+      }
+    },
+    {
+      "id": "youtube-zoo",
+      "prompt": "The first video ever uploaded to YouTube was shot at the San Diego ____.",
+      "answer": "zoo",
+      "alternates": [],
+      "decoys": [
+        "pier",
+        "airport",
+        "mall"
+      ],
+      "source": {
+        "title": "Me at the zoo",
+        "url": "https://en.wikipedia.org/wiki/Me_at_the_zoo"
+      }
+    },
+    {
+      "id": "antarctica-desert",
+      "prompt": "Antarctica, covered in ice, is mainly a polar ____.",
+      "answer": "desert",
+      "alternates": [
+        "polar desert"
+      ],
+      "decoys": [
+        "forest",
+        "swamp",
+        "savanna"
+      ],
+      "source": {
+        "title": "Antarctica",
+        "url": "https://en.wikipedia.org/wiki/Antarctica"
+      }
+    },
+    {
+      "id": "crocodile-tongue",
+      "prompt": "Crocodiles are unable to stick out their ____.",
+      "answer": "tongues",
+      "alternates": [
+        "tongue"
+      ],
+      "decoys": [
+        "claws",
+        "tails",
+        "ears"
+      ],
+      "source": {
+        "title": "Crocodile",
+        "url": "https://en.wikipedia.org/wiki/Crocodile"
+      }
+    },
+    {
+      "id": "camel-hump",
+      "prompt": "A camel's hump stores ____, not water.",
+      "answer": "fat",
+      "alternates": [
+        "fatty tissue"
+      ],
+      "decoys": [
+        "milk",
+        "air",
+        "sand"
+      ],
+      "source": {
+        "title": "Camel",
+        "url": "https://en.wikipedia.org/wiki/Camel"
+      }
+    },
+    {
+      "id": "peanut-family",
+      "prompt": "Peanuts are in the same plant family as beans and ____.",
+      "answer": "peas",
+      "alternates": [
+        "pea"
+      ],
+      "decoys": [
+        "walnuts",
+        "almonds",
+        "chestnuts"
+      ],
+      "source": {
+        "title": "Peanut",
+        "url": "https://en.wikipedia.org/wiki/Peanut"
+      }
+    },
+    {
+      "id": "olympic-gold-silver",
+      "prompt": "Olympic gold medals must be at least 92.5% ____.",
+      "answer": "silver",
+      "alternates": [],
+      "decoys": [
+        "gold",
+        "bronze",
+        "copper"
+      ],
+      "source": {
+        "title": "Gold medal",
+        "url": "https://en.wikipedia.org/wiki/Gold_medal"
+      }
+    }
+  ]
+}

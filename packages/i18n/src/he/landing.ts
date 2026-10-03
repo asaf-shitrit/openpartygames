@@ -12,7 +12,7 @@ export const landing: Dictionary["landing"] = {
   codeToReadOut: "תקבלו קוד להקראה",
   tvHint: "משחקים עם טלוויזיה או מחשב נייד? פתחו את הדף הזה שם למסך הגדול.",
   errorStorageBlocked: "הדפדפן הזה חסם אחסון מקומי, אז אי אפשר לארח כאן את החדר.",
-  errorFullTonight: "מלא אצלנו הערב. חִזרו מחר.",
+  errorFullTonight: "מלא אצלנו הערב. חזרו מחר.",
   errorGeneric: "לא הצלחנו לפתוח חדר. נסו שוב בעוד רגע.",
   step1: "פתחו חדר במסך הזה",
   step2: "כולם סורקים את הקוד עם הטלפון",

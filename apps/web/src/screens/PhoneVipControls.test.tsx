@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en, LocaleProvider } from "@opg/i18n";
@@ -358,6 +358,23 @@ describe("PhoneVipControls", () => {
     const tile = screen.getByRole("button", { name: /real or nah/i });
     expect(tile.getAttribute("style")).toContain("opacity: 0.45");
     expect(screen.getByText("Plays on a shared screen.")).toBeTruthy();
+    await user.click(tile);
+    expect(handlers.onPickGame).toHaveBeenCalledWith("real-or-nah");
+  });
+
+  it("shows a game with nothing in the room's language dimmed, labelled and still selectable", async () => {
+    const { handlers, user } = setup({
+      games: [
+        makeGame({ noTv: false }),
+        makeGame({ id: "real-or-nah", name: "Real or Nah", hasContentInLanguage: false }),
+      ],
+    });
+    const tile = screen.getByRole("button", { name: /real or nah/i });
+    expect(tile.getAttribute("style")).toContain("opacity: 0.45");
+    expect(within(tile).getByText(en.picker.noContentInLanguage)).toBeTruthy();
+    const playable = screen.getByText("Imposter", { selector: "div" }).closest("button");
+    expect(playable?.getAttribute("style")).not.toContain("opacity: 0.45");
+    expect(screen.getAllByText(en.picker.noContentInLanguage)).toHaveLength(1);
     await user.click(tile);
     expect(handlers.onPickGame).toHaveBeenCalledWith("real-or-nah");
   });

@@ -86,7 +86,7 @@ describe("registry", () => {
         { id: "crowd-reader", playerIds: ["maya"], value: 4 },
         he,
       ),
-    ).toEqual({ title: "קורא קהל", detail: "קרא את החדר 4 פעמים" });
+    ).toEqual({ title: "קריאת קהל", detail: "קריאת החדר הצליחה 4 פעמים" });
   });
 });
 

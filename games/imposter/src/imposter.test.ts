@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LEFT_PLAYER_GRACE_MS } from "@opg/sdk";
 import type { GameContext, Rng, WordPairContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
@@ -470,18 +471,75 @@ describe("turn order and actions", () => {
     expect(onDeadline(setup(c), dc).phase).toBe("vote");
   });
 
-  it("closes the vote early once every connected player voted", () => {
+  it("closes the vote at once when every player voted", () => {
+    const c = makeCtx({ n: 4, seed: 25 });
+    let state = toVotePhase(setup(c), c);
+    const imp = imposterOf(state);
+    for (const voter of state.playerIds) {
+      expect(state.phase).toBe("vote");
+      const target = voter === imp ? otherPlayer(state.playerIds, imp) : imp;
+      state = onAction(state, voter, { type: "vote", target }, c);
+    }
+    expect(state.phase).toBe("reveal");
+  });
+
+  it("pulls the vote in to the grace when only disconnected players are missing", () => {
     const c = makeCtx({ n: 4, seed: 25 });
     let state = toVotePhase(setup(c), c);
     const imp = imposterOf(state);
     const connected = crewIds(state.playerIds, imp);
-    const dc = withCtx(c, { connectedIds: connected });
+    const dc = withCtx(c, { connectedIds: connected, now: BASE_NOW + 2000 });
 
     for (const voter of connected) {
       expect(state.phase).toBe("vote");
       state = onAction(state, voter, { type: "vote", target: imp }, dc);
     }
+    // Not closed the instant someone is gone (a locked phone keeps its vote), but pulled in.
+    expect(state.phase).toBe("vote");
+    expect(state.deadline).toBe(BASE_NOW + 2000 + LEFT_PLAYER_GRACE_MS);
+    const due = withCtx(dc, { now: state.deadline ?? 0 });
+    expect(onDeadline(state, due).phase).toBe("reveal");
+  });
+
+  it("pulls the vote in when the last holdout disconnects after everyone else voted", () => {
+    const c = makeCtx({ n: 4, seed: 25 });
+    let state = toVotePhase(setup(c), c);
+    const imp = imposterOf(state);
+    const crew = crewIds(state.playerIds, imp);
+    for (const voter of crew.slice(0, 2)) {
+      state = onAction(state, voter, { type: "vote", target: imp }, c);
+    }
+    const holdouts = state.playerIds.filter((id) => state.votes[id] === undefined);
+    expect(holdouts).toHaveLength(2);
+    const gone = withCtx(c, {
+      now: BASE_NOW + 5000,
+      connectedIds: state.playerIds.filter((id) => !holdouts.includes(id)),
+    });
+    const next = onPlayersChanged(state, gone);
+    expect(next.phase).toBe("vote");
+    expect(next.deadline).toBe(BASE_NOW + 5000 + LEFT_PLAYER_GRACE_MS);
+    // Someone connected still has to vote: nothing happens.
+    const oneGone = withCtx(c, {
+      connectedIds: state.playerIds.filter((id) => id !== holdouts[0]),
+    });
+    expect(onPlayersChanged(state, oneGone)).toBe(state);
+  });
+
+  it("counts a holdout who reconnects and votes inside the grace", () => {
+    const c = makeCtx({ n: 3, seed: 25 });
+    let state = toVotePhase(setup(c), c);
+    const [first, second, holdout] = state.playerIds;
+    if (first === undefined || second === undefined || holdout === undefined)
+      throw new Error("expected three players");
+    const away = withCtx(c, { connectedIds: [first, second] });
+    state = onAction(state, first, { type: "vote", target: second }, away);
+    state = onAction(state, second, { type: "vote", target: first }, away);
+    expect(state.phase).toBe("vote");
+    const back = withCtx(c, { now: BASE_NOW + 3000 });
+    expect(onPlayersChanged(state, back)).toBe(state);
+    state = onAction(state, holdout, { type: "vote", target: first }, back);
     expect(state.phase).toBe("reveal");
+    expect(state.votes[holdout]).toBe(first);
   });
 
   it("ignores self votes, unknown targets, second votes and wrong-phase votes", () => {
@@ -1151,9 +1209,11 @@ describe("onPlayerRemoved", () => {
     const voted = onAction(state, a, { type: "vote", target: imp }, onlyAAndC3);
     expect(voted.phase).toBe("vote");
 
-    // c3 is kicked before voting; a is the only remaining connected voter.
+    // c3 is kicked before voting; a is the only remaining connected voter, so the vote
+    // is pulled in to the grace rather than closed (b and the imposter may come back).
     const closed = onPlayerRemoved(voted, c3, onlyAAndC3);
-    expect(closed.phase).toBe("reveal");
+    expect(closed.phase).toBe("vote");
+    expect(closed.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
     expect(closed.votes[c3]).toBeUndefined();
 
     // With an outstanding connected voter the vote stays open.

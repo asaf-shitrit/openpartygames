@@ -7,9 +7,10 @@ import type {
   PlayerRoomView,
   PlayerSummary,
 } from "@opg/protocol";
+import { NAME_MAX_LENGTH } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import { PhaseEnter, useScreenWakeLock } from "@opg/ui";
-import { useLocale } from "@opg/i18n";
+import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { z } from "zod";
 import { gameUiFor } from "../games";
@@ -81,7 +82,7 @@ function errorCopy(t: Dictionary) {
     "room-full": t.common.errorRoomFull,
     "room-locked": t.common.errorRoomLocked,
     "name-taken": t.common.errorNameTaken,
-    "name-invalid": t.common.errorNameInvalid,
+    "name-invalid": format(t.common.errorNameInvalid, { max: NAME_MAX_LENGTH }),
     "not-enough-players": t.common.errorNotEnoughPlayers,
     "players-away": t.status.errorPlayersAway,
     "start-failed": t.status.errorStartFailed,

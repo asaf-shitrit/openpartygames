@@ -163,6 +163,15 @@ function blurbStyle(metrics: CardMetrics): CSSProperties {
   };
 }
 
+function UnavailableNote({ t, size }: { t: Dictionary; size: number }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: size, fontWeight: 700 }}>
+      <Icon name="cards" size={size} />
+      <span>{t.picker.noContentInLanguage}</span>
+    </div>
+  );
+}
+
 function GameCard({
   t,
   game,
@@ -185,8 +194,13 @@ function GameCard({
     cue("tape");
   }, [justPicked, reduced, cue]);
   const metrics = cardMetrics(density);
+  const unavailable = !game.hasContentInLanguage;
   return (
-    <div ref={cardRef}>
+    <div
+      ref={cardRef}
+      data-unavailable={unavailable ? "" : undefined}
+      style={unavailable ? { opacity: 0.55 } : undefined}
+    >
       <Card
         {...cardLook(selected)}
         style={{
@@ -226,6 +240,7 @@ function GameCard({
             minutes: game.minutes,
           })}
         </div>
+        {unavailable ? <UnavailableNote t={t} size={metrics.meta} /> : null}
       </Card>
     </div>
   );

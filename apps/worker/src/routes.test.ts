@@ -320,6 +320,18 @@ describe("GET /ws/:code", () => {
 });
 
 describe("other paths", () => {
+  it.each(["/api/nope", "/api/rooms/BCDF/extra", "/api/", "/ws/", "/ws/BCDF/extra"])(
+    "answers unknown %s with a JSON 404, not the SPA",
+    async (path) => {
+      const routes = makeRoutes();
+      const response = await routes.request("GET", path);
+
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ error: "not-found" });
+      expect(routes.assets.requests).toEqual([]);
+    },
+  );
+
   it("falls through to the asset fetcher", async () => {
     const routes = makeRoutes();
     const response = await routes.request("GET", "/play/imposter");

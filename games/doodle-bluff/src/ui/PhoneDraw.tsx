@@ -360,6 +360,8 @@ function SquiggleButton({ done, onSquiggle }: { done: boolean; onSquiggle: () =>
 export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawProps) {
   const { t } = useLocale();
   const prompts = view.myPrompts;
+  // The game's own start files the mirror; the timer's start moves when the phase is pulled in.
+  const gameKey = view.gameStartedAt ?? startedAt;
   const [activeIndex, setActiveIndex] = useState(0);
   // Seeded from the room's own accepted counts, once, at mount. Held in state rather than a ref
   // only because a ref's initial value is recomputed on every render.
@@ -417,7 +419,7 @@ export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawP
           done={view.myDone[prompt.drawingId] === true}
           clock={clock}
           roomCode={roomCode}
-          startedAt={startedAt}
+          startedAt={gameKey}
           sentRef={sentRef}
           send={send}
         />
