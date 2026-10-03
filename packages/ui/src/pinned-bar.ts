@@ -2,10 +2,10 @@
 // halves: the bar's own style, and the page's scroll padding, so that a row scrolled or focused
 // into view lands above the bar and not underneath it.
 import { useEffect } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, RefObject } from "react";
 
-/** Room the page leaves under scrolled-to elements for the bar; a button plus its padding. */
-export const PINNED_BAR_SCROLL_PADDING = "120px";
+/** Breathing room kept between a scrolled-to element and the top of the bar. */
+const GAP_PX = 8;
 
 /**
  * Style for the bar. Make it the LAST child of its container: a sticky box is held inside its
@@ -22,15 +22,25 @@ export const PINNED_BAR_STYLE: CSSProperties = {
   padding: "10px 18px 16px",
 };
 
-/** While `pinned`, the page's scroller stops short of the bar. */
-export function usePinnedBarScrollPadding(pinned: boolean): void {
+/**
+ * While `pinned`, the page's scroller stops short of the bar, by the bar's own height: at 200%
+ * text the button wraps and the bar grows, so a fixed number would leave rows underneath it.
+ */
+export function usePinnedBarScrollPadding(pinned: boolean, bar: RefObject<HTMLElement | null>): void {
   useEffect(() => {
-    if (!pinned) return undefined;
+    const el = bar.current;
+    if (!pinned || el === null) return undefined;
     const root = document.documentElement;
     const before = root.style.scrollPaddingBottom;
-    root.style.scrollPaddingBottom = PINNED_BAR_SCROLL_PADDING;
+    const apply = () => {
+      root.style.scrollPaddingBottom = `${el.getBoundingClientRect().height + GAP_PX}px`;
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
     return () => {
+      observer.disconnect();
       root.style.scrollPaddingBottom = before;
     };
-  }, [pinned]);
+  }, [pinned, bar]);
 }

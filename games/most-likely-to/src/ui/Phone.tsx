@@ -260,7 +260,8 @@ function VoteLocked(
 function VoteForm(props: SectionProps) {
   const { view, players, me, deadline, clock, send, stage } = props;
   const { t } = useLocale();
-  usePinnedBarScrollPadding(stage !== null);
+  const barRef = useRef<HTMLDivElement>(null);
+  usePinnedBarScrollPadding(stage !== null, barRef);
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -288,7 +289,7 @@ function VoteForm(props: SectionProps) {
           />
         ))}
       </div>
-      <div style={lockBarStyle(stage !== null)}>
+      <div ref={barRef} style={lockBarStyle(stage !== null)}>
         <Button
           size="lg"
           fullWidth
