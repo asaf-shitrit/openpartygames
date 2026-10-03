@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "@opg/i18n";
+import { en, LocaleProvider } from "@opg/i18n";
 import { SoundProvider } from "@opg/ui";
 import type { CueHandle, CueId, SoundEngine, SoundStatus } from "@opg/ui";
 import {
@@ -207,6 +207,22 @@ describe("TvGamePicker", () => {
     expect(engine.cues).toEqual([]);
   });
 
+  it("dims a game with nothing in the room's language and says why, on that card only", () => {
+    renderLocalized(
+      <TvGamePicker
+        view={makeHostView({
+          games: [IMPOSTER, makeGame({ id: "draw", name: "Draw It", hasContentInLanguage: false })],
+          selectedGameId: "imposter",
+        })}
+      />,
+    );
+    const note = screen.getByText(en.picker.noContentInLanguage);
+    const unavailable = note.closest("[data-unavailable]");
+    expect(unavailable?.textContent).toContain("Draw It");
+    expect(unavailable?.getAttribute("style")).toContain("opacity: 0.55");
+    expect(document.querySelectorAll("[data-unavailable]")).toHaveLength(1);
+  });
+
   it("shows all three games and lets the third be picked", () => {
     renderLocalized(
       <TvGamePicker
@@ -286,7 +302,7 @@ describe("TvGamePicker, in Hebrew", () => {
         })}
       />,
     );
-    expect(screen.getByText("בוחר משחק")).toBeTruthy();
+    expect(screen.getByText("בתור לבחור משחק")).toBeTruthy();
     expect(screen.getAllByText(/חפיסות/).length).toBeGreaterThan(0);
   });
 
