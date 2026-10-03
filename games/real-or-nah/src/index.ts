@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 // Real or Nah: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
-import { normalizeAnswer } from "@opg/sdk";
+import { normalizeAnswer, pullInDeadline } from "@opg/sdk";
 import type {
   Fact,
   FactContent,
@@ -358,31 +358,46 @@ function rejectLie(
   return { ...state, lieErrors: { ...state.lieErrors, [playerId]: error } };
 }
 
-/** Connected game players who have an accepted lie for this fact. */
-function allSubmitted(state: RonState, ctx: Ctx): boolean {
-  const connected = ctx.connectedIds.filter((id) =>
-    state.playerIds.includes(id),
-  );
-  if (connected.length === 0) return false;
-  return connected.every((id) => state.lies[id] !== undefined);
-}
-
 function canPick(state: RonState, playerId: PlayerId): boolean {
   return (state.options ?? []).some((option) => option.authorId !== playerId);
 }
 
 /**
- * Every connected player who has something to pick has picked. A connected player
- * with no pickable option (all options are theirs) does not block the phase.
+ * Whether this player has nothing left to do in the current phase: a lie is in, or in the
+ * vote a pick is in. A player with no pickable option (all options are theirs) is done.
  */
-function allPicked(state: RonState, ctx: Ctx): boolean {
-  const connected = ctx.connectedIds.filter((id) =>
-    state.playerIds.includes(id),
-  );
+function isDone(state: RonState, playerId: PlayerId): boolean {
+  if (state.phase === "write") return state.lies[playerId] !== undefined;
+  return !canPick(state, playerId) || state.votes[playerId] !== undefined;
+}
+
+function connectedPlayers(state: RonState, ctx: Ctx): PlayerId[] {
+  return ctx.connectedIds.filter((id) => state.playerIds.includes(id));
+}
+
+/** Everyone connected is done, and someone who is not connected is not (yet). */
+function onlyAbsentPlayersLeft(state: RonState, ctx: Ctx): boolean {
+  const connected = connectedPlayers(state, ctx);
   if (connected.length === 0) return false;
-  return connected.every(
-    (id) => !canPick(state, id) || state.votes[id] !== undefined,
-  );
+  return connected.every((id) => isDone(state, id));
+}
+
+/**
+ * Ends the write or vote phase once everyone is done. When only players who are not
+ * connected are missing it does not end at once (a locked phone must keep its lie or pick):
+ * it pulls the deadline in to LEFT_PLAYER_GRACE_MS, so a returning player can still count.
+ */
+function settlePhase(state: RonState, ctx: Ctx): RonState {
+  if (state.phase !== "write" && state.phase !== "vote") return state;
+  const everyoneDone =
+    state.playerIds.length > 0 &&
+    state.playerIds.every((id) => isDone(state, id));
+  if (everyoneDone)
+    return state.phase === "write"
+      ? startVote(state, ctx)
+      : startReveal(state, ctx);
+  if (onlyAbsentPlayersLeft(state, ctx)) return pullInDeadline(state, ctx.now);
+  return state;
 }
 
 // ---------- Actions ----------
@@ -456,8 +471,7 @@ function applyLie(
   const cleaned = cleanLie(text);
   const error = lieError(state, playerId, cleaned);
   if (error !== null) return rejectLie(state, playerId, error);
-  const next = acceptLie(state, playerId, cleaned);
-  return allSubmitted(next, ctx) ? startVote(next, ctx) : next;
+  return settlePhase(acceptLie(state, playerId, cleaned), ctx);
 }
 
 /** The chosen option, when it exists and is not the player's own lie. */
@@ -480,11 +494,10 @@ function applyPick(
   if (!mayVote(state, playerId)) return state;
   const option = pickedOption(state, playerId, optionId);
   if (option === undefined) return state;
-  const next: RonState = {
-    ...state,
-    votes: { ...state.votes, [playerId]: option.id },
-  };
-  return allPicked(next, ctx) ? startReveal(next, ctx) : next;
+  return settlePhase(
+    { ...state, votes: { ...state.votes, [playerId]: option.id } },
+    ctx,
+  );
 }
 
 // ---------- GameDefinition hooks ----------
@@ -532,15 +545,6 @@ function anonymizeOptions(
   return next;
 }
 
-/** Ends the current phase early once the remaining players are all done. */
-function advanceIfReady(state: RonState, ctx: Ctx): RonState {
-  if (state.phase === "write" && allSubmitted(state, ctx))
-    return startVote(state, ctx);
-  if (state.phase === "vote" && allPicked(state, ctx))
-    return startReveal(state, ctx);
-  return state;
-}
-
 export function onPlayerRemoved(
   state: RonState,
   playerId: PlayerId,
@@ -575,7 +579,16 @@ export function onPlayerRemoved(
             planLies: planLiesOf(state.reveal),
           },
   };
-  return advanceIfReady(next, ctx);
+  return settlePhase(next, ctx);
+}
+
+/** A connection flip can leave only absent players to act: start the grace clock. */
+export function onPlayersChanged(state: RonState, ctx: Ctx): RonState {
+  if (state.finished) return state;
+  if (state.phase !== "write" && state.phase !== "vote") return state;
+  return onlyAbsentPlayersLeft(state, ctx)
+    ? pullInDeadline(state, ctx.now)
+    : state;
 }
 
 export function isOver(state: RonState): boolean {
@@ -705,6 +718,7 @@ export const realOrNah: GameDefinition<
   nextDeadline,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   hostView: (state) => buildHostView(state),
   playerView: (state, playerId) => buildPlayerView(state, playerId),
   isOver,
