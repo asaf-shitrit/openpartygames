@@ -53,6 +53,8 @@ export const status: Dictionary["status"] = {
   storageBlockedTitle: "אחסון מקומי חסום",
   storageBlockedBody:
     "המסך הזה לא הצליח לקרוא את החדר שהוא יצר. אפשרו אחסון נתונים לאתר הזה ורעננו, או התחילו כאן חדר חדש.",
+  roomGoneTitle: "החדר הזה לא קיים",
+  roomGoneBody: "בדקו את קוד החדר, או התחילו כאן חדר חדש.",
   otherHostTitle: "החדר הזה מתארח על מסך אחר",
   otherHostBody: "פתחו את החדר הזה על המסך שיצר אותו, או התחילו כאן חדר חדש.",
   connectingTitle: "מתחברים…",

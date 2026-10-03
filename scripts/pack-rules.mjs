@@ -57,7 +57,9 @@ const codePoints = (text) => Array.from(text);
 // A copy of packages/sdk/src/text.ts: this file cannot import TypeScript, and
 // scripts/pack-rules.test.ts fails if the two ever give different answers.
 const HEBREW_POINTS = /[\u0591-\u05BD\u05BF-\u05C2\u05C4\u05C5\u05C7]/g;
-const APOSTROPHES = /['\u2018\u2019\u02BC\u05F3`]/g;
+const APOSTROPHES = /['\u2018\u2019\u02BC\u05F3\u05F4`]/g;
+/** An ASCII quote between two Hebrew letters is a gershayim ("צה\"ל"), so it joins like one. */
+const GERSHAYIM_QUOTE = /(?<=[\u05D0-\u05EA])"(?=[\u05D0-\u05EA])/g;
 
 /** NFC, lowercase, drop Hebrew points and apostrophes, strip punctuation, drop a leading article, collapse whitespace. */
 export function normalizeAnswer(text) {
@@ -68,6 +70,7 @@ export function normalizeAnswer(text) {
     .trim()
     .replace(HEBREW_POINTS, "")
     .replace(APOSTROPHES, "")
+    .replace(GERSHAYIM_QUOTE, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .replace(/\s+/gu, " ")
     .trim()

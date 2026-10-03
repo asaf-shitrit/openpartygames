@@ -4,8 +4,10 @@
 
 /** Niqqud and cantillation marks: the same Hebrew word with or without them is one answer. */
 const HEBREW_POINTS = /[֑-ֽֿ-ׇׂׅׄ]/g;
-/** Apostrophes, backtick and the Hebrew geresh join a word ("dont" is "don't"), not split it. */
-const APOSTROPHES = /['‘’ʼ׳`]/g;
+/** Apostrophes, backtick and the Hebrew geresh and gershayim join a word ("dont" is "don't"), not split it. */
+const APOSTROPHES = /['\u2018\u2019\u02BC\u05F3\u05F4`]/g;
+/** An ASCII quote between two Hebrew letters is a gershayim ("צה\"ל"), so it joins like one. */
+const GERSHAYIM_QUOTE = /(?<=[\u05D0-\u05EA])"(?=[\u05D0-\u05EA])/g;
 
 /**
  * NFC, lowercase, trim, drop Hebrew points and apostrophes, turn other punctuation into
@@ -19,6 +21,7 @@ export function normalizeAnswer(text: string): string {
     .trim()
     .replace(HEBREW_POINTS, "")
     .replace(APOSTROPHES, "")
+    .replace(GERSHAYIM_QUOTE, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim()

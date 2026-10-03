@@ -32,6 +32,10 @@ export interface FlipCardProps {
 
 const ROOT_STYLE: CSSProperties = {
   position: "relative",
+  // A column, so the card's faces fill whatever height the parent gives it instead of stopping
+  // at their floor.
+  display: "flex",
+  flexDirection: "column",
   minHeight: MIN_HEIGHT,
   width: "100%",
   padding: 0,
@@ -141,37 +145,47 @@ function useFlipAnimation(flipped: boolean, reduced: boolean) {
   return { innerRef, mountedFlipped };
 }
 
+/**
+ * Both faces share one grid cell, so the card is as tall as the taller face. The front used to
+ * be absolutely positioned over the back, which sized the card from the back alone: a front
+ * with more to say than the back (the Imposter's briefing, the word and what to do with it)
+ * was clipped by its own card whatever room the screen had.
+ */
+const STACK_STYLE: CSSProperties = {
+  position: "relative",
+  width: "100%",
+  flexGrow: 1,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr)",
+  gridTemplateRows: "minmax(min-content, 1fr)",
+};
+
 function innerStyle(flipped: boolean, reduced: boolean): CSSProperties {
-  if (reduced) return { position: "relative", width: "100%" };
+  if (reduced) return STACK_STYLE;
   return {
-    position: "relative",
-    width: "100%",
+    ...STACK_STYLE,
     transformStyle: "preserve-3d",
     rotate: flipped ? "y 180deg" : "y 0deg",
   };
 }
 
-function facePositionStyle(backFace: boolean): CSSProperties {
-  if (backFace) return { position: "relative" };
-  return { position: "absolute", inset: 0 };
+function facePositionStyle(): CSSProperties {
+  return { position: "relative", gridArea: "1 / 1" };
 }
 
 function flippedFaceStyle(backFace: boolean): CSSProperties {
   return {
     ...FACE_STYLE,
-    ...facePositionStyle(backFace),
+    ...facePositionStyle(),
     backfaceVisibility: "hidden",
     rotate: backFace ? undefined : "y 180deg",
   };
 }
 
-function crossfadeFaceStyle(
-  visible: boolean,
-  backFace: boolean,
-): CSSProperties {
+function crossfadeFaceStyle(visible: boolean): CSSProperties {
   return {
     ...FACE_STYLE,
-    ...facePositionStyle(backFace),
+    ...facePositionStyle(),
     opacity: visible ? 1 : 0,
     transition: `opacity ${CROSSFADE_DURATION_MS}ms ease-out`,
   };
@@ -182,7 +196,7 @@ function faceTransitionStyle(
   visible: boolean,
   backFace: boolean,
 ): CSSProperties {
-  if (reduced) return crossfadeFaceStyle(visible, backFace);
+  if (reduced) return crossfadeFaceStyle(visible);
   return flippedFaceStyle(backFace);
 }
 

@@ -222,6 +222,9 @@ describe("normalizeAnswer matches the SDK's", () => {
     "cafe\u0301",
     "caf\u00e9",
     "a\u00a0b",
+    "צה\u05F4ל",
+    'צה"ל',
+    'say "שלום" now',
     "",
   ];
 

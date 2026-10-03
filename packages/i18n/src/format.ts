@@ -4,25 +4,27 @@
 
 export type FormatParams = Record<string, string | number>;
 
-const HEBREW_LETTER = /[\u05D0-\u05EA]/;
-const STARTS_LATIN_OR_DIGIT = /^[A-Za-z0-9]/;
+const STARTS_LATIN_OR_DIGIT = /^(?:[\p{Script=Latin}0-9]|\u2066)/u;
 
 /**
- * Hebrew writes a one-letter prefix (ו, ב, ל…) glued to a Latin word or number with a hyphen:
- * "ל-Dana", never "לDana". A player picks their own name, so the dictionary cannot know which
- * script it will meet; the hyphen is added here, only when the prefix letter sits directly
- * against the placeholder and the value starts in Latin or a digit.
+ * Hebrew writes a one-letter prefix (ו, ב, ל, ה, מ, ש, כ) glued to a Latin word or number with
+ * a hyphen: "ל-Dana", never "לDana". A player picks their own name, so the dictionary cannot
+ * know which script it will meet. The hyphen is added only when a run of prefix letters that
+ * starts a word sits against the placeholder ("שלום{name}" is a word, not a prefix) and the
+ * value starts in Latin, a digit, or an LTR isolate.
  */
-function prefixed(before: string, value: string): string {
-  return HEBREW_LETTER.test(before) && STARTS_LATIN_OR_DIGIT.test(value) ? "-" : "";
+function hyphenFor(prefix: string | undefined, value: string): string {
+  return prefix !== undefined && STARTS_LATIN_OR_DIGIT.test(value) ? "-" : "";
 }
+
+const PLACEHOLDER = /((?<![\u05D0-\u05EA])[\u05D5\u05D1\u05DC\u05D4\u05DE\u05E9\u05DB]{1,3})?\{(\w+)\}/g;
 
 export function format(template: string, params?: FormatParams): string {
   if (!params) return template;
-  return template.replace(/(.?)\{(\w+)\}/g, (match, before: string, key: string) => {
+  return template.replace(PLACEHOLDER, (match, prefix: string | undefined, key: string) => {
     const raw = params[key];
     if (raw === undefined) return match;
     const value = String(raw);
-    return `${before}${prefixed(before, value)}${value}`;
+    return `${prefix ?? ""}${hyphenFor(prefix, value)}${value}`;
   });
 }

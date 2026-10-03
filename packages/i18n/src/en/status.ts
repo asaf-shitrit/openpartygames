@@ -52,6 +52,8 @@ export const status = {
   storageBlockedTitle: "Local storage is blocked",
   storageBlockedBody:
     "This screen could not read the room it created. Allow site data for this site and reload, or start a new room here.",
+  roomGoneTitle: "This room doesn't exist",
+  roomGoneBody: "Check the room code, or start a new room here.",
   otherHostTitle: "This room is hosted on another screen",
   otherHostBody: "Open this room on the screen that created it, or start a new room here.",
   connectingTitle: "Connecting…",

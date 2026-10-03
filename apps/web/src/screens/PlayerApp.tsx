@@ -151,8 +151,15 @@ function busyFor(
   return joinRequested && !error;
 }
 
-function errorFor(t: Dictionary, error: RoomSocketError | null): string | null {
+function errorFor(
+  t: Dictionary,
+  error: RoomSocketError | null,
+  joinAsked: boolean,
+): string | null {
   if (!error) return null;
+  // A reload with a token the room no longer honours (the player was removed) makes the socket
+  // try to join with no name at all. Nobody typed a bad name, so there is nothing to scold.
+  if (error.code === "name-invalid" && !joinAsked) return null;
   return errorCopy(t)[error.code];
 }
 
@@ -506,7 +513,7 @@ export function PlayerApp({ code }: { code: string }) {
   useOutlivedError(socket, view);
   const myAvatar = avatarFor(me);
   const myName = nameFor(me, joinedName);
-  const error = errorFor(t, socket.lastError);
+  const error = errorFor(t, socket.lastError, joinRequested);
 
   const donePicker = () => {
     markAvatarPicked(code, playerId);
@@ -553,6 +560,7 @@ export function PlayerApp({ code }: { code: string }) {
   const showResults = showsResults(view, dismissedResultAt);
   return (
     <>
+      <ReconnectOverlay status={socket.status} />
       <PhaseEnter phaseKey={playerScreenKey(view, showPicker, showResults)}>
         <PlayerStage
           view={view}
@@ -566,7 +574,6 @@ export function PlayerApp({ code }: { code: string }) {
           onNextRound={() => setDismissedResultAt(finishedAtOf(view))}
         />
       </PhaseEnter>
-      <ReconnectOverlay status={socket.status} />
     </>
   );
 }

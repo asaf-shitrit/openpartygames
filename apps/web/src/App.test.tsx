@@ -122,11 +122,27 @@ describe("App routing", () => {
     expect(screen.getByText("Join a game")).toBeTruthy();
   });
 
-  it("renders the host app at /host/<code>", () => {
+  it("renders the host app at /host/<code>", async () => {
+    // No host token here, so the host app asks the server whether the room exists at all
+    // before deciding what to say about it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>(async () =>
+        Response.json({
+          code: "BKTZ",
+          exists: true,
+          locked: false,
+          inGame: false,
+          playerCount: 1,
+          joinable: true,
+        }),
+      ),
+    );
     renderAt("/host/BKTZ");
     expect(
-      screen.getByText("This room is hosted on another screen"),
+      await screen.findByText("This room is hosted on another screen"),
     ).toBeTruthy();
+    vi.unstubAllGlobals();
   });
 
   it("renders the credits page", () => {
