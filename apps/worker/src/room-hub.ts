@@ -24,6 +24,8 @@ import type { MatchStats } from "./stats";
 
 /** Snapshot key inside Durable Object storage. */
 export const ROOM_KEY = "room";
+/** Storage key for the end of a restored room's wait for its phones. */
+export const GRACE_KEY = "graceUntil";
 /** A room with no connections and no running game is deleted after this long. */
 export const IDLE_MS = 2 * 60 * 60 * 1000;
 /**
@@ -75,6 +77,9 @@ export interface HubStorage {
   get(): Promise<RoomSnapshot | undefined>;
   put(snapshot: RoomSnapshot): Promise<void>;
   deleteAll(): Promise<void>;
+  /** When a restored room stops waiting for phones; undefined when no wait is outstanding. */
+  getGraceUntil(): Promise<number | undefined>;
+  setGraceUntil(at: number | null): Promise<void>;
   setAlarm(at: number): Promise<void>;
 }
 
@@ -139,8 +144,9 @@ export class RoomHub {
   private readonly budgets: Map<HubSocket, Budget>;
   /**
    * When a restored room stops waiting for phones and reconciles seats against live sockets;
-   * null for a room that was not restored, or once it has. Not persisted: a restart before it
-   * fires restores the room again and starts a fresh wait.
+   * null for a room that was not restored, or once it has. It lives in storage too, because
+   * a process can be gone again before the alarm rings (hibernation, another deploy), and a
+   * wait that restarted with every process would be pushed back forever.
    */
   private reconcileAt: number | null;
 
@@ -151,7 +157,7 @@ export class RoomHub {
       : null;
     this.resumed = snapshot === undefined;
     this.budgets = new Map();
-    this.reconcileAt = snapshot ? options.now() + RECONNECT_GRACE_MS : null;
+    this.reconcileAt = null;
   }
 
   /** True when this room owns the code, so the adapter can 404 every other socket. */
@@ -282,7 +288,8 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    await this.apply(mergeResults([this.reconcileWhenDue(room, now), room.tick(now)]));
+    const reconciled = await this.reconcileWhenDue(room, now);
+    await this.apply(mergeResults([reconciled, room.tick(now)]));
     if (!room.isIdleSince(now, IDLE_MS)) return;
 
     this.room = null;
@@ -303,17 +310,30 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
+    await this.beginGrace(now);
     const result = room.resumeStart(now);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
   }
 
+  /** Picks up the wait an earlier process began, or begins one: every wake might follow a crash. */
+  private async beginGrace(now: number): Promise<void> {
+    const stored = await this.options.storage.getGraceUntil();
+    if (stored !== undefined) {
+      this.reconcileAt = stored;
+      return;
+    }
+    this.reconcileAt = now + RECONNECT_GRACE_MS;
+    await this.options.storage.setGraceUntil(this.reconcileAt);
+  }
+
   /** Reconciles once the grace is over; an empty result before that. */
-  private reconcileWhenDue(room: RoomCore, now: number): HandleResult {
+  private async reconcileWhenDue(room: RoomCore, now: number): Promise<HandleResult> {
     if (this.reconcileAt === null || now < this.reconcileAt) {
       return mergeResults([]);
     }
     this.reconcileAt = null;
+    await this.options.storage.setGraceUntil(null);
     return this.reconcileConnections(room, now);
   }
 
