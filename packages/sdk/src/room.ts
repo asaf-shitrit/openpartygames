@@ -65,6 +65,12 @@ const SHORT_OF_PLAYERS: StartNotice = {
   message: "You need more players to start.",
 };
 
+/** Why a start that cannot begin is abandoned: too few players left, or something else. */
+function startNoticeFor(def: AnyGame | undefined, playerIds: PlayerId[]): StartNotice {
+  const short = def !== undefined && playerIds.length < def.minPlayers;
+  return short ? SHORT_OF_PLAYERS : START_FAILED;
+}
+
 export const START_TIMEOUT_MS = 15_000;
 
 interface PlayerRecord {
@@ -523,8 +529,7 @@ class RoomImpl implements RoomCore {
       (id) => this.getPlayer(id) !== undefined,
     );
     if (!this.canBegin(def, content, playerIds)) {
-      const short = def !== undefined && playerIds.length < def.minPlayers;
-      this.abortStartNow(out, short ? SHORT_OF_PLAYERS : START_FAILED);
+      this.abortStartNow(out, startNoticeFor(def, playerIds));
       return result(out);
     }
     const state = def.setup(this.makeCtx({ playerIds, content }, now));
