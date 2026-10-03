@@ -248,12 +248,14 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, startedAt, sen
 
   const onSquiggle = useCallback(() => {
     // Clear first: appending the squiggle over strokes already in the room would keep some of
-    // them, and a plain truncate to the squiggle's length would keep the wrong ones.
-    commitDrawingChange({ roomCode: scope, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate });
+    // them, and a plain truncate to the squiggle's length would keep the wrong ones. The clear
+    // is always allowed: the player chose to throw the drawing away, so a pad that lost its
+    // mirror has nothing to protect (the rules still check the truncate against `from`).
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: emptyDoodle(), sentRef, send, canTruncate: true });
     latestRef.current = SQUIGGLE_DOODLE;
-    commitDrawingChange({ roomCode: scope, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate });
+    commitDrawingChange({ roomCode: scope, drawingId, doodle: SQUIGGLE_DOODLE, sentRef, send, canTruncate: true });
     send({ type: "doodle-done", drawingId });
-  }, [canTruncate, drawingId, scope, send, sentRef]);
+  }, [drawingId, scope, send, sentRef]);
 
   return (
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>

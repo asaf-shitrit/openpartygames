@@ -170,6 +170,19 @@ describe("PhoneDraw", () => {
     ]);
   });
 
+  it("the squiggle replaces the room's strokes even when this phone lost its mirror", () => {
+    // A rejoin from another phone: the room holds 3 strokes, this pad has none of them.
+    const send = vi.fn<(action: DoodleAction) => void>();
+    renderDraw(baseView({ myStrokeCounts: { "p1:0": 3 } }), send);
+    clickSquiggle();
+    const actions = send.mock.calls.map(([action]) => action);
+    expect(actions).toEqual([
+      { type: "truncate", drawingId: "p1:0", from: 3, to: 0 },
+      { type: "strokes", drawingId: "p1:0", from: 0, strokes: SQUIGGLE_DOODLE.s },
+      { type: "doodle-done", drawingId: "p1:0" },
+    ]);
+  });
+
   it("shows a waiting state when there are no prompts yet", () => {
     renderDraw(baseView({ myPrompts: [] }));
     expect(screen.getByText("Waiting on your prompts…")).toBeTruthy();
