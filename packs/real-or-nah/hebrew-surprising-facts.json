@@ -80,7 +80,7 @@
       "id": "ben-yehuda-ice-cream",
       "prompt": "אליעזר בן-יהודה המציא את המילה ____.",
       "answer": "גלידה",
-      "alternates": [],
+      "alternates": ["בובה", "אופניים"],
       "decoys": [
         "פיצה",
         "שוקולד",
