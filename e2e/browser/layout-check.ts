@@ -115,11 +115,35 @@ async function stableViolations(page: Page, surface: Surface): Promise<Violation
   return first.filter((found) => seenAgain.has(identity(found)));
 }
 
+
+const PAINTED_PATH = fileURLToPath(new URL("./painted.js", import.meta.url));
+
+declare global {
+  interface Window {
+    opgPainted?: {
+      problems: () => string[];
+      underBanner: (pattern: string) => string[];
+    };
+  }
+}
+
+/**
+ * Content that is in the page but not on screen (see painted.js). The layout invariants run
+ * against every element and still passed when a game's whole TV body collapsed to zero height
+ * under its frame, so this is asked separately, at every in-play check.
+ */
+async function clippedAway(page: Page): Promise<string[]> {
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  return page.evaluate(() => window.opgPainted?.problems() ?? []);
+}
+
 export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {
   await page.waitForTimeout(SETTLE_MS);
   await ensureInjected(page);
   const violations = await stableViolations(page, surface);
   expect(violations, `${label}:\n${report(violations)}`).toEqual([]);
+  expect(await clippedAway(page), `${label}: content on the page but not on screen`).toEqual([]);
 }
 
 /**
@@ -139,4 +163,11 @@ export async function expectPainted(locator: Locator, label: string): Promise<vo
     return hit !== null && element.contains(hit);
   });
   expect(painted, `${label} is painted on screen, not clipped away by a collapsed ancestor`).toBe(true);
+}
+
+/** Text and controls the reconnect banner sits on top of, by comparing rectangles. */
+export async function coveredByBanner(page: Page): Promise<string[]> {
+  const present = await page.evaluate(() => "opgPainted" in window);
+  if (!present) await page.addScriptTag({ path: PAINTED_PATH });
+  return page.evaluate(() => window.opgPainted?.underBanner("Reconnecting") ?? []);
 }

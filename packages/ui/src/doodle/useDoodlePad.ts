@@ -44,6 +44,8 @@ interface PointerState {
   live: LiveStroke | null;
   activePointerId: number | null;
   lastEndAt: number | null;
+  /** Strokes each finished drag produced, newest last; one Undo removes a whole drag. */
+  dragSizes: number[];
   keyboardAt: GridPoint;
 }
 
@@ -61,6 +63,10 @@ function setActivePointerField(ref: RefObject<PointerState>, id: number | null):
 
 function setLastEndField(ref: RefObject<PointerState>, at: number | null): void {
   ref.current.lastEndAt = at;
+}
+
+function setDragSizesField(ref: RefObject<PointerState>, sizes: number[]): void {
+  ref.current.dragSizes = sizes;
 }
 
 function setKeyboardAtField(ref: RefObject<PointerState>, at: GridPoint): void {
@@ -254,7 +260,9 @@ function commitLiveStroke(options: CommitStrokeOptions, pointerId: number): void
   const gap = lastEndAt === null ? 0 : now - lastEndAt;
   setLastEndField(stateRef, now);
   const added = finalizeStrokes({ ink: live.ink, points: live.points, durationMs: now - live.startedAt, gapMs: gap }, strokes);
-  if (added.length > 0) commit([...strokes, ...added]);
+  if (added.length === 0) return;
+  setDragSizesField(stateRef, [...stateRef.current.dragSizes, added.length]);
+  commit([...strokes, ...added]);
 }
 
 function clampGrid(value: number): number {
@@ -396,6 +404,7 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     activePointerId: null,
     lastEndAt: null,
     keyboardAt: centerPoint(),
+    dragSizes: [],
   });
   const { canvasRef, repaint } = usePadCanvas(stateRef, options);
 
@@ -430,8 +439,13 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
   };
 
   const undo = useCallback(() => {
-    const { strokes } = stateRef.current;
-    if (strokes.length > 0) commit(strokes.slice(0, -1));
+    const { strokes, dragSizes } = stateRef.current;
+    if (strokes.length === 0) return;
+    // A drag longer than the point cap was stored as several strokes; take it back whole.
+    // Strokes restored from before this pad mounted have no recorded size: one apiece.
+    const size = Math.min(dragSizes.at(-1) ?? 1, strokes.length);
+    setDragSizesField(stateRef, dragSizes.slice(0, -1));
+    commit(strokes.slice(0, strokes.length - size));
   }, [commit, stateRef]);
 
   const clear = useCallback(() => {
@@ -442,6 +456,7 @@ export function useDoodlePad(options: UseDoodlePadOptions): UseDoodlePad {
     }
     setConfirmingClear(false);
     setLastEndField(stateRef, null);
+    setDragSizesField(stateRef, []);
     commit([]);
   }, [commit, confirmingClear, stateRef]);
 

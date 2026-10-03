@@ -10,7 +10,7 @@ import { Icon } from "@opg/ui";
  * every in-progress draft on a phone is local `useState`: the imposter's vote, a half-typed
  * guess, the lie a player is still wording. Mobile browsers close the socket whenever the tab
  * goes to the background, so unmounting the game here would cost a player their round for
- * glancing at a text message. It takes no taps and covers nothing below the room strip.
+ * glancing at a text message. It takes no taps and takes its own row, so it covers nothing.
  */
 export function PhoneReconnectingBanner() {
   const { t } = useLocale();
@@ -18,9 +18,10 @@ export function PhoneReconnectingBanner() {
     <output
       aria-live="polite"
       style={{
-        position: "fixed",
+        // Sticky, not fixed: it takes its own row above the screen, so it never sits on the
+        // game's title or the first thing a player reads, and still follows a scrolled page.
+        position: "sticky",
         insetBlockStart: 0,
-        insetInline: 0,
         zIndex: 10,
         display: "flex",
         justifyContent: "center",

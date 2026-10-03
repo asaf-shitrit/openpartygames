@@ -67,3 +67,15 @@ describe("normalizeAnswer, Hebrew and apostrophes", () => {
     expect(normalizeAnswer("cafe\u0301")).toBe(normalizeAnswer("caf\u00e9"));
   });
 });
+
+describe("normalizeAnswer, gershayim", () => {
+  it("joins an acronym at a gershayim or an ASCII quote between Hebrew letters", () => {
+    expect(normalizeAnswer("צה\u05F4ל")).toBe("צהל");
+    expect(normalizeAnswer('צה"ל')).toBe("צהל");
+  });
+
+  it("still treats a quote around words as punctuation", () => {
+    expect(normalizeAnswer('"hello" world')).toBe("hello world");
+    expect(normalizeAnswer('say "שלום" now')).toBe("say שלום now");
+  });
+});

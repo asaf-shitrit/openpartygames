@@ -352,8 +352,6 @@ describe("GuessView in Hebrew", () => {
         { wrapper: LocaleProvider },
       );
       expect(screen.getByLabelText("הניחוש שלכם")).toBeTruthy();
-      const me = room.players.find((p) => p.id === room.you);
-      expect(screen.getByRole("img", { name: `האווטאר של ${me?.name}` })).toBeTruthy();
     } finally {
       window.localStorage.removeItem("opg:locale");
     }

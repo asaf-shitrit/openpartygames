@@ -8,6 +8,7 @@ import {
   ANONYMOUS_CALLER,
   RoomHub,
   ROOM_KEY,
+  GRACE_KEY,
   type HubOptions,
   type HubSocket,
   type HubSockets,
@@ -150,6 +151,11 @@ function hubStorage(ctx: DurableObjectState): HubStorage {
     get: () => ctx.storage.get<RoomSnapshot>(ROOM_KEY),
     put: (snapshot) => ctx.storage.put(ROOM_KEY, snapshot),
     deleteAll: () => ctx.storage.deleteAll(),
+    getGraceUntil: () => ctx.storage.get<number>(GRACE_KEY),
+    setGraceUntil: async (at) => {
+      if (at === null) await ctx.storage.delete(GRACE_KEY);
+      else await ctx.storage.put(GRACE_KEY, at);
+    },
     setAlarm: (at) => ctx.storage.setAlarm(at),
   };
 }

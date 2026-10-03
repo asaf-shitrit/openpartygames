@@ -308,3 +308,11 @@ export function cleanPlayerName(input: string): string | null {
   if (name.replace(INVISIBLE_CHARS, "").trim().length === 0) return null;
   return name;
 }
+
+/**
+ * What makes two names "the same name": case, Unicode form and invisible characters ignored,
+ * so "Dana" and "Dana" plus a zero-width space cannot take two seats that look identical.
+ */
+export function playerNameKey(name: string): string {
+  return name.normalize("NFC").replace(INVISIBLE_CHARS, "").toLowerCase();
+}

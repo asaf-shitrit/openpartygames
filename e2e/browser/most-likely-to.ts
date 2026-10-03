@@ -3,6 +3,7 @@
 // and each phone lands its own personal result card.
 
 import { expect, type Page } from "@playwright/test";
+import { assertLayout } from "./layout-check";
 import type { Phone } from "./harness";
 
 /**
@@ -13,11 +14,22 @@ export async function playOneRound(tv: Page, phones: Phone[]): Promise<void> {
   await expect(tv.getByText("Vote for anyone, even yourself")).toBeVisible({
     timeout: 45_000,
   });
+  await assertLayout(tv, "tv", "most-likely-to vote phase (tv)");
+  await assertPhones(phones, "most-likely-to vote phase");
   await lockVotes(phones);
   await expect(tv.getByText("Most likely!").first()).toBeVisible({
     timeout: 45_000,
   });
+  await assertLayout(tv, "tv", "most-likely-to reveal phase (tv)");
   await expectPersonalCards(phones);
+  await assertPhones(phones, "most-likely-to reveal phase");
+}
+
+/** Every phone's current screen holds to the layout and painted checks. */
+async function assertPhones(phones: Phone[], label: string): Promise<void> {
+  await Promise.all(
+    phones.map((phone) => assertLayout(phone.page, "phone", `${label} (${phone.name})`)),
+  );
 }
 
 async function lockVotes(phones: Phone[]): Promise<void> {
