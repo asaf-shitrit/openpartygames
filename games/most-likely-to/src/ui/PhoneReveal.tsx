@@ -39,10 +39,8 @@ function ResultCard({
   me,
   cardRef,
   level,
-  t,
 }: {
   level: 1 | 2;
-  t: Dictionary;
   personal: PersonalReveal;
   live: boolean;
   totals: Record<string, number>;
@@ -252,7 +250,6 @@ export function PhoneReveal(props: PhoneRevealProps) {
           cardRef={cardRef}
           // A no-TV room's stage above already holds the h1 (the prompt).
           level={controlsHeadingLevel(stage !== null)}
-          t={t}
         />
       ) : (
         <Waiting noTv={stage !== null} prompt={view.prompt} suspense={suspense} t={t} />
