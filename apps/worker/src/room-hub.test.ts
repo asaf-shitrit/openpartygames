@@ -651,6 +651,29 @@ describe("RoomHub restore after a crash or deploy", () => {
     expect(restored.storage.alarms.at(-1)).toBe(born + RECONNECT_GRACE_MS);
   });
 
+  it("books a grace an earlier process stored but died before booking", async () => {
+    const lobby = await makeLobby();
+    const restored = restartHub(lobby);
+    const graceEnd = restored.clock.now() + 5_000;
+    restored.storage.graceUntil = graceEnd;
+
+    await restored.hub.close(accept(restored));
+
+    expect(restored.storage.alarms.at(-1)).toBe(graceEnd);
+  });
+
+  it("runs no grace for a room created over an idle snapshot", async () => {
+    const old = makeHub();
+    await old.hub.init("BCDF", "host-token");
+    old.clock.advance(IDLE_MS + 1);
+    const fresh = restartHub(old);
+    expect(await fresh.hub.init("CDFG", "host-token")).toBe(true);
+
+    await fresh.hub.close(accept(fresh));
+
+    expect(fresh.storage.graceUntil).toBeUndefined();
+  });
+
   it("keeps the seats whose sockets survived hibernation", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);

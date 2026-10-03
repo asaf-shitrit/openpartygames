@@ -202,6 +202,8 @@ export class RoomHub {
       contentLanguage,
     });
     this.room = room;
+    // A brand-new room has no seats a crash could have stranded, so it needs no grace.
+    this.resumed = true;
 
     const packs = await this.loadPacks();
     await this.apply(room.setPackCatalog(packs, this.options.now()));
@@ -310,7 +312,8 @@ export class RoomHub {
     const room = this.room;
     if (!room) return;
     const now = this.options.now();
-    if (await this.beginGrace(now)) await this.armAlarm();
+    await this.beginGrace(now);
+    await this.armAlarm();
     const result = room.resumeStart(now);
     if (!result.changed && result.effects.length === 0) return;
     await this.apply(result);
@@ -318,18 +321,17 @@ export class RoomHub {
 
   /**
    * Picks up the wait an earlier process began, or begins one: every wake might follow a crash.
-   * True when it began one, which then needs an alarm: the wake may be an event that never
-   * reaches `apply`, and the alarm already booked can be hours away.
+   * The caller books its alarm either way: the wake may be an event that never reaches `apply`,
+   * and an earlier process may have died between storing the wait and booking it.
    */
-  private async beginGrace(now: number): Promise<boolean> {
+  private async beginGrace(now: number): Promise<void> {
     const stored = await this.options.storage.getGraceUntil();
     if (stored !== undefined) {
       this.reconcileAt = stored;
-      return false;
+      return;
     }
     this.reconcileAt = now + RECONNECT_GRACE_MS;
     await this.options.storage.setGraceUntil(this.reconcileAt);
-    return true;
   }
 
   /** Reconciles once the grace is over; an empty result before that. */
