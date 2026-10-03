@@ -40,7 +40,7 @@ import type {
 } from "./types";
 import { createRng, restoreRng } from "./rng";
 
-const VIP_GRACE_MS = 60_000;
+export const VIP_GRACE_MS = 60_000;
 const MAX_TICK_ITERATIONS = 50;
 
 /**

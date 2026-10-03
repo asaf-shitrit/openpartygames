@@ -44,6 +44,8 @@ export interface StoredRoom {
   phase: string;
   players: StoredPlayer[];
   hostConnected?: boolean;
+  /** The running game's engine state, when a game is on. */
+  game?: { state: { phase: string } } | null;
   emptySince?: number | null;
 }
 
