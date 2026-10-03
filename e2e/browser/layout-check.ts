@@ -135,7 +135,13 @@ declare global {
 async function clippedAway(page: Page): Promise<string[]> {
   const present = await page.evaluate(() => "opgPainted" in window);
   if (!present) await page.addScriptTag({ path: PAINTED_PATH });
-  return page.evaluate(() => window.opgPainted?.problems() ?? []);
+  const first = await page.evaluate(() => window.opgPainted?.problems() ?? []);
+  if (first.length === 0) return [];
+  // Same two-sample rule as stableViolations: a frame caught mid phase change is not a bug a
+  // player could meet, so only what is still wrong a moment later counts.
+  await page.waitForTimeout(RESCAN_GAP_MS);
+  const second = new Set(await page.evaluate(() => window.opgPainted?.problems() ?? []));
+  return first.filter((problem) => second.has(problem));
 }
 
 export async function assertLayout(page: Page, surface: Surface, label: string): Promise<void> {

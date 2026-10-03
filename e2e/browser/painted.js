@@ -31,13 +31,26 @@ function clippedBy(element) {
   return false;
 }
 
-/** Fixed and sticky chrome (a footer, a banner) legitimately sits over a scrolling page. */
-function isStuck(element) {
-  for (let up = element; up !== null; up = up.parentElement) {
+/**
+ * Fixed and sticky chrome (a footer, a banner) legitimately sits over a scrolling page. Only
+ * chrome that does not contain `heading` counts: the TV's whole stage is `position: fixed` and
+ * holds every heading, so a walk that stopped at any fixed ancestor could never fail there.
+ */
+function isChromeOver(hit, heading) {
+  for (let up = hit; up !== null; up = up.parentElement) {
     const { position } = getComputedStyle(up);
-    if (position === "fixed" || position === "sticky") return true;
+    if ((position === "fixed" || position === "sticky") && !up.contains(heading)) return true;
   }
   return false;
+}
+
+/** The product of every ancestor's opacity: a faded-out parent hides a child that says 1. */
+function effectiveOpacity(element) {
+  let opacity = 1;
+  for (let up = element; up !== null; up = up.parentElement) {
+    opacity *= Number(getComputedStyle(up).opacity);
+  }
+  return opacity;
 }
 
 /** Text a player can see in principle: sized, shown, and not marked aria-hidden. */
@@ -49,7 +62,8 @@ function isShownText(element) {
   if (rect.width < 4 || rect.height < 4) return false;
   const style = getComputedStyle(element);
   if (style.visibility === "hidden" || style.display === "none") return false;
-  if (Number(style.opacity) === 0) return false;
+  // Mid fade-in (a phase entering) is moving, not missing: only judge what has settled in.
+  if (effectiveOpacity(element) < 0.99) return false;
   return element.closest("[aria-hidden='true'], [hidden]") === null;
 }
 
@@ -78,11 +92,11 @@ function hitAtCentre(heading) {
 function headingUnpainted(heading) {
   const rect = heading.getBoundingClientRect();
   if (rect.width < 4 || rect.height < 4) return false;
-  if (getComputedStyle(heading).opacity === "0") return false;
+  if (effectiveOpacity(heading) < 0.99) return false;
   const hit = hitAtCentre(heading);
   if (hit === undefined) return false;
   if (hit === null) return true;
-  if (isStuck(hit)) return false;
+  if (isChromeOver(hit, heading)) return false;
   return !(heading.contains(hit) || hit.contains(heading));
 }
 
