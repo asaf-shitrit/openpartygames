@@ -6,7 +6,8 @@
 // src/ui/stage/ is the reference for the shape.
 import type { CSSProperties } from "react";
 import type { PlayerId, PlayerSummary } from "@opg/protocol";
-import { Avatar, Icon } from "@opg/ui";
+import { Avatar, Icon, Timer } from "@opg/ui";
+import type { ServerClock } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { DoodleHostView, DoodlePhase } from "../state";
@@ -66,15 +67,6 @@ function othersOf(view: DoodleHostView): PlayerId[] {
   return view.playerIds.filter((id) => id !== view.artistId);
 }
 
-function drawContent(view: DoodleHostView, t: Dictionary): StageContent {
-  return {
-    label: t.doodleBluff.everyoneIsDrawing,
-    count: format(t.doodleBluff.drawnOfTotal, { drawn: view.drawnIds.length, total: view.playerIds.length }),
-    ids: view.playerIds,
-    doneIds: view.drawnIds,
-  };
-}
-
 function titleContent(view: DoodleHostView, t: Dictionary): StageContent {
   const others = othersOf(view);
   return {
@@ -95,17 +87,21 @@ function voteContent(view: DoodleHostView, t: Dictionary): StageContent {
   };
 }
 
-const CONTENT = { draw: drawContent, title: titleContent, vote: voteContent } as const;
+const CONTENT = { title: titleContent, vote: voteContent } as const;
 
-/** The phases that stage a roster. Reveal and gallery stage the whole host screen instead. */
-export type StagedPhase = keyof typeof CONTENT;
+/** The phases with their own controls under a stage. Reveal and gallery stage the whole host
+ * screen instead, and the draw phase stages itself as one compact row (DrawHeader). */
+export type StagedPhase = "draw" | keyof typeof CONTENT;
+
+/** The phases whose stage is a roster of avatars. */
+export type RosterPhase = keyof typeof CONTENT;
 
 export function isStagedPhase(phase: DoodlePhase): phase is StagedPhase {
   return phase === "draw" || phase === "title" || phase === "vote";
 }
 
 export interface PhoneStageProps {
-  phase: StagedPhase;
+  phase: RosterPhase;
   /** The host view, in a no-TV room only; null in a room with a shared screen. */
   stage: DoodleHostView | null;
   players: PlayerSummary[];
@@ -126,6 +122,41 @@ export function PhoneStage({ phase, stage, players }: PhoneStageProps) {
           <StageAvatar key={id} id={id} done={doneIds.includes(id)} players={players} t={t} />
         ))}
       </div>
+    </div>
+  );
+}
+
+export interface DrawHeaderProps {
+  /** The host view, in a no-TV room only. */
+  stage: DoodleHostView;
+  roomCode: string | undefined;
+  clock: ServerClock;
+  deadline: number | null;
+  timerStartedAt: number | null;
+}
+
+/**
+ * The whole of a no-TV phone's header while drawing: game name, how many have finished, the room
+ * code and the clock in one row. The strip and the avatar roster used to stack to about 205px,
+ * which on a 360x640 phone left the canvas 150px. The roster is the part given up; the count
+ * stays, and so does the room code, the rejoin path for a phone that died.
+ */
+export function DrawHeader({ stage, roomCode, clock, deadline, timerStartedAt }: DrawHeaderProps) {
+  const { t } = useLocale();
+  const count = format(t.doodleBluff.drawnOfTotal, { drawn: stage.drawnIds.length, total: stage.playerIds.length });
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <h1 className="opg-marker" style={{ margin: 0, fontSize: 26, lineHeight: 1.1 }}>
+          {t.doodleBluff.title}
+        </h1>
+        <div style={LABEL}>
+          {roomCode ? <span>{format(t.kit.roomCode, { code: roomCode })}</span> : null}
+          {roomCode ? <span aria-hidden="true"> · </span> : null}
+          <span>{count}</span>
+        </div>
+      </div>
+      <Timer deadline={deadline} clock={clock} startedAt={timerStartedAt} size={60} haptics />
     </div>
   );
 }

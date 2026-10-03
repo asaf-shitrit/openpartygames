@@ -64,8 +64,8 @@ const SIZES = [
   { width: 430, height: 932 },
 ];
 
-/** Smallest canvas a finger can still draw on: what a 360x640 no-TV phone leaves under its stage. */
-const MIN_CANVAS = 140;
+/** Smallest canvas worth drawing on, at any phone size: what 360x640 leaves in a no-TV room once its header is one row. */
+const MIN_CANVAS = 260;
 
 async function inViewport(locator: Locator) {
   return locator.evaluate((el) => {

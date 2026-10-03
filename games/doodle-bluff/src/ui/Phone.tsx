@@ -11,7 +11,7 @@ import { ControlsLevelProvider } from "./common";
 import { HostGallery } from "./HostGallery";
 import { PhoneDraw } from "./PhoneDraw";
 import { PhoneReveal } from "./PhoneReveal";
-import { isStagedPhase, PhoneStage } from "./PhoneStage";
+import { DrawHeader, isStagedPhase, PhoneStage } from "./PhoneStage";
 import { PhoneTitle } from "./PhoneTitle";
 import { PhoneVote } from "./PhoneVote";
 
@@ -60,7 +60,9 @@ function controlsFor(props: PhoneProps): ReactNode {
 function StagedPhase(props: PhoneProps & { phase: "draw" | "title" | "vote" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, flexGrow: 1, minHeight: 0 }}>
-      <PhoneStage phase={props.phase} stage={props.stage} players={props.room.players} />
+      {props.phase === "draw" ? null : (
+        <PhoneStage phase={props.phase} stage={props.stage} players={props.room.players} />
+      )}
       <ControlsLevelProvider value={props.stage === null ? 1 : 2}>{controlsFor(props)}</ControlsLevelProvider>
     </div>
   );
@@ -97,9 +99,22 @@ function Strip({ view, deadline, timerStartedAt, clock }: Omit<PhoneProps, "room
 }
 
 export function Phone(props: PhoneProps) {
+  const roomCode = phoneRoomCode(props.room);
+  // A no-TV draw phase gets one compact row instead of the strip and the roster: the canvas
+  // needs the height.
   return (
-    <PhoneScreen roomCode={phoneRoomCode(props.room)}>
-      <Strip view={props.view} deadline={props.deadline} timerStartedAt={props.timerStartedAt} clock={props.clock} />
+    <PhoneScreen roomCode={roomCode}>
+      {props.view.phase === "draw" && props.stage !== null ? (
+        <DrawHeader
+          stage={props.stage}
+          roomCode={roomCode}
+          clock={props.clock}
+          deadline={props.deadline}
+          timerStartedAt={props.timerStartedAt}
+        />
+      ) : (
+        <Strip view={props.view} deadline={props.deadline} timerStartedAt={props.timerStartedAt} clock={props.clock} />
+      )}
       <PhaseEnter phaseKey={`${props.view.roundNumber}:${props.view.phase}`}>{renderPhase(props)}</PhaseEnter>
     </PhoneScreen>
   );
