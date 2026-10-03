@@ -108,6 +108,19 @@ describe("PhoneReveal, mounted late", () => {
 });
 
 describe("PhoneReveal, card copy", () => {
+  it("running total reads in Hebrew when the locale is Hebrew", () => {
+    vi.useFakeTimers();
+    stubVibrate();
+    window.localStorage.setItem("opg:locale", "he");
+    try {
+      setup("Phone: Maya reveal matched", 11200);
+      expect(screen.getByText("סה\"כ 2,000")).toBeTruthy();
+      expect(screen.queryByText(/total/)).toBeNull();
+    } finally {
+      window.localStorage.removeItem("opg:locale");
+    }
+  });
+
   it("matched: the vote matched the top pick", () => {
     vi.useFakeTimers();
     stubVibrate();
@@ -115,19 +128,6 @@ describe("PhoneReveal, card copy", () => {
     expect(screen.getByText("You read the room!")).toBeTruthy();
     expect(screen.getByText("+500. It's Dov.")).toBeTruthy();
     expect(screen.getByText("2,000 total")).toBeTruthy();
-  });
-
-  it("matched, in Hebrew: the running total is Hebrew too", () => {
-    vi.useFakeTimers();
-    stubVibrate();
-    window.localStorage.setItem("opg:locale", "he");
-    try {
-      setup("Phone: Maya reveal matched", 11200);
-    } finally {
-      window.localStorage.removeItem("opg:locale");
-    }
-    expect(screen.getByText('סה"כ 2,000')).toBeTruthy();
-    expect(screen.queryByText(/total/)).toBeNull();
   });
 
   it("missed: the vote went elsewhere", () => {

@@ -32,6 +32,7 @@ export const kit = {
    */
   crowns: { one: "1 crown", two: "{count} crowns", other: "{count} crowns" },
   doodle: {
+    full: "The page is full. Undo a stroke to keep drawing.",
     undo: "Undo",
     clear: "Clear",
     confirmClear: "Clear the drawing? Tap again to confirm",

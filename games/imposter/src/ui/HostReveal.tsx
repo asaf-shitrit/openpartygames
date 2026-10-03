@@ -437,7 +437,7 @@ function TallyRow({ count, shown }: { count: number; shown: number }) {
   const { t } = useLocale();
   return (
     <div style={{ height: 60, display: "flex", alignItems: "center", gap: 12 }}>
-      <TallyScratch count={count} drawn={shown} size={50} />
+      <TallyScratch count={count} drawn={shown} size={50} label={voteLabel(t, shown)} />
       <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
         {voteLabel(t, shown)}
       </div>

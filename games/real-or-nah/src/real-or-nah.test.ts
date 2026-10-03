@@ -208,6 +208,38 @@ describe("lie validation", () => {
     }
   });
 
+  it("rejects the truth typed with niqqud, without an apostrophe, or in a decomposed accent", () => {
+    const ctx = makeCtx({
+      content: {
+        kind: "facts",
+        items: [
+          fact("hebrew", "שלום", [], ["אחד", "שניים", "שלושה"]),
+          fact("dont", "don't stop", [], ["keep going", "slow down", "pause"]),
+          fact("cafe", "café", [], ["bar", "pub", "diner"]),
+        ],
+      },
+    });
+    const cases: Array<[string, string]> = [
+      ["hebrew", "שָׁלוֹם"],
+      ["dont", "dont stop"],
+      ["dont", "don\u2019t stop"],
+      ["cafe", "cafe\u0301"],
+    ];
+    for (const [id, text] of cases) {
+      const state = setup(ctx);
+      const only = { ...state, factIndex: state.facts.findIndex((f) => f.id === id) };
+      const next = lie(only, "p1", text, ctx);
+      expect(`${text}: ${next.lieErrors.p1}`).toBe(`${text}: truth`);
+    }
+  });
+
+  it("treats the same Hebrew lie with and without niqqud as a duplicate", () => {
+    const ctx = makeCtx();
+    let state = setup(ctx);
+    state = lie(state, "p1", "גירפה", ctx);
+    expect(lie(state, "p2", "גִּירָפָה", ctx).lieErrors.p2).toBe("duplicate");
+  });
+
   it("accepts a cleaned lie and clears a previous error", () => {
     const ctx = makeCtx();
     const rejected = lie(setup(ctx), "p1", "emus", ctx);

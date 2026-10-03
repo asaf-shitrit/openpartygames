@@ -29,6 +29,7 @@ import {
 } from "@opg/ui";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
+import { lettersLabel } from "./letters-label";
 import { resultDurationMs, type ImposterHostView } from "../state";
 import {
   hostResultBeats,
@@ -190,6 +191,7 @@ function GuessLine({
         revealed={lettersRevealed(beats, moment)}
         live={moment.live}
         size={tileSize}
+        label={lettersLabel(t, guessLetters, lettersRevealed(beats, moment))}
       />
     </div>
   );
@@ -494,7 +496,7 @@ function PointRowView({
       }}
     >
       <div
-        style={{ display: "flex", alignItems: "center", gap: 4, width: 264 }}
+        style={{ display: "flex", alignItems: "center", gap: 4, width: 312, flexShrink: 0 }}
       >
         {row.ids.slice(0, 4).map((id) => (
           <Avatar

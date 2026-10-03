@@ -101,6 +101,7 @@ export const imposter: Dictionary["imposter"] = {
     yourGuessLabel: "הניחוש שלכם",
     typeCrewWord: "הקלידו את המילה של הצוות",
     submitGuess: "שלחו ניחוש",
+    letters: { one: "אות אחת", other: "{count} אותיות" },
     guessSent: "הניחוש נשלח",
     guessing: "{name} מנחש…",
     caughtStage: "{name} נתפס!",
