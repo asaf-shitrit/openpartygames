@@ -258,6 +258,7 @@ function VoteLocked(
 function VoteForm(props: SectionProps) {
   const { view, players, me, deadline, clock, send, stage } = props;
   const { t } = useLocale();
+  useLockBarScrollPadding(stage !== null);
   const [pick, setPick] = useState<PlayerId | null>(null);
   const [sent, setSent] = useState(false);
 
@@ -369,6 +370,24 @@ function lockBarStyle(scrolls: boolean): CSSProperties {
     margin: "0 -18px -28px",
     padding: "10px 18px 16px",
   };
+}
+
+const LOCK_BAR_SCROLL_PADDING = "120px";
+
+/**
+ * While the pinned lock-in bar is up, tell the page's scroller to stop short of it, so a row
+ * scrolled or focused into view lands above the bar and not underneath it.
+ */
+function useLockBarScrollPadding(pinned: boolean): void {
+  useEffect(() => {
+    if (!pinned) return undefined;
+    const root = document.documentElement;
+    const before = root.style.scrollPaddingBottom;
+    root.style.scrollPaddingBottom = LOCK_BAR_SCROLL_PADDING;
+    return () => {
+      root.style.scrollPaddingBottom = before;
+    };
+  }, [pinned]);
 }
 
 export function Phone({
