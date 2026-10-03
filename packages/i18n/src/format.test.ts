@@ -45,4 +45,17 @@ describe("format", () => {
     expect(format("ל{name}", { name: "Émile" })).toBe("ל-Émile");
     expect(format("ל{name}", { name: "\u2066+5\u2069" })).toBe("ל-\u2066+5\u2069");
   });
+
+  it("does not treat a whole Hebrew word as a prefix", () => {
+    for (const word of ["כמו", "של", "מה", "כמה", "שלו", "מול"]) {
+      expect(format(`${word}{x}`, { x: "Dana" })).toBe(`${word}Dana`);
+      expect(format(`אז ${word}{x}`, { x: "Dana" })).toBe(`אז ${word}Dana`);
+    }
+  });
+
+  it("still hyphenates a single prefix letter and real prefix pairs", () => {
+    for (const prefix of ["ו", "ב", "ל", "ה", "מ", "ש", "כ", "וב", "ול", "ומ", "כש"]) {
+      expect(format(`${prefix}{x}`, { x: "Dana" })).toBe(`${prefix}-Dana`);
+    }
+  });
 });
