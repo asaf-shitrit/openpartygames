@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LEFT_PLAYER_GRACE_MS } from "@opg/sdk";
 import type { GameContext, Rng, SuperlativeContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import {
@@ -13,6 +14,7 @@ import {
   onAction,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   scores,
   setup,
   bot,
@@ -201,10 +203,47 @@ describe("early reveal", () => {
     expect(state.deadline).toBe(BASE_NOW + REVEAL_MS);
   });
 
-  it("a disconnected roster player does not block the early reveal", () => {
+  it("a disconnected roster player does not hold the vote for the whole timer", () => {
     const c = makeCtx({ n: 3, connected: ["p1", "p2"] });
     const state = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    // Not closed the instant they drop (a locked phone must keep its vote), but pulled in.
+    expect(state.phase).toBe("vote");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
+    expect(onDeadline(state, withCtx(c, { now: state.deadline ?? 0 })).phase).toBe("reveal");
+  });
+
+  it("pulls the vote in when the last holdout disconnects after everyone else voted", () => {
+    const c = makeCtx({ n: 3 });
+    const voted = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    expect(voted.deadline).toBe(BASE_NOW + VOTE_MS);
+    const later = withCtx(c, { now: BASE_NOW + 5000, connectedIds: ["p1", "p2"] });
+    const state = onPlayersChanged(voted, later);
+    expect(state.phase).toBe("vote");
+    expect(state.deadline).toBe(BASE_NOW + 5000 + LEFT_PLAYER_GRACE_MS);
+  });
+
+  it("never pushes a nearer deadline out", () => {
+    const c = makeCtx({ n: 3 });
+    const voted = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    const late = withCtx(c, { now: BASE_NOW + VOTE_MS - 1000, connectedIds: ["p1", "p2"] });
+    expect(onPlayersChanged(voted, late)).toBe(voted);
+  });
+
+  it("counts a holdout who reconnects and votes inside the grace", () => {
+    const c = makeCtx({ n: 3, connected: ["p1", "p2"] });
+    const waiting = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    const back = withCtx(c, { now: BASE_NOW + 3000, connectedIds: ["p1", "p2", "p3"] });
+    expect(onPlayersChanged(waiting, back)).toBe(waiting);
+    const state = onAction(waiting, "p3", { type: "vote", target: "p1" }, back);
     expect(state.phase).toBe("reveal");
+    expect(state.votes.p3).toBe("p1");
+  });
+
+  it("leaves the vote alone while a connected player is still to vote", () => {
+    const c = makeCtx({ n: 3 });
+    const state = castVotes(setup(c), c, { p1: "p2" });
+    const dc = withCtx(c, { connectedIds: ["p1", "p2"] });
+    expect(onPlayersChanged(state, dc)).toBe(state);
   });
 
   it("never advances when nobody is connected", () => {

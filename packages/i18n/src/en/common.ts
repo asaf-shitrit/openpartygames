@@ -5,7 +5,7 @@ export const common = {
   errorRoomFull: "That room is full.",
   errorRoomLocked: "That room is locked.",
   errorNameTaken: "That name is taken. Try another.",
-  errorNameInvalid: "Names are 1–12 characters.",
+  errorNameInvalid: "Names are 1–{max} characters.",
   errorNotEnoughPlayers: "Not enough players yet.",
   errorInvalidAction: "That didn't work. Check the game and packs.",
   errorGeneric: "Something went wrong. Try again.",

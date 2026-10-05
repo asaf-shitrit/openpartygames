@@ -522,4 +522,37 @@ describe("Timer ring", () => {
     expect(inlineStyle).toContain("animation-duration: 10000ms");
     expect(inlineStyle).toContain("animation-delay: -3000ms");
   });
+
+  it("restarts the ring cleanly when the deadline is pulled in and re-anchored", () => {
+    // RoomCore re-anchors timerStartedAt when a game shortens a phase (the left-player
+    // grace: 30s -> 8s). A CSS animation whose delay and duration change in place keeps its
+    // old start time, so the ring would land at an arbitrary fraction. A fresh element starts
+    // at the new, honest 8s ring.
+    const tree = (deadline: number, startedAt: number) => (
+      <LocaleProvider>
+        <Timer deadline={deadline} clock={clockAt(12_000)} startedAt={startedAt} />
+      </LocaleProvider>
+    );
+    const { container, rerender } = render(tree(30_000, 0));
+    const before = container.querySelectorAll("path")[1];
+    expect(screen.getByText("0:18")).toBeTruthy();
+    expect(before?.getAttribute("style") ?? "").toContain("animation-delay: -12000ms");
+
+    rerender(tree(20_000, 12_000));
+    const after = container.querySelectorAll("path")[1];
+    expect(after).not.toBe(before);
+    const style = after?.getAttribute("style") ?? "";
+    expect(style).toContain("animation-duration: 8000ms");
+    expect(style).toMatch(/animation-delay: -?0ms/);
+    expect(screen.getByText("0:08")).toBeTruthy();
+    expect(screen.getByRole("timer").getAttribute("data-stage")).toBe("hurry");
+  });
+
+  it("never shows negative time or a negative delay when the deadline jumps behind the clock", () => {
+    const { container } = renderTimer(
+      <Timer deadline={5_000} clock={clockAt(9_000)} startedAt={8_000} />,
+    );
+    expect(screen.getByText("0:00")).toBeTruthy();
+    expect(container.querySelectorAll("path")[1]?.getAttribute("style") ?? "").not.toContain("NaN");
+  });
 });

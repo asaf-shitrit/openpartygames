@@ -65,8 +65,9 @@ function zigzagOf(length: number): GridPoint[] {
 }
 
 function strokeOfPoints(count: number): Stroke {
-  const p = [0, 0];
-  for (let i = 1; i < count; i += 1) p.push(i % 2 === 0 ? 1 : -1, 40);
+  // A zigzag in the middle of the grid: every running point stays on it.
+  const p = [500, 500];
+  for (let i = 1; i < count; i += 1) p.push(i % 2 === 0 ? -1 : 1, i % 2 === 0 ? -40 : 40);
   return { c: 0, d: 0, g: 0, p };
 }
 

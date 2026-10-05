@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { PlayerSummary } from "@opg/protocol";
 import { LocaleProvider } from "@opg/i18n";
 import type { DoodleHostView } from "../state";
-import { isStagedPhase, PhoneStage } from "./PhoneStage";
+import { DrawHeader, isStagedPhase, PhoneStage } from "./PhoneStage";
 
 afterEach(() => {
   cleanup();
@@ -38,7 +38,7 @@ function hostView(overrides: Partial<DoodleHostView> = {}): DoodleHostView {
   };
 }
 
-function renderStage(phase: "draw" | "title" | "vote", stage: DoodleHostView | null) {
+function renderStage(phase: "title" | "vote", stage: DoodleHostView | null) {
   return render(
     <LocaleProvider>
       <PhoneStage phase={phase} stage={stage} players={PLAYERS} />
@@ -65,13 +65,6 @@ describe("PhoneStage", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("shows who has finished drawing, and how many", () => {
-    renderStage("draw", hostView({ drawnIds: ["maya"] }));
-    expect(screen.getByText("Everyone is drawing")).toBeTruthy();
-    expect(screen.getByText("1 of 3 finished")).toBeTruthy();
-    expect(screen.getAllByTestId("stage-done")).toHaveLength(1);
-  });
-
   it("counts titles against the players who may write one, leaving the artist out", () => {
     renderStage("title", hostView({ phase: "title", artistId: "priya", writtenIds: ["maya"] }));
     expect(screen.getByText("Who's written")).toBeTruthy();
@@ -87,16 +80,43 @@ describe("PhoneStage", () => {
   });
 
   it("marks a player who is still working without relying on contrast alone", () => {
-    renderStage("draw", hostView({ drawnIds: ["maya"] }));
-    // Two of the three carry no check badge; the badge, not the dimming, is the signal.
+    renderStage("vote", hostView({ phase: "vote", artistId: "priya", votedIds: ["maya"] }));
+    // One of the two carries a check badge; the badge, not the dimming, is the signal.
     expect(screen.getAllByTestId("stage-done")).toHaveLength(1);
-    expect(screen.getAllByLabelText(/avatar/)).toHaveLength(3);
+    expect(screen.getAllByLabelText(/avatar/)).toHaveLength(2);
   });
 
   it("renders in Hebrew when the locale is set", () => {
     window.localStorage.setItem("opg:locale", "he");
-    renderStage("draw", hostView({ drawnIds: ["maya", "dov"] }));
-    expect(screen.getByText("כולם מציירים")).toBeTruthy();
+    renderStage("vote", hostView({ phase: "vote", artistId: "priya", votedIds: ["maya", "dov"] }));
+    expect(screen.getByText("2 מתוך 2 הצביעו")).toBeTruthy();
+  });
+});
+
+function renderHeader(stage: DoodleHostView, roomCode: string | undefined) {
+  return render(
+    <LocaleProvider>
+      <DrawHeader stage={stage} roomCode={roomCode} clock={{ now: () => 0 }} deadline={null} timerStartedAt={null} />
+    </LocaleProvider>,
+  );
+}
+
+describe("DrawHeader", () => {
+  it("is one row: the game name, the room code with how many have finished, and the clock", () => {
+    renderHeader(hostView({ drawnIds: ["maya"] }), "BKTZ");
+    expect(screen.getByRole("heading", { name: "Doodle Bluff" })).toBeTruthy();
+    expect(screen.getByText("Room BKTZ")).toBeTruthy();
+    expect(screen.getByText("1 of 3 finished")).toBeTruthy();
+  });
+
+  it("leaves the room code out when the phone was not given one", () => {
+    renderHeader(hostView({ drawnIds: ["maya", "dov"] }), undefined);
+    expect(screen.getByText("2 of 3 finished")).toBeTruthy();
+  });
+
+  it("speaks Hebrew", () => {
+    window.localStorage.setItem("opg:locale", "he");
+    renderHeader(hostView({ drawnIds: ["maya", "dov"] }), "BKTZ");
     expect(screen.getByText("2 מתוך 3 סיימו")).toBeTruthy();
   });
 });

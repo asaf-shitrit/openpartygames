@@ -11,6 +11,7 @@
 // nothing for prefers-reduced-motion to turn off.
 import type { CSSProperties } from "react";
 import { useId } from "react";
+import { createPortal } from "react-dom";
 import { format, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { ServerClock } from "../game-ui";
@@ -19,7 +20,7 @@ import type { ClientRectLike } from "./geometry";
 import { doodleInkNames, DOODLE_INKS } from "./inks";
 import type { DoodleCanvasContext } from "./paint";
 import type { RefObject } from "react";
-import type { Doodle, GridPoint } from "@opg/sdk";
+import type { Doodle, GridPoint, InkIndex } from "@opg/sdk";
 import { GRID } from "@opg/sdk";
 import { DoodlePalette } from "./DoodlePalette";
 import { useDoodlePad } from "./useDoodlePad";
@@ -45,6 +46,13 @@ export interface DoodlePadProps {
   /** Test seam: builds the drawing context from the canvas. Default: canvas.getContext("2d"). */
   getContext?: (canvas: HTMLCanvasElement) => DoodleCanvasContext | null;
   style?: CSSProperties;
+  /**
+   * Where the ink palette, Undo and Clear go. Left out, they sit under the canvas. Given an
+   * element, they are portalled into it so the screen can pin them beside its main action;
+   * `null` means that element is not mounted yet, and they wait rather than flash in place.
+   * The slot is expected to be a flex row that wraps (the palette takes a full row of its own).
+   */
+  controlsSlot?: HTMLElement | null;
 }
 
 function defaultRectOf(el: Element): ClientRectLike {
@@ -128,6 +136,8 @@ function DoodleCanvasSurface({
       // inside it is positioned in percentages, so it follows.
       style={{
         position: "relative",
+        // Centred: a canvas shrunk to fit a short screen is narrower than its column.
+        alignSelf: "center",
         width: size,
         maxWidth: "100%",
         height: size,
@@ -158,6 +168,87 @@ function DoodleCanvasSurface({
   );
 }
 
+interface DoodleControlsProps {
+  inks: readonly string[];
+  inkNames: readonly string[];
+  selectedInk: InkIndex;
+  onSelectInk: (ink: InkIndex) => void;
+  strokeCount: number;
+  confirmingClear: boolean;
+  onUndo: () => void;
+  onClear: () => void;
+  onCancelClear: () => void;
+  /** In a screen's pinned toolbar the rows are laid out by the slot's flex, not stacked here. */
+  inSlot: boolean;
+}
+
+function toolButtonStyle(inSlot: boolean, order: number, disabled: boolean): CSSProperties {
+  return {
+    // Painted, not left to the browser: a disabled default button is grey text on grey, under
+    // the 4.5:1 floor. Ink on card stays readable and a fade says "nothing to undo yet".
+    background: "var(--opg-card)",
+    color: "var(--opg-ink)",
+    border: "3px solid var(--opg-ink)",
+    borderRadius: "var(--opg-radius-button)",
+    opacity: disabled ? 0.45 : 1,
+    minHeight: TAP_TARGET,
+    flex: inSlot ? "0 0 auto" : 1,
+    minWidth: inSlot ? 64 : undefined,
+    padding: inSlot ? "0 6px" : undefined,
+    order: inSlot ? order : undefined,
+    fontWeight: 700,
+    fontSize: 16,
+  };
+}
+
+/** Ink palette, Undo and Clear. Order: palette first, then the two buttons, whatever the slot. */
+function DoodleControls({
+  inks,
+  inkNames,
+  selectedInk,
+  onSelectInk,
+  strokeCount,
+  confirmingClear,
+  onUndo,
+  onClear,
+  onCancelClear,
+  inSlot,
+}: DoodleControlsProps) {
+  const { t } = useLocale();
+  return (
+    <>
+      <DoodlePalette
+        inks={inks}
+        inkNames={inkNames}
+        selected={selectedInk}
+        onSelect={onSelectInk}
+        name="doodle-pad-ink"
+        style={inSlot ? { flex: "1 0 100%", order: 1 } : undefined}
+      />
+      <div style={inSlot ? { display: "contents" } : { display: "flex", gap: 12 }}>
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={strokeCount === 0}
+          style={toolButtonStyle(inSlot, 2, strokeCount === 0)}
+        >
+          {t.kit.doodle.undo}
+        </button>
+        <button
+          type="button"
+          onClick={onClear}
+          onBlur={onCancelClear}
+          disabled={strokeCount === 0}
+          aria-label={confirmingClear ? t.kit.doodle.confirmClear : t.kit.doodle.clear}
+          style={toolButtonStyle(inSlot, 3, strokeCount === 0)}
+        >
+          {confirmingClear ? t.kit.doodle.tapAgainToClear : t.kit.doodle.clear}
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function DoodlePad({
   prompt,
   clock,
@@ -169,6 +260,7 @@ export function DoodlePad({
   rectOf = defaultRectOf,
   getContext = defaultGetContext,
   style,
+  controlsSlot,
 }: DoodlePadProps) {
   const { t } = useLocale();
   const {
@@ -187,6 +279,21 @@ export function DoodlePad({
   } = useDoodlePad({ clock, size, inks, initialDoodle, onChange, rectOf, getContext });
   const labelId = useId();
   const instructionsId = useId();
+  const inSlot = controlsSlot !== undefined;
+  const controls = (
+    <DoodleControls
+      inks={inks}
+      inkNames={inkNames ?? doodleInkNames(t.kit.ink)}
+      selectedInk={selectedInk}
+      onSelectInk={setSelectedInk}
+      strokeCount={strokeCount}
+      confirmingClear={confirmingClear}
+      onUndo={undo}
+      onClear={clear}
+      onCancelClear={cancelClear}
+      inSlot={inSlot}
+    />
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, ...style }}>
@@ -206,33 +313,11 @@ export function DoodlePad({
       <span id={instructionsId} style={SR_ONLY}>
         {t.kit.doodle.keyboardInstructions}
       </span>
-      <DoodlePalette
-        inks={inks}
-        inkNames={inkNames ?? doodleInkNames(t.kit.ink)}
-        selected={selectedInk}
-        onSelect={setSelectedInk}
-        name="doodle-pad-ink"
-      />
-      <div style={{ display: "flex", gap: 12 }}>
-        <button
-          type="button"
-          onClick={undo}
-          disabled={strokeCount === 0}
-          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700, fontSize: 16 }}
-        >
-          {t.kit.doodle.undo}
-        </button>
-        <button
-          type="button"
-          onClick={clear}
-          onBlur={cancelClear}
-          disabled={strokeCount === 0}
-          aria-label={confirmingClear ? t.kit.doodle.confirmClear : t.kit.doodle.clear}
-          style={{ minHeight: TAP_TARGET, flex: 1, fontWeight: 700, fontSize: 16 }}
-        >
-          {confirmingClear ? t.kit.doodle.tapAgainToClear : t.kit.doodle.clear}
-        </button>
-      </div>
+      {controlsSlot === undefined ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>{controls}</div>
+      ) : (
+        controlsSlot && createPortal(controls, controlsSlot)
+      )}
     </div>
   );
 }

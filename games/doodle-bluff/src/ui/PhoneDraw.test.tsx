@@ -237,6 +237,24 @@ describe("PhoneDraw when a later game brings the same prompt back", () => {
   });
 });
 
+describe("PhoneDraw when the draw timer is pulled in mid-game", () => {
+  const MIRROR = JSON.stringify({ v: 1, s: [stroke(2)] });
+
+  it("still restores the mirror: the game's own start, not the re-anchored timer, files it", () => {
+    // The left-player grace shortens the draw deadline, so RoomCore re-anchors timerStartedAt
+    // mid-phase. The mirror must not be filed under that moving value.
+    window.sessionStorage.setItem(storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), "p1:0"), MIRROR);
+    renderDraw(baseView({ gameStartedAt: GAME_START }), vi.fn<(action: DoodleAction) => void>(), GAME_START + 100_000);
+    expect(screen.getByText(`Your drawing for ${FIRST_PROMPT}: 1 stroke so far`)).toBeTruthy();
+  });
+
+  it("still keeps one game's mirror out of the next game", () => {
+    window.sessionStorage.setItem(storageKey(mirrorScope("BKTZ", FIRST_PROMPT, GAME_START), "p1:0"), MIRROR);
+    renderDraw(baseView({ gameStartedAt: GAME_START + 600_000 }), vi.fn<(action: DoodleAction) => void>(), GAME_START + 600_000);
+    expect(screen.getByText(`Your drawing for ${FIRST_PROMPT}: 0 strokes so far`)).toBeTruthy();
+  });
+});
+
 describe("PhoneDraw after a remount", () => {
   const DRAWING = "p1:0";
 

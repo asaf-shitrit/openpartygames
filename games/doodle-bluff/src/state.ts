@@ -113,6 +113,8 @@ export interface DoodleRoundRecord {
 
 export interface DoodleState {
   phase: DoodlePhase;
+  /** `ctx.now` at setup. Optional: a game saved before it existed has none. */
+  startedAt?: number;
   /** Current roster (game players minus anyone kicked). */
   playerIds: PlayerId[];
   /** Every drawing made in the game, keyed by drawingId, until it is dropped (see rules.ts). */
@@ -242,6 +244,12 @@ export type DoodlePlayerPrompt = z.infer<typeof doodlePlayerPromptSchema>;
 export const doodlePlayerViewSchema = z.object({
   phase: doodlePhaseSchema,
   playerCount: z.number(),
+  /**
+   * When this game began. It identifies the game, so a phone files its drawing mirror under it:
+   * unlike the phase timer's start it is not re-anchored when a phase is pulled in (the
+   * left-player grace). Absent in views from before it existed.
+   */
+  gameStartedAt: z.number().optional(),
   /** The viewer's own two secret prompts, during `draw`. */
   myPrompts: z.array(doodlePlayerPromptSchema),
   /** drawingId -> accepted stroke count, so a reconnecting phone knows where to resume. */

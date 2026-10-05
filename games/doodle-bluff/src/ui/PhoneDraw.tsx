@@ -14,9 +14,18 @@
 //     picture and the room sees a mutilated one.
 //   - the cursor moves on the room's ack and on what we send, never on the pad's stroke count.
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MutableRefObject } from "react";
+import type { CSSProperties, MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
-import { Button, Card, DoodlePad, Icon, PINNED_BAR_STYLE, PRESSABLE_CLASS, usePinnedBarScrollPadding } from "@opg/ui";
+import {
+  Button,
+  Card,
+  DoodlePad,
+  Icon,
+  PINNED_BAR_STYLE,
+  PRESSABLE_CLASS,
+  useFitSquare,
+  usePinnedBarScrollPadding,
+} from "@opg/ui";
 import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
@@ -29,6 +38,21 @@ import {
 import { ControlsMarker } from "./common";
 
 const TAP_TARGET = 44;
+/** The pad's usual side. A taller phone gets no bigger canvas than before. */
+const PAD_MAX = 320;
+/** Smallest the canvas shrinks to before the page scrolls instead. */
+const PAD_MIN = 140;
+const PAD_GAP = 8;
+/** The pinned bar holds the ink palette, Undo and Clear beside the main action. */
+const BAR_STYLE: CSSProperties = {
+  ...PINNED_BAR_STYLE,
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "stretch",
+  gap: 8,
+  // Tighter than the shared bar: every pixel here is canvas on a 640px-tall phone.
+  padding: "8px 18px 12px",
+};
 
 /** A small, fixed drawing well over MIN_STROKES, for players who can't or don't want to draw. */
 export const SQUIGGLE_DOODLE: Doodle = {
@@ -214,6 +238,10 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, startedAt, sen
   const { drawingId } = prompt;
   const barRef = useRef<HTMLDivElement>(null);
   usePinnedBarScrollPadding(active, barRef);
+  const padAreaRef = useRef<HTMLDivElement>(null);
+  const padSide = useFitSquare(padAreaRef, barRef, { min: PAD_MIN, max: PAD_MAX, gap: PAD_GAP });
+  // The palette, Undo and Clear render into the pinned bar, state and all staying in the pad.
+  const [controlsSlot, setControlsSlot] = useState<HTMLElement | null>(null);
   const scope = mirrorScope(roomCode, prompt.prompt, startedAt);
   // Computed once, at mount: whether this pad's starting point is known to hold at least
   // everything the room does, so a later shrink from it is a real undo or clear rather than a
@@ -261,14 +289,26 @@ function OneDrawing({ prompt, active, ack, done, clock, roomCode, startedAt, sen
     <div style={{ display: active ? "flex" : "none", flexDirection: "column", gap: 12 }}>
       {/* The room refuses strokes for a finished drawing, so a pad left live would show ink
           that never reaches the TV. */}
-      <div inert={done}>
-        <DoodlePad prompt={prompt.prompt} clock={clock} initialDoodle={initialDoodle} onChange={onChange} />
+      <div ref={padAreaRef} inert={done}>
+        <DoodlePad
+          prompt={prompt.prompt}
+          clock={clock}
+          size={padSide}
+          initialDoodle={initialDoodle}
+          onChange={onChange}
+          controlsSlot={controlsSlot}
+        />
       </div>
       <SquiggleButton done={done} onSquiggle={onSquiggle} />
       {/* Last in the column on purpose: a pinned bar is held inside its container, so anything
           after it would end up underneath it at the bottom of the scroll. */}
-      <div ref={barRef} style={PINNED_BAR_STYLE}>
-        <DoneButton drawingId={drawingId} done={done} send={send} />
+      <div ref={barRef} style={BAR_STYLE}>
+        {/* `display: contents`: the pad's controls join this bar's own rows. Inert once the
+            drawing is handed in, like the canvas, which this slot sits outside of. */}
+        <div ref={setControlsSlot} inert={done} style={{ display: "contents" }} />
+        <div style={{ order: 4, flex: "1 1 160px", display: "flex" }}>
+          <DoneButton drawingId={drawingId} done={done} send={send} />
+        </div>
       </div>
     </div>
   );
@@ -279,6 +319,9 @@ function DoneButton({ drawingId, done, send }: { drawingId: string; done: boolea
   return (
     <Button
       fullWidth
+      size="md"
+      // Narrower padding: beside Undo and Clear the label gets two lines, not five.
+      style={{ padding: "0 10px", gap: 8 }}
       disabled={done}
       onClick={() => {
         if (!done) send({ type: "doodle-done", drawingId });
@@ -317,6 +360,8 @@ function SquiggleButton({ done, onSquiggle }: { done: boolean; onSquiggle: () =>
 export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawProps) {
   const { t } = useLocale();
   const prompts = view.myPrompts;
+  // The game's own start files the mirror; the timer's start moves when the phase is pulled in.
+  const gameKey = view.gameStartedAt ?? startedAt;
   const [activeIndex, setActiveIndex] = useState(0);
   // Seeded from the room's own accepted counts, once, at mount. Held in state rather than a ref
   // only because a ref's initial value is recomputed on every render.
@@ -333,33 +378,47 @@ export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawP
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* Label at one end, button at the other — until the two together are wider than the
-          phone, which is what zooming to 200% does to them. Wrapping drops the button to its
-          own line rather than off the edge; at normal size they still share one. */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 8,
-        }}
-      >
-        <ControlsMarker size={24} style={{ minWidth: 0, overflowWrap: "anywhere" }}>
-          {progressLabel(t, activeIndex, prompts.length)}
-        </ControlsMarker>
-        {prompts.length > 1 ? (
-          <button
-            type="button"
-            className={`opg-reset ${PRESSABLE_CLASS}`}
-            onClick={() => setActiveIndex((i) => (i + 1) % prompts.length)}
-            style={{ minHeight: TAP_TARGET, padding: "0 14px", fontWeight: 700 }}
-          >
-            {t.doodleBluff.nextDrawing}
-          </button>
-        ) : null}
-      </div>
-      <Card style={{ padding: "10px 14px", fontSize: 18, fontWeight: 700 }}>{format(t.doodleBluff.drawThisNoWords, { prompt: active.prompt })}</Card>
+      {/* One card for the whole header so the canvas gets the height. Label at one end, button
+          at the other — until the two together are wider than the phone, which is what zooming
+          to 200% does to them. Wrapping drops the button to its own line rather than off the
+          edge; at normal size they still share one. */}
+      <Card style={{ padding: "6px 14px 10px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <ControlsMarker size={20} style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+            {progressLabel(t, activeIndex, prompts.length)}
+          </ControlsMarker>
+          {prompts.length > 1 ? (
+            <button
+              type="button"
+              className={`opg-reset ${PRESSABLE_CLASS}`}
+              onClick={() => setActiveIndex((i) => (i + 1) % prompts.length)}
+              style={{
+                minHeight: TAP_TARGET,
+                padding: "0 12px",
+                fontWeight: 700,
+                fontSize: 16,
+                background: "var(--opg-card)",
+                color: "var(--opg-ink)",
+                border: "3px solid var(--opg-ink)",
+                borderRadius: "var(--opg-radius-button)",
+              }}
+            >
+              {t.doodleBluff.nextDrawing}
+            </button>
+          ) : null}
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>
+          {format(t.doodleBluff.drawThisNoWords, { prompt: active.prompt })}
+        </div>
+      </Card>
       {prompts.map((prompt, index) => (
         <OneDrawing
           key={prompt.drawingId}
@@ -369,7 +428,7 @@ export function PhoneDraw({ view, roomCode, startedAt, clock, send }: PhoneDrawP
           done={view.myDone[prompt.drawingId] === true}
           clock={clock}
           roomCode={roomCode}
-          startedAt={startedAt}
+          startedAt={gameKey}
           sentRef={sentRef}
           send={send}
         />

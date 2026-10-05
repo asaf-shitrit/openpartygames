@@ -1207,35 +1207,31 @@ describe("api e2e", () => {
     await closeAllPlayers(lobby);
   });
 
-  it("plays Imposter in Hebrew and refuses Real or Nah with no-language-packs", async () => {
+  it("plays Real or Nah in Hebrew from the Hebrew pack", async () => {
     const lobby = await makeHebrewLobby(3);
-    expect(hostViewOf(lobby.host).contentLanguage).toBe("he");
-
     const games = hostViewOf(lobby.host).games;
-    expect(games.find((g) => g.id === "imposter")?.hasContentInLanguage).toBe(
-      true,
-    );
     expect(
       games.find((g) => g.id === "real-or-nah")?.hasContentInLanguage,
-    ).toBe(false);
+    ).toBe(true);
 
-    // Real or Nah has no Hebrew pack (out of scope: it needs sourced facts), so
-    // starting it in a Hebrew room fails with a distinct code, not silent English content.
-    const ronVip = vipOf(lobby);
-    ronVip.send({ t: "pick-game", gameId: "real-or-nah" });
+    // The refusal for a language with no pack at all is covered in packages/sdk room.test.ts;
+    // here the Hebrew facts pack has to reach the table.
+    await startGame(lobby, "real-or-nah");
     await lobby.host.waitFor(
-      (client) => hostViewOf(client).selectedGameId === "real-or-nah",
+      safe((client) => /[֐-׿]/u.test(ronHostView(client).prompt)),
       WAIT_MS,
-      "pick real-or-nah (hebrew)",
+      "real-or-nah prompt in hebrew",
     );
-    ronVip.send({ t: "start-game" });
-    await ronVip.waitFor(
-      (client) =>
-        client.errors.some((error) => error.code === "no-language-packs"),
-      WAIT_MS,
-      "no-language-packs (hebrew real-or-nah)",
-    );
-    expect(hostViewOf(lobby.host).phase).toBe("lobby");
+
+    await closeAll(lobby);
+  });
+
+  it("plays Imposter in Hebrew", async () => {
+    const lobby = await makeHebrewLobby(3);
+    expect(hostViewOf(lobby.host).contentLanguage).toBe("he");
+    expect(
+      hostViewOf(lobby.host).games.find((g) => g.id === "imposter")?.hasContentInLanguage,
+    ).toBe(true);
 
     // Imposter does have a Hebrew pack, and it actually plays: the word a player sees
     // is drawn from it, not from the English catalog.

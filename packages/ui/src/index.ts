@@ -177,6 +177,8 @@ export { paintDoodle } from "./doodle/paint";
 export type { DoodleBox, DoodleCanvasContext, DoodleUpTo } from "./doodle/paint";
 export { replaySchedule, replayStateAt } from "./doodle/replay";
 export type { ReplayState, StrokeWindow } from "./doodle/replay";
+export { fitSquare, useFitSquare } from "./doodle/fit-square";
+export type { FitSquareInput } from "./doodle/fit-square";
 export { DoodlePad } from "./doodle/DoodlePad";
 export type { DoodlePadProps } from "./doodle/DoodlePad";
 export { DoodleView } from "./doodle/DoodleView";

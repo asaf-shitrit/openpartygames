@@ -1,5 +1,6 @@
 // Most Likely To: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
 import { z, type ZodType } from "zod";
+import { pullInDeadline } from "@opg/sdk";
 import type { GameContext, GameDefinition, Rng, SuperlativeContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import { addPoints, matchedVoters, revealOutcome, roundPoints, tallyVotes } from "./rules";
@@ -90,6 +91,20 @@ function allConnectedVoted(state: MltState, ctx: Ctx): boolean {
   return connected.every((id) => state.votes[id] !== undefined);
 }
 
+/**
+ * Closes the vote once everyone has voted. When only players who are not connected are
+ * missing it does not close at once (a locked phone must keep its vote): it pulls the
+ * deadline in to LEFT_PLAYER_GRACE_MS instead, so a returning player can still count.
+ */
+function settleVote(state: MltState, ctx: Ctx): MltState {
+  const everyoneVoted =
+    state.playerIds.length > 0 &&
+    state.playerIds.every((id) => state.votes[id] !== undefined);
+  if (everyoneVoted) return startReveal(state, ctx);
+  if (allConnectedVoted(state, ctx)) return pullInDeadline(state, ctx.now);
+  return state;
+}
+
 export function startReveal(state: MltState, ctx: Ctx): MltState {
   const tally = tallyVotes(state.votes, state.playerIds);
   const outcome = revealOutcome(tally, state.playerIds);
@@ -144,8 +159,7 @@ function applyVote(
   if (state.votes[playerId] !== undefined) return state; // one vote only
   if (!state.playerIds.includes(target)) return state;
   const votes = { ...state.votes, [playerId]: target };
-  const next = { ...state, votes };
-  return allConnectedVoted(next, ctx) ? startReveal(next, ctx) : next;
+  return settleVote({ ...state, votes }, ctx);
 }
 
 export function onAction(
@@ -209,8 +223,13 @@ export function onPlayerRemoved(
   if (state.phase !== "vote") return base;
 
   const votes = survivingVotes(state, playerId);
-  const next = { ...base, votes };
-  return allConnectedVoted(next, ctx) ? startReveal(next, ctx) : next;
+  return settleVote({ ...base, votes }, ctx);
+}
+
+/** A connection flip can leave only disconnected players to vote: start the grace clock. */
+export function onPlayersChanged(state: MltState, ctx: Ctx): MltState {
+  if (state.finished || state.phase !== "vote") return state;
+  return allConnectedVoted(state, ctx) ? pullInDeadline(state, ctx.now) : state;
 }
 
 export function isOver(state: MltState): boolean {
@@ -253,6 +272,7 @@ export const mostLikelyTo: GameDefinition<
   nextDeadline,
   onDeadline,
   onPlayerRemoved,
+  onPlayersChanged,
   hostView: (state) => buildHostView(state),
   playerView: (state, playerId) => buildPlayerView(state, playerId),
   isOver,
