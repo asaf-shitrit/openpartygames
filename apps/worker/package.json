@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "mkdir -p ../web/dist && wrangler dev",
+    "dev": "mkdir -p ../web/dist && wrangler dev --port ${OPG_WORKER_PORT:-8787}",
     "deploy": "pnpm --filter @opg/web build && wrangler deploy",
     "types": "wrangler types",
     "typecheck": "wrangler types && tsc -p tsconfig.json",
