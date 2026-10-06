@@ -4,9 +4,11 @@ name: Visual baselines
 # runner image CI uses, because they cannot be made on macOS. Manual and branch-only: it never
 # runs on main or on pull requests, and `visual` is deliberately not part of the CI gate yet.
 #
-# To refresh baselines: push a branch named visual-baselines/<anything> (or run this workflow
-# by hand against one), download the `visual-snapshots` artifact, look at every PNG that
-# changed, and commit only the ones that should have.
+# To refresh baselines on a pushed branch: `scripts/pull-visual-baselines.sh <branch>` runs this
+# workflow, copies the new PNGs in and lists the diff images to read. By hand: push a branch named
+# visual-baselines/<anything> (or run this workflow by hand against one), download the
+# `visual-snapshots` artifact, look at every PNG that changed, and commit only the ones that
+# should have.
 on:
   workflow_dispatch:
   push:

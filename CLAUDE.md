@@ -5,21 +5,24 @@ Open-source Jackbox-style party games. Two ways to play: a host screen (TV/lapto
 ## Commands
 
 - Install: `pnpm install`
-- Dev: `pnpm dev` (Vite on :5173 proxying to `wrangler dev` on :8787). First time: `pnpm --filter @opg/worker db:migrate:local && pnpm --filter @opg/worker db:seed:local`
+- Dev: `pnpm dev` (Vite on :5173 proxying to `wrangler dev` on :8787; a second checkout sets `OPG_WEB_PORT` and `OPG_WORKER_PORT`). First time: `pnpm --filter @opg/worker db:migrate:local && pnpm --filter @opg/worker db:seed:local`
 - Lint: `pnpm lint` (Oxlint, type-aware, anti-slop plugin; warnings fail). One folder: `pnpm exec oxlint --type-aware --deny-warnings <dir>`
 - Typecheck: `pnpm typecheck` (every workspace; the worker runs `wrangler types` first)
 - Test: `pnpm test` (Vitest projects, one per workspace). One package: `cd <dir> && pnpm exec vitest run`
 - Layout invariants: `pnpm e2e:layout` (every game screen at three phone sizes and the TV, in English and Hebrew; needs `pnpm exec playwright install chromium` once). One screen: open `/dev/screens?id=<game>/<index>` under `pnpm dev`
 - CRAP gate: `pnpm crap` (threshold 8; runs coverage per package). One folder: `pnpm exec crap-typescript --format text --failures-only --threshold 8 <dir>`
 - Packs: `pnpm validate:packs`
+- Visual baselines (Linux-only, made in CI): `scripts/pull-visual-baselines.sh <branch>`
 - Build web: `pnpm build`
-- Everything: `pnpm check`
+- Everything: `pnpm check`; with every e2e suite: `pnpm verify` (logs in `.verify/`, one summary line per suite)
 
 ## Verifying your work
 
 Run `pnpm check` before reporting done. Healthy output: packs validate with no errors, Oxlint reports 0 problems, every `typecheck` exits 0, all Vitest tests pass (never skip or delete a failing test), `crap-typescript` reports no failed methods, and Vite prints `built in`. For UI work also run `pnpm dev` and look at the screen next to its design file.
 
-`pnpm check` does not run `e2e/browser` or `e2e/layout`, so it cannot catch a behaviour change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs `pnpm e2e:browser` too before calling it done (about 3 minutes; needs `wrangler` and a local D1, which is why it isn't part of `pnpm check`). In `e2e/browser`'s output, watch the pass count: the `imposter` project depends on `fast`, so any failure in `fast` makes Playwright skip `imposter` entirely rather than reporting it failed — a red run showing `1 failed, 10 passed` instead of `12 passed` means the Imposter spec never ran.
+`pnpm check` does not run `e2e/api`, `e2e/browser` or `e2e/layout`, so it cannot catch a behaviour change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs `pnpm e2e:browser` too before calling it done (about 3 minutes; needs `wrangler` and a local D1, which is why it isn't part of `pnpm check`). In `e2e/browser`'s output, watch the pass count: the `imposter` project depends on `fast`, so any failure in `fast` makes Playwright skip `imposter` entirely rather than reporting it failed — a red run showing `1 failed, 10 passed` instead of `12 passed` means the Imposter spec never ran. Before merging a branch, run `pnpm verify`.
+
+Reviewing a diff: apply every rule in `CODING_STANDARDS.md`.
 
 ## Architecture
 
@@ -55,7 +58,6 @@ Run `pnpm check` before reporting done. Healthy output: packs validate with no e
 
 - Deploys restart Durable Objects: always persist the room snapshot after a change and let clients reconnect.
 - Keep WebSocket messages bounded: one view broadcast per change.
-- Commit messages must not attribute Claude.
 
 ## Agent skills
 
