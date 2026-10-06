@@ -8,9 +8,11 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "dev": "pnpm --parallel --filter @opg/web --filter @opg/worker dev",
     "build": "pnpm --filter @opg/web build",
-    "lint": "oxlint --type-aware --deny-warnings --report-unused-disable-directives --disable-nested-config",
+    "lint": "pnpm lint:directives && oxlint --type-aware --deny-warnings --report-unused-disable-directives --disable-nested-config",
+    "lint:directives": "! git grep -nE '(oxlint|eslint)-disable' -- '*.ts' '*.tsx' '*.js' '*.mjs' || (echo 'Lint disable comments are not allowed: fix the finding at its root.' && exit 1)",
     "lint:fix": "oxlint --type-aware --fix --disable-nested-config",
     "typecheck": "pnpm -r --no-bail typecheck",
     "test": "vitest run",
@@ -24,6 +26,7 @@
     "e2e:layout": "playwright test -c e2e/layout/playwright.config.ts",
     "e2e:visual": "OPG_VISUAL=1 playwright test -c e2e/layout/playwright.config.ts --project=visual",
     "e2e:visual:update": "OPG_VISUAL=1 playwright test -c e2e/layout/playwright.config.ts --project=visual --update-snapshots",
+    "verify": "node scripts/verify-all.mjs",
     "e2e": "pnpm e2e:api && pnpm e2e:layout && pnpm e2e:browser"
   },
   "devDependencies": {
