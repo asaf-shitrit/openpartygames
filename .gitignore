@@ -13,3 +13,6 @@ playwright-report/
 
 # Scratch worktrees an agent checks out while working on a branch.
 .claude/worktrees/
+
+# Logs from `pnpm verify`.
+.verify/
