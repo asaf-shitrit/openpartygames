@@ -10,6 +10,7 @@
 // This drives that case deliberately rather than waiting for a screen to regress into it.
 import { expect, test } from "@playwright/test";
 import { fileURLToPath } from "node:url";
+import { SCREENS } from "../../apps/web/src/dev/screens";
 
 interface Limits {
   minFontSize: number;
@@ -26,6 +27,7 @@ interface Violation {
 declare global {
   interface Window {
     opgLayout: { collectViolations: (limits: Limits) => Violation[] };
+    opgStage: { collectStageViolations: () => Violation[] };
   }
 }
 
@@ -94,5 +96,96 @@ test.describe("page-scrolls-sideways", () => {
       document.querySelector('[data-testid="burst-wrap"]')?.remove();
     });
     expect(await page.evaluate(sidewaysViolations, PHONE_LIMITS)).toEqual([]);
+  });
+});
+
+/** The first TV screen in the gallery; this suite only needs a stage to hang a stack inside. */
+function firstHostScreen(): string {
+  const host = SCREENS.find((screen) => screen.surface === "host");
+  if (host === undefined) throw new Error("blame.spec: no host screen in the gallery");
+  return host.id;
+}
+
+/**
+ * A table whose rows run off the bottom of the stage, for the reason real ones do: not one
+ * tall thing, but eight rows that are each one line taller than they look, because a single
+ * cell in each wraps. The row that lands below the edge is the symptom; the wrapping cell is
+ * what somebody has to change.
+ *
+ * Modelled on the Real or Nah reveal (#88), where exactly this shape cost four full runs of
+ * the suite to diagnose — the violations named the row, and the author's name in a too-narrow
+ * column was setting the height of all eight.
+ */
+function buildWrappingTable(): void {
+  const stage = document.querySelector(".opg-grid-tv");
+  if (stage === null) throw new Error("no stage on this page");
+  const table = document.createElement("div");
+  table.setAttribute("data-testid", "lies-table");
+  table.style.position = "absolute";
+  table.style.top = "400px";
+  table.style.insetInlineStart = "0";
+  table.style.width = "900px";
+  table.style.display = "flex";
+  table.style.flexDirection = "column";
+  table.style.gap = "10px";
+  for (let index = 0; index < 10; index += 1) {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "16px";
+    const lie = document.createElement("div");
+    lie.style.fontSize = "30px";
+    lie.textContent = `lie number ${index}`;
+    const author = document.createElement("div");
+    author.setAttribute("data-testid", "author-cell");
+    author.style.fontSize = "30px";
+    // The whole point: too narrow for the name, so it takes two lines and sets the row.
+    author.style.width = "120px";
+    author.textContent = "Wilhelmina Abernathy";
+    row.append(lie, author);
+    table.append(row);
+  }
+  stage.append(table);
+}
+
+/** Widens every author cell so the name fits one line — the fix the blame points at. */
+function unwrapAuthorCells(): void {
+  for (const cell of document.querySelectorAll<HTMLElement>('[data-testid="author-cell"]')) {
+    cell.style.width = "400px";
+  }
+}
+
+function stageViolations(): Violation[] {
+  return window.opgStage.collectStageViolations();
+}
+
+test.describe("offstage-y", () => {
+  test("names the cell that set the height, not just the row that fell off", async ({ page }) => {
+    const screenId = firstHostScreen();
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.addInitScript({ path: INVARIANTS_PATH });
+    await page.goto(`/dev/screens?id=${encodeURIComponent(screenId)}`);
+    await page.waitForFunction((id) => document.body.dataset.screen === id, screenId, {
+      timeout: 15_000,
+    });
+
+    // Clean first, so the failure below is the table and not the screen under it.
+    expect(await page.evaluate(stageViolations)).toEqual([]);
+
+    await page.evaluate(buildWrappingTable);
+    const found = await page.evaluate(stageViolations);
+
+    expect(found.length).toBeGreaterThan(0);
+    const detail = found[0]?.detail ?? "";
+    // The measurement the rule always gave (either wording: cut off, or entirely below).
+    expect(detail).toContain("1080px bottom edge");
+    // The lead it did not: how many things are stacked, and which box sets their height.
+    expect(detail).toContain("stacks 10 items");
+    expect(detail).toContain("author-cell");
+    expect(detail).toContain("Wilhelmina Abernathy");
+
+    // And it named the real lever: widening that cell, and nothing else, settles the stage.
+    await page.evaluate(unwrapAuthorCells);
+    expect(await page.evaluate(stageViolations)).toEqual([]);
   });
 });

@@ -283,6 +283,107 @@ function stageFrame() {
 }
 
 /**
+ * The block space a container has to give its children: its own box, less border and padding.
+ *
+ * `clientHeight` already excludes the border, and reports 0 for an inline box — which is what
+ * makes it the right measure here. An inline element hands its children no block space of its
+ * own, so it is never the place a screen's height is being spent.
+ *
+ * @param {Element} el @returns {number}
+ */
+function contentHeight(el) {
+  const style = getComputedStyle(el);
+  const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  return el.clientHeight - (Number.isFinite(padding) ? padding : 0);
+}
+
+/** The tallest element child of `el`, or null when it has none. @param {Element} el @returns {Element | null} */
+function tallestChild(el) {
+  let best = null;
+  let tallest = -1;
+  for (const child of Array.from(el.children)) {
+    const height = child.getBoundingClientRect().height;
+    if (height > tallest) {
+      tallest = height;
+      best = child;
+    }
+  }
+  return best;
+}
+
+/**
+ * Whether `el` STACKS its children — their heights add up — rather than taking the tallest.
+ *
+ * The two kinds of container fail differently and want different answers. A row is as tall as
+ * its tallest cell, so one box is to blame and naming it ends the search. A column adds its
+ * children up, so no single child is to blame and the useful fact is how many there are.
+ *
+ * Told apart by measurement rather than by reading `display`, which would have to enumerate
+ * every block, flex and grid case and would still have to guess at `subgrid`: a container
+ * taller than its tallest child is spending the difference on the others.
+ *
+ * @param {Element} el @returns {boolean}
+ */
+function stacks(el) {
+  const tallest = tallestChild(el);
+  if (tallest === null) return false;
+  return contentHeight(el) > tallest.getBoundingClientRect().height + EPS;
+}
+
+/**
+ * Descends from `el` to the box that actually sets its height, through each container that
+ * takes its tallest child's height instead of adding its children up.
+ *
+ * @param {Element} el @returns {Element}
+ */
+function heightSetter(el) {
+  let node = el;
+  for (let depth = 0; depth < 20; depth += 1) {
+    if (stacks(node)) break;
+    const child = tallestChild(node);
+    if (child === null) break;
+    node = child;
+  }
+  return node;
+}
+
+/**
+ * Why the element sits that low: the nearest container above it that is stacking several
+ * things, how many it is stacking, and the box that sets the tallest one's height.
+ *
+ * This is the vertical half of what `blameForWidth` does sideways, and it answers the question
+ * the rule otherwise leaves open. `offstage-y` names the element that crossed the edge, which
+ * is rarely the element at fault: the table row that fell off the bottom is the same height as
+ * the seven above it, and all eight are that tall because one cell in each wrapped to a second
+ * line. The element below the edge is the symptom; the stack and that cell are the lead.
+ *
+ * @param {Element} el @param {{ top: number, scale: number }} frame @returns {string | null}
+ */
+function heightBlame(el, frame) {
+  let node = el.parentElement;
+  for (let depth = 0; node !== null && depth < 20; depth += 1) {
+    // The stage stacks the screen itself, which is true and no help; stop before saying it.
+    if (node.classList.contains("opg-grid-tv")) return null;
+    if (stacks(node)) return blameForStack(node, frame);
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/** @param {Element} stack @param {{ top: number, scale: number }} frame @returns {string | null} */
+function blameForStack(stack, frame) {
+  const tallest = tallestChild(stack);
+  if (tallest === null) return null;
+  const inStageUnits = (el) => Math.round(el.getBoundingClientRect().height / frame.scale);
+  const stacked = `${pathOf(stack)} stacks ${stack.children.length} items, tallest ${inStageUnits(tallest)}px`;
+  const setter = heightSetter(tallest);
+  if (setter === tallest) return stacked;
+  const text = textOf(setter);
+  const named = `${pathOf(setter)}${text === "" ? "" : ` — "${text}"`}`;
+  return `${stacked}, set by ${named} at ${inStageUnits(setter)}px`;
+}
+
+/**
  * The TV stage does not scroll and nobody can touch it. It is a fixed 1920x1080 box under
  * `overflow: hidden`, cast to a screen across the room, so a word below its bottom edge is not
  * awkward to reach the way the bottom of a long phone column is — it is simply not there, and
@@ -309,7 +410,8 @@ function checkBelowStage(el, frame) {
     top >= STAGE_HEIGHT - EPS
       ? `entirely below the stage: starts ${Math.round(top - STAGE_HEIGHT)}px past its ${STAGE_HEIGHT}px bottom edge`
       : `cut off by the stage: ${Math.round(bottom - STAGE_HEIGHT)}px of it is below the ${STAGE_HEIGHT}px bottom edge`;
-  return violation("offstage-y", el, detail);
+  const blame = heightBlame(el, frame);
+  return violation("offstage-y", el, blame === null ? detail : `${detail}; ${blame}`);
 }
 
 /**
