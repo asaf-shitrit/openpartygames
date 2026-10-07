@@ -20,7 +20,12 @@ Open-source Jackbox-style party games. Two ways to play: a host screen (TV/lapto
 
 Run `pnpm check` before reporting done. Healthy output: packs validate with no errors, Oxlint reports 0 problems, every `typecheck` exits 0, all Vitest tests pass (never skip or delete a failing test), `crap-typescript` reports no failed methods, and Vite prints `built in`. For UI work also run `pnpm dev` and look at the screen next to its design file.
 
-`pnpm check` does not run `e2e/api`, `e2e/browser` or `e2e/layout`, so it cannot catch a behaviour change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs `pnpm e2e:browser` too before calling it done (about 3 minutes; needs `wrangler` and a local D1, which is why it isn't part of `pnpm check`). In `e2e/browser`'s output, watch the pass count: the `imposter` project depends on `fast`, so any failure in `fast` makes Playwright skip `imposter` entirely rather than reporting it failed — a red run showing `1 failed, 10 passed` instead of `12 passed` means the Imposter spec never ran. Before merging a branch, run `pnpm verify`.
+`pnpm check` does not run `e2e/api`, `e2e/browser` or `e2e/layout`, so it cannot catch a change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs the browser suites that cover it before calling it done. They fail on different things:
+
+- `pnpm e2e:layout` — what a screen **draws**, at three phone sizes and the TV in both locales: words across an edge, anything past the bottom of a screen that does not scroll, a phone tap target under 44px, TV text under 28px. Needs only Vite. Run it for any change to what a screen renders: `pnpm check` and `e2e:browser` both stay green on a screen that overflows. One game: `pnpm e2e:layout -g <game-id>`.
+- `pnpm e2e:browser` — what a flow **does**: a real room, real clicks, a reconnect. About 3 minutes; needs `wrangler` and a local D1, which is why it isn't part of `pnpm check`. Run it for a change to a flow or to a screen's behaviour.
+
+In `e2e/browser`'s output, watch the pass count: the `imposter` project depends on `fast`, so any failure in `fast` makes Playwright skip `imposter` entirely rather than reporting it failed — a red run showing `1 failed, 10 passed` instead of `12 passed` means the Imposter spec never ran. Before merging a branch, run `pnpm verify`.
 
 Reviewing a diff: apply every rule in `CODING_STANDARDS.md`.
 

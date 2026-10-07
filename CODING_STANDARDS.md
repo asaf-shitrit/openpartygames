@@ -21,3 +21,5 @@ A test asserts behaviour that stays true as packs and games grow. A refusal path
 ## A regression test can fail
 
 A test added for a bug drives the exact path that broke and fails on the code before the fix. A test that would pass with the fix reverted measured nothing; flag it.
+
+Prove it with `git stash push -- <the source paths, not the test>`: the fix goes away, the new test stays, run it and watch it fail, then `git stash pop`. Stashing by path returns each file to where it came from, so a fix spanning files that share a basename across directories (`en/realOrNah.ts` and `he/realOrNah.ts`) round-trips intact — copying those into one scratch directory keeps only whichever landed second, and restores it over its sibling.
