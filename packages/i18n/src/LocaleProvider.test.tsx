@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { en } from "./en";
 import { he } from "./he";
 import { initialLocale, LocaleProvider, useLocale } from "./LocaleProvider";
 
@@ -116,6 +117,17 @@ describe("LocaleProvider", () => {
     expect(document.documentElement.dir).toBe("rtl");
     expect(document.title).toBe(he.common.documentTitle);
     expect(window.localStorage.getItem("opg:locale")).toBe("he");
+  });
+
+  it("reads its copy from the dictionaries it is given", () => {
+    setLang("en-US");
+    const custom = { en: { ...en, join: { ...en.join, join: "Hop in" } }, he };
+    render(
+      <LocaleProvider dictionaries={custom}>
+        <LocaleProbe />
+      </LocaleProvider>,
+    );
+    expect(screen.getByTestId("text").textContent).toBe("Hop in");
   });
 
   it("throws when useLocale is called outside a provider", () => {
