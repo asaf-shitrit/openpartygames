@@ -13,12 +13,13 @@ Open-source Jackbox-style party games. Two ways to play: a host screen (TV/lapto
 - CRAP gate: `pnpm crap` (threshold 8; runs coverage per package). One folder: `pnpm exec crap-typescript --format text --failures-only --threshold 8 <dir>`
 - Packs: `pnpm validate:packs`
 - Visual baselines (Linux-only, made in CI): `scripts/pull-visual-baselines.sh <branch>`
+- Design as a picture: `node scripts/build-design-previews.mjs --one <artboard>` (e.g. `TVRealOrNahReveal`) renders one `design/*.dc.html` at its frame size to a PNG in the temp dir and prints the path; `--out <file>` picks the path. With no flag it redraws the README pages in `design/previews/` (commit those). Use it rather than writing a renderer.
 - Build web: `pnpm build`
 - Everything: `pnpm check`; with every e2e suite: `pnpm verify` (logs in `.verify/`, one summary line per suite)
 
 ## Verifying your work
 
-Run `pnpm check` before reporting done. Healthy output: packs validate with no errors, Oxlint reports 0 problems, every `typecheck` exits 0, all Vitest tests pass (never skip or delete a failing test), `crap-typescript` reports no failed methods, and Vite prints `built in`. For UI work also run `pnpm dev` and look at the screen next to its design file.
+Run `pnpm check` before reporting done. Healthy output: packs validate with no errors, Oxlint reports 0 problems, every `typecheck` exits 0, all Vitest tests pass (never skip or delete a failing test), `crap-typescript` reports no failed methods, and Vite prints `built in`. For UI work also run `pnpm dev` and look at the screen next to its design file; `node scripts/build-design-previews.mjs --one <artboard>` gives you the design as a PNG at the same size as the screen.
 
 `pnpm check` does not run `e2e/api`, `e2e/browser` or `e2e/layout`, so it cannot catch a change that only breaks in a real browser. A change to a screen, a flow, or anything under `apps/web/src/screens` or `games/*/src/ui` needs the browser suites that cover it before calling it done. They fail on different things:
 
