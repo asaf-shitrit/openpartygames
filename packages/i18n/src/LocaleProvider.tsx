@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { directionFor, LOCALES, type Direction, type Locale } from "./locale";
-import { dictionaryFor } from "./dictionaries";
+import { DICTIONARIES } from "./dictionaries";
 import type { Dictionary } from "./dictionary";
 
 export interface LocaleValue {
@@ -46,10 +46,19 @@ export function initialLocale(): Locale {
   return "en";
 }
 
-export function LocaleProvider({ children }: { children: ReactNode }) {
+interface LocaleProviderProps {
+  children: ReactNode;
+  /**
+   * The copy for each locale. The app always uses the shipped dictionaries; a test can hand in
+   * its own, such as one that records which strings the screens under it read.
+   */
+  dictionaries?: Readonly<Record<Locale, Dictionary>>;
+}
+
+export function LocaleProvider({ children, dictionaries = DICTIONARIES }: LocaleProviderProps) {
   const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const dir = directionFor(locale);
-  const t = dictionaryFor(locale);
+  const t = dictionaries[locale];
 
   useEffect(() => {
     document.documentElement.lang = locale;
