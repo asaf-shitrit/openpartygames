@@ -2,14 +2,21 @@
 // Renders each page of the design canvas into design/previews/<page>.jpg for the README.
 //
 //   node scripts/build-design-previews.mjs
+//   node scripts/build-design-previews.mjs --one TVRealOrNahReveal [--out reveal.png]
 //
 // design/canvas.json places every design/*.dc.html artboard on a page; this lays each
 // page out the same way, with the artboard titles above them. Needs Playwright's
 // Chromium (`pnpm exec playwright install chromium`). Rerun after changing a design and
 // commit the files it writes.
+//
+// `--one` renders a single artboard at its frame size (1920x1080 for the TV, 390x844 for
+// a phone) to a PNG outside the repo, for putting a screen next to its design. It writes
+// nothing under design/, so there is nothing to commit.
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 
@@ -111,8 +118,49 @@ async function renderPage(browser, canvasPage) {
   console.log(`wrote ${path.relative(rootDir, file)} (${width}x${height})`);
 }
 
-fs.mkdirSync(outDir, { recursive: true });
+/** The artboard whose file is `name`, with or without `.dc.html`, ignoring case. */
+function findArtboard(name) {
+  const wanted = name.toLowerCase().replace(/\.dc\.html$/, "");
+  return canvas.artboards.find((a) => a.file.toLowerCase().replace(/\.dc\.html$/, "") === wanted);
+}
+
+/** Lists the artboard files, so a mistyped `--one` shows what it could have been. */
+function artboardList() {
+  return canvas.artboards.map((a) => `  ${a.file.replace(/\.dc\.html$/, "")}  (${a.title})`).join("\n");
+}
+
+/** Renders one artboard at its frame size, with nothing around it, to a PNG at `file`. */
+async function renderArtboard(browser, artboard, file) {
+  const page = await browser.newPage({ viewport: { width: artboard.w, height: artboard.h } });
+  await serveLocally(page, "");
+  await page.goto(`${ORIGIN}/${encodeURIComponent(artboard.file)}`);
+  await page.evaluate(() => document.fonts.ready);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  await page.screenshot({ path: file, type: "png" });
+  await page.close();
+  console.log(`wrote ${file} (${artboard.w}x${artboard.h})`);
+}
+
+/** Every README page, written into design/previews/. */
+async function renderAllPages(browser) {
+  fs.mkdirSync(outDir, { recursive: true });
+  const pages = canvas.pages.filter((p) => !SKIPPED_PAGES.has(p.id));
+  await Promise.all(pages.map((canvasPage) => renderPage(browser, canvasPage)));
+}
+
+const { values: args } = parseArgs({ options: { one: { type: "string" }, out: { type: "string" } } });
+const artboard = args.one === undefined ? undefined : findArtboard(args.one);
+if (args.one !== undefined && artboard === undefined) {
+  console.error(`No artboard named "${args.one}" in design/canvas.json. The artboards are:\n${artboardList()}`);
+  process.exit(1);
+}
+
 const browser = await chromium.launch();
-const pages = canvas.pages.filter((p) => !SKIPPED_PAGES.has(p.id));
-await Promise.all(pages.map((canvasPage) => renderPage(browser, canvasPage)));
+if (artboard === undefined) {
+  await renderAllPages(browser);
+} else {
+  const base = artboard.file.replace(/\.dc\.html$/, "");
+  const file = path.resolve(args.out ?? path.join(os.tmpdir(), "opg-design", `${base}.png`));
+  await renderArtboard(browser, artboard, file);
+}
 await browser.close();

@@ -81,7 +81,7 @@ Every screen is designed before it's built. The designs live in [`design/`](desi
 
 </details>
 
-After changing a design, run `node scripts/build-design-previews.mjs` to redraw the pictures, and commit them.
+After changing a design, run `node scripts/build-design-previews.mjs` to redraw the pictures, and commit them. To see one design on its own at full size, add `--one <artboard>`, e.g. `--one TVRealOrNahReveal`.
 
 ## Run it locally
 
