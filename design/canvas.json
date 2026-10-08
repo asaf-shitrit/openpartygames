@@ -37,7 +37,11 @@
       "x": 0,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: landing"
+      }
     },
     {
       "file": "Main.dc.html",
@@ -46,7 +50,11 @@
       "x": 2040,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: lobby"
+      }
     },
     {
       "file": "TVGamePicker.dc.html",
@@ -55,7 +63,11 @@
       "x": 4080,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: game picker"
+      }
     },
     {
       "file": "PhoneJoin.dc.html",
@@ -64,7 +76,11 @@
       "x": 2040,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: join a room"
+      }
     },
     {
       "file": "PhoneAvatarPicker.dc.html",
@@ -73,7 +89,11 @@
       "x": 2530,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: avatar picker"
+      }
     },
     {
       "file": "PhoneLobby.dc.html",
@@ -82,7 +102,11 @@
       "x": 3020,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: lobby, shared screen"
+      }
     },
     {
       "file": "PhoneVIPControls.dc.html",
@@ -91,7 +115,11 @@
       "x": 4080,
       "y": 1280,
       "w": 390,
-      "h": 1240
+      "h": 1240,
+      "screen": {
+        "game": "app",
+        "label": "Phone: VIP controls"
+      }
     },
     {
       "file": "TVImposterWordCheck.dc.html",
@@ -100,7 +128,11 @@
       "x": 0,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: check your phones"
+      }
     },
     {
       "file": "TVImposterClues.dc.html",
@@ -109,7 +141,11 @@
       "x": 2040,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: clues"
+      }
     },
     {
       "file": "TVImposterVoting.dc.html",
@@ -118,7 +154,11 @@
       "x": 4080,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: vote"
+      }
     },
     {
       "file": "TVImposterReveal.dc.html",
@@ -127,7 +167,11 @@
       "x": 6120,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: reveal"
+      }
     },
     {
       "file": "TVImposterLastChance.dc.html",
@@ -136,7 +180,11 @@
       "x": 8160,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: last chance"
+      }
     },
     {
       "file": "TVImposterResult.dc.html",
@@ -145,7 +193,11 @@
       "x": 10200,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "imposter",
+        "label": "Host: result caught nope"
+      }
     },
     {
       "file": "PhoneImposterCrewCard.dc.html",
@@ -154,7 +206,11 @@
       "x": 0,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone: Maya crew card"
+      }
     },
     {
       "file": "PhoneImposterCard.dc.html",
@@ -163,7 +219,11 @@
       "x": 490,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone: Priya imposter card"
+      }
     },
     {
       "file": "PhoneImposterYourTurn.dc.html",
@@ -172,7 +232,11 @@
       "x": 2040,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone: Dov your turn"
+      }
     },
     {
       "file": "PhoneImposterVote.dc.html",
@@ -181,7 +245,11 @@
       "x": 4080,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone: Dov vote selecting"
+      }
     },
     {
       "file": "PhoneImposterLastChance.dc.html",
@@ -190,7 +258,11 @@
       "x": 8160,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone: Priya last chance"
+      }
     },
     {
       "file": "TVRealOrNahWrite.dc.html",
@@ -199,7 +271,11 @@
       "x": 0,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "real-or-nah",
+        "label": "Host: write"
+      }
     },
     {
       "file": "TVRealOrNahVote.dc.html",
@@ -208,7 +284,11 @@
       "x": 2040,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "real-or-nah",
+        "label": "Host: vote"
+      }
     },
     {
       "file": "TVRealOrNahReveal.dc.html",
@@ -217,7 +297,11 @@
       "x": 4080,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "real-or-nah",
+        "label": "Host: reveal, 3 foolers"
+      }
     },
     {
       "file": "PhoneRealOrNahWrite.dc.html",
@@ -226,7 +310,11 @@
       "x": 0,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "real-or-nah",
+        "label": "Phone: Dov writing"
+      }
     },
     {
       "file": "PhoneRealOrNahVote.dc.html",
@@ -235,7 +323,11 @@
       "x": 2040,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "real-or-nah",
+        "label": "Phone: Dov voting"
+      }
     },
     {
       "file": "TVFinalScores.dc.html",
@@ -244,7 +336,11 @@
       "x": 0,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: final scores, crown with awards"
+      }
     },
     {
       "file": "TVFullTonight.dc.html",
@@ -253,7 +349,11 @@
       "x": 2040,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: room limit reached tonight"
+      }
     },
     {
       "file": "TVCredits.dc.html",
@@ -262,7 +362,11 @@
       "x": 4080,
       "y": 0,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "app",
+        "label": "TV: credits"
+      }
     },
     {
       "file": "PhoneWaitingNextGame.dc.html",
@@ -271,7 +375,11 @@
       "x": 0,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: waiting for the next game"
+      }
     },
     {
       "file": "PhoneReconnecting.dc.html",
@@ -280,7 +388,11 @@
       "x": 490,
       "y": 1280,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: reconnecting"
+      }
     },
     {
       "file": "DirectionATV.dc.html",
@@ -325,7 +437,11 @@
       "x": 0,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: landing"
+      }
     },
     {
       "file": "PhoneNoTvLobbyStarter.dc.html",
@@ -334,7 +450,8 @@
       "x": 450,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": null
     },
     {
       "file": "PhoneNoTvLobbyPlayer.dc.html",
@@ -343,7 +460,11 @@
       "x": 900,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "app",
+        "label": "Phone: lobby, worst case (no shared screen, 8 long names)"
+      }
     },
     {
       "file": "PhoneNoTvVipPicker.dc.html",
@@ -352,7 +473,11 @@
       "x": 1350,
       "y": 0,
       "w": 390,
-      "h": 1240
+      "h": 1240,
+      "screen": {
+        "game": "app",
+        "label": "Phone: VIP controls, worst case (8 long names, every pack, an error)"
+      }
     },
     {
       "file": "PhoneNoTvMltVote.dc.html",
@@ -361,7 +486,11 @@
       "x": 1800,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "most-likely-to",
+        "label": "Phone (no-TV): Dov vote selecting"
+      }
     },
     {
       "file": "PhoneNoTvMltReveal.dc.html",
@@ -370,7 +499,11 @@
       "x": 2250,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "most-likely-to",
+        "label": "Phone (no-TV): Priya reveal settled"
+      }
     },
     {
       "file": "PhoneNoTvImposterWordCheck.dc.html",
@@ -379,7 +512,11 @@
       "x": 0,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Maya crew card"
+      }
     },
     {
       "file": "PhoneNoTvImposterClues.dc.html",
@@ -388,7 +525,11 @@
       "x": 450,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Priya watching Dov's clue"
+      }
     },
     {
       "file": "PhoneNoTvImposterVote.dc.html",
@@ -397,7 +538,11 @@
       "x": 900,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Dov vote selecting"
+      }
     },
     {
       "file": "PhoneNoTvImposterReveal.dc.html",
@@ -406,7 +551,11 @@
       "x": 1350,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Dov reveal settled"
+      }
     },
     {
       "file": "PhoneNoTvImposterLastChance.dc.html",
@@ -415,7 +564,11 @@
       "x": 1800,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Priya last chance"
+      }
     },
     {
       "file": "PhoneNoTvImposterResult.dc.html",
@@ -424,7 +577,11 @@
       "x": 2250,
       "y": 1440,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "imposter",
+        "label": "Phone (no-TV): Dov result settled"
+      }
     },
     {
       "file": "PhoneDoodleBluffDraw.dc.html",
@@ -433,7 +590,11 @@
       "x": 0,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Phone: Dov drawing"
+      }
     },
     {
       "file": "PhoneDoodleBluffTitle.dc.html",
@@ -442,7 +603,11 @@
       "x": 490,
       "y": 0,
       "w": 390,
-      "h": 1340
+      "h": 1340,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Phone: Maya writing a title"
+      }
     },
     {
       "file": "PhoneDoodleBluffVote.dc.html",
@@ -451,7 +616,11 @@
       "x": 980,
       "y": 0,
       "w": 390,
-      "h": 844
+      "h": 844,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Phone: Maya voting"
+      }
     },
     {
       "file": "TVDoodleBluffDraw.dc.html",
@@ -460,7 +629,11 @@
       "x": 0,
       "y": 1500,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Host: draw"
+      }
     },
     {
       "file": "TVDoodleBluffTitle.dc.html",
@@ -469,7 +642,11 @@
       "x": 2040,
       "y": 1500,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Host: title"
+      }
     },
     {
       "file": "TVDoodleBluffVote.dc.html",
@@ -478,7 +655,11 @@
       "x": 4080,
       "y": 1500,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Host: vote"
+      }
     },
     {
       "file": "TVDoodleBluffReveal.dc.html",
@@ -487,7 +668,11 @@
       "x": 6120,
       "y": 1500,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Host: reveal found"
+      }
     },
     {
       "file": "TVDoodleBluffGallery.dc.html",
@@ -496,7 +681,11 @@
       "x": 8160,
       "y": 1500,
       "w": 1920,
-      "h": 1080
+      "h": 1080,
+      "screen": {
+        "game": "doodle-bluff",
+        "label": "Host: gallery"
+      }
     }
   ],
   "annotations": [
