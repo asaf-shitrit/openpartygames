@@ -43,12 +43,15 @@ export class FakeRooms implements RoomNamespace {
   }
 }
 
+/** Serves `files` (path to content type) and answers anything else like the SPA fallback. */
 export class FakeAssets implements AssetFetcher {
   readonly requests: string[] = [];
+  readonly files = new Map<string, string>();
 
   async fetch(request: Request): Promise<Response> {
     this.requests.push(request.url);
-    return new Response("assets", { status: 200 });
+    const type = this.files.get(new URL(request.url).pathname) ?? "text/html; charset=utf-8";
+    return new Response("assets", { status: 200, headers: { "content-type": type } });
   }
 }
 

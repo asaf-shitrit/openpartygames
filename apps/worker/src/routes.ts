@@ -97,8 +97,32 @@ export function createRouter(
     }
     const route = apiRoute(pathname);
     if (route) return handleApi(route, request, deps);
-    return isApiPath(pathname) ? apiError("not-found", 404) : deps.assets.fetch(request);
+    return isApiPath(pathname)
+      ? apiError("not-found", 404)
+      : serveAsset(request, pathname, deps.assets);
   };
+}
+
+/**
+ * The SPA fallback answers any unknown path with index.html and a 200, so a scanner asking
+ * for `/users.db` or `/.env` looks like it found something. A path naming a file gets a 404
+ * instead; paths without an extension are app routes and keep the fallback.
+ */
+async function serveAsset(
+  request: Request,
+  pathname: string,
+  assets: AssetFetcher,
+): Promise<Response> {
+  const response = await assets.fetch(request);
+  return isFallbackForFile(pathname, response)
+    ? new Response("Not found", { status: 404 })
+    : response;
+}
+
+function isFallbackForFile(pathname: string, response: Response): boolean {
+  const name = pathname.slice(pathname.lastIndexOf("/") + 1);
+  const isHtml = (response.headers.get("content-type") ?? "").startsWith("text/html");
+  return name.includes(".") && !name.endsWith(".html") && isHtml;
 }
 
 /** Paths the Worker owns: an unknown one is a 404, never the SPA shell. */

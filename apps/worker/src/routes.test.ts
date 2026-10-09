@@ -341,4 +341,28 @@ describe("other paths", () => {
       "https://party.test/play/imposter",
     ]);
   });
+
+  it.each(["/users.db", "/backup.zip", "/.env", "/old/db1.sql", "/sendgrid.env"])(
+    "answers %s with a 404 when no such file exists, not the SPA",
+    async (path) => {
+      const routes = makeRoutes();
+      const response = await routes.request("GET", path);
+
+      expect(response.status).toBe(404);
+      expect(await response.text()).toBe("Not found");
+    },
+  );
+
+  it.each([
+    ["/favicon.ico", "image/vnd.microsoft.icon"],
+    ["/manifest.webmanifest", "application/manifest+json"],
+    ["/index.html", "text/html; charset=utf-8"],
+  ])("serves the real file %s", async (path, type) => {
+    const routes = makeRoutes();
+    routes.assets.files.set(path, type);
+    const response = await routes.request("GET", path);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(type);
+  });
 });
