@@ -332,6 +332,17 @@ describe("other paths", () => {
     },
   );
 
+  it.each(["/users.db", "/.env", "/old/backup.zip", "/wp-admin/install.php"])(
+    "answers a missing file %s with a 404, not the SPA",
+    async (path) => {
+      const routes = makeRoutes();
+      const response = await routes.request("GET", path);
+
+      expect(response.status).toBe(404);
+      expect(routes.assets.requests).toEqual([]);
+    },
+  );
+
   it("falls through to the asset fetcher", async () => {
     const routes = makeRoutes();
     const response = await routes.request("GET", "/play/imposter");

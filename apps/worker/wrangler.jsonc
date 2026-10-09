@@ -11,8 +11,10 @@
   "assets": {
     "directory": "../web/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/ws/*"]
+    // No run_worker_first: a browser navigation that matches no asset gets the
+    // SPA shell, and every other unmatched request (the API, sockets, a scanner
+    // asking for /users.db) reaches the Worker, which 404s missing files.
+    "not_found_handling": "single-page-application"
   },
   "durable_objects": {
     "bindings": [{ "name": "ROOMS", "class_name": "Room" }]

@@ -97,8 +97,22 @@ export function createRouter(
     }
     const route = apiRoute(pathname);
     if (route) return handleApi(route, request, deps);
-    return isApiPath(pathname) ? apiError("not-found", 404) : deps.assets.fetch(request);
+    if (isApiPath(pathname)) return apiError("not-found", 404);
+    return isFilePath(pathname) ? notFound() : deps.assets.fetch(request);
   };
+}
+
+/**
+ * The Worker only sees paths that matched no asset, so a file name here is missing.
+ * Answering it with the SPA shell tells scanners that `/users.db` exists.
+ */
+function isFilePath(pathname: string): boolean {
+  const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1);
+  return lastSegment.includes(".");
+}
+
+function notFound(): Response {
+  return new Response("Not found", { status: 404 });
 }
 
 /** Paths the Worker owns: an unknown one is a 404, never the SPA shell. */
