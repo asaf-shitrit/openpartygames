@@ -6,6 +6,7 @@ import type { RevealSegment } from "../reveal-plan";
 import { planLiesOf, type RonReveal } from "../types";
 import {
   callout,
+  foolablePlayers,
   hostRevealBeats,
   personalCardBeats,
   personalRevealCards,
@@ -206,6 +207,23 @@ describe("callout", () => {
   it("routes through the Hebrew dictionary too", () => {
     expect(callout(he, 2, 2)).toBe("רימו את כולם!");
     expect(callout(he, 3, 5)).toBe("רימו 3 אנשים!");
+  });
+});
+
+describe("foolablePlayers", () => {
+  it("excludes the author of a player-written lie: they can never pick their own", () => {
+    // 3-player game, A authors a lie, B and C both pick it -> fooled everyone who could be.
+    expect(foolablePlayers("a", 3)).toBe(2);
+    expect(callout(en, 2, foolablePlayers("a", 3))).toBe("Fooled everyone!");
+  });
+
+  it("counts the whole room for a house decoy with no author", () => {
+    expect(foolablePlayers(null, 3)).toBe(3);
+    expect(callout(en, 3, foolablePlayers(null, 3))).toBe("Fooled everyone!");
+  });
+
+  it("stress fixture: a lie that fools 7 of 8 others reads as everyone", () => {
+    expect(callout(en, 7, foolablePlayers("author", 8))).toBe("Fooled everyone!");
   });
 });
 

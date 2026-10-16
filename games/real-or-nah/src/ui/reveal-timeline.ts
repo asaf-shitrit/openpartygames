@@ -375,6 +375,15 @@ export function personalCardBeats(cards: readonly PersonalCard[]): Beat[] {
 
 // ---------- Callout ----------
 
+/**
+ * How many players a lie could possibly fool. A player can never pick their own lie, so a
+ * player-authored lie tops out at everyone else; a house decoy (no author) is up for grabs by
+ * the whole room. This is the denominator `callout` compares against for "Fooled everyone!".
+ */
+export function foolablePlayers(authorId: PlayerId | null, rosterSize: number): number {
+  return authorId === null ? rosterSize : rosterSize - 1;
+}
+
 /** "Fooled everyone!" (>=2 voters, all fooled), "Fooled N people!" (>=3), else null. */
 export function callout(t: Dictionary, fooledCount: number, voterCount: number): string | null {
   if (fooledCount >= 2 && fooledCount === voterCount) return t.realOrNah.calloutEveryone;
