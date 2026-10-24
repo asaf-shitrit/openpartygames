@@ -221,6 +221,12 @@ previews at three phone sizes and on the 1920x1080 TV, in English and Hebrew, an
 anything readable crosses the screen edge, an action sits where nobody can reach it, a control
 is covered, or text drops below the 16px phone / 28px TV floor.
 
+`pnpm e2e:browser` also writes the one-minute record. It counts the screens, taps and typed
+fields between the landing page and the first game phase, for a starter and a joiner, with and
+without a TV, and stores the numbers in [e2e/browser/one-minute/](e2e/browser/one-minute/).
+The suite reports these numbers and never fails on them, so a change that adds a step shows up
+as a diff in those files instead of passing unseen.
+
 ## Accessibility
 
 Everyone plays from the phone in their pocket, so the phone is where the bar is set. What the
