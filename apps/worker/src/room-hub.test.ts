@@ -675,6 +675,18 @@ describe("RoomHub restore after a crash or deploy", () => {
     expect(fresh.storage.graceUntil).toBeUndefined();
   });
 
+  it("clears a stale grace left in storage when it takes over an idle room", async () => {
+    const old = makeHub();
+    await old.hub.init("BCDF", "host-token");
+    old.clock.advance(IDLE_MS + 1);
+    const fresh = restartHub(old);
+    fresh.storage.graceUntil = fresh.clock.now() + 5_000;
+
+    expect(await fresh.hub.init("CDFG", "host-token")).toBe(true);
+
+    expect(fresh.storage.graceUntil).toBeUndefined();
+  });
+
   it("keeps the seats whose sockets survived hibernation", async () => {
     const lobby = await makeLobby();
     const restored = makeHub(lobby.storage.stored);
