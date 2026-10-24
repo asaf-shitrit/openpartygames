@@ -115,6 +115,15 @@ describe("titleErrorOf", () => {
     expect(titleErrorOf(prompt, {}, "p1", "A Cat Riding A Skateboard")).toBe("truth");
   });
 
+  it("accepts two different emoji-only titles", () => {
+    expect(titleErrorOf(prompt, { p2: "\u{1F438}" }, "p1", "\u{1F984}")).toBeNull();
+    expect(titleErrorOf(prompt, { p2: "!!!" }, "p1", "???")).toBeNull();
+  });
+
+  it("still rejects the same emoji-only title from two players", () => {
+    expect(titleErrorOf(prompt, { p2: "\u{1F438}" }, "p1", "\u{1F438}")).toBe("duplicate");
+  });
+
   it("rejects a title duplicating another player's, but not the same player's own", () => {
     const existing = { p2: "a dog on a scooter" };
     expect(titleErrorOf(prompt, existing, "p1", "a dog on a scooter")).toBe("duplicate");

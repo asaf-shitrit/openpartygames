@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAnswer } from "./text";
+import { duplicateKey, normalizeAnswer } from "./text";
 
 describe("normalizeAnswer", () => {
   it("lowercases and trims", () => {
@@ -77,5 +77,27 @@ describe("normalizeAnswer, gershayim", () => {
   it("still treats a quote around words as punctuation", () => {
     expect(normalizeAnswer('"hello" world')).toBe("hello world");
     expect(normalizeAnswer('say "שלום" now')).toBe("say שלום now");
+  });
+});
+
+describe("duplicateKey", () => {
+  it("is the normalized answer when there is one", () => {
+    expect(duplicateKey("  The Giraffe!  ")).toBe("giraffe");
+    expect(duplicateKey("giraffe")).toBe("giraffe");
+  });
+
+  it("keeps two different emoji-only answers apart", () => {
+    expect(normalizeAnswer("\u{1F438}")).toBe("");
+    expect(normalizeAnswer("\u{1F984}")).toBe("");
+    expect(duplicateKey("\u{1F438}")).not.toBe(duplicateKey("\u{1F984}"));
+  });
+
+  it("keeps two different punctuation-only answers apart", () => {
+    expect(duplicateKey("!!!")).not.toBe(duplicateKey("???"));
+  });
+
+  it("gives the same key for the same answer", () => {
+    expect(duplicateKey("\u{1F438}")).toBe(duplicateKey("\u{1F438}"));
+    expect(duplicateKey("!!!")).toBe(duplicateKey("!!!"));
   });
 });

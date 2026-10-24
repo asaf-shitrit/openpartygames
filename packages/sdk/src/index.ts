@@ -8,7 +8,7 @@ export { dedupeContent, mergeContent } from "./content";
 export { createRng, restoreRng } from "./rng";
 export { createRoom, restoreRoom, START_TIMEOUT_MS, VIP_GRACE_MS } from "./room";
 export { LEFT_PLAYER_GRACE_MS, pullInDeadline } from "./grace";
-export { normalizeAnswer } from "./text";
+export { duplicateKey, normalizeAnswer } from "./text";
 export {
   doodleSchema,
   emptyDoodle,

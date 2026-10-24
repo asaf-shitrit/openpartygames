@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 // Real or Nah: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
-import { normalizeAnswer, pullInDeadline } from "@opg/sdk";
+import { duplicateKey, normalizeAnswer, pullInDeadline } from "@opg/sdk";
 import type {
   Fact,
   FactContent,
@@ -422,17 +422,17 @@ function mayVote(state: RonState, playerId: PlayerId): boolean {
   );
 }
 
-/** Same lie as someone else's once both sides are normalized. */
+/** Same lie as someone else's, once both sides are put in their comparison form. */
 function isDuplicateLie(
   state: RonState,
   playerId: PlayerId,
   cleaned: string,
 ): boolean {
-  const normalized = normalizeLie(cleaned);
+  const key = duplicateKey(cleaned);
   return Object.keys(state.lies).some((otherId) => {
     if (otherId === playerId) return false;
     const other = state.lies[otherId];
-    return other !== undefined && normalizeLie(other) === normalized;
+    return other !== undefined && duplicateKey(other) === key;
   });
 }
 

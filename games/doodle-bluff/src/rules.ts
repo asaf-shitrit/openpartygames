@@ -1,7 +1,7 @@
 // Pure helpers for Doodle Bluff: none of these touch GameContext, so they are unit-testable
 // without a clock or an rng. Phase transitions that need `ctx` live in index.ts and call these.
 import type { PlayerId } from "@opg/protocol";
-import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, normalizeAnswer, type Doodle, type Stroke } from "@opg/sdk";
+import { duplicateKey, MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, normalizeAnswer, type Doodle, type Stroke } from "@opg/sdk";
 import {
   drawingIdOf,
   MAX_POINTS_PER_CHUNK,
@@ -35,12 +35,13 @@ function isTruthTitle(promptText: string, cleaned: string): boolean {
   return normalizeTitle(cleaned) === normalizeTitle(promptText);
 }
 
+/** Same title as another player's, once both sides are put in their comparison form. */
 function isDuplicateTitle(existing: Record<PlayerId, string>, playerId: PlayerId, cleaned: string): boolean {
-  const normalized = normalizeTitle(cleaned);
+  const key = duplicateKey(cleaned);
   return Object.keys(existing).some((otherId) => {
     if (otherId === playerId) return false;
     const other = existing[otherId];
-    return other !== undefined && normalizeTitle(other) === normalized;
+    return other !== undefined && duplicateKey(other) === key;
   });
 }
 

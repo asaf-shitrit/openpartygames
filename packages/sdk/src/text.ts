@@ -28,3 +28,14 @@ export function normalizeAnswer(text: string): string {
     .replace(/^(?:an?|the)\s+/, "")
     .trim();
 }
+
+/**
+ * The form two player-written answers are compared in to spot a duplicate: the normalized
+ * answer, or, when that is empty, the text itself ("🐸" and "🦄" both normalize to "", and
+ * are still two different answers).
+ */
+export function duplicateKey(text: string): string {
+  const normalized = normalizeAnswer(text);
+  if (normalized !== "") return normalized;
+  return text.normalize("NFC").toLowerCase().replace(/\s+/gu, " ").trim();
+}
