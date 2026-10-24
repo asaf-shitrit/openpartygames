@@ -267,6 +267,25 @@ describe("lie validation", () => {
     expect(accepted.lieErrors.p1).toBeUndefined();
   });
 
+  it("accepts different emoji-only lies because they normalize to empty", () => {
+    const ctx = makeCtx();
+    let state = setup(ctx);
+    state = lie(state, "p1", "🐸", ctx);
+    expect(state.lieErrors.p1).toBeUndefined();
+    const other = lie(state, "p2", "🦄", ctx);
+    expect(other.lieErrors.p2).toBeUndefined();
+    expect(other.lies.p2).toBe("🦄");
+  });
+
+  it("rejects an identical emoji-only lie as a duplicate", () => {
+    const ctx = makeCtx();
+    let state = setup(ctx);
+    state = lie(state, "p1", "🐸", ctx);
+    const dup = lie(state, "p2", "🐸", ctx);
+    expect(dup.lieErrors.p2).toBe("duplicate");
+    expect(dup.lies.p2).toBeUndefined();
+  });
+
   it("rejects another player's lie as duplicate after normalization", () => {
     const ctx = makeCtx();
     let state = setup(ctx);

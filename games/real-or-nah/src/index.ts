@@ -429,10 +429,13 @@ function isDuplicateLie(
   cleaned: string,
 ): boolean {
   const normalized = normalizeLie(cleaned);
+  // Emoji-only and punctuation-only lies normalize to ""; two of them are
+  // different lies unless the cleaned text is identical (#147).
   return Object.keys(state.lies).some((otherId) => {
     if (otherId === playerId) return false;
     const other = state.lies[otherId];
-    return other !== undefined && normalizeLie(other) === normalized;
+    if (other === undefined) return false;
+    return normalized === "" ? other === cleaned : normalizeLie(other) === normalized;
   });
 }
 
