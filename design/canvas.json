@@ -25,6 +25,10 @@
       "name": "Doodle Bluff"
     },
     {
+      "id": "sketch-phone",
+      "name": "Sketch Phone (proposed)"
+    },
+    {
       "id": "style-options",
       "name": "Style options (not picked)"
     }
@@ -686,6 +690,296 @@
         "game": "doodle-bluff",
         "label": "Host: gallery"
       }
+    },
+    {
+      "file": "TVSketchPhoneWrite.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Everyone writes",
+      "page": "sketch-phone",
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "TVSketchPhoneRound.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Passing round",
+      "page": "sketch-phone",
+      "x": 2040,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "TVSketchPhoneReplay.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Replay",
+      "page": "sketch-phone",
+      "x": 4080,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "TVSketchPhoneVote.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Pick a favourite",
+      "page": "sketch-phone",
+      "x": 6120,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "TVSketchPhoneFavourite.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Favourite link",
+      "page": "sketch-phone",
+      "x": 8160,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "TVSketchPhoneReplayHe.dc.html",
+      "title": "TV \u00b7 Sketch Phone \u00b7 Replay (Hebrew)",
+      "page": "sketch-phone",
+      "x": 10200,
+      "y": 0,
+      "w": 1920,
+      "h": 1080,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneWrite.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Write the first line",
+      "page": "sketch-phone",
+      "x": 0,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDraw.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Draw what you got",
+      "page": "sketch-phone",
+      "x": 490,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDescribe.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Describe the drawing",
+      "page": "sketch-phone",
+      "x": 980,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneSent.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Sent, waiting",
+      "page": "sketch-phone",
+      "x": 1470,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneTimesUp.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Time's up",
+      "page": "sketch-phone",
+      "x": 1960,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhonePresent.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Showing your chain",
+      "page": "sketch-phone",
+      "x": 2450,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneVote.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Pick a favourite (scrolls)",
+      "page": "sketch-phone",
+      "x": 2940,
+      "y": 1300,
+      "w": 390,
+      "h": 1240,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneDraw.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Draw",
+      "page": "sketch-phone",
+      "x": 0,
+      "y": 2740,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplay.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay, showing your chain",
+      "page": "sketch-phone",
+      "x": 490,
+      "y": 2740,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplayWatch.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay, watching",
+      "page": "sketch-phone",
+      "x": 980,
+      "y": 2740,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneVote.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Pick a favourite (scrolls)",
+      "page": "sketch-phone",
+      "x": 1470,
+      "y": 2740,
+      "w": 390,
+      "h": 1240,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneFavourite.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Favourite link",
+      "page": "sketch-phone",
+      "x": 1960,
+      "y": 2740,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneWriteHe.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Write (Hebrew)",
+      "page": "sketch-phone",
+      "x": 0,
+      "y": 4180,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDrawHe.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Draw (Hebrew)",
+      "page": "sketch-phone",
+      "x": 490,
+      "y": 4180,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDescribeHe.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Describe (Hebrew)",
+      "page": "sketch-phone",
+      "x": 980,
+      "y": 4180,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplayHe.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay (Hebrew)",
+      "page": "sketch-phone",
+      "x": 1470,
+      "y": 4180,
+      "w": 390,
+      "h": 844,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneVoteHe.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Pick a favourite (Hebrew, scrolls)",
+      "page": "sketch-phone",
+      "x": 1960,
+      "y": 4180,
+      "w": 390,
+      "h": 1240,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDraw360.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Draw, 360 wide, longest line",
+      "page": "sketch-phone",
+      "x": 0,
+      "y": 5620,
+      "w": 360,
+      "h": 780,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDrawHe360.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Draw, 360 wide, Hebrew, longest line",
+      "page": "sketch-phone",
+      "x": 490,
+      "y": 5620,
+      "w": 360,
+      "h": 780,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplay360.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay, 360 wide",
+      "page": "sketch-phone",
+      "x": 980,
+      "y": 5620,
+      "w": 360,
+      "h": 780,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplayHe360.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay, 360 wide, Hebrew",
+      "page": "sketch-phone",
+      "x": 1470,
+      "y": 5620,
+      "w": 360,
+      "h": 780,
+      "screen": null
+    },
+    {
+      "file": "PhoneSketchPhoneDraw430.dc.html",
+      "title": "Phone \u00b7 Sketch Phone \u00b7 Draw, 430 wide",
+      "page": "sketch-phone",
+      "x": 1960,
+      "y": 5620,
+      "w": 430,
+      "h": 932,
+      "screen": null
+    },
+    {
+      "file": "PhoneNoTvSketchPhoneReplay430.dc.html",
+      "title": "Phone \u00b7 No-TV \u00b7 Sketch Phone \u00b7 Replay, 430 wide",
+      "page": "sketch-phone",
+      "x": 2490,
+      "y": 5620,
+      "w": 430,
+      "h": 932,
+      "screen": null
     }
   ],
   "annotations": [
@@ -760,6 +1054,14 @@
       "y": 1240,
       "w": 1100,
       "text": "Doodle Bluff. Everyone draws two secret prompts up front, then drawings are shown one at a time: everyone but the artist writes a fake title, then the room votes for the real one.\n\nThe six marker inks are settled here, contrast-checked against the paper. Colour is decoration only \u2014 no rule, score, title or vote ever reads a stroke's colour.\n\nThe gallery is the finale: every drawing made in the game, including the ones never titled, and then they die with the room.\nAll names, prompts and titles are sample content."
+    },
+    {
+      "id": "sketch-phone-notes",
+      "page": "sketch-phone",
+      "x": 3500,
+      "y": 1300,
+      "w": 1100,
+      "text": "Sketch Phone, proposed for issue #145. Nothing here is built yet. Every player starts a chain with a line of words. Each round the chains move one seat on, and the rounds take turns: draw what you got, then describe the drawing you got. At the end every chain plays back, one link at a time.\n\nProposals for the open questions (the plan settles them):\n- Chain length: the player count, rounded down to an odd number and capped at 7 (3 or 4 players: 3 links; 8 players: 7). A chain always starts and ends with words, so the end can be read against the start. At 8 players one player sits out each chain; Maya isn't in Priya's.\n- Times: write 45 s, draw 75 s, describe 40 s. About 6 minutes of play at 8 players, then about 70 s of replay and vote per chain.\n- The chain's starter presents it: their phone holds Next, and the link moves on by itself after 10 s. Phones that aren't presenting show the kit's Look up screen while there's a TV.\n- Scoring: after each chain, everyone picks a favourite link that isn't their own. Each vote is +100 for that link's author; ties share. Final scores and the crown use the platform's existing screens, so nothing new is drawn for them.\n- Words are capped at 50 characters; 'Give me one' fills the first line from the drawing-prompts pack.\n- Time runs out: a drawing goes on as it is. An empty line is replaced from the pack and tagged 'Out of time' in the replay.\n- No shared screen: the game opts in. Each phone carries the replay as its stage, with the presenter's Next button or a line saying who has it below.\n\nRows: the TV; phones with a TV; phones alone; Hebrew, right to left; the 360 and 430 wide phones with the longest line (50 characters) and 12-character names.\nAll names, lines and drawings are sample content."
     }
   ],
   "launch": {
