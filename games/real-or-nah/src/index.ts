@@ -524,6 +524,26 @@ export function onDeadline(state: RonState, ctx: Ctx): RonState {
   return startNextFact(state, ctx);
 }
 
+/**
+ * The reveal after a kick. Everything the reveal counted when it started — each lie's
+ * fooled list, its points, and `planLies` — stays as it was, so the points on stage keep
+ * matching the `pointsThisFact` the standings count. Only two things follow the live
+ * room: a departed author's own lie leaves the table, and the finders lose that player.
+ */
+function revealAfterKick(
+  frozen: RonReveal | null,
+  foundByIds: readonly PlayerId[],
+  playerId: PlayerId,
+): RonReveal | null {
+  if (frozen === null) return null;
+  return {
+    ...frozen,
+    foundByIds: [...foundByIds],
+    lies: frozen.lies.filter((lie) => lie.authorId !== playerId),
+    planLies: planLiesOf(frozen),
+  };
+}
+
 /** Copies a per-player map without one player's entry. */
 function withoutPlayer<T>(record: Record<PlayerId, T>, playerId: PlayerId) {
   const next = { ...record };
@@ -555,6 +575,7 @@ export function onPlayerRemoved(
   const playerIds = state.playerIds.filter((id) => id !== playerId);
   const votes = withoutPlayer(state.votes, playerId);
   const options = anonymizeOptions(state.options, playerId);
+  const truthId = truthOptionId(options ?? []);
   const next: RonState = {
     ...state,
     playerIds,
@@ -564,20 +585,13 @@ export function onPlayerRemoved(
     options,
     pointsThisFact: withoutPlayer(state.pointsThisFact, playerId),
     scores: withoutPlayer(state.scores, playerId),
-    // `planLies` stays frozen: a kick can shrink or reorder `lies`, but must never
-    // move the reveal's beat timing (see startReveal).
-    reveal:
-      state.reveal === null
-        ? null
-        : {
-            ...computeReveal(
-              options ?? [],
-              votes,
-              playerIds,
-              state.facts[state.factIndex],
-            ),
-            planLies: planLiesOf(state.reveal),
-          },
+    // The reveal stays as it started, apart from a departed author's own lie (see
+    // revealAfterKick): its beats, fooled lists and points are frozen like `planLies`.
+    reveal: revealAfterKick(
+      state.reveal,
+      playerIds.filter((id) => votes[id] === truthId),
+      playerId,
+    ),
   };
   return settlePhase(next, ctx);
 }
