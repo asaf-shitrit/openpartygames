@@ -179,6 +179,22 @@ function pickedOptionId(action: RonAction | null): string {
   return action.optionId;
 }
 
+/**
+ * Every remaining author's counted points equal the truth points plus the sum of the
+ * points the reveal shows their lies earning. A kick must keep this true.
+ */
+function expectCountedPointsMatchReveal(state: RonState): void {
+  const reveal = state.reveal;
+  const shown = reveal?.lies ?? [];
+  for (const id of state.playerIds) {
+    const truth = (reveal?.foundByIds ?? []).includes(id) ? POINTS_TRUTH : 0;
+    const lies = shown
+      .filter((shownLie) => shownLie.authorId === id)
+      .reduce((sum, shownLie) => sum + shownLie.points, 0);
+    expect(state.pointsThisFact[id] ?? 0).toBe(truth + lies);
+  }
+}
+
 // ---------- Tests ----------
 
 describe("setup", () => {
@@ -707,6 +723,7 @@ describe("onPlayerRemoved edges", () => {
     expect(after.reveal?.foundByIds).toEqual(["p2", "p4"]);
     expect(after.reveal?.lies).toEqual([]);
     expect(after.scores.p1).toBeUndefined();
+    expectCountedPointsMatchReveal(after);
   });
 
   it("leaves the reveal deadline unchanged when a player is kicked mid-reveal", () => {
@@ -740,16 +757,45 @@ describe("onPlayerRemoved edges", () => {
     const planBefore = state.reveal?.planLies;
     expect(planBefore?.find((p) => p.optionId === p1Lie)?.fooledCount).toBe(1);
 
-    // Kicking the only voter fooled by p1's lie drops it from `lies` (now zero-fooled),
-    // but the frozen plan, and so the reveal's timing, must not move.
+    // Kicking the only voter fooled by p1's lie must not shrink that lie's shown points:
+    // the reveal counted 500 for it into `pointsThisFact`, so it keeps 500 on stage, and
+    // the frozen plan, and so the reveal's timing, does not move either.
     const after = onPlayerRemoved(state, "p3", ctx);
     expect(after.reveal?.planLies).toEqual(planBefore);
     expect(
-      after.reveal?.lies.find((l) => l.optionId === p1Lie)?.fooledIds,
-    ).toEqual([]);
+      after.reveal?.lies.find((l) => l.optionId === p1Lie),
+    ).toMatchObject({ fooledIds: ["p3"], points: POINTS_PER_FOOL });
+    expect(after.pointsThisFact.p1).toBe(POINTS_TRUTH + POINTS_PER_FOOL);
     expect(
       revealPlan({ lies: planLiesOf(after.reveal ?? { lies: [] }) }),
     ).toEqual(revealPlan({ lies: planLiesOf(state.reveal ?? { lies: [] }) }));
+  });
+
+  it("keeps a lie's shown points matching the standings when a fooled player is kicked mid-reveal", () => {
+    const ctx = makeCtx({ n: 4 });
+    let state = lie(setup(ctx), "p1", "aaa", ctx);
+    state = onDeadline(state, ctx);
+    const truthId = optionIdByText(state, "emus");
+    const p1Lie = optionIdByText(state, "aaa");
+    state = pick(state, "p1", truthId, ctx);
+    state = pick(state, "p2", p1Lie, ctx); // p2 is fooled by p1's lie
+    state = pick(state, "p3", p1Lie, ctx); // p3 is fooled by p1's lie
+    state = pick(state, "p4", truthId, ctx);
+    expect(state.phase).toBe("reveal");
+    expect(state.reveal?.lies.find((l) => l.optionId === p1Lie)?.points).toBe(
+      2 * POINTS_PER_FOOL,
+    );
+    expect(state.pointsThisFact.p1).toBe(POINTS_TRUTH + 2 * POINTS_PER_FOOL);
+
+    // The TV row and p1's phone card show +1,000 for the lie, and the standings count
+    // +2,000 this fact, before and after the kick.
+    const after = onPlayerRemoved(state, "p3", ctx);
+    expect(
+      after.reveal?.lies.find((l) => l.optionId === p1Lie),
+    ).toMatchObject({ fooledIds: ["p2", "p3"], points: 2 * POINTS_PER_FOOL });
+    expect(after.pointsThisFact.p1).toBe(POINTS_TRUTH + 2 * POINTS_PER_FOOL);
+    expect(after.scores.p1).toBe(state.scores.p1);
+    expectCountedPointsMatchReveal(after);
   });
 
   it("shows a lie's beat with no author once that author is kicked mid-reveal", () => {
