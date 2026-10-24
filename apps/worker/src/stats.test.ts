@@ -4,6 +4,7 @@ import {
   dailyRoomParams,
   matchParams,
   MATCH_STATS_SQL,
+  RELEASE_ROOM_SQL,
   withinCap,
 } from "./stats";
 
@@ -20,6 +21,11 @@ describe("withinCap", () => {
     expect(DAILY_ROOM_SQL).toContain("ON CONFLICT(day) DO UPDATE");
     expect(DAILY_ROOM_SQL).toContain("WHERE daily_rooms.count < ?");
     expect(dailyRoomParams("2026-09-11", 150)).toEqual(["2026-09-11", 150]);
+  });
+
+  it("gives one counted room back without ever going below zero", () => {
+    expect(RELEASE_ROOM_SQL).toContain("count = count - 1");
+    expect(RELEASE_ROOM_SQL).toContain("count > 0");
   });
 });
 

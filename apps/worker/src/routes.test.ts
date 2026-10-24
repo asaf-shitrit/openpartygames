@@ -35,6 +35,8 @@ describe("POST /api/rooms", () => {
       hostToken: "host-1",
     });
     expect(routes.budgetDays).toEqual(["2023-11-14"]);
+    expect(routes.roomCount).toBe(1);
+    expect(routes.releasedDays).toEqual([]);
     expect(routes.rooms.initCalls).toEqual([
       { code: "BCDF", hostToken: "host-1", sharedScreen: true, contentLanguage: "en" },
     ]);
@@ -196,6 +198,60 @@ describe("POST /api/rooms", () => {
     expect(response.status).toBe(500);
     expect(JSON.parse(await response.text())).toEqual({ error: "internal" });
     expect(routes.rooms.initCalls).toHaveLength(10);
+  });
+
+  it("gives today's room back when every code is taken", async () => {
+    const routes = makeRoutes({
+      codes: ["BCDF", "GHJK"],
+      taken: ["BCDF", "GHJK"],
+    });
+
+    await routes.request("POST", "/api/rooms", IP);
+
+    expect(routes.roomCount).toBe(0);
+    expect(routes.releasedDays).toEqual(["2023-11-14"]);
+  });
+
+  it("gives today's room back when the room cannot be initialized", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const routes = makeRoutes({ codes: ["BCDF"] });
+    routes.rooms.getByName = () => ({
+      init: async () => {
+        throw new Error("class not deployed");
+      },
+      info: async () => null,
+      fetch: async () => new Response(null, { status: 404 }),
+    });
+
+    const response = await routes.request("POST", "/api/rooms", IP);
+
+    expect(response.status).toBe(500);
+    expect(routes.roomCount).toBe(0);
+    expect(routes.releasedDays).toEqual(["2023-11-14"]);
+    error.mockRestore();
+  });
+
+  it("still answers internal when giving the room back fails too", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const routes = makeRoutes({
+      codes: ["BCDF", "GHJK"],
+      taken: ["BCDF", "GHJK"],
+    });
+    routes.budgetReleaseFails = true;
+
+    const response = await routes.request("POST", "/api/rooms", IP);
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(await response.text())).toEqual({ error: "internal" });
+    expect(error).toHaveBeenCalledWith(
+      "failed to give back today's room",
+      expect.any(Error),
+    );
+    error.mockRestore();
   });
 
   it("answers internal when the room cannot be initialized", async () => {

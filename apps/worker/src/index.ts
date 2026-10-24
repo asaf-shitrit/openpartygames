@@ -7,7 +7,7 @@ import {
   type RouteDeps,
   type RoomBudget,
 } from "./routes";
-import { consumeDailyRoom } from "./stats";
+import { consumeDailyRoom, releaseDailyRoom } from "./stats";
 
 export { Room };
 
@@ -34,5 +34,8 @@ function routeDeps(env: Env): RouteDeps {
 }
 
 function roomBudget(db: D1Database, cap: number): RoomBudget {
-  return { tryConsume: (day) => consumeDailyRoom(db, day, cap) };
+  return {
+    tryConsume: (day) => consumeDailyRoom(db, day, cap),
+    release: (day) => releaseDailyRoom(db, day),
+  };
 }

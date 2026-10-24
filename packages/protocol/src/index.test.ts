@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_AWARDS,
+  MAX_MESSAGE_LENGTH,
   cleanPlayerName,
   playerNameKey,
   normalizeRoomCode,
@@ -52,6 +53,15 @@ describe("parseClientMessage", () => {
     expect(
       parseClientMessage(JSON.stringify({ t: "start-game", extra: 1 })),
     ).toEqual({ t: "start-game" });
+  });
+
+  it("answers null for a frame nested too deep to walk", () => {
+    const depth = (MAX_MESSAGE_LENGTH - 30) / 2;
+    const action = "[".repeat(depth) + "]".repeat(depth);
+    const frame = `{"t":"game-action","action":${action}}`;
+
+    expect(frame.length).toBeLessThanOrEqual(MAX_MESSAGE_LENGTH);
+    expect(parseClientMessage(frame)).toBeNull();
   });
 });
 

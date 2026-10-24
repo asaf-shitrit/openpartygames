@@ -206,6 +206,10 @@ export class RoomHub {
     this.room = room;
     // A brand-new room has no seats a crash could have stranded, so it needs no grace.
     this.resumed = true;
+    this.reconcileAt = null;
+    // A reused idle instance can still hold the wait an earlier room booked here. Left in
+    // place, it would cut short the grace a future restore gives its phones.
+    await this.options.storage.setGraceUntil(null);
 
     const packs = await this.loadPacks();
     await this.apply(room.setPackCatalog(packs, this.options.now()));

@@ -19,6 +19,10 @@ export const DAILY_ROOM_SQL = `INSERT INTO daily_rooms (day, count) VALUES (?, 1
 export const MATCH_STATS_SQL =
   "INSERT INTO match_stats (game_id, player_count, duration_ms, completed, finished_at) VALUES (?, ?, ?, ?, ?)";
 
+/** Takes back one room the cap counted, never below zero. */
+export const RELEASE_ROOM_SQL =
+  "UPDATE daily_rooms SET count = count - 1 WHERE day = ? AND count > 0";
+
 /** Bind values for DAILY_ROOM_SQL. */
 export function dailyRoomParams(day: string, cap: number): (string | number)[] {
   return [day, cap];
@@ -55,6 +59,17 @@ export async function consumeDailyRoom(
     .bind(...dailyRoomParams(day, cap))
     .all<CountRow>();
   return withinCap(results);
+}
+
+/**
+ * Gives back one room the counter took, for a create that produced no room. The count never
+ * drops below zero, so a release that arrives twice cannot hand out a free room later.
+ */
+export async function releaseDailyRoom(
+  db: D1Database,
+  day: string,
+): Promise<void> {
+  await db.prepare(RELEASE_ROOM_SQL).bind(day).run();
 }
 
 /** Records a finished game. Failures are the caller's to swallow. */
