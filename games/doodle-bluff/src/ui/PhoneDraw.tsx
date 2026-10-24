@@ -27,6 +27,7 @@ import {
   usePinnedBarScrollPadding,
 } from "@opg/ui";
 import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
+import { MAX_MESSAGE_LENGTH } from "@opg/protocol";
 import { format, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import {
@@ -63,19 +64,48 @@ export const SQUIGGLE_DOODLE: Doodle = {
   ],
 };
 
-/** Groups pending strokes into chunks that each fit MAX_POINTS_PER_CHUNK. */
-export function pendingChunks(strokes: readonly Stroke[], from: number): Stroke[][] {
+/**
+ * How many characters the frame around one "strokes" action takes with an empty stroke list: the
+ * `game-action` wrapper the socket serializes, the drawing id and the cursor. `widestFrom` is the
+ * largest cursor the chunks built from this call can carry, so no chunk's own digits outgrow it.
+ */
+function strokesFrameOverhead(drawingId: string, widestFrom: number): number {
+  return JSON.stringify({
+    t: "game-action",
+    action: { type: "strokes", drawingId, from: widestFrom, strokes: [] },
+  }).length;
+}
+
+/**
+ * Groups pending strokes into "strokes" chunks that each cross the wire whole, by the serialized
+ * frame rather than by point count. Two bounds: a chunk's frame must fit `MAX_MESSAGE_LENGTH`
+ * (`parseClientMessage` drops a longer one in silence, which is how a dense scribble froze the
+ * drawing for the rest of the phase) and its points must fit `MAX_POINTS_PER_CHUNK` (the rules
+ * refuse more). Both are needed, in opposite directions: 400 dense points serialize past the
+ * frame, and 400 one-pixel points pass the frame and fail the rules.
+ */
+export function pendingChunks(strokes: readonly Stroke[], from: number, drawingId: string): Stroke[][] {
+  const pending = strokes.slice(from);
+  const overhead = strokesFrameOverhead(drawingId, Math.max(from, strokes.length));
   const chunks: Stroke[][] = [];
   let current: Stroke[] = [];
+  let chars = 0;
   let points = 0;
-  for (const stroke of strokes.slice(from)) {
+  for (const stroke of pending) {
+    const strokeChars = JSON.stringify(stroke).length;
     const strokePoints = stroke.p.length / 2;
-    if (current.length > 0 && points + strokePoints > MAX_POINTS_PER_CHUNK) {
+    // `current.length` is the comma between this stroke and the ones already in the chunk.
+    const overFrame = overhead + chars + strokeChars + current.length > MAX_MESSAGE_LENGTH;
+    if (current.length > 0 && (overFrame || points + strokePoints > MAX_POINTS_PER_CHUNK)) {
       chunks.push(current);
       current = [];
+      chars = 0;
       points = 0;
     }
+    // A stroke always goes in, even alone and over a bound: it cannot be split, and one stroke at
+    // MAX_POINTS_PER_STROKE is far under the frame cap, so the rules' own stroke caps keep this safe.
     current.push(stroke);
+    chars += strokeChars;
     points += strokePoints;
   }
   if (current.length > 0) chunks.push(current);
@@ -172,7 +202,7 @@ function sendChunks({ send, sentRef, drawingId, doodle, canTruncate = false }: S
     return;
   }
   let cursor = from;
-  for (const chunk of pendingChunks(doodle.s, from)) {
+  for (const chunk of pendingChunks(doodle.s, from, drawingId)) {
     send({ type: "strokes", drawingId, from: cursor, strokes: chunk });
     cursor += chunk.length;
   }
