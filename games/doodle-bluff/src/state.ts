@@ -33,7 +33,11 @@ export const POINTS_TRUTH = 1000;
 export const POINTS_PER_FOOL = 500;
 export const POINTS_PER_FOUND = 500;
 
-/** Rules-level sanity bound on one "strokes" action; the frame cap is the hard bound. */
+/**
+ * Rules-level sanity bound on the points in one "strokes" action. It is not what makes a chunk
+ * fit the wire: 400 dense points serialize past `MAX_MESSAGE_LENGTH`, and 400 one-pixel points pass
+ * the frame but fail this. The pad splits on both (ui/PhoneDraw.tsx, `pendingChunks`).
+ */
 export const MAX_POINTS_PER_CHUNK = 400;
 
 /** The two drawing slots a player fills during `draw`, 0 and 1. */

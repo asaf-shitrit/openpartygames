@@ -267,7 +267,12 @@ export interface ApiErrorResponse {
 
 // ---------- Parsing untrusted client messages ----------
 
-const MAX_MESSAGE_LENGTH = 4096;
+/**
+ * The longest client frame a room parses, in characters (the same `.length` this file measures).
+ * A phone that builds a frame has to keep inside it: `parseClientMessage` drops a longer one in
+ * silence, so the action inside never happens. Doodle Bluff's `pendingChunks` sizes by it.
+ */
+export const MAX_MESSAGE_LENGTH = 4096;
 
 function parseJson(text: string): z.core.util.JSONType | undefined {
   try {
