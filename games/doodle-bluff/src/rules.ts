@@ -37,6 +37,9 @@ function isTruthTitle(promptText: string, cleaned: string): boolean {
 
 function isDuplicateTitle(existing: Record<PlayerId, string>, playerId: PlayerId, cleaned: string): boolean {
   const normalized = normalizeTitle(cleaned);
+  // Emoji-only and punctuation-only titles normalize to "" and are not
+  // duplicates of one another (#147).
+  if (normalized === "") return false;
   return Object.keys(existing).some((otherId) => {
     if (otherId === playerId) return false;
     const other = existing[otherId];
