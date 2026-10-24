@@ -265,12 +265,18 @@ function fooledByCard(
   if (lie === undefined) return null;
   const index = lieIndexOf(input.segments, lie.optionId);
   if (index < 0) return null;
-  const author = input.names[lie.authorId ?? ""] ?? t.common.someone;
   const p = t.realOrNah.personal;
+  // A decoy has no author, so it gets its own headline: the TV calls the same row a house lie.
+  const headline =
+    lie.authorId === null
+      ? p.fooledByHouseHeadline
+      : format(p.fooledByHeadline, {
+          author: input.names[lie.authorId] ?? t.common.someone,
+        });
   return {
     id: "fooled-by",
     atMs: beatAtMs(beats, `lie-${index}-fooled`) + CARD_FOLLOW_MS,
-    headline: format(p.fooledByHeadline, { author }),
+    headline,
     sub: format(p.fooledBySub, { text: lie.text }),
     haptic: "soft",
     celebrate: false,

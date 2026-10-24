@@ -60,6 +60,7 @@ export const realOrNah: Dictionary["realOrNah"] = {
     dudsHeadline: "השקר שלכם לא רימה אף אחד",
     dudsSub: "בפעם הבאה!",
     fooledByHeadline: "השקר של {author} תפס אתכם",
+    fooledByHouseHeadline: "השקר של הבית תפס אתכם",
     fooledBySub: "\"{text}\"",
     authorFooledHeadline: "רימיתם את {names}!",
     authorFooledSub: "\u2066+{points}\u2069",
