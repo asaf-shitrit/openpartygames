@@ -96,15 +96,15 @@ function artistReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal
 
 function voterReveal(t: Dictionary, input: PersonalRevealInput): PersonalReveal {
   const p = t.doodleBluff.personal;
-  if (input.myVote === null) return card(p.satOutHeadline, p.satOutSub, "soft");
-  const found = input.myVote === input.truthOptionId;
   const points = input.myPoints ?? 0;
-  if (found) {
+  if (input.myVote === input.truthOptionId) {
     return card(p.foundItHeadline, format(p.foundItSub, { points: points.toLocaleString("en-US") }), "good", true);
   }
+  // A player who missed the vote but still scored fooled someone with their own title.
   if (points > 0) {
     return card(p.fooledSomeoneHeadline, format(p.fooledSomeoneSub, { points: points.toLocaleString("en-US") }), "good", true);
   }
+  if (input.myVote === null) return card(p.satOutHeadline, p.satOutSub, "soft");
   return card(p.notThisTimeHeadline, p.notThisTimeSub, "caught");
 }
 
