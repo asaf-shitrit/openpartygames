@@ -300,15 +300,17 @@ describe("personalRevealCards", () => {
     expect(standings?.haptic).toBeUndefined();
   });
 
-  it("orders cards chronologically by atMs", () => {
+  // Noa's lie plays first in the plan, so her cards arrive in a different order than Dov's.
+  it.each([DOV, NOA])("orders cards chronologically by atMs for %s", (me) => {
     const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
-      me: DOV,
+      me,
       names: NAMES,
       standingsOrdinal: 1,
       myPointsThisFact: 1000,
     });
+    expect(cards.length).toBeGreaterThan(1);
     for (let i = 1; i < cards.length; i += 1) {
       const a = cards[i - 1];
       const b = cards[i];

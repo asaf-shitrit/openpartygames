@@ -348,20 +348,41 @@ function standingsCard(
   };
 }
 
+/** Earliest card first, ties kept in the order they were built. ES2022 has no Array#toSorted. */
+function byLandingTime(cards: readonly PersonalCard[]): PersonalCard[] {
+  const remaining = [...cards];
+  const ordered: PersonalCard[] = [];
+  while (remaining.length > 0) {
+    let earliestIndex = 0;
+    for (let index = 1; index < remaining.length; index += 1) {
+      const candidate = remaining[index];
+      const earliest = remaining[earliestIndex];
+      if (candidate !== undefined && earliest !== undefined && candidate.atMs < earliest.atMs) {
+        earliestIndex = index;
+      }
+    }
+    ordered.push(...remaining.splice(earliestIndex, 1));
+  }
+  return ordered;
+}
+
 /** This phone's stack of result cards, in the order they land. */
 export function personalRevealCards(
   t: Dictionary,
   input: PersonalRevealInput,
 ): PersonalCard[] {
   const beats = hostRevealBeats(input.segments);
-  const cards = [
-    dudsCard(t, input, beats),
-    fooledByCard(t, input, beats),
-    authorFooledCard(t, input, beats),
-    truthCard(t, input, beats),
-    standingsCard(t, input, beats),
-  ];
-  return cards.filter((card): card is PersonalCard => card !== null);
+  // Card timestamps come from the shared segment plan, so a player whose lie plays first builds
+  // them out of order. The stack follows the TV, earliest card first.
+  return byLandingTime(
+    [
+      dudsCard(t, input, beats),
+      fooledByCard(t, input, beats),
+      authorFooledCard(t, input, beats),
+      truthCard(t, input, beats),
+      standingsCard(t, input, beats),
+    ].filter((card): card is PersonalCard => card !== null),
+  );
 }
 
 /** A phone-local beat per card, so useMoment can stage the +200ms follow lands. */
