@@ -105,6 +105,29 @@ describe("RoomHub.init", () => {
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
+
+  it("opens the room when its first alarm cannot be booked, and books it on the next wake", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const harness = makeHub();
+    harness.storage.alarmFailures = 1;
+
+    expect(await harness.hub.init("BCDF", "host-token")).toBe(true);
+
+    // The snapshot is saved, so the code holds a room even though no wake was booked.
+    expect(storedRoom(harness.storage.stored)?.code).toBe("BCDF");
+    expect(harness.storage.alarmAt).toBeUndefined();
+    expect(error).toHaveBeenCalledWith(
+      "failed to arm the new room's first alarm",
+      "BCDF",
+      expect.any(Error),
+    );
+
+    await connectHost(harness);
+    expect(harness.storage.alarmAt).toBe(harness.clock.now() + IDLE_MS);
+    error.mockRestore();
+  });
 });
 
 describe("RoomHub sockets", () => {

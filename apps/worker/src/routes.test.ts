@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { limiter, makeRoutes } from "./fixtures/router";
+import { makeHub, storedRoom } from "./fixtures/hub";
 import { dailyCap, DEFAULT_DAILY_ROOM_CAP } from "./routes";
 
 const IP = { "CF-Connecting-IP": "1.2.3.4" };
@@ -230,6 +231,33 @@ describe("POST /api/rooms", () => {
     expect(response.status).toBe(500);
     expect(routes.roomCount).toBe(0);
     expect(routes.releasedDays).toEqual(["2023-11-14"]);
+    error.mockRestore();
+  });
+
+  it("keeps the room it saved when its first alarm cannot be booked", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const routes = makeRoutes({ codes: ["BCDF", "GHJK"] });
+    const room = makeHub();
+    room.storage.alarmFailures = 1;
+    routes.rooms.getByName = () => ({
+      init: (code, hostToken) => room.hub.init(code, hostToken),
+      info: async () => room.hub.info(),
+      fetch: async () => new Response(null, { status: 404 }),
+    });
+
+    const response = await routes.request("POST", "/api/rooms", IP);
+
+    // The room was saved before the alarm failed, so it is the room the host gets.
+    expect(response.status).toBe(200);
+    expect(JSON.parse(await response.text())).toEqual({
+      code: "BCDF",
+      hostToken: "host-1",
+    });
+    expect(storedRoom(room.storage.stored)?.code).toBe("BCDF");
+    expect(routes.roomCount).toBe(1);
+    expect(routes.releasedDays).toEqual([]);
     error.mockRestore();
   });
 
