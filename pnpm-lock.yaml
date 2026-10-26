@@ -252,6 +252,31 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0
 
+  games/sketch-phone:
+    dependencies:
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@opg/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@opg/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@opg/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      react:
+        specifier: ^19.3.0
+        version: 19.3.0
+
   packages/i18n:
     dependencies:
       react:
