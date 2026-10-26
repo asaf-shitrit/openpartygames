@@ -80,15 +80,16 @@ export function buildHostView(state: SketchState): SketchHostView {
   return {
     phase: state.phase,
     playerIds: [...state.playerIds],
-    roundNumber: state.round,
-    roundCount: Math.max(0, state.playerIds.length - 1),
+    // One-based for players: round 0 is the seed everyone writes, so the last round is round N.
+    roundNumber: state.round + 1,
+    roundCount: Math.max(1, state.playerIds.length),
     doneIds: doneIds(state),
     totals: { ...state.scores },
     chainNumber: chainNumber(state, chain),
     chainCount: chainCount(state),
     ownerId,
     presenterId: ownerId,
-    links: visibleLinks(state, chain)?.map(linkView) ?? null,
+    links: visibleLinkViews(state, chain),
     revealed: state.revealed,
     votedIds: votedIdsOf(state),
     voteCounts: countsOf(state, chain),
@@ -126,23 +127,59 @@ function myLinkVotes(state: SketchState, playerId: PlayerId, chain: number | nul
   return mine === undefined ? 0 : votesOn(state, mine.id);
 }
 
+/** The link a player may fill this phase; none at all while the room replays or votes. */
+function workingLink(state: SketchState, playerId: PlayerId): ChainLink | null {
+  if (state.phase === "replay" || state.phase === "vote" || state.phase === "favourite") return null;
+  return myLinkOf(state, playerId);
+}
+
+function wordsOf(link: ChainLink | null): string | null {
+  if (link === null || link.kind !== "words") return null;
+  return link.text;
+}
+
+function strokeCountOf(link: ChainLink | null): number {
+  return link === null ? 0 : link.doodle.s.length;
+}
+
+function doneOf(link: ChainLink | null): boolean {
+  return link === null || link.done;
+}
+
+/** The chain on stage's showable links as wire objects, or null while nothing is revealed. */
+function visibleLinkViews(state: SketchState, chain: number | null) {
+  const links = visibleLinks(state, chain);
+  return links === null ? null : links.map(linkView);
+}
+
+/** What this chain has paid the player so far, once the room is on the favourite screen. */
+function chainPointsOf(state: SketchState, playerId: PlayerId): number {
+  if (state.phase !== "favourite") return 0;
+  return state.pointsThisChain[playerId] ?? 0;
+}
+
+function inputViewOf(state: SketchState, link: ChainLink | null) {
+  return inputView(link === null ? null : inputOf(state, link));
+}
+
 export function buildPlayerView(state: SketchState, playerId: PlayerId): SketchPlayerView {
   const chain = stageChain(state);
-  const myLink = state.phase === "vote" || state.phase === "replay" || state.phase === "favourite" ? null : myLinkOf(state, playerId);
+  const myLink = workingLink(state, playerId);
   const ownerId = ownerOf(state, chain);
   return {
     phase: state.phase,
     gameStartedAt: state.startedAt,
     playerCount: state.playerIds.length,
-    roundNumber: state.round,
-    roundCount: Math.max(0, state.playerIds.length - 1),
+    // One-based for players: round 0 is the seed everyone writes, so the last round is round N.
+    roundNumber: state.round + 1,
+    roundCount: Math.max(1, state.playerIds.length),
     doneCount: doneIds(state).length,
     myLinkId: myLink === null ? null : myLink.id,
     myKind: myLink === null ? null : myLink.kind,
-    myWords: myLink !== null && myLink.kind === "words" ? myLink.text : null,
-    myDone: myLink === null || myLink.done,
-    input: inputView(myLink === null ? null : inputOf(state, myLink)),
-    myStrokeCount: myLink === null ? 0 : myLink.doodle.s.length,
+    myWords: wordsOf(myLink),
+    myDone: doneOf(myLink),
+    input: inputViewOf(state, myLink),
+    myStrokeCount: strokeCountOf(myLink),
     chainNumber: chainNumber(state, chain),
     chainCount: chainCount(state),
     ownerId,
@@ -155,7 +192,7 @@ export function buildPlayerView(state: SketchState, playerId: PlayerId): SketchP
     voteCounts: countsOf(state, chain),
     favouriteId: favouriteIdOf(state, chain),
     myLinkVotes: myLinkVotes(state, playerId, chain),
-    myChainPoints: state.phase === "favourite" ? (state.pointsThisChain[playerId] ?? 0) : 0,
+    myChainPoints: chainPointsOf(state, playerId),
     totals: { ...state.scores },
   };
 }

@@ -1,10 +1,12 @@
 // Full-room playthroughs through the SDK's bot harness: 3 and 8 players, with a shared screen
 // and without one, plus a snapshot round-trip through the real Room engine.
 import { describe, expect, it } from "vitest";
-import type { DrawingPromptContent, PlayerId } from "@opg/sdk";
+import type { DrawingPromptContent } from "@opg/sdk";
+import type { PlayerId } from "@opg/protocol";
 import { createRoom, restoreRoom } from "@opg/sdk";
 import { createMemoryContentSource, runBotPlaythrough } from "@opg/sdk/testing";
-import type { Caller, ServerMessage } from "@opg/protocol";
+import type { Caller } from "@opg/sdk";
+import type { ServerMessage } from "@opg/protocol";
 import { sketchPhone } from "./index";
 import { sketchPlayerViewSchema, type SketchAction } from "./state";
 

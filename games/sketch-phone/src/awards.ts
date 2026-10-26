@@ -19,25 +19,39 @@ const TALLIES: Tally[] = [
   { id: "wordsmith", includes: (link) => link.kind === "words" },
 ];
 
-function topAward(tally: Tally, state: SketchState): Award | null {
+/** The tally's votes for one link, and nothing for a link nobody on the roster wrote. */
+function votesFor(tally: Tally, state: SketchState, link: ChainLink): number {
+  if (!tally.includes(link) || !state.playerIds.includes(link.authorId)) return 0;
+  return votesOn(state, link.id);
+}
+
+function countsOf(tally: Tally, state: SketchState) {
   const counts: Record<PlayerId, number> = {};
   for (const link of Object.values(state.links)) {
-    if (!tally.includes(link) || !state.playerIds.includes(link.authorId)) continue;
-    counts[link.authorId] = (counts[link.authorId] ?? 0) + votesOn(state, link.id);
+    counts[link.authorId] = (counts[link.authorId] ?? 0) + votesFor(tally, state, link);
   }
+  return counts;
+}
+
+/** Everyone holding the highest count, and that count; empty when nobody reached the minimum. */
+function leadersOf(counts: Record<PlayerId, number>) {
   let top = 0;
   let leaders: PlayerId[] = [];
-  for (const playerId of Object.keys(counts)) {
-    const value = counts[playerId] ?? 0;
+  for (const [playerId, value] of Object.entries(counts)) {
     if (value < THRESHOLD) continue;
+    if (value === top) leaders.push(playerId);
     if (value > top) {
       top = value;
       leaders = [playerId];
-    } else if (value === top) {
-      leaders.push(playerId);
     }
   }
-  return leaders.length > 0 ? { id: tally.id, playerIds: leaders, value: top } : null;
+  return { top, leaders };
+}
+
+function topAward(tally: Tally, state: SketchState): Award | null {
+  const { top, leaders } = leadersOf(countsOf(tally, state));
+  if (leaders.length === 0) return null;
+  return { id: tally.id, playerIds: leaders, value: top };
 }
 
 /** Best first, capped at MAX_AWARDS like every award list the platform draws. */

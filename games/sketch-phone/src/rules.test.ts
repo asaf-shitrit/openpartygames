@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { DrawingPromptContent, GameContext, PlayerId } from "@opg/sdk";
+import type { DrawingPromptContent, GameContext } from "@opg/sdk";
+import type { PlayerId } from "@opg/protocol";
 import { createRng, emptyDoodle } from "@opg/sdk";
 import {
   addPoints,

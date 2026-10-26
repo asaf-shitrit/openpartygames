@@ -214,6 +214,10 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "realOrNah.awards.truthFinder",
   "realOrNah.awards.truthFinderDetail",
   "realOrNah.blurb",
+  // Sketch Phone's blurb is in the same boat: the gallery's TV picker draws the server's
+  // already-localized `game.blurb`, and only `withLocalizedGames` in the real app reads the
+  // dictionary's copy for it.
+  "sketchPhone.blurb",
   "realOrNah.calloutEveryone",
   "realOrNah.everyoneIn",
   "realOrNah.hereItComes",

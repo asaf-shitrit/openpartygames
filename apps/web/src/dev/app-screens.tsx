@@ -595,6 +595,27 @@ function TvFinalScoresWorstScreen() {
   return <TvFinalScores view={view} clock={clockAt(SERVER_NOW + 40_000)} />;
 }
 
+/** Sketch Phone's own awards, so its three names and every plural form of `people` render. */
+function TvFinalScoresSketchPhoneScreen() {
+  const players = [
+    makePlayer({ id: "p1", name: "Priya", avatar: "drop" }),
+    makePlayer({ id: "p2", name: "Sam", avatar: "star" }),
+    makePlayer({ id: "p3", name: "Lee", avatar: "cat" }),
+  ];
+  const result = makeResultWithAwards({
+    gameId: "sketch-phone",
+    scores: { p1: 300, p2: 200, p3: 100 },
+    winnerIds: ["p1"],
+    awards: [
+      { id: "favourite", playerIds: ["p1"], value: 3 },
+      { id: "sharpest-pencil", playerIds: ["p2"], value: 2 },
+      { id: "wordsmith", playerIds: ["p3"], value: 1 },
+    ],
+  });
+  const view = makeHostView({ players, games: ALL_GAMES, lastResult: result });
+  return <TvFinalScores view={view} clock={clockAt(SERVER_NOW + 40_000)} />;
+}
+
 function TvCreditsScreen() {
   return <TvCredits />;
 }
@@ -643,6 +664,7 @@ const APP_SCREEN_COMPONENTS = {
   "tv-game-picker": TvGamePickerScreen,
   "tv-final-scores": TvFinalScoresScreen,
   "tv-final-scores-worst": TvFinalScoresWorstScreen,
+  "tv-final-scores-sketch-phone": TvFinalScoresSketchPhoneScreen,
   "tv-credits": TvCreditsScreen,
   "tv-reconnecting": TvReconnectingScreen,
 } satisfies Record<string, () => JSX.Element>;

@@ -21,6 +21,8 @@ function copyFor(t: Dictionary, id: string): GameCopy | undefined {
       return t.mostLikelyTo;
     case "doodle-bluff":
       return t.doodleBluff;
+    case "sketch-phone":
+      return t.sketchPhone;
     default:
       return undefined;
   }

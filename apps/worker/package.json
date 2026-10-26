@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@opg/game-doodle-bluff": "workspace:*",
+    "@opg/game-sketch-phone": "workspace:*",
     "@opg/game-imposter": "workspace:*",
     "@opg/game-most-likely-to": "workspace:*",
     "@opg/game-real-or-nah": "workspace:*",

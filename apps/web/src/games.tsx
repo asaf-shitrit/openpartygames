@@ -13,6 +13,11 @@ import {
   doodleHostViewSchema,
   doodlePlayerViewSchema,
 } from "@opg/game-doodle-bluff/views";
+import { sketchPhoneAwardCopy } from "@opg/game-sketch-phone/award-copy";
+import {
+  sketchHostViewSchema,
+  sketchPlayerViewSchema,
+} from "@opg/game-sketch-phone/views";
 import { imposterAwardCopy } from "@opg/game-imposter/award-copy";
 import {
   imposterHostViewSchema,
@@ -77,6 +82,16 @@ export const LANDING_GAMES: LandingGame[] = [
     minutes: 12,
     icon: "point",
     avatar: "cat",
+  },
+  {
+    id: "sketch-phone",
+    name: "Sketch Phone",
+    blurb: "Write it, draw it, describe it. Watch a phrase turn into nonsense.",
+    minPlayers: 3,
+    maxPlayers: 8,
+    minutes: 18,
+    icon: "pencil",
+    avatar: "ghost",
   },
   {
     id: "doodle-bluff",
@@ -243,6 +258,15 @@ const GAME_REGISTRY = new Map<string, RegisteredGame>([
       awardCopy: mostLikelyToAwardCopy,
       hostViewSchema: mltHostViewSchema,
       playerViewSchema: mltPlayerViewSchema,
+    }),
+  ],
+  [
+    "sketch-phone",
+    registerGame({
+      loadScreens: () => import("@opg/game-sketch-phone/ui").then((m) => m.sketchPhoneUi),
+      awardCopy: sketchPhoneAwardCopy,
+      hostViewSchema: sketchHostViewSchema,
+      playerViewSchema: sketchPlayerViewSchema,
     }),
   ],
   [

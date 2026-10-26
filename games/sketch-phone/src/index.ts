@@ -9,11 +9,11 @@ import {
   pullInDeadline,
   type GameContext,
   type GameDefinition,
-  type PlayerId,
   type Rng,
   type DrawingPromptContent,
 } from "@opg/sdk";
 import { emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
+import type { PlayerId } from "@opg/protocol";
 import {
   addPoints,
   chainLinks,
@@ -63,15 +63,23 @@ function phaseOfRound(round: number): SketchPhase {
   return kindOfStep(round) === "drawing" ? "draw" : "describe";
 }
 
-const PHASE_MS: Record<"write" | "draw" | "describe", number> = {
+/** The three phases a round is played in, and only those three, are on a clock. */
+type TimedPhase = "write" | "draw" | "describe";
+
+const PHASE_MS = {
   write: WRITE_MS,
   draw: DRAW_MS,
   describe: DESCRIBE_MS,
-};
+} satisfies Record<TimedPhase, number>;
+
+function timedPhaseOf(round: number): TimedPhase | null {
+  const phase = phaseOfRound(round);
+  return phase === "replay" || phase === "vote" || phase === "favourite" ? null : phase;
+}
 
 function roundDuration(round: number): number {
-  const phase = phaseOfRound(round);
-  return phase === "write" || phase === "draw" || phase === "describe" ? PHASE_MS[phase] : 0;
+  const phase = timedPhaseOf(round);
+  return phase === null ? 0 : PHASE_MS[phase];
 }
 
 // ---------- Setup ----------
@@ -89,11 +97,14 @@ function emptyLink(chain: number, step: number, authorId: PlayerId): ChainLink {
   };
 }
 
-/** Every (player, round) pair gets its link at setup, so a kick can never move one. */
-function dealLinks(playerIds: readonly PlayerId[]): {
+/** The links of every chain, and who works on which chain each round. */
+interface DealtLinks {
   links: Record<string, ChainLink>;
   chainsFor: Record<PlayerId, number>[];
-} {
+}
+
+/** Every (player, round) pair gets its link at setup, so a kick can never move one. */
+function dealLinks(playerIds: readonly PlayerId[]): DealtLinks {
   const links: Record<string, ChainLink> = {};
   const chainsFor: Record<PlayerId, number>[] = [];
   const count = playerIds.length;
@@ -340,6 +351,8 @@ function timeout(state: SketchState, ctx: Ctx): SketchState {
       return closeVote(state, ctx);
     case "favourite":
       return startNextChain(state, ctx);
+    default:
+      return state;
   }
 }
 
@@ -352,9 +365,9 @@ function dropUnfinished(state: SketchState, playerId: PlayerId): SketchState {
   return { ...state, links };
 }
 
-function removed(state: SketchState, playerId: PlayerId, ctx: Ctx): SketchState {
-  if (!state.playerIds.includes(playerId)) return state;
-  const next = dropUnfinished(
+/** The state without the player, their votes and their unfinished work. */
+function kickOut(state: SketchState, playerId: PlayerId): SketchState {
+  return dropUnfinished(
     {
       ...state,
       playerIds: state.playerIds.filter((id) => id !== playerId),
@@ -366,17 +379,25 @@ function removed(state: SketchState, playerId: PlayerId, ctx: Ctx): SketchState 
     },
     playerId,
   );
+}
+
+/** True when the chain on stage has nothing left to show, so it should be skipped. */
+function chainEmptied(state: SketchState): boolean {
+  const chain = currentChain(state);
+  return chain !== null && chainLinks(state, chain).length === 0;
+}
+
+/** A player left (kicked or timed out): their unfinished work goes with them. */
+export function onPlayerRemoved(state: SketchState, playerId: PlayerId, ctx: Ctx): SketchState {
+  if (!state.playerIds.includes(playerId)) return state;
+  const next = kickOut(state, playerId);
   if (next.phase === "vote") return settleVote(next, ctx);
   if (next.phase === "write" || next.phase === "draw" || next.phase === "describe") {
     return settleRound(next, ctx);
   }
   // A chain on stage may have lost its only links with that player; skip it rather than replay
   // an empty one.
-  const chain = currentChain(next);
-  if ((next.phase === "replay" || next.phase === "favourite") && chain !== null && chainLinks(next, chain).length === 0) {
-    return startNextChain(next, ctx);
-  }
-  return next;
+  return chainEmptied(next) ? startNextChain(next, ctx) : next;
 }
 
 // ---------- Bots ----------
@@ -392,34 +413,56 @@ const BOT_PHRASES = [
   "two ducks in a trench coat",
 ];
 
-function botAction(view: ReturnType<typeof buildPlayerView>, rng: Rng): SketchAction | null {
+type PlayerView = ReturnType<typeof buildPlayerView>;
+
+/** A phrase to write, or null once this bot has nothing left to add. */
+function botWords(view: PlayerView, rng: Rng): SketchAction | null {
+  if (view.myDone || view.myLinkId === null) return null;
+  if (view.myWords !== null && view.myWords.length > 0) return null;
+  const phrase = BOT_PHRASES[rng.int(BOT_PHRASES.length)] ?? BOT_PHRASES[0] ?? "something";
+  return { type: "words", text: `${phrase} ${view.roundNumber}`.slice(0, TEXT_MAX_LENGTH) };
+}
+
+/** A squiggle the first time round, and "done" once it is on the pad. */
+function botDrawing(view: PlayerView, rng: Rng): SketchAction | null {
+  if (view.myDone || view.myLinkId === null) return null;
+  if (view.myStrokeCount > 0) return { type: "done", linkId: view.myLinkId };
+  return { type: "strokes", linkId: view.myLinkId, from: 0, strokes: botDoodle(rng) };
+}
+
+/** A vote for somebody else's link, or null once this bot has voted. */
+function botVote(view: PlayerView, rng: Rng): SketchAction | null {
+  if (view.myVote !== null) return null;
+  const choices = (view.options ?? []).filter((option) => !option.mine);
+  const chosen = choices[rng.int(choices.length)];
+  return chosen === undefined ? null : { type: "vote", linkId: chosen.id };
+}
+
+function botAction(view: PlayerView, rng: Rng): SketchAction | null {
   switch (view.phase) {
     case "write":
-    case "describe": {
-      if (view.myDone || view.myLinkId === null) return null;
-      if (view.myWords !== null && view.myWords.length > 0) return null;
-      const phrase = BOT_PHRASES[rng.int(BOT_PHRASES.length)] ?? BOT_PHRASES[0] ?? "something";
-      return { type: "words", text: `${phrase} ${view.roundNumber}`.slice(0, TEXT_MAX_LENGTH) };
-    }
-    case "draw": {
-      if (view.myDone || view.myLinkId === null) return null;
-      if (view.myStrokeCount > 0) return { type: "done", linkId: view.myLinkId };
-      return { type: "strokes", linkId: view.myLinkId, from: 0, strokes: botDoodle(rng) };
-    }
+    case "describe":
+      return botWords(view, rng);
+    case "draw":
+      return botDrawing(view, rng);
     case "replay":
       return view.isPresenter ? { type: "next-link" } : null;
-    case "vote": {
-      if (view.myVote !== null) return null;
-      const choices = (view.options ?? []).filter((option) => !option.mine);
-      const chosen = choices[rng.int(choices.length)];
-      return chosen === undefined ? null : { type: "vote", linkId: chosen.id };
-    }
+    case "vote":
+      return botVote(view, rng);
     case "favourite":
+    default:
       return null;
   }
 }
 
 // ---------- The game ----------
+
+/** The chain's owner alone walks their own replay on; anyone else's tap does nothing. */
+function applyNextLink(state: SketchState, playerId: PlayerId, ctx: Ctx): SketchState {
+  if (state.phase !== "replay") return state;
+  const chain = currentChain(state);
+  return chain !== null && chainOwner(state, chain) === playerId ? advanceReplay(state, ctx) : state;
+}
 
 /** One action, from any player, at any moment. Returns the same state when it is not allowed. */
 export function onAction(
@@ -437,13 +480,12 @@ export function onAction(
       return applyTruncate(state, playerId, action);
     case "done":
       return applyDone(state, playerId, action.linkId, ctx);
-    case "next-link": {
-      if (state.phase !== "replay") return state;
-      const chain = currentChain(state);
-      return chain !== null && chainOwner(state, chain) === playerId ? advanceReplay(state, ctx) : state;
-    }
+    case "next-link":
+      return applyNextLink(state, playerId, ctx);
     case "vote":
       return applyVote(state, playerId, action.linkId, ctx);
+    default:
+      return state;
   }
 }
 
@@ -472,7 +514,7 @@ export const sketchPhone: GameDefinition<
   onAction,
   onDeadline,
   nextDeadline: (state) => state.deadline,
-  onPlayerRemoved: removed,
+  onPlayerRemoved,
   onPlayersChanged(state, ctx) {
     if (state.phase === "vote") return settleVote(state, ctx);
     if (state.phase === "write" || state.phase === "draw" || state.phase === "describe") {

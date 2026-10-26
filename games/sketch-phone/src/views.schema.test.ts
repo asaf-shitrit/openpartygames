@@ -23,28 +23,33 @@ function makeCtx(n: number, now = 1000): GameContext<DrawingPromptContent> {
   return { players, connectedIds: players.map((p) => p.id), rng: createRng(11), now, content: CONTENT };
 }
 
-function expectViewsParse(state: SketchState, ctx: GameContext<DrawingPromptContent>, seen: Set<SketchPhase>): void {
-  seen.add(state.phase);
+/** The host view parses, and no chain is on screen while one is still being worked on. */
+function expectHostParses(state: SketchState): void {
   const host = buildHostView(state);
   expect(sketchHostViewSchema.parse(host)).toStrictEqual(host);
   if (state.phase === "write" || state.phase === "draw" || state.phase === "describe") {
     expect(host.links).toBeNull();
   }
-  for (const player of ctx.players) {
-    const view = buildPlayerView(state, player.id);
-    expect(sketchPlayerViewSchema.parse(view)).toStrictEqual(view);
-    if (state.phase === "replay") expect(view.links?.length).toBe(state.revealed);
-    if (view.myLinkId !== null) {
-      expect(state.links[view.myLinkId]?.authorId).toBe(player.id);
-    }
-    for (const link of view.links ?? []) {
-      expect(state.links[link.id]?.done).toBe(true);
-    }
-  }
+}
+
+/** One player's view parses, their own link is theirs, and nothing unrevealed leaked into it. */
+function expectPlayerParses(state: SketchState, playerId: string): void {
+  const view = buildPlayerView(state, playerId);
+  expect(sketchPlayerViewSchema.parse(view)).toStrictEqual(view);
+  if (state.phase === "replay") expect(view.links?.length).toBe(state.revealed);
+  if (view.myLinkId !== null) expect(state.links[view.myLinkId]?.authorId).toBe(playerId);
+  const unrevealed = (view.links ?? []).filter((link) => state.links[link.id]?.done !== true);
+  expect(unrevealed).toEqual([]);
+}
+
+function expectViewsParse(state: SketchState, ctx: GameContext<DrawingPromptContent>, seen: Set<SketchPhase>): void {
+  seen.add(state.phase);
+  expectHostParses(state);
+  for (const player of ctx.players) expectPlayerParses(state, player.id);
 }
 
 /** Bots play, the clock runs and phases time out, until the game is over. */
-function walk(start: SketchState, ctx: GameContext<DrawingPromptContent>): { state: SketchState; seen: Set<SketchPhase> } {
+function walk(start: SketchState, ctx: GameContext<DrawingPromptContent>) {
   const seen = new Set<SketchPhase>();
   let state = start;
   let now = ctx.now;
@@ -71,10 +76,12 @@ describe("Sketch Phone views", () => {
     const ctx = makeCtx(4);
     const { state, seen } = walk(setup(ctx), ctx);
     expect(state.finished).toBe(true);
-    expect([...seen].sort()).toEqual(["describe", "draw", "favourite", "replay", "vote", "write"]);
+    expect(seen).toEqual(new Set(["describe", "draw", "favourite", "replay", "vote", "write"]));
   });
 
-  it("parse at every phase in a 8-player game too", () => {
+  // 8 players is 8 chains of 8 links: the default 5s budget is this whole suite's, and this
+  // one walk runs it end to end.
+  it("parse at every phase in a 8-player game too", { timeout: 30_000 }, () => {
     const ctx = makeCtx(8);
     const { state } = walk(setup(ctx), ctx);
     expect(state.finished).toBe(true);

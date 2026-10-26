@@ -13,6 +13,7 @@ import { mostLikelyTo } from "./he/mostLikelyTo";
 import { imposter } from "./he/imposter";
 import { realOrNah } from "./he/realOrNah";
 import { doodleBluff } from "./he/doodleBluff";
+import { sketchPhone } from "./he/sketchPhone";
 import { results } from "./he/results";
 import { picker } from "./he/picker";
 import { landing } from "./he/landing";
@@ -29,6 +30,7 @@ export const he: Dictionary = {
   imposter,
   realOrNah,
   doodleBluff,
+  sketchPhone,
   results,
   picker,
   landing,

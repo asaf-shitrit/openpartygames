@@ -1,6 +1,7 @@
 // Pure helpers for Sketch Phone. Nothing here touches GameContext, so the phase arithmetic is
 // unit-testable without a clock or an rng; transitions that need `ctx` live in index.ts.
 import type { PlayerId } from "@opg/protocol";
+import { chainLength } from "@opg/sdk";
 import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, type Doodle, type Stroke } from "@opg/sdk";
 import type { ChainLink, SketchState } from "./state";
 import { linkIdOf, TEXT_MAX_LENGTH } from "./state";
@@ -38,7 +39,7 @@ export function wordsAcceptable(cleaned: string): boolean {
 
 // ---------- Links ----------
 
-export function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
+export function withoutKey<T>(record: Record<string, T>, key: string) {
   const next = { ...record };
   delete next[key];
   return next;
@@ -113,11 +114,14 @@ export function currentChain(state: SketchState): number | null {
 
 /** A chain's showable links, in step order. */
 export function chainLinks(state: SketchState, chain: number): ChainLink[] {
+  // Walked in step order rather than sorted after the fact: ES2022 has no `Array#toSorted`,
+  // and the link id already says which step a link is.
   const links: ChainLink[] = [];
-  for (const link of Object.values(state.links)) {
-    if (link.chain === chain && hasContent(link)) links.push(link);
+  for (let step = 0; step < chainLength(state.playerIds.length); step += 1) {
+    const link = state.links[linkIdOf(chain, step)];
+    if (hasContent(link)) links.push(link);
   }
-  return links.sort((a, b) => a.step - b.step);
+  return links;
 }
 
 /** The chain's own author: whoever wrote its seed. Null when the seed never arrived. */
@@ -147,7 +151,7 @@ export function votesOn(state: SketchState, linkId: string): number {
 }
 
 /** Every link on the chain on stage, keyed by id, with the votes it collected. */
-export function voteCountsOf(state: SketchState, chain: number): Record<string, number> {
+export function voteCountsOf(state: SketchState, chain: number) {
   const counts: Record<string, number> = {};
   for (const link of chainLinks(state, chain)) counts[link.id] = votesOn(state, link.id);
   return counts;
@@ -178,7 +182,7 @@ export function favouriteOf(state: SketchState, chain: number): string | null {
 }
 
 /** Points the chain on stage pays out: POINTS_PER_VOTE for every vote a still-rostered author got. */
-export function pointsOnChain(state: SketchState, chain: number, perVote: number): Record<PlayerId, number> {
+export function pointsOnChain(state: SketchState, chain: number, perVote: number) {
   const points: Record<PlayerId, number> = {};
   for (const id of state.playerIds) points[id] = 0;
   for (const link of chainLinks(state, chain)) {
@@ -201,7 +205,7 @@ export function addPoints(scores: Record<PlayerId, number>, gained: Record<Playe
 // ---------- Removing a player ----------
 
 /** Drops a player's votes from every link, roster bookkeeping aside. */
-export function votersWithout(state: SketchState, playerId: PlayerId): Record<string, PlayerId[]> {
+export function votersWithout(state: SketchState, playerId: PlayerId) {
   const voters: Record<string, PlayerId[]> = {};
   for (const [linkId, ids] of Object.entries(state.voters)) {
     const kept = ids.filter((id) => id !== playerId);

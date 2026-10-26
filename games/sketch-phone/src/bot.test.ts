@@ -4,7 +4,7 @@ import { botDoodle } from "./bot";
 import { chunkFits } from "./rules";
 import { onAction, onDeadline, setup, sketchPhone } from "./index";
 import { buildPlayerView } from "./views";
-import { myLinkOf } from "./rules";
+import { myLinkOf, votableLinks, currentChain } from "./rules";
 import type { SketchAction } from "./state";
 
 const SEEDS = [1, 2, 3, 7, 11, 29, 101, 977];
@@ -109,6 +109,28 @@ describe("the bot's policy", () => {
     if (vote?.type !== "vote") throw new Error("expected a vote");
     const own = myLinkOf(atVote, "p1");
     expect(vote.linkId).not.toBe(own?.id);
+  });
+
+  it("stays quiet once it has voted", () => {
+    const ctx = makeCtx(3);
+    const atVote = driveUntil(setup(ctx), ctx, (state) => state.phase === "vote");
+    const choice = votableLinks(atVote, "p1")[0];
+    if (choice === undefined) throw new Error("expected a link to vote for");
+    const voted = onAction(atVote, "p1", { type: "vote", linkId: choice.id }, ctx);
+    expect(botAt(voted, "p1")).toBeNull();
+  });
+
+  it("has no vote to cast when every option on stage is its own", () => {
+    const ctx = makeCtx(3);
+    const atVote = driveUntil(setup(ctx), ctx, (state) => state.phase === "vote");
+    const chain = currentChain(atVote) ?? 0;
+    const links = Object.fromEntries(
+      Object.entries(atVote.links).map(([id, link]) => [
+        id,
+        link.chain === chain ? { ...link, authorId: "p1" } : link,
+      ]),
+    );
+    expect(botAt({ ...atVote, links }, "p1")).toBeNull();
   });
 
   it("has nothing to send outside its turn", () => {

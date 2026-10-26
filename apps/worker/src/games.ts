@@ -3,6 +3,7 @@ import { doodleBluff } from "@opg/game-doodle-bluff";
 import { imposter } from "@opg/game-imposter";
 import { mostLikelyTo } from "@opg/game-most-likely-to";
 import { realOrNah } from "@opg/game-real-or-nah";
+import { sketchPhone } from "@opg/game-sketch-phone";
 
 /** Game registry: the first entry is the default selection for a new room. */
-export const GAMES: AnyGame[] = [imposter, realOrNah, mostLikelyTo, doodleBluff];
+export const GAMES: AnyGame[] = [imposter, realOrNah, mostLikelyTo, doodleBluff, sketchPhone];

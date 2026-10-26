@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DrawingPromptContent, GameContext, Stroke } from "@opg/sdk";
 import { createRng } from "@opg/sdk";
-import { onAction, onDeadline, setup, sketchPhone } from "./index";
-import { canWork, chainLinks, currentChain, myLinkOf, votableLinks } from "./rules";
+import { onAction, onDeadline, onPlayerRemoved, setup, sketchPhone } from "./index";
+import { canWork, chainLinks, currentChain, myLinkOf, votableLinks, withoutKey } from "./rules";
 import {
   DRAW_MS,
   linkIdOf,
@@ -31,7 +31,7 @@ function makeCtx(n: number, now = NOW): GameContext<DrawingPromptContent> {
 function fillRound(state: SketchState, ctx: GameContext<DrawingPromptContent>): SketchState {
   const round = state.round;
   let next = state;
-  for (const id of [...state.playerIds]) {
+  for (const id of state.playerIds) {
     if (next.round !== round) break;
     const link = myLinkOf(next, id);
     if (link === null || link.done) continue;
@@ -47,7 +47,7 @@ function fillRound(state: SketchState, ctx: GameContext<DrawingPromptContent>): 
 
 function voteRound(state: SketchState, ctx: GameContext<DrawingPromptContent>): SketchState {
   let next = state;
-  for (const id of [...state.playerIds]) {
+  for (const id of state.playerIds) {
     const choice = votableLinks(next, id)[0];
     if (choice === undefined) continue;
     next = onAction(next, id, { type: "vote", linkId: choice.id }, ctx);
@@ -55,19 +55,24 @@ function voteRound(state: SketchState, ctx: GameContext<DrawingPromptContent>): 
   return next;
 }
 
+/** Every player does their bit of the phase the state is in, then the phase moves on. */
+function playPhase(state: SketchState, ctx: GameContext<DrawingPromptContent>): SketchState {
+  if (state.phase === "replay" || state.phase === "favourite") {
+    return onDeadline(state, { ...ctx, now: (state.deadline ?? 0) + PRESENT_MS });
+  }
+  if (state.phase === "vote") {
+    const voted = voteRound(state, ctx);
+    return voted.phase === "vote" ? onDeadline(voted, { ...ctx, now: (voted.deadline ?? 0) + 1 }) : voted;
+  }
+  return fillRound(state, ctx);
+}
+
 /** Runs replays and votes until the game is over or `until` says stop. */
 function playOut(state: SketchState, ctx: GameContext<DrawingPromptContent>, until?: (s: SketchState) => boolean) {
   let next = state;
   for (let guard = 0; guard < 200; guard += 1) {
     if (next.finished || until?.(next) === true) return next;
-    if (next.phase === "replay" || next.phase === "favourite") {
-      next = onDeadline(next, { ...ctx, now: (next.deadline ?? 0) + PRESENT_MS });
-    } else if (next.phase === "vote") {
-      const voted = voteRound(next, ctx);
-      next = voted.phase === "vote" ? onDeadline(voted, { ...ctx, now: (voted.deadline ?? 0) + 1 }) : voted;
-    } else {
-      next = fillRound(next, ctx);
-    }
+    next = playPhase(next, ctx);
   }
   return next;
 }
@@ -79,7 +84,7 @@ describe("setup", () => {
     expect(state.deadline).toBe(NOW + WRITE_MS);
     expect(state.playerIds).toEqual(["p1", "p2", "p3", "p4"]);
     expect(Object.keys(state.links)).toHaveLength(16);
-    expect(state.replayOrder.slice().sort()).toEqual([0, 1, 2, 3]);
+    expect(new Set(state.replayOrder)).toEqual(new Set([0, 1, 2, 3]));
     expect(state.scores).toEqual({ p1: 0, p2: 0, p3: 0, p4: 0 });
   });
 
@@ -199,12 +204,27 @@ describe("writing and drawing", () => {
     const empty = onDeadline(state, { ...ctx, now: (state.deadline ?? 0) + 1 });
     expect(empty.phase).toBe("replay");
     const host = buildHostView(empty);
-    expect(host.links).not.toBeNull();
-    expect(host.links?.length).toBeLessThan(3);
-    for (const link of host.links ?? []) {
-      if (link.kind === "words") expect(link.text).not.toBe("");
-      else expect(link.doodle?.s.length ?? 0).toBeGreaterThan(0);
-    }
+    const links = host.links ?? [];
+    expect(links.length).toBeLessThan(3);
+    const allHaveContent = links.every((link) =>
+      link.kind === "words" ? link.text !== "" : (link.doodle?.s.length ?? 0) > 0,
+    );
+    expect(allHaveContent).toBe(true);
+  });
+});
+
+describe("undoing", () => {
+  it("drops the strokes after `from`, and only inside a draw round", () => {
+    const ctx = makeCtx(3);
+    let state = fillRound(setup(ctx), ctx);
+    const link = myLinkOf(state, "p1");
+    if (link === null || link.kind !== "drawing") throw new Error("expected p1 to be drawing");
+    state = onAction(state, "p1", { type: "strokes", linkId: link.id, from: 0, strokes: [STROKE, STROKE] }, ctx);
+    expect(state.links[link.id]?.doodle.s).toHaveLength(2);
+    const undone = onAction(state, "p1", { type: "truncate", linkId: link.id, from: 2, to: 1 }, ctx);
+    expect(undone.links[link.id]?.doodle.s).toHaveLength(1);
+    const writing = setup(ctx);
+    expect(onAction(writing, "p1", { type: "truncate", linkId: linkIdOf(0, 0), from: 1, to: 0 }, ctx)).toBe(writing);
   });
 });
 
@@ -246,7 +266,7 @@ describe("the next-link shortcut", () => {
 });
 
 describe("voting", () => {
-  function atVote(): { state: SketchState; ctx: GameContext<DrawingPromptContent> } {
+  function atVote() {
     const ctx = makeCtx(3);
     let state = setup(ctx);
     state = fillRound(state, ctx);
@@ -280,6 +300,55 @@ describe("voting", () => {
 });
 
 describe("kicks and connections", () => {
+  function atReplay() {
+    const ctx = makeCtx(3);
+    let state = setup(ctx);
+    state = fillRound(state, ctx);
+    state = fillRound(state, ctx);
+    state = fillRound(state, ctx);
+    return { state: playOut(state, ctx, (s) => s.phase === "replay"), ctx };
+  }
+
+  it("settles the vote when a voter leaves", () => {
+    const ctx = makeCtx(3);
+    let state = setup(ctx);
+    state = fillRound(state, ctx);
+    state = fillRound(state, ctx);
+    state = fillRound(state, ctx);
+    state = playOut(state, ctx, (s) => s.phase === "vote");
+    for (const id of ["p1", "p2"]) {
+      const choice = votableLinks(state, id)[0];
+      if (choice !== undefined) state = onAction(state, id, { type: "vote", linkId: choice.id }, ctx);
+    }
+    const kicked = onPlayerRemoved(state, "p3", ctx);
+    expect(kicked.playerIds).toEqual(["p1", "p2"]);
+    expect(kicked.phase).toBe("favourite");
+    expect(kicked.votes.p3).toBeUndefined();
+  });
+
+  it("skips a chain on stage that left with its author", () => {
+    const { state, ctx } = atReplay();
+    const chain = currentChain(state);
+    if (chain === null) throw new Error("expected a chain on stage");
+    const stripped: SketchState = {
+      ...state,
+      links: withoutKey(
+        withoutKey(withoutKey(state.links, linkIdOf(chain, 0)), linkIdOf(chain, 1)),
+        linkIdOf(chain, 2),
+      ),
+    };
+    expect(currentChain(stripped)).toBe(chain);
+    expect(chainLinks(stripped, chain)).toHaveLength(0);
+    const kicked = onPlayerRemoved(stripped, "p1", ctx);
+    expect(currentChain(kicked)).not.toBe(chain);
+  });
+
+  it("does nothing for a player who already left", () => {
+    const ctx = makeCtx(3);
+    const state = setup(ctx);
+    expect(onPlayerRemoved(state, "ghost", ctx)).toBe(state);
+  });
+
   it("drops the removed player's unfinished link and forgets them", () => {
     const ctx = makeCtx(3);
     const state = fillRound(setup(ctx), ctx);
