@@ -375,7 +375,6 @@ function votesLabel(t: Dictionary, votes: number): string {
 function VoteStage({ view, players, deadline, timerStartedAt, clock }: SectionProps) {
   const { t } = useLocale();
   const links = view.links ?? [];
-  const counts = view.voteCounts ?? {};
   return (
     <div style={{ ...BODY, alignItems: "stretch", gap: 26 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32 }}>
@@ -390,10 +389,9 @@ function VoteStage({ view, players, deadline, timerStartedAt, clock }: SectionPr
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 22, overflow: "hidden" }}>
+        {/* No live tally while the vote is open: a count can steer the votes that follow it. */}
         {links.map((link) => (
-          <LinkCard key={link.id} link={link} players={players} clock={clock} size={170} t={t}>
-            <div style={{ fontSize: 28, fontWeight: 700 }}>{votesLabel(t, counts[link.id] ?? 0)}</div>
-          </LinkCard>
+          <LinkCard key={link.id} link={link} players={players} clock={clock} size={170} t={t} />
         ))}
       </div>
       <div style={{ fontSize: 30, color: "var(--opg-ink-secondary)", textAlign: "center" }}>
