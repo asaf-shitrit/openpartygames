@@ -85,6 +85,12 @@ function gridColumns(gameCount: number): number {
   return Math.min(gameCount, 4);
 }
 
+/** The gap between cards: widest for two, tightest for the two rows five games need. */
+function gridGap(density: CardDensity): number {
+  if (density === "wide") return 40;
+  return density === "dense" ? 20 : 28;
+}
+
 interface CardMetrics {
   padding: string;
   gap: number;
@@ -100,7 +106,10 @@ interface CardMetrics {
 function cardMetrics(density: CardDensity): CardMetrics {
   if (density === "dense") {
     return {
-      padding: "18px 20px 20px",
+      // Five games wrap onto a second row, and in Hebrew that row's bottom met the picker
+      // footer with 11px to spare on the stage's 1080px edge. A few pixels off the card and
+      // the row gap is all it takes; the copy itself is unchanged.
+      padding: "14px 20px 16px",
       gap: 6,
       icon: 56,
       name: 38,
@@ -470,7 +479,7 @@ export function TvGamePicker({ view }: { view: HostRoomView }) {
           style={{
             display: "grid",
             gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-            gap: density === "wide" ? 40 : 28,
+            gap: gridGap(density),
             paddingTop: 8,
             alignContent: "start",
           }}

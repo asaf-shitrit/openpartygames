@@ -79,4 +79,13 @@ describe("useFitSquare", () => {
     act(remeasure);
     expect(result.current).toBe(212);
   });
+
+  it("gives up the room a row between the canvas and the bar takes, gaps included", () => {
+    const area = { current: elementWith({ top: 300, height: 0, width: 324 }) };
+    const bar = { current: elementWith({ top: 520, height: 120, width: 360 }) };
+    const below = { current: elementWith({ top: 480, height: 44, width: 360 }) };
+    const { result } = renderHook(() => useFitSquare(area, bar, { ...options, gap: 12, below }));
+    // 640 - 300 (the canvas top) - (120 + 44 + 12) (bar, row, the gap under the row) - 12 (gap).
+    expect(result.current).toBe(152);
+  });
 });

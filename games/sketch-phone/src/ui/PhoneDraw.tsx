@@ -4,21 +4,19 @@
 // cursor is seeded from `view.myStrokeCount`, moved on what we send, and pulled back only to the
 // room's count when it has run ahead.
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, RefObject } from "react";
 import type { ServerClock } from "@opg/ui";
 import {
   Button,
   Card,
   DoodlePad,
   Icon,
-  PINNED_BAR_STYLE,
   PRESSABLE_CLASS,
   useFitSquare,
-  usePinnedBarScrollPadding,
 } from "@opg/ui";
 import { doodleSchema, emptyDoodle, type Doodle, type Stroke } from "@opg/sdk";
 import { MAX_MESSAGE_LENGTH } from "@opg/protocol";
-import { format, useLocale } from "@opg/i18n";
+import { useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import { type SketchAction, type SketchPlayerView } from "../state";
 import { MAX_POINTS_PER_CHUNK } from "../rules";
@@ -26,14 +24,33 @@ import { MAX_POINTS_PER_CHUNK } from "../rules";
 const TAP_TARGET = 44;
 const PAD_MAX = 320;
 const PAD_MIN = 140;
-const PAD_GAP = 8;
+/** The column's own gap: the card, the pad, the squiggle row and the bar are all one gap apart. */
+const PAD_GAP = 12;
+/**
+ * The bar is the column's last row, in flow, never laid over what is above it: a `fit` screen
+ * that cannot fit its content (200% text, a short phone) scrolls its middle instead, so the
+ * action stays on the screen and nothing ends up underneath it. The negative margins run the
+ * opaque paper strip to the screen edges (PhoneScreen pads 18px at the sides, 28px at the
+ * bottom).
+ */
 const BAR_STYLE: CSSProperties = {
-  ...PINNED_BAR_STYLE,
   display: "flex",
   flexWrap: "wrap",
   alignItems: "stretch",
   gap: 8,
+  background: "var(--opg-paper)",
+  margin: "0 -18px -28px",
   padding: "8px 18px 12px",
+};
+/** The pad and the squiggle row: the part of the column that gives up space when there is too little. */
+const PAD_AREA_STYLE: CSSProperties = {
+  flex: "1 1 0",
+  minHeight: 0,
+  overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: PAD_GAP,
+  alignItems: "stretch",
 };
 
 /** A small, fixed drawing well over the platform's minimum, for players who can't or won't draw. */
@@ -168,9 +185,15 @@ function DrawPad({ view, roomCode, startedAt, clock, send, linkId }: PhoneDrawPr
   const prompt = view.input?.text ?? "";
   const ack = view.myStrokeCount;
   const barRef = useRef<HTMLDivElement>(null);
-  usePinnedBarScrollPadding(true, barRef);
+  // Measured against the pad's own box, which now scrolls when the column is too short.
   const padAreaRef = useRef<HTMLDivElement>(null);
-  const padSide = useFitSquare(padAreaRef, barRef, { min: PAD_MIN, max: PAD_MAX, gap: PAD_GAP });
+  const squiggleRef = useRef<HTMLButtonElement>(null);
+  const padSide = useFitSquare(padAreaRef, barRef, {
+    min: PAD_MIN,
+    max: PAD_MAX,
+    gap: PAD_GAP,
+    below: squiggleRef,
+  });
   const [controlsSlot, setControlsSlot] = useState<HTMLElement | null>(null);
   const key = mirrorKey(roomCode, linkId, view.gameStartedAt ?? startedAt);
   const [{ initialDoodle, canTruncate }] = useState(() => {
@@ -205,27 +228,26 @@ function DrawPad({ view, roomCode, startedAt, clock, send, linkId }: PhoneDrawPr
   }, [key, linkId, send, sentRef]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: PAD_GAP, flex: "1 1 0", minHeight: 0 }}>
       <PromptCard prompt={prompt} t={t} />
-      <div ref={padAreaRef} inert={done}>
-        <DoodlePad
-          prompt={prompt}
-          clock={clock}
-          size={padSide}
-          initialDoodle={initialDoodle}
-          onChange={onChange}
-          controlsSlot={controlsSlot}
-        />
+      <div ref={padAreaRef} style={PAD_AREA_STYLE}>
+        <div inert={done} style={{ flexShrink: 0 }}>
+          <DoodlePad
+            prompt={prompt}
+            clock={clock}
+            size={padSide}
+            initialDoodle={initialDoodle}
+            onChange={onChange}
+            controlsSlot={controlsSlot}
+          />
+        </div>
+        <SquiggleButton done={done} onSquiggle={onSquiggle} t={t} buttonRef={squiggleRef} />
       </div>
-      <SquiggleButton done={done} onSquiggle={onSquiggle} t={t} />
       <div ref={barRef} style={BAR_STYLE}>
         <div ref={setControlsSlot} inert={done} style={{ display: "contents" }} />
         <div style={{ order: 4, flex: "1 1 160px", display: "flex" }}>
           <DoneButton done={done} onDone={() => send({ type: "done", linkId })} t={t} />
         </div>
-      </div>
-      <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>
-        {format(t.sketchPhone.roundOf, { round: view.roundNumber, count: view.roundCount })}
       </div>
     </div>
   );
@@ -244,9 +266,21 @@ function PromptCard({ prompt, t }: { prompt: string; t: Dictionary }) {
 }
 
 /** The way out for anyone who cannot draw: one squiggle, handed in for them. */
-function SquiggleButton({ done, onSquiggle, t }: { done: boolean; onSquiggle: () => void; t: Dictionary }) {
+function SquiggleButton({
+  done,
+  onSquiggle,
+  t,
+  buttonRef,
+}: {
+  done: boolean;
+  onSquiggle: () => void;
+  t: Dictionary;
+  /** Measured by the pad's fit: this row sits between the canvas and the pinned bar. */
+  buttonRef: RefObject<HTMLButtonElement | null>;
+}) {
   return (
     <button
+      ref={buttonRef}
       type="button"
       className={`opg-reset ${PRESSABLE_CLASS}`}
       disabled={done}

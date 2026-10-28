@@ -117,7 +117,7 @@ function StatusTile({
           display: "flex",
           alignItems: "center",
           gap: 6,
-          fontSize: 26,
+          fontSize: 28,
           color: done ? "var(--opg-ink)" : "var(--opg-ink-secondary)",
         }}
       >
@@ -208,7 +208,7 @@ function ReplayStage({ view, players, deadline, clock, timerStartedAt }: Section
         </Marker>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{presenter}</div>
-          <Timer deadline={deadline} clock={clock} size={110} startedAt={timerStartedAt} ticks />
+          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 22, overflow: "hidden" }}>
@@ -241,7 +241,7 @@ function VoteStage({ view, players, deadline, timerStartedAt, clock }: SectionPr
           <div style={{ fontSize: 30, fontWeight: 700 }}>
             {format(t.sketchPhone.votedOfTotal, { voted: view.votedIds.length, total: view.playerIds.length })}
           </div>
-          <Timer deadline={deadline} clock={clock} size={110} startedAt={timerStartedAt} ticks />
+          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 22, overflow: "hidden" }}>
@@ -325,7 +325,7 @@ function FavouriteStage({ view, players, deadline, timerStartedAt, clock }: Sect
           <div style={{ fontSize: 30, fontWeight: 700 }}>
             {format(t.sketchPhone.chainOfShort, { current: view.chainNumber, count: view.chainCount })}
           </div>
-          <Timer deadline={deadline} clock={clock} size={100} startedAt={timerStartedAt} ticks />
+          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 40, overflow: "hidden" }}>

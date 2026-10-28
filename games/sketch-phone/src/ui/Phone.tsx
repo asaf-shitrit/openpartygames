@@ -91,7 +91,7 @@ function DrawingToDescribe({
       ) : (
         <div style={{ fontSize: 22, fontWeight: 700, overflowWrap: "anywhere" }}>{input.text}</div>
       )}
-      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
         {format(t.sketchPhone.itCameFrom, { label: inputLabel })}
       </div>
     </>
@@ -160,7 +160,7 @@ function WordsCard({ view, players, clock, send, describing }: WordsCardProps) {
         {format(t.sketchPhone.counter, { count: clean.length, max: TEXT_MAX_LENGTH })}
       </span>
       <SuggestionChips onPick={setText} t={t} />
-      <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>
+      <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
         {describing ? t.sketchPhone.describeHint : t.sketchPhone.writeHint}
       </div>
       <Button
@@ -195,10 +195,10 @@ function SentStage({ view, room }: BodyProps) {
         <div style={{ fontSize: 20, overflowWrap: "anywhere" }}>“{view.myWords}”</div>
       ) : null}
       <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>{next}</div>
-      <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>
+      <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
         {format(t.sketchPhone.chainOfShort, { current: view.chainNumber, count: view.chainCount })}
       </div>
-      <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>{room.code}</div>
+      <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>{room.code}</div>
     </Card>
   );
 }
@@ -223,7 +223,7 @@ function ChainLinks({
         const label = linkLabel(t, link.kind, nameOf(players, link.authorId, t.common.someone));
         return (
           <Card key={link.id} style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{label}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{label}</div>
             {link.doodle !== null ? (
               <DoodleView doodle={link.doodle} label={label} clock={clock} size={size} />
             ) : (
@@ -252,7 +252,7 @@ function PresentStage({ view, players, deadline, clock, send }: BodyProps) {
           {t.sketchPhone.yourChainOnTv}
         </Marker>
         <div style={{ fontSize: 16 }}>{t.sketchPhone.yourChainHint}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
           {format(t.sketchPhone.linkOf, { current: links.length, count: view.roundCount + 1 })}
         </div>
       </Card>
@@ -266,7 +266,7 @@ function PresentStage({ view, players, deadline, clock, send }: BodyProps) {
       >
         {t.sketchPhone.nextLink}
       </Button>
-      <div style={{ fontSize: 15, textAlign: "center", color: "var(--opg-ink-secondary)" }}>
+      <div style={{ fontSize: 16, textAlign: "center", color: "var(--opg-ink-secondary)" }}>
         {secondsHint(t, deadline, clock)}
       </div>
     </div>
@@ -334,7 +334,7 @@ function OptionRow({
       onClick={onPick}
       style={rowStyle(selected, option.mine)}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 15, fontWeight: 700 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, fontSize: 16, fontWeight: 700 }}>
         <span style={{ color: "var(--opg-ink-secondary)", overflowWrap: "anywhere" }}>{label}</span>
         {option.mine ? <span>{t.sketchPhone.yours}</span> : null}
         {selected && !option.mine ? <span>{t.sketchPhone.picked}</span> : null}
@@ -359,11 +359,11 @@ function VoteStage({ view, players, deadline, clock, send }: BodyProps) {
         <Marker size={26} level={1}>
           {t.sketchPhone.pickFavouritePhone}
         </Marker>
-        <div style={{ fontSize: 15 }}>{t.sketchPhone.voteHint}</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
+        <div style={{ fontSize: 16 }}>{t.sketchPhone.voteHint}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
           {format(t.sketchPhone.votedOfTotal, { voted: view.votedCount, total: view.playerCount })}
         </div>
-        <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>{secondsHint(t, deadline, clock)}</div>
+        <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>{secondsHint(t, deadline, clock)}</div>
       </Card>
       {options.map((option) => (
         <OptionRow
@@ -441,7 +441,7 @@ function FavouriteCard({ view, players, t, yourLine }: {
       <Marker size={30} level={1}>
         {t.sketchPhone.favourite}
       </Marker>
-      <div style={{ fontSize: 15, color: "var(--opg-ink-secondary)" }}>
+      <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
         {format(t.sketchPhone.chainOfShort, { current: view.chainNumber, count: view.chainCount })}
       </div>
       {favourite !== null ? (
@@ -545,6 +545,9 @@ export function Phone(props: PhoneProps) {
       />
       <PhaseEnter
         phaseKey={`${props.view.phase}:${props.view.chainNumber}:${props.view.myLinkId ?? ""}:${props.view.myDone}`}
+        // The phase's own box takes the height the strip leaves, so a phase that needs to (the
+        // drawing pad) can put its action at the bottom edge and give the middle what is left.
+        style={{ flex: "1 1 0", minHeight: 0 }}
       >
         {bodyFor({ ...props, players: props.room.players, noTv })}
       </PhaseEnter>

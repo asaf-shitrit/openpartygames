@@ -101,19 +101,28 @@ function LandingHero({
  * Stacking the roster in a single column made each new game push the how-to-play steps and
  * footer further down, and once there were four they went past the stage's bottom edge
  * entirely (the TV stage does not scroll). Two columns keep the showcase's height bounded by
- * ceil(games.length / 2) rows instead of games.length rows, so it holds under 1080px with the
- * roadmap's next few games too. `wide` (one or two games) keeps the original single-column
- * story-card look, since the grid only earns its keep once there is a second row to save.
+ * ceil(games.length / 2) rows instead of games.length rows. A fifth game made three rows, which
+ * came 39px past the bottom edge at the width the page left for them; the page gives the
+ * showcase a wider column once there are five (see `TvLanding`), and the rows sit 12px apart
+ * rather than 16 — in Hebrew the three rows and the footer links then clear the edge with 2px
+ * to spare. A third column was tried and is worse — at that width every blurb and player range
+ * wraps to another line, and the shorter row count buys nothing back. `wide` (one or two games)
+ * keeps the original single-column story-card look, since the grid only earns its keep once
+ * there is a second row to save.
  */
+function showcaseColumns(gameCount: number): number {
+  return gameCount <= 2 ? 1 : 2;
+}
+
 function GameShowcase({ playersRangeTemplate }: { playersRangeTemplate: string }) {
   const { t } = useLocale();
-  const wide = LANDING_GAMES.length <= 2;
+  const wide = showcaseColumns(LANDING_GAMES.length) === 1;
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: wide ? "1fr" : "repeat(2, minmax(0, 1fr))",
-        gap: wide ? 28 : 16,
+        gridTemplateColumns: `repeat(${showcaseColumns(LANDING_GAMES.length)}, minmax(0, 1fr))`,
+        gap: wide ? 28 : 12,
       }}
     >
       {LANDING_GAMES.map((game, index) => (
@@ -274,7 +283,11 @@ export function TvLanding() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1000px minmax(0, 1fr)",
+          // The showcase's column widens once the roster needs a third row: at 1000px for the
+          // hero, five games left each card about 340px, which wrapped every blurb and player
+          // range one line further and put the three rows 39px past the stage's bottom edge.
+          gridTemplateColumns:
+            LANDING_GAMES.length > 4 ? "760px minmax(0, 1fr)" : "1000px minmax(0, 1fr)",
           gap: 72,
           flexGrow: 1,
           alignItems: "center",
