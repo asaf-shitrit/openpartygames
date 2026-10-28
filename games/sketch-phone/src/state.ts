@@ -182,7 +182,7 @@ export const sketchHostViewSchema = z.object({
   roundNumber: z.number(),
   /** Rounds the room dealt: one per player, the seed included ("Round 4 of 7" at seven players). */
   roundCount: z.number(),
-  /** Links in every chain, one per player the room dealt for: "Link 4 of 7" at seven players. */
+  /** The links the chain on stage shows, empty ones aside: what "Link 3 of" counts up to. */
   linkCount: z.number(),
   doneIds: z.array(z.string()),
   totals: z.record(z.string(), z.number()),
@@ -234,7 +234,7 @@ export const sketchPlayerViewSchema = z.object({
   gameStartedAt: z.number().optional(),
   roundNumber: z.number(),
   roundCount: z.number(),
-  /** Links in every chain: what the replay's "Link 3 of" counts up to. */
+  /** The links the chain on stage shows, empty ones aside: what "Link 3 of" counts up to. */
   linkCount: z.number(),
   doneCount: z.number(),
   /** The phrases this player's write screen offers for a start, from the room's packs. */

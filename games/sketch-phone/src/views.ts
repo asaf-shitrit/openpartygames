@@ -60,6 +60,15 @@ function visibleLinks(state: SketchState, chain: number | null): ChainLink[] | n
   return state.phase === "replay" ? revealedLinks(state) : chainLinks(state, chain);
 }
 
+/**
+ * What a chain links up to: the links the chain on stage will show, so the presenter's "Link 3 of
+ * 4" ends on 4. An empty link — a phone that missed its deadline, a kick — is skipped on stage,
+ * so it is not counted here either. Before the replay the deal's count stands in.
+ */
+function linkCountOf(state: SketchState, chain: number | null): number {
+  return chain === null ? dealRounds(state) : chainLinks(state, chain).length;
+}
+
 function countsOf(state: SketchState, chain: number | null): Record<string, number> | null {
   if (chain === null) return null;
   if (state.phase !== "vote" && state.phase !== "favourite") return null;
@@ -86,7 +95,7 @@ export function buildHostView(state: SketchState): SketchHostView {
     // count the way a live-roster length did, nor hide a link the room already played.
     roundNumber: state.round + 1,
     roundCount: dealRounds(state),
-    linkCount: dealRounds(state),
+    linkCount: linkCountOf(state, chain),
     doneIds: doneIds(state),
     totals: { ...state.scores },
     chainNumber: chainNumber(state, chain),
@@ -179,7 +188,7 @@ export function buildPlayerView(state: SketchState, playerId: PlayerId): SketchP
     // count the way a live-roster length did, nor hide a link the room already played.
     roundNumber: state.round + 1,
     roundCount: dealRounds(state),
-    linkCount: dealRounds(state),
+    linkCount: linkCountOf(state, chain),
     doneCount: doneIds(state).length,
     mySuggestions: state.suggestions[playerId] ?? [],
     myLinkId: myLink === null ? null : myLink.id,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { DrawingPromptContent, GameContext, Stroke } from "@opg/sdk";
 import { createRng } from "@opg/sdk";
 import { onAction, onDeadline, onPlayerRemoved, setup, sketchPhone } from "./index";
-import { canWork, chainLinks, currentChain, myLinkOf, votableLinks, withoutKey } from "./rules";
+import { canWork, chainLinks, chainOwner, currentChain, myLinkOf, votableLinks, withoutKey } from "./rules";
 import {
   DRAW_MS,
   linkIdOf,
@@ -404,6 +404,24 @@ describe("kicks and connections", () => {
     const kicked = onPlayerRemoved(atDraw, "p8", ctx);
     expect(buildPlayerView(kicked, "p1").roundCount).toBe(8);
     expect(buildPlayerView(kicked, "p1").linkCount).toBe(8);
+  });
+
+  it("counts the replay's links by the ones the chain shows, not the ones the deal made", () => {
+    const { state } = atReplay();
+    const chain = currentChain(state);
+    if (chain === null) throw new Error("expected a chain on stage");
+    const owner = chainOwner(state, chain);
+    if (owner === null) throw new Error("expected the chain to have an owner");
+    expect(buildPlayerView(state, owner).linkCount).toBe(3);
+
+    // A link nobody filled — a phone that missed its deadline, or a kick — is skipped on stage,
+    // so the presenter's phone counts up to the links the chain shows, not the deal's three.
+    const missing = chainLinks(state, chain)[1];
+    if (missing === undefined) throw new Error("expected a three-link chain");
+    const stripped: SketchState = { ...state, links: withoutKey(state.links, missing.id) };
+    const view = buildPlayerView(stripped, owner);
+    expect(view.linkCount).toBe(2);
+    expect(view.roundCount).toBe(3);
   });
 
   it("drops the removed player's unfinished link and forgets them", () => {
