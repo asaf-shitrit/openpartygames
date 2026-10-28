@@ -131,6 +131,14 @@ describe("the phone screens", () => {
     expect(send).toHaveBeenCalledWith({ type: "next-link" });
   });
 
+  it("does not send the presenter to a TV in a phone-only room", () => {
+    const { preview } = renderPhone("Phone (no-TV): Priya presenting");
+    expect(preview.room.sharedScreen).toBe(false);
+    expect(preview.view.isPresenter).toBe(true);
+    expect(screen.queryByText(en.sketchPhone.yourChainOnTv)).toBeNull();
+    expect(screen.getByText(en.sketchPhone.yourChain)).toBeTruthy();
+  });
+
   it("tells everyone else to look up when there is a shared screen", () => {
     const { preview } = renderPhone("Phone: Sam watching");
     expect(preview.room.sharedScreen).toBe(true);

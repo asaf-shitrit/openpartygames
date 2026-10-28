@@ -1,5 +1,6 @@
 // TV host screens for Sketch Phone. One body per phase, all data from SketchHostView: the round
 // with its roster, the replay of one chain, its vote and its favourite.
+import { Fragment } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { HostRoomView, PlayerId, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
@@ -196,27 +197,171 @@ function LinkCard({
 
 // ---------- the replay ----------
 
+const CHIP: CSSProperties = {
+  flex: "1 1 0",
+  minWidth: 0,
+  height: 116,
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+  background: "var(--opg-paper)",
+  border: "4px solid var(--opg-ink)",
+  borderRadius: "26px 10px 22px 12px / 12px 22px 10px 26px",
+};
+
+const PENDING_CHIP: CSSProperties = {
+  ...CHIP,
+  background: "rgba(255, 255, 255, 0.6)",
+  border: "3px dashed var(--opg-ink-secondary)",
+};
+
+/** The chip's name line: the kind of link it holds, then whose it is. */
+function ChipName({ name, kind, muted }: { name: string; kind: SketchLinkView["kind"]; muted: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+      <Icon name={kind === "drawing" ? "pencil" : "cards"} size={24} color="var(--opg-ink-secondary)" />
+      <div
+        style={{
+          fontSize: 28,
+          fontWeight: 700,
+          lineHeight: 1.1,
+          textAlign: "center",
+          overflowWrap: "anywhere",
+          color: muted ? "var(--opg-ink-secondary)" : "var(--opg-ink)",
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+}
+
+/** One link of the chain as the room has it: who made it and what it holds. */
+function ChainChip({
+  link,
+  players,
+  current,
+  t,
+}: {
+  link: SketchLinkView;
+  players: PlayerSummary[];
+  current: boolean;
+  t: Dictionary;
+}) {
+  const name = nameOf(players, link.authorId, t.common.someone);
+  return (
+    <div
+      style={
+        current
+          ? { ...CHIP, background: "var(--opg-highlight-soft)", border: "5px solid var(--opg-marker)" }
+          : CHIP
+      }
+    >
+      <Avatar id={avatarOf(players, link.authorId)} size={44} alt={format(t.sketchPhone.avatarAlt, { name })} />
+      <ChipName name={name} kind={link.kind} muted={false} />
+    </div>
+  );
+}
+
+/** A link the replay has not reached yet: the room knows only how far the chain goes. */
+function PendingChip({ position }: { position: number }) {
+  return (
+    <div style={PENDING_CHIP}>
+      <div style={{ fontSize: 40, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>?</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{position}</div>
+    </div>
+  );
+}
+
+/** The whole chain above the stage: what the room has seen, and what it still has to come. */
+function ChainStrip({
+  links,
+  linkCount,
+  players,
+  t,
+}: {
+  links: SketchLinkView[];
+  linkCount: number;
+  players: PlayerSummary[];
+  t: Dictionary;
+}) {
+  const positions = Array.from({ length: linkCount }, (_, index) => index);
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", gap: 14, flex: "1 1 auto", minWidth: 0 }}>
+      {positions.map((index) => {
+        const link = links[index];
+        return link === undefined ? (
+          <PendingChip key={`pending-${index}`} position={index + 1} />
+        ) : (
+          <ChainChip key={link.id} link={link} players={players} current={index === links.length - 1} t={t} />
+        );
+      })}
+    </div>
+  );
+}
+
+/** The last two links, one after the other: what the chain said, then what came of it. */
+function ChainPair({
+  links,
+  players,
+  clock,
+  t,
+}: {
+  links: SketchLinkView[];
+  players: PlayerSummary[];
+  clock: ServerClock;
+  t: Dictionary;
+}) {
+  const pair = links.slice(-2);
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 36 }}>
+      {pair.map((link, index) => (
+        <Fragment key={link.id}>
+          {index > 0 ? <Icon name="arrow-right" size={88} color="var(--opg-marker)" /> : null}
+          <LinkCard link={link} players={players} clock={clock} size={330} t={t} />
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+/** Whose turn it is to move the chain on: the design puts the Next button in one person's hand. */
+function PresenterLine({ id, players, t }: { id: PlayerId | null; players: PlayerSummary[]; t: Dictionary }) {
+  const name = id === null ? t.common.someone : nameOf(players, id, t.common.someone);
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 14,
+        fontSize: 30,
+        fontWeight: 700,
+        color: "var(--opg-ink-secondary)",
+      }}
+    >
+      <Avatar id={id === null ? null : avatarOf(players, id)} size={44} alt={format(t.sketchPhone.avatarAlt, { name })} />
+      <div>{format(t.sketchPhone.hasNextButton, { name })}</div>
+    </div>
+  );
+}
+
 function ReplayStage({ view, players, deadline, clock, timerStartedAt }: SectionProps) {
   const { t } = useLocale();
   const links = view.links ?? [];
-  const presenter = view.presenterId === null ? "" : nameOf(players, view.presenterId, t.common.someone);
   return (
-    <div style={{ ...BODY, alignItems: "stretch", gap: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32 }}>
-        <Marker size={54} level={1}>
-          {t.sketchPhone.yourChain}
-        </Marker>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ fontSize: 30, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{presenter}</div>
-          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
-        </div>
+    <div style={{ ...BODY, alignItems: "stretch", gap: 22 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 24, minWidth: 0 }}>
+        <ChainStrip links={links} linkCount={view.linkCount} players={players} t={t} />
+        <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
       </div>
-      <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 22, overflow: "hidden" }}>
-        {links.map((link) => (
-          <LinkCard key={link.id} link={link} players={players} clock={clock} size={links.length > 4 ? 150 : 210} t={t} />
-        ))}
+      <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <ChainPair links={links} players={players} clock={clock} t={t} />
       </div>
-      <div style={{ fontSize: 30, color: "var(--opg-ink-secondary)", textAlign: "center" }}>{t.sketchPhone.movedOneSeat}</div>
+      <PresenterLine id={view.presenterId} players={players} t={t} />
     </div>
   );
 }
@@ -241,7 +386,7 @@ function VoteStage({ view, players, deadline, timerStartedAt, clock }: SectionPr
           <div style={{ fontSize: 30, fontWeight: 700 }}>
             {format(t.sketchPhone.votedOfTotal, { voted: view.votedIds.length, total: view.playerIds.length })}
           </div>
-          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
+          <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 22, overflow: "hidden" }}>
@@ -325,7 +470,7 @@ function FavouriteStage({ view, players, deadline, timerStartedAt, clock }: Sect
           <div style={{ fontSize: 30, fontWeight: 700 }}>
             {format(t.sketchPhone.chainOfShort, { current: view.chainNumber, count: view.chainCount })}
           </div>
-          <Timer deadline={deadline} clock={clock} size={120} startedAt={timerStartedAt} ticks />
+          <Timer deadline={deadline} clock={clock} size={150} startedAt={timerStartedAt} ticks />
         </div>
       </div>
       <div style={{ flex: "1 1 auto", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 40, overflow: "hidden" }}>

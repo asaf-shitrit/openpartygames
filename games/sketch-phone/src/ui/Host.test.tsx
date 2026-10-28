@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ServerClock } from "@opg/ui";
-import { en, LocaleProvider } from "@opg/i18n";
+import { en, format, LocaleProvider } from "@opg/i18n";
 import { Host } from "./Host";
 import { sketchPhoneHostPreviews } from "./preview";
 
@@ -61,11 +61,27 @@ describe("the TV screens", () => {
 
   it("replays the chain one link at a time, never the whole thing", () => {
     const preview = renderHost("Host: replay");
-    expect(screen.getByText(en.sketchPhone.yourChain)).toBeTruthy();
-    expect(screen.getByText(en.sketchPhone.movedOneSeat)).toBeTruthy();
-    // Four links revealed of a chain of eight: the last four are still secret.
+    // Four links revealed of a chain of eight: the last four are still secret, numbered on the strip.
     expect(preview.view.revealed).toBe(4);
     expect(preview.view.links?.length).toBe(4);
+    expect(screen.getByText("5")).toBeTruthy();
+    expect(screen.getByText("8")).toBeTruthy();
+  });
+
+  it("strips the whole chain above the stage, naming who made each link", () => {
+    const preview = renderHost("Host: replay");
+    const links = preview.view.links ?? [];
+    const last = links[links.length - 1];
+    const name = preview.room.players.find((each) => each.id === last?.authorId)?.name ?? "";
+    // The revealed links name their authors; the four still to come are only numbers so far.
+    expect(name.length).toBeGreaterThan(0);
+    expect(screen.getAllByText(name).length).toBeGreaterThan(0);
+  });
+
+  it("says whose hand the Next button is in", () => {
+    const preview = renderHost("Host: replay");
+    const name = preview.room.players.find((each) => each.id === preview.view.presenterId)?.name;
+    expect(screen.getByText(format(en.sketchPhone.hasNextButton, { name: name ?? "" }))).toBeTruthy();
   });
 
   it("asks the room to vote on their phones", () => {

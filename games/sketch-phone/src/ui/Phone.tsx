@@ -238,7 +238,7 @@ function secondsHint(t: Dictionary, deadline: number | null, clock: ServerClock)
   return format(t.sketchPhone.movesOnIn, { seconds: Math.max(0, Math.ceil((deadline - clock.now()) / 1000)) });
 }
 
-function PresentStage({ view, players, deadline, clock, send }: BodyProps) {
+function PresentStage({ view, players, deadline, clock, send, noTv }: BodyProps) {
   const { t } = useLocale();
   const links = view.links ?? [];
   const current = links[links.length - 1];
@@ -246,7 +246,8 @@ function PresentStage({ view, players, deadline, clock, send }: BodyProps) {
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Card style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
         <Marker size={26} level={1}>
-          {t.sketchPhone.yourChainOnTv}
+          {/* A phone-only room has no shared screen, so the presenter holds the chain up. */}
+          {noTv ? t.sketchPhone.yourChain : t.sketchPhone.yourChainOnTv}
         </Marker>
         <div style={{ fontSize: 16 }}>{t.sketchPhone.yourChainHint}</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
