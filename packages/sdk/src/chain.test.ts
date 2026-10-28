@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chainHeldBy, chainLength, holderSeat, stepAt, stepKind, transferRounds } from "./chain";
+import { chainHeldBy, chainLength, holderSeat, stepKind, transferRounds } from "./chain";
 
 describe("chain step kinds", () => {
   it("starts with words and alternates", () => {
@@ -53,10 +53,6 @@ describe("chain hand-off", () => {
     expect(holderSeat(0, 5, 4)).toBe(1);
     expect(chainHeldBy(0, 1, 4)).toBe(3);
     expect(holderSeat(2, 2, 0)).toBe(0);
-  });
-
-  it("names the link a round fills", () => {
-    expect(stepAt(0)).toBe(0);
-    expect(stepAt(6)).toBe(6);
+    expect(chainHeldBy(2, 2, 0)).toBe(0);
   });
 });

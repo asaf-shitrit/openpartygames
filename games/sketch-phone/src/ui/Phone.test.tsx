@@ -68,15 +68,16 @@ describe("the phone screens", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("offers three phrases to start from, each one a tap away", () => {
-    renderPhone("Phone: Maya writing");
+  it("offers three phrases from the room's packs to start from, each one a tap away", () => {
+    const { preview } = renderPhone("Phone: Maya writing");
     const input = screen.getByLabelText<HTMLInputElement>(en.sketchPhone.writeSomething);
-    const { cat, pig, waffle } = en.sketchPhone.suggestions;
-    expect(screen.getByRole("button", { name: cat })).toBeTruthy();
-    expect(screen.getByRole("button", { name: pig })).toBeTruthy();
-    expect(screen.getByRole("button", { name: waffle })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: pig }));
-    expect(input.value).toBe(pig);
+    const [first, second] = preview.view.mySuggestions;
+    if (first === undefined || second === undefined) throw new Error("expected the packs' phrases");
+    expect(preview.view.mySuggestions).toHaveLength(3);
+    expect(screen.getByRole("button", { name: first })).toBeTruthy();
+    expect(screen.getByRole("button", { name: second })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: second }));
+    expect(input.value).toBe(second);
   });
 
   it("shows the drawing a describer has to put into words", () => {

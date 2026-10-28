@@ -49,12 +49,6 @@ function votesLabel(t: Dictionary, votes: number): string {
 
 // ---------- writing and describing ----------
 
-/** Starting points, offered as taps rather than invented: three chips, all of them readable. */
-function suggestionsOf(t: Dictionary): string[] {
-  const list = t.sketchPhone.suggestions;
-  return [list.cat, list.pig, list.waffle];
-}
-
 interface WordsCardProps {
   view: SketchPlayerView;
   players: PlayerSummary[];
@@ -108,11 +102,14 @@ const CHIP = {
   color: "var(--opg-ink)",
 } as const;
 
-/** Starting points, offered as taps rather than invented: three chips, all of them readable. */
-function SuggestionChips({ onPick, t }: { onPick: (phrase: string) => void; t: Dictionary }) {
+/**
+ * Starting points, offered as taps rather than invented: the phrases the room's packs dealt this
+ * phone, so a player who cannot think of one still has three the table's own content carries.
+ */
+function SuggestionChips({ phrases, onPick }: { phrases: readonly string[]; onPick: (phrase: string) => void }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-      {suggestionsOf(t).map((phrase) => (
+      {phrases.map((phrase) => (
         <button key={phrase} type="button" className="opg-reset" onClick={() => onPick(phrase)} style={CHIP}>
           {phrase}
         </button>
@@ -142,7 +139,7 @@ function WordsCard({ view, players, clock, send, describing }: WordsCardProps) {
           value={text}
           maxLength={TEXT_MAX_LENGTH}
           onChange={(event) => setText(event.target.value)}
-          placeholder={t.sketchPhone.suggestions.cat}
+          placeholder={view.mySuggestions[0] ?? ""}
           style={{
             minHeight: 56,
             padding: "0 14px",
@@ -159,7 +156,7 @@ function WordsCard({ view, players, clock, send, describing }: WordsCardProps) {
       <span style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
         {format(t.sketchPhone.counter, { count: clean.length, max: TEXT_MAX_LENGTH })}
       </span>
-      <SuggestionChips onPick={setText} t={t} />
+      <SuggestionChips phrases={view.mySuggestions} onPick={setText} />
       <div style={{ fontSize: 16, color: "var(--opg-ink-secondary)" }}>
         {describing ? t.sketchPhone.describeHint : t.sketchPhone.writeHint}
       </div>
@@ -253,7 +250,7 @@ function PresentStage({ view, players, deadline, clock, send }: BodyProps) {
         </Marker>
         <div style={{ fontSize: 16 }}>{t.sketchPhone.yourChainHint}</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-          {format(t.sketchPhone.linkOf, { current: links.length, count: view.roundCount + 1 })}
+          {format(t.sketchPhone.linkOf, { current: links.length, count: view.linkCount })}
         </div>
       </Card>
       {current !== undefined ? <ChainLinks links={[current]} players={players} clock={clock} size={160} /> : null}

@@ -12,6 +12,7 @@ import { NAME_MAX_LENGTH } from "@opg/protocol";
 import { useLocale } from "@opg/i18n";
 import type { ServerClock } from "@opg/ui";
 import { LANDING_GAMES } from "../games";
+import { withLocalizedGames } from "../screens/localize-games";
 import {
   makeGame,
   makeHostView,
@@ -113,6 +114,17 @@ const ALL_GAMES: GameSummary[] = LANDING_GAMES.map((game) =>
   }),
 );
 
+/**
+ * The games as a room view carries them, in the UI language. The Worker sends English for both
+ * name and blurb and the app localizes them on the way in (see `withLocalizedGames`), so a
+ * fixture that draws either has to do the same or the gallery measures the wrong words — and the
+ * layout suite would never see the Hebrew ones.
+ */
+function useLocalizedGames(): GameSummary[] {
+  const { t } = useLocale();
+  return withLocalizedGames(t, { games: ALL_GAMES }).games;
+}
+
 const MANY_PACKS: PackSummary[] = [
   makePack({ id: "animals", name: "Animals", rating: "family", enabled: true, itemCount: 12 }),
   makePack({ id: "food-and-drink", name: "Food & Drink", rating: "family", enabled: true, itemCount: 20 }),
@@ -192,21 +204,23 @@ function AvatarPickerWorstScreen() {
 // ---------- phone: lobby ----------
 
 function LobbyScreen() {
+  const games = useLocalizedGames();
   const players = [
     makePlayer({ id: "p1", name: "Priya", avatar: "drop", isVip: true }),
     makePlayer({ id: "p2", name: "Sam", avatar: "star" }),
     makePlayer({ id: "p3", name: "Lee", avatar: "cat" }),
   ];
-  const view = makePlayerView({ you: "p2", players, games: ALL_GAMES });
+  const view = makePlayerView({ you: "p2", players, games });
   return <PhoneLobby view={view} onChangeAvatar={ignore} onLeave={ignore} />;
 }
 
 function LobbyWorstScreen() {
+  const games = useLocalizedGames();
   const players = stressPlayers();
   const view = makePlayerView({
     you: "stress-1",
     players,
-    games: ALL_GAMES,
+    games,
     sharedScreen: false,
     // "real-or-nah" is not `noTv`, so picking it with no shared screen is exactly the blocked
     // case `SelectedGameSection` warns about: the old fixture picked "doodle-bluff" instead,
@@ -477,10 +491,11 @@ function StartingScreen() {
 
 /** A full room where three phones have dropped: every away row grows by a badge. */
 function LobbyAwayScreen() {
+  const games = useLocalizedGames();
   const view = makePlayerView({
     players: stressPlayers(0, () => false, (index) => index % 3 === 2),
     you: "stress-1",
-    games: ALL_GAMES,
+    games,
   });
   return <PhoneLobby view={view} onChangeAvatar={ignore} onLeave={ignore} />;
 }
@@ -541,12 +556,13 @@ function TvLobbyWorstScreen() {
 }
 
 function TvGamePickerScreen() {
+  const games = useLocalizedGames();
   const players = [
     makePlayer({ id: "p1", name: "Priya", avatar: "drop", isVip: true }),
     makePlayer({ id: "p2", name: "Sam", avatar: "star" }),
     makePlayer({ id: "p3", name: "Lee", avatar: "cat" }),
   ];
-  const view = makeHostView({ players, games: ALL_GAMES, selectedGameId: "real-or-nah" });
+  const view = makeHostView({ players, games, selectedGameId: "real-or-nah" });
   return <TvGamePicker view={view} />;
 }
 

@@ -89,7 +89,7 @@ export const LANDING_GAMES: LandingGame[] = [
     blurb: "Write it, draw it, describe it. Watch a phrase turn into nonsense.",
     minPlayers: 3,
     maxPlayers: 8,
-    minutes: 18,
+    minutes: 15,
     icon: "pencil",
     avatar: "ghost",
   },

@@ -18,17 +18,23 @@ import {
 
 // ---------- Timing ----------
 
-export const WRITE_MS = 45_000;
+// Every phase is timed to a full table finishing the game in about fifteen minutes (the
+// issue's fixed length): a fast table taps through sooner, and a slow one is closed by the
+// clock at exactly these numbers. `minutes.test.ts` holds the advertised length to the sum.
+export const WRITE_MS = 40_000;
 export const DRAW_MS = 75_000;
-export const DESCRIBE_MS = 40_000;
-/** One link of a replayed chain. "Moves on by itself in 0:08" (design/PhoneNoTvSketchPhoneReplay). */
-export const PRESENT_MS = 6_000;
-export const VOTE_MS = 25_000;
-export const FAVOURITE_MS = 10_000;
+export const DESCRIBE_MS = 35_000;
+/**
+ * One link of a replayed chain, when nobody taps Next. The chain's owner walks their own replay,
+ * so this is the fallback pace for a phone that blinked off, not the pace of a present table.
+ */
+export const PRESENT_MS = 4_000;
+export const VOTE_MS = 20_000;
+export const FAVOURITE_MS = 6_000;
 
 export const SKETCH_MIN_PLAYERS = 3;
 export const SKETCH_MAX_PLAYERS = 8;
-export const SKETCH_MINUTES = 18;
+export const SKETCH_MINUTES = 15;
 
 /** The phone shows "21 / 50" (design/PhoneSketchPhoneDescribe.dc.html). */
 export const TEXT_MAX_LENGTH = 50;
@@ -82,8 +88,13 @@ export interface SketchState {
   revealed: number;
   /** 0 is `write`; 1.. are the transfer rounds. */
   round: number;
-  /** PlayerId -> the chain they work on in each round, frozen at setup. */
+  /** PlayerId -> the chains they work on, round by round, frozen at setup. */
   chainsFor: Record<PlayerId, number>[];
+  /**
+   * PlayerId -> the phrases their write screen offers, dealt from the room's drawing prompts at
+   * setup. Empty when the room plays without a content pack.
+   */
+  suggestions: Record<PlayerId, string[]>;
   /** Who has handed in their link for the current round. */
   doneIds: Record<PlayerId, boolean>;
   /** voterId -> linkId, for the chain on stage. */
@@ -100,6 +111,15 @@ export interface SketchState {
 
 export function linkIdOf(chain: number, step: number): string {
   return `c${chain}s${step}`;
+}
+
+/**
+ * The rounds the room dealt at setup, frozen in `chainsFor`. It is the length of every chain and
+ * the number of rounds a game plays, and it comes from the deal rather than the live roster: a
+ * kick must not skip a round that was dealt, nor hide links the remaining players already made.
+ */
+export function dealRounds(state: SketchState): number {
+  return state.chainsFor.length;
 }
 
 // ---------- Actions ----------
@@ -158,9 +178,12 @@ export const sketchHostVoteSchema = z.object({
 export const sketchHostViewSchema = z.object({
   phase: sketchPhaseSchema,
   playerIds: z.array(z.string()),
-  /** The transfer round on stage, 1..roundCount; 0 during `write`. */
+  /** The round on stage, numbered from the seed: 1 is the writing round, 2..roundCount transfer. */
   roundNumber: z.number(),
+  /** Rounds the room dealt: one per player, the seed included ("Round 4 of 7" at seven players). */
   roundCount: z.number(),
+  /** Links in every chain, one per player the room dealt for: "Link 4 of 7" at seven players. */
+  linkCount: z.number(),
   doneIds: z.array(z.string()),
   totals: z.record(z.string(), z.number()),
   /** 1-based position of the chain on stage in the replay order; 0 before the replay. */
@@ -211,7 +234,11 @@ export const sketchPlayerViewSchema = z.object({
   gameStartedAt: z.number().optional(),
   roundNumber: z.number(),
   roundCount: z.number(),
+  /** Links in every chain: what the replay's "Link 3 of" counts up to. */
+  linkCount: z.number(),
   doneCount: z.number(),
+  /** The phrases this player's write screen offers for a start, from the room's packs. */
+  mySuggestions: z.array(z.string()),
   /** The link this player may fill now; null when the round has nothing for them. */
   myLinkId: z.string().nullable(),
   myKind: sketchLinkKindSchema.nullable(),

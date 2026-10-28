@@ -64,11 +64,6 @@ export const sketchPhone = {
   noFavourite: "No favourite this time",
   lookUp: "Look up",
   counter: "{count} / {max}",
-  suggestions: {
-    cat: "a cat riding a skateboard",
-    pig: "a pig surfing on a pancake",
-    waffle: "sunrise over a flying waffle",
-  },
   avatarAlt: "{name}'s avatar",
   awards: {
     favourite: "Favourite",

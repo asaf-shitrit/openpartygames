@@ -37,7 +37,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "doodleBluff.awards.sharpEyeDetail",
   "doodleBluff.awards.times.one",
   "doodleBluff.awards.times.other",
-  "doodleBluff.blurb",
   "doodleBluff.doneShort",
   "doodleBluff.everyonesInReadyToVote",
   "doodleBluff.foundByPlayers.one",
@@ -59,7 +58,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "imposter.awards.trustedCrewDetail",
   "imposter.awards.words.one",
   "imposter.awards.words.other",
-  "imposter.blurb",
   "imposter.clues.clueIsIn",
   "imposter.clues.lastClueForWord",
   "imposter.lastChance.guessSent",
@@ -151,7 +149,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "mostLikelyTo.awards.times.other",
   "mostLikelyTo.awards.wildCard",
   "mostLikelyTo.awards.wildCardDetail",
-  "mostLikelyTo.blurb",
   "mostLikelyTo.finalScoresNext",
   "mostLikelyTo.hereItComes",
   "mostLikelyTo.personal.selfCalledHeadline",
@@ -213,11 +210,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "realOrNah.awards.people.other",
   "realOrNah.awards.truthFinder",
   "realOrNah.awards.truthFinderDetail",
-  "realOrNah.blurb",
-  // Sketch Phone's blurb is in the same boat: the gallery's TV picker draws the server's
-  // already-localized `game.blurb`, and only `withLocalizedGames` in the real app reads the
-  // dictionary's copy for it.
-  "sketchPhone.blurb",
   "realOrNah.calloutEveryone",
   "realOrNah.everyoneIn",
   "realOrNah.hereItComes",

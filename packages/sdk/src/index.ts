@@ -13,7 +13,6 @@ export {
   chainHeldBy,
   chainLength,
   holderSeat,
-  stepAt,
   stepKind,
   transferRounds,
 } from "./chain";

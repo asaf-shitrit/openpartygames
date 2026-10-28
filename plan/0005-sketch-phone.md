@@ -31,8 +31,11 @@ that is easy to get subtly wrong and it is the same for every chain game:
 
 - a chain has one link per player (`chainLength`);
 - links alternate words, drawing, words, … from the seed (`stepKind`);
-- chain `c` is worked on in round `r` by seat `(c + r) mod n` (`holderSeat`), so the chain moves
-  one seat per round and no player ever works on the same chain twice.
+- in round `r`, seat `s` works on chain `(s - r) mod n` (`chainHeldBy`), so a chain moves one
+  seat per round and no player ever works on the same chain twice.
+
+The deal is `chainHeldBy` for every (seat, round) pair at setup, so the rules never repeat the
+formula; `transferRounds` counts the rounds a chain is passed on.
 
 It is pure arithmetic with no state, so it is unit-tested on its own and the game's rules are
 thin on top of it.
@@ -48,9 +51,12 @@ thin on top of it.
 | `vote` | everyone but nobody's own link | pick a favourite link (`PhoneSketchPhoneVote`) | every link of the chain, and the vote count (`TVSketchPhoneVote`) |
 | `favourite` | nobody | the winner and what you earned (`PhoneNoTvSketchPhoneFavourite`) | the winner and the points (`TVSketchPhoneFavourite`) |
 
-Rounds: round 0 is `write`, then `n - 1` transfer rounds, alternating `draw` and `describe`.
-The phone shows "Round 4 of 7" — the round count is the transfer rounds, so the number means
-"step 4 of the 7 handoffs" for eight players.
+Rounds: the room deals one round per player at setup, and the deal is what the rules count.
+Round 1 is `write`, then `n - 1` transfer rounds, alternating `draw` and `describe`. Seven
+players therefore see "Round 4 of 7" — the seed is round 1 — and "Link 4 of 7" in the replay,
+where a link is one player's contribution to a chain. Both counts come from the deal rather than
+the live roster: a kick in round three cannot skip a dealt round or cut the last links off a
+chain the room already played.
 
 A drawing or description is sent when the player taps done, or when the phase times out: the
 room keeps whatever the player had (a half-drawn page is still a link; an empty one is dropped
@@ -60,15 +66,17 @@ from the replay). One player's link is never on the wire to anyone else until th
 
 | Constant | Value | Why |
 | --- | --- | --- |
-| `WRITE_MS` | 45s | writing a phrase is quick; the design shows 0:38 left |
-| `DRAW_MS` | 75s | one drawing, not Doodle Bluff's two |
-| `DESCRIBE_MS` | 40s | the design shows 0:31 |
-| `PRESENT_MS` | 6s | "Moves on by itself" |
-| `VOTE_MS` | 25s | a little under Doodle Bluff's vote: one chain, not a whole ballot |
-| `FAVOURITE_MS` | 10s | one card, one beat |
+| `WRITE_MS` | 40s | writing a phrase is quick; the design shows 0:38 left |
+| `DRAW_MS` | 75s | one drawing, not Doodle Bluff's two; the design shows 1:04 left |
+| `DESCRIBE_MS` | 35s | the design shows 0:31 left |
+| `PRESENT_MS` | 4s | the fallback pace for a chain nobody taps through |
+| `VOTE_MS` | 20s | a little under Doodle Bluff's vote: one chain, not a whole ballot |
+| `FAVOURITE_MS` | 6s | one card, one beat |
 
-At eight players the phases add up to about 19 minutes: 45 + (75 + 40) × 3 + 75 + 8 × (8 × 6 +
-25 + 10) ≈ 1,130 seconds. `minutes.test.ts` holds the advertised 18 minutes to that sum.
+The eight-player table stays inside the standard length. Seven transfer rounds are four drawings
+and three descriptions, so the phases are 40 + 75 × 4 + 35 × 3 = 445 seconds. Each of the eight
+chains then costs 8 × 4 + 20 + 6 = 58 seconds to replay and vote on, so 8 × 58 = 464.
+Together ≈ 909 seconds: about 15 minutes, and `minutes.test.ts` holds the advertised 15 to it.
 
 When only disconnected players have not acted, the phase deadline is pulled in to the left-player
 grace, exactly like Doodle Bluff: a phone that blinks off keeps its half-made link and can still
@@ -90,9 +98,10 @@ a words link, a doodle for a drawing link. Nothing else is derived at send time.
 
 ## Content
 
-`contentKind: "drawing-prompts"`. The write screen's "Give me one" button hands out a random
-prompt from the room's packs; the game needs no new pack kind and no new content to ship, which
-is why the packs stay as they are. The suggestion is only a suggestion: the player edits or
+`contentKind: "drawing-prompts"`. At setup each phone is dealt three of the room's own prompts
+(`dealSuggestions`), and the write screen offers them as chips the player taps to start from.
+The packs are the content, so a room's language decides the phrases and the game ships no words
+of its own; the packs stay as they are. A suggestion is only a suggestion: the player edits or
 keeps the words and sends them as their own.
 
 ## Registering the game

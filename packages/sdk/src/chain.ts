@@ -38,12 +38,10 @@ export function holderSeat(chain: number, round: number, playerCount: number): n
   return wrap(chain + round, playerCount);
 }
 
-/** The chain `seat` works on in round `round`: the inverse of `holderSeat`. */
+/**
+ * The chain `seat` works on in round `round`: the inverse of `holderSeat`. Games deal their
+ * links with this one, because a game knows a seat and the round, and asks which chain it holds.
+ */
 export function chainHeldBy(seat: number, round: number, playerCount: number): number {
   return wrap(seat - round, playerCount);
-}
-
-/** The step index a player's work lands at in `round`, which is also the round number. */
-export function stepAt(round: number): number {
-  return round;
 }

@@ -19,6 +19,14 @@ const CONTENT: DrawingPromptContent = {
   items: [{ id: "cat", prompt: "a cat in a hat", houseTitles: [] }],
 };
 
+/** Four prompts, so a dealt window of three can be three different phrases. */
+const MANY_PROMPTS: DrawingPromptContent = {
+  kind: "drawing-prompts",
+  items: ["a cat in a hat", "a pig on a bike", "a duck in a van", "a moon in a spoon"].map(
+    (prompt, index) => ({ id: `prompt-${index}`, prompt, houseTitles: [] }),
+  ),
+};
+
 const STROKE: Stroke = { c: 0, d: 20, g: 0, p: [10, 10, 30, 30] };
 const NOW = 1000;
 
@@ -104,6 +112,24 @@ describe("setup", () => {
       expect(authors).toHaveLength(5);
       expect(new Set(authors).size).toBe(5);
     }
+  });
+
+  it("deals each phone three phrases from the room's packs, and none when there are none", () => {
+    const state = setup(makeCtx(4));
+    const mine = buildPlayerView(state, "p1").mySuggestions;
+    // One item in the pack, so one chip: a phone never shows a phrase the packs do not carry.
+    expect(mine).toEqual([CONTENT.items[0]?.prompt]);
+
+    const many = setup({ ...makeCtx(4), content: MANY_PROMPTS });
+    expect(many.suggestions.p1).toHaveLength(3);
+    expect(new Set(many.suggestions.p1).size).toBe(3);
+    // Different seats start at different prompts, so a table does not write the same phrase.
+    expect(many.suggestions.p1).not.toEqual(many.suggestions.p2);
+
+    // An empty pack, and a room restored before chips were dealt: the write screen offers none.
+    const empty = setup({ ...makeCtx(4), content: { kind: "drawing-prompts", items: [] } });
+    expect(buildPlayerView(empty, "p1").mySuggestions).toEqual([]);
+    expect(buildPlayerView({ ...empty, suggestions: {} }, "p1").mySuggestions).toEqual([]);
   });
 });
 
@@ -349,6 +375,37 @@ describe("kicks and connections", () => {
     expect(onPlayerRemoved(state, "ghost", ctx)).toBe(state);
   });
 
+  it("plays every round the room dealt when a player is kicked mid-game", () => {
+    const ctx = makeCtx(4);
+    let state = fillRound(setup(ctx), ctx);
+    // Four players, so four rounds: the seed and three hand-offs. p4 leaves during the first.
+    expect(state.round).toBe(1);
+    state = onPlayerRemoved(state, "p4", ctx);
+    expect(state.playerIds).toEqual(["p1", "p2", "p3"]);
+
+    const played = playOut(state, ctx, (s) => s.phase === "replay");
+    expect(played.phase).toBe("replay");
+    expect(played.round).toBe(3);
+    // The last round was played and its links stay: three players held a chain in round 3.
+    const lastSteps = [0, 1, 2, 3].map(
+      (chain) => chainLinks(played, chain).filter((link) => link.step === 3).length,
+    );
+    expect(lastSteps.reduce((sum, count) => sum + count, 0)).toBe(3);
+  });
+
+  it("counts rounds and links by the deal, whatever the roster does", () => {
+    const ctx = makeCtx(8);
+    const state = setup(ctx);
+    const atDraw = onDeadline(state, { ...ctx, now: (state.deadline ?? 0) + 1 });
+    // Eight players are dealt eight rounds, the seed included, and every chain holds eight links.
+    expect(buildHostView(atDraw).roundNumber).toBe(2);
+    expect(buildHostView(atDraw).roundCount).toBe(8);
+    expect(buildHostView(atDraw).linkCount).toBe(8);
+    const kicked = onPlayerRemoved(atDraw, "p8", ctx);
+    expect(buildPlayerView(kicked, "p1").roundCount).toBe(8);
+    expect(buildPlayerView(kicked, "p1").linkCount).toBe(8);
+  });
+
   it("drops the removed player's unfinished link and forgets them", () => {
     const ctx = makeCtx(3);
     const state = fillRound(setup(ctx), ctx);
@@ -460,7 +517,7 @@ describe("advertised details", () => {
   it("sits inside the platform's player and length limits", () => {
     expect(sketchPhone.minPlayers).toBe(3);
     expect(sketchPhone.maxPlayers).toBe(8);
-    expect(sketchPhone.minutes).toBe(18);
+    expect(sketchPhone.minutes).toBe(15);
     expect(sketchPhone.contentKind).toBe("drawing-prompts");
     expect(VOTE_MS).toBeLessThan(DRAW_MS);
   });

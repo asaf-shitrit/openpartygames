@@ -1,10 +1,9 @@
 // Pure helpers for Sketch Phone. Nothing here touches GameContext, so the phase arithmetic is
 // unit-testable without a clock or an rng; transitions that need `ctx` live in index.ts.
 import type { PlayerId } from "@opg/protocol";
-import { chainLength } from "@opg/sdk";
 import { MAX_POINTS_PER_DOODLE, MAX_STROKES_PER_DOODLE, type Doodle, type Stroke } from "@opg/sdk";
 import type { ChainLink, SketchState } from "./state";
-import { linkIdOf, TEXT_MAX_LENGTH } from "./state";
+import { dealRounds, linkIdOf, TEXT_MAX_LENGTH } from "./state";
 
 /**
  * Rules-level bound on the points in one "strokes" action, the same one Doodle Bluff uses: the
@@ -115,9 +114,10 @@ export function currentChain(state: SketchState): number | null {
 /** A chain's showable links, in step order. */
 export function chainLinks(state: SketchState, chain: number): ChainLink[] {
   // Walked in step order rather than sorted after the fact: ES2022 has no `Array#toSorted`,
-  // and the link id already says which step a link is.
+  // and the link id already says which step a link is. The bound is the deal's, not the live
+  // roster's, so a kick cannot cut the last links off a chain the room already played.
   const links: ChainLink[] = [];
-  for (let step = 0; step < chainLength(state.playerIds.length); step += 1) {
+  for (let step = 0; step < dealRounds(state); step += 1) {
     const link = state.links[linkIdOf(chain, step)];
     if (hasContent(link)) links.push(link);
   }

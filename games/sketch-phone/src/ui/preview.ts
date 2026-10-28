@@ -46,10 +46,29 @@ const PLAYERS: PlayerSummary[] = [
   player(WILHELMINA, "Wilhelmina A", "ghost"),
 ];
 
-const CONTENT: DrawingPromptContent = { kind: "drawing-prompts", items: [] };
-
 /** The longest words any link can carry, so the host and phone layouts are measured at their worst. */
 export const STRESS_TEXT = "a cat riding a skateboard while the moon watches";
+
+/** The room's drawing prompts, so the write screen's phrase chips are the packs' own words. */
+const PROMPTS = [
+  "a pig surfing on a pancake",
+  "sunrise over a flying waffle",
+  "a cat on a skateboard",
+  "a pigeon on the bus",
+  "grandma at a rave",
+  "the last slice of pizza",
+  "two ducks in a trench coat",
+  "a very confused ghost",
+];
+
+const CONTENT: DrawingPromptContent = {
+  kind: "drawing-prompts",
+  items: [
+    ...PROMPTS.map((prompt, index) => ({ id: `prompt-${index}`, prompt, houseTitles: [] })),
+    // The longest phrase a chip can carry, measured with the longest words link.
+    { id: "stress", prompt: STRESS_TEXT, houseTitles: [] },
+  ],
+};
 
 const DRAWING: Doodle = {
   v: 1,

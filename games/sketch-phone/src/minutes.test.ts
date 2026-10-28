@@ -16,7 +16,7 @@ function nominalMs(players: number): number {
 
 describe("Sketch Phone's advertised length", () => {
   it("is within 20% of what its phases add up to at eight players", () => {
-    expect(sketchPhone.minutes).toBe(18);
+    expect(sketchPhone.minutes).toBe(15);
     expect(minutesMatchLength(sketchPhone.minutes, nominalMs(sketchPhone.maxPlayers))).toBe(true);
   });
 

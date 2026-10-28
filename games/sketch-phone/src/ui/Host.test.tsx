@@ -54,6 +54,7 @@ describe("the TV screens", () => {
     expect(screen.getByText(en.sketchPhone.drawWhatYouGot)).toBeTruthy();
     expect(screen.getByText(en.sketchPhone.everyoneIsDrawing)).toBeTruthy();
     expect(screen.getByText(en.sketchPhone.progressDraw)).toBeTruthy();
+    // Eight players hand a chain off seven times.
     expect(screen.getByText("Round 2 of 8")).toBeTruthy();
     expect(screen.getByText("0 of 8 done")).toBeTruthy();
   });

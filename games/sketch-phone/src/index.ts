@@ -6,6 +6,7 @@
 // empty one behind, and every chain view skips links that hold nothing, so a late phone can
 // never break a replay.
 import {
+  chainHeldBy,
   pullInDeadline,
   type GameContext,
   type GameDefinition,
@@ -33,6 +34,7 @@ import {
 } from "./rules";
 import {
   DESCRIBE_MS,
+  dealRounds,
   DRAW_MS,
   FAVOURITE_MS,
   kindOfStep,
@@ -111,8 +113,7 @@ function dealLinks(playerIds: readonly PlayerId[]): DealtLinks {
   for (let round = 0; round < count; round += 1) {
     const byPlayer: Record<PlayerId, number> = {};
     playerIds.forEach((playerId, seat) => {
-      // chainHeldBy's inverse: seat s works on chain (s - round) mod n.
-      const chain = ((seat - round) % count + count) % count;
+      const chain = chainHeldBy(seat, round, count);
       byPlayer[playerId] = chain;
       links[linkIdOf(chain, round)] = emptyLink(chain, round, playerId);
     });
@@ -132,6 +133,30 @@ function shuffledChains(rng: Rng, count: number): number[] {
   return order;
 }
 
+/** Phrase chips the write screen offers, so a player who is stuck has something to tap. */
+const SUGGESTIONS_PER_PLAYER = 3;
+
+/**
+ * The phrases each phone offers, dealt from the room's own drawing prompts: the packs are the
+ * content, and a player who cannot think of a phrase taps one of theirs instead. Each player gets
+ * a different window onto the shuffled prompts, so a table does not write the same phrase twice.
+ */
+function dealSuggestions(rng: Rng, content: DrawingPromptContent, playerIds: readonly PlayerId[]) {
+  const prompts = rng.shuffle(content.items.map((item) => item.prompt));
+  const count = Math.min(SUGGESTIONS_PER_PLAYER, prompts.length);
+  return Object.fromEntries(playerIds.map((playerId, seat) => [playerId, promptsFor(prompts, seat, count)]));
+}
+
+/** One phone's window onto the shuffled prompts: `count` of them from its seat's offset. */
+function promptsFor(prompts: readonly string[], seat: number, count: number): string[] {
+  const mine: string[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const prompt = prompts[(seat * SUGGESTIONS_PER_PLAYER + index) % prompts.length];
+    if (prompt !== undefined) mine.push(prompt);
+  }
+  return mine;
+}
+
 export function setup(ctx: Ctx): SketchState {
   const playerIds = ctx.players.map((player) => player.id);
   const { links, chainsFor } = dealLinks(playerIds);
@@ -147,6 +172,7 @@ export function setup(ctx: Ctx): SketchState {
     revealed: 0,
     round: 0,
     chainsFor,
+    suggestions: dealSuggestions(ctx.rng, ctx.content, playerIds),
     doneIds: {},
     votes: {},
     voters: {},
@@ -218,7 +244,8 @@ function beginReplay(state: SketchState, ctx: Ctx): SketchState {
 
 function nextRound(state: SketchState, ctx: Ctx): SketchState {
   const handed = handInEverything(state);
-  if (handed.round + 1 >= handed.playerIds.length) return beginReplay(handed, ctx);
+  // The deal decides how many rounds there are: a kick must not end the game a round early.
+  if (handed.round + 1 >= dealRounds(handed)) return beginReplay(handed, ctx);
   return startRound(handed, ctx, handed.round + 1);
 }
 

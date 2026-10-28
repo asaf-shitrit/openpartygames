@@ -24,6 +24,7 @@ import type {
   SketchPlayerView,
   SketchState,
 } from "./state";
+import { dealRounds } from "./state";
 
 function linkView(link: ChainLink): SketchLinkView {
   return {
@@ -80,9 +81,12 @@ export function buildHostView(state: SketchState): SketchHostView {
   return {
     phase: state.phase,
     playerIds: [...state.playerIds],
-    // One-based for players: round 0 is the seed everyone writes, so the last round is round N.
+    // Rounds are numbered from the seed, which is round 1 (design/*SketchPhoneDraw: "Round 4 of
+    // 7" at seven players), and the deal decides how many there are: a kick cannot shrink the
+    // count the way a live-roster length did, nor hide a link the room already played.
     roundNumber: state.round + 1,
-    roundCount: Math.max(1, state.playerIds.length),
+    roundCount: dealRounds(state),
+    linkCount: dealRounds(state),
     doneIds: doneIds(state),
     totals: { ...state.scores },
     chainNumber: chainNumber(state, chain),
@@ -170,10 +174,14 @@ export function buildPlayerView(state: SketchState, playerId: PlayerId): SketchP
     phase: state.phase,
     gameStartedAt: state.startedAt,
     playerCount: state.playerIds.length,
-    // One-based for players: round 0 is the seed everyone writes, so the last round is round N.
+    // Rounds are numbered from the seed, which is round 1 (design/*SketchPhoneDraw: "Round 4 of
+    // 7" at seven players), and the deal decides how many there are: a kick cannot shrink the
+    // count the way a live-roster length did, nor hide a link the room already played.
     roundNumber: state.round + 1,
-    roundCount: Math.max(1, state.playerIds.length),
+    roundCount: dealRounds(state),
+    linkCount: dealRounds(state),
     doneCount: doneIds(state).length,
+    mySuggestions: state.suggestions[playerId] ?? [],
     myLinkId: myLink === null ? null : myLink.id,
     myKind: myLink === null ? null : myLink.kind,
     myWords: wordsOf(myLink),
