@@ -16,7 +16,7 @@
     { "id": "wake-the-group-chat", "prompt": "שתתעוררו מקבוצת וואטסאפ באמצע הלילה" },
     { "id": "wrong-group-message", "prompt": "שתשלחו הודעה לקבוצה הלא נכונה" },
     { "id": "presentation-the-night-before", "prompt": "שתכינו מצגת בלילה שלפני" },
-    { "id": "forget-the-homework", "prompt": "שתשכחו את השיעורים בבית" },
+    { "id": "forget-the-homework", "prompt": "שתשכחו את שיעורי הבית במגירה" },
     { "id": "share-the-snacks", "prompt": "שתחלקו את הצ'יפס שלכם עם כולם" },
     { "id": "talk-to-the-teacher-like-a-friend", "prompt": "שתדברו עם המורה כמו עם חבר" },
     { "id": "nap-in-class", "prompt": "שתירדמו בשיעור בלי שישימו לב" },
