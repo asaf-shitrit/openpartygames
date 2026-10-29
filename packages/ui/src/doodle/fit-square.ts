@@ -32,6 +32,19 @@ interface FitSquareOptions {
   min: number;
   max: number;
   gap: number;
+  /**
+   * A row that sits between the canvas and the pinned `bar`: the screen's secondary action, say.
+   * It costs its own height plus a `gap` on either side, so the canvas gives all of that up
+   * rather than sliding underneath it. Left out, nothing is reserved for it.
+   */
+  below?: RefObject<HTMLElement | null>;
+}
+
+/** The height the canvas must leave for everything under it: the bar, and any row above it. */
+function reservedHeight(bar: HTMLElement, below: HTMLElement | null | undefined, gap: number): number {
+  const barHeight = bar.getBoundingClientRect().height;
+  if (below === null || below === undefined) return barHeight;
+  return barHeight + below.getBoundingClientRect().height + gap;
 }
 
 /**
@@ -45,12 +58,13 @@ export function useFitSquare(
   bar: RefObject<HTMLElement | null>,
   options: FitSquareOptions,
 ): number {
-  const { min, max, gap } = options;
+  const { min, max, gap, below } = options;
   const [side, setSide] = useState(max);
   useEffect(() => {
     const areaEl = area.current;
     const barEl = bar.current;
     if (areaEl === null || barEl === null) return undefined;
+    const belowEl = below?.current ?? null;
     const measure = () => {
       // Hidden (display: none): nothing to measure, and a zero would collapse the canvas.
       if (areaEl.clientWidth === 0) return;
@@ -58,7 +72,7 @@ export function useFitSquare(
         fitSquare({
           viewportHeight: window.innerHeight,
           top: areaEl.getBoundingClientRect().top + window.scrollY,
-          pinnedHeight: barEl.getBoundingClientRect().height,
+          pinnedHeight: reservedHeight(barEl, belowEl, gap),
           gap,
           width: areaEl.clientWidth,
           min,
@@ -70,11 +84,12 @@ export function useFitSquare(
     const observer = new ResizeObserver(measure);
     observer.observe(document.documentElement);
     observer.observe(barEl);
+    if (belowEl !== null) observer.observe(belowEl);
     window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [area, bar, min, max, gap]);
+  }, [area, bar, below, min, max, gap]);
   return side;
 }

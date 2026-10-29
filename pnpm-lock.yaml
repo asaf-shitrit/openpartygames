@@ -86,6 +86,9 @@ importers:
       '@opg/game-real-or-nah':
         specifier: workspace:*
         version: link:../../games/real-or-nah
+      '@opg/game-sketch-phone':
+        specifier: workspace:*
+        version: link:../../games/sketch-phone
       '@opg/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -138,6 +141,9 @@ importers:
       '@opg/game-real-or-nah':
         specifier: workspace:*
         version: link:../../games/real-or-nah
+      '@opg/game-sketch-phone':
+        specifier: workspace:*
+        version: link:../../games/sketch-phone
       '@opg/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
@@ -228,6 +234,31 @@ importers:
         version: 19.3.0
 
   games/real-or-nah:
+    dependencies:
+      '@opg/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@opg/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@opg/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@opg/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      react:
+        specifier: ^19.3.0
+        version: 19.3.0
+
+  games/sketch-phone:
     dependencies:
       '@opg/i18n':
         specifier: workspace:*

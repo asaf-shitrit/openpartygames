@@ -11,6 +11,7 @@ import { doodleBluffPreviews } from "@opg/game-doodle-bluff/preview";
 import { imposterPreviews } from "@opg/game-imposter/preview";
 import { mostLikelyToPreviews } from "@opg/game-most-likely-to/preview";
 import { realOrNahPreviews } from "@opg/game-real-or-nah/preview";
+import { sketchPhonePreviews } from "@opg/game-sketch-phone/preview";
 
 export type Surface = "host" | "phone";
 
@@ -110,6 +111,7 @@ const SOURCES: Array<[string, readonly PreviewEntry[]]> = [
   ["real-or-nah", realOrNahPreviews],
   ["most-likely-to", mostLikelyToPreviews],
   ["doodle-bluff", doodleBluffPreviews],
+  ["sketch-phone", sketchPhonePreviews],
 ];
 
 interface AppScreenSpec {
@@ -224,6 +226,11 @@ const APP_SCREENS: readonly AppScreenSpec[] = [
   {
     appId: "tv-final-scores-worst",
     label: "TV: final scores, worst case (8 long names, 3 awards, a tie)",
+    surface: "host",
+  },
+  {
+    appId: "tv-final-scores-sketch-phone",
+    label: "TV: final scores, Sketch Phone awards",
     surface: "host",
   },
   { appId: "tv-credits", label: "TV: credits", surface: "host" },

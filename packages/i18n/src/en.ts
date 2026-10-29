@@ -12,6 +12,7 @@ import { mostLikelyTo } from "./en/mostLikelyTo";
 import { imposter } from "./en/imposter";
 import { realOrNah } from "./en/realOrNah";
 import { doodleBluff } from "./en/doodleBluff";
+import { sketchPhone } from "./en/sketchPhone";
 import { results } from "./en/results";
 import { picker } from "./en/picker";
 import { landing } from "./en/landing";
@@ -28,6 +29,7 @@ export const en = {
   imposter,
   realOrNah,
   doodleBluff,
+  sketchPhone,
   results,
   picker,
   landing,
