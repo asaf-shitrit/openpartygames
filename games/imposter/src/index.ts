@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 // Imposter: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
-import { pullInDeadline } from "@opg/sdk";
+import { pullInDeadline, restoreDeadline } from "@opg/sdk";
 import type {
   GameContext,
   GameDefinition,
@@ -375,7 +375,7 @@ function settleVote(state: ImposterState, ctx: Ctx): ImposterState {
     state.playerIds.every((id) => state.votes[id] !== undefined);
   if (everyoneVoted) return startReveal(state, ctx);
   if (allConnectedVoted(state, ctx)) return pullInDeadline(state, ctx.now);
-  return state;
+  return restoreDeadline(state, ctx.now);
 }
 
 // ---------- GameDefinition hooks ----------
@@ -626,7 +626,7 @@ export function onPlayersChanged(state: ImposterState, ctx: Ctx): ImposterState 
   if (state.phase === "vote")
     return allConnectedVoted(state, ctx)
       ? pullInDeadline(state, ctx.now)
-      : state;
+      : restoreDeadline(state, ctx.now);
   if (state.phase !== "clues") return state;
   const speaker = state.clueOrder[state.clueIndex];
   if (speaker === undefined || ctx.connectedIds.includes(speaker)) return state;
