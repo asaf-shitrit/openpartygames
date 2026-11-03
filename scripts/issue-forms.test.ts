@@ -30,7 +30,10 @@ describe("pack submission forms", () => {
     it(`${form} lists every ${folder} pack, English first, then Hebrew`, () => {
       const packs = entries
         .filter((entry) => entry.folder === folder)
-        .map((entry) => entry.pack as { id: string; language: "en" | "he" });
+        .map((entry) => ({
+          id: String(entry.pack?.id),
+          language: entry.pack?.language === "he" ? "he" : "en",
+        }));
       const label = { en: "English", he: "Hebrew" };
       const expected = (["en", "he"] as const).flatMap((language) =>
         packs

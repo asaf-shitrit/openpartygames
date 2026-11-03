@@ -159,7 +159,7 @@ function crossPackErrorsFor({ rootDir, folder, filename, updated }) {
   const after = crossPackErrors(
     entries.map((entry) =>
       entry.folder === folder && entry.filename === filename
-        ? { ...entry, pack: updated }
+        ? { folder, filename, pack: updated }
         : entry,
     ),
   );
