@@ -1,11 +1,12 @@
 // Phone screens for Sketch Phone: writing a phrase, drawing, describing, the sent-away wait,
 // presenting and watching a replay, voting, and the favourite. In a no-TV room the phone also
 // carries the chain itself, so a phones-only table still sees what a shared screen would show.
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 import type { PlayerRoomView, PlayerSummary } from "@opg/protocol";
 import type { ServerClock } from "@opg/ui";
 import {
+  Avatar,
   Button,
   Card,
   DoodleView,
@@ -20,7 +21,7 @@ import { format, pickPluralByCount, useLocale } from "@opg/i18n";
 import type { Dictionary } from "@opg/i18n";
 import type { SketchAction, SketchLinkView, SketchPlayerOption, SketchPlayerView } from "../state";
 import { POINTS_PER_VOTE, TEXT_MAX_LENGTH } from "../state";
-import { linkLabel, nameOf } from "./common";
+import { avatarOf, linkLabel, nameOf } from "./common";
 import { PhoneDraw } from "./PhoneDraw";
 
 interface BodyProps {
@@ -35,7 +36,11 @@ interface BodyProps {
   noTv: boolean;
 }
 
-function progressLabel(t: Dictionary, view: SketchPlayerView): string {
+function progressLabel(t: Dictionary, view: SketchPlayerView, players: PlayerSummary[], noTv: boolean): string {
+  // A phone-only room has no TV header naming the chain, so the strip names whose it is.
+  if (noTv && view.phase === "replay" && view.ownerId !== null) {
+    return format(t.sketchPhone.chainOfName, { name: nameOf(players, view.ownerId, t.common.someone) });
+  }
   if (view.phase === "replay" || view.phase === "vote" || view.phase === "favourite") {
     return format(t.sketchPhone.chainOfShort, { current: view.chainNumber, count: view.chainCount });
   }
@@ -207,19 +212,39 @@ function ChainLinks({
   players,
   clock,
   size = 120,
+  arrow = false,
 }: {
   links: readonly SketchLinkView[];
   players: PlayerSummary[];
   clock: ServerClock;
   size?: number;
+  /** Put the design's red arrow between links, pointing from the one before to the one after. */
+  arrow?: boolean;
 }) {
   const { t } = useLocale();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {links.map((link) => {
+      {links.map((link, index) => {
         const label = linkLabel(t, link.kind, nameOf(players, link.authorId, t.common.someone));
         return (
-          <Card key={link.id} style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+          <Fragment key={link.id}>
+            {arrow && index > 0 ? (
+              <svg
+                aria-hidden="true"
+                width={30}
+                height={30}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--opg-marker)"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ alignSelf: "center", flexShrink: 0 }}
+              >
+                <path d="M12 4v15M6 13l6 6 6-6" />
+              </svg>
+            ) : null}
+          <Card style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>{label}</div>
             {link.doodle !== null ? (
               <DoodleView doodle={link.doodle} label={label} clock={clock} size={size} />
@@ -227,6 +252,7 @@ function ChainLinks({
               <div style={{ fontSize: 19, fontWeight: 700, overflowWrap: "anywhere" }}>{link.text}</div>
             )}
           </Card>
+          </Fragment>
         );
       })}
     </div>
@@ -238,23 +264,87 @@ function secondsHint(t: Dictionary, deadline: number | null, clock: ServerClock)
   return format(t.sketchPhone.movesOnIn, { seconds: Math.max(0, Math.ceil((deadline - clock.now()) / 1000)) });
 }
 
-function PresentStage({ view, players, deadline, clock, send, noTv }: BodyProps) {
+/** One dot of the chain strip: whose link it is, the shown one ringed, the ones to come dashed. */
+function StripDot({ link, current, players }: { link: SketchLinkView | undefined; current: boolean; players: PlayerSummary[] }) {
+  const { t } = useLocale();
+  const dotBox = {
+    width: 40,
+    height: 40,
+    boxSizing: "border-box" as const,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  if (link === undefined) {
+    return (
+      <div style={{ ...dotBox, border: "3px dashed var(--opg-ink-secondary)", color: "var(--opg-ink-secondary)", fontSize: 18, fontWeight: 700 }}>
+        ?
+      </div>
+    );
+  }
+  const name = nameOf(players, link.authorId, t.common.someone);
+  return (
+    <div
+      style={{
+        ...dotBox,
+        border: `${current ? 4 : 3}px solid ${current ? "var(--opg-marker)" : "var(--opg-ink)"}`,
+        background: current ? "var(--opg-highlight-soft)" : "var(--opg-card)",
+      }}
+    >
+      <Avatar id={avatarOf(players, link.authorId)} size={28} alt={format(t.sketchPhone.avatarAlt, { name })} />
+    </div>
+  );
+}
+
+/** Every link of the chain in order: the ones shown so far, then a "?" for each still to come. */
+function ChainDots({ links, linkCount, players }: { links: readonly SketchLinkView[]; linkCount: number; players: PlayerSummary[] }) {
+  const { t } = useLocale();
+  const label = format(t.sketchPhone.linkOf, { current: links.length, count: linkCount });
+  const positions = Array.from({ length: Math.max(linkCount, links.length) }, (_, index) => index);
+  return (
+    <div aria-label={label} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+      {positions.map((index) => (
+        <StripDot key={links[index]?.id ?? `to-come-${index}`} link={links[index]} current={index === links.length - 1} players={players} />
+      ))}
+    </div>
+  );
+}
+
+/** The phone-only presenter's stage: the link before, a red arrow, the one being shown. */
+function NoTvPresentStage({ view, players, clock }: BodyProps) {
+  const links = view.links ?? [];
+  return (
+    <>
+      <ChainDots links={links} linkCount={view.linkCount} players={players} />
+      <ChainLinks links={links.slice(-2)} players={players} clock={clock} size={240} arrow />
+    </>
+  );
+}
+
+function PresentStage(props: BodyProps) {
+  const { view, players, deadline, clock, send, noTv } = props;
   const { t } = useLocale();
   const links = view.links ?? [];
   const current = links[links.length - 1];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Card style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <Marker size={26} level={1}>
-          {/* A phone-only room has no shared screen, so the presenter holds the chain up. */}
-          {noTv ? t.sketchPhone.yourChain : t.sketchPhone.yourChainOnTv}
-        </Marker>
-        <div style={{ fontSize: 16 }}>{t.sketchPhone.yourChainHint}</div>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
-          {format(t.sketchPhone.linkOf, { current: links.length, count: view.linkCount })}
-        </div>
-      </Card>
-      {current !== undefined ? <ChainLinks links={[current]} players={players} clock={clock} size={160} /> : null}
+      {noTv ? (
+        <NoTvPresentStage {...props} />
+      ) : (
+        <>
+          <Card style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <Marker size={26} level={1}>
+              {t.sketchPhone.yourChainOnTv}
+            </Marker>
+            <div style={{ fontSize: 16 }}>{t.sketchPhone.yourChainHint}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--opg-ink-secondary)" }}>
+              {format(t.sketchPhone.linkOf, { current: links.length, count: view.linkCount })}
+            </div>
+          </Card>
+          {current !== undefined ? <ChainLinks links={[current]} players={players} clock={clock} size={160} /> : null}
+        </>
+      )}
       <Button
         fullWidth
         size="lg"
@@ -538,7 +628,7 @@ export function Phone(props: PhoneProps) {
     <PhoneScreen roomCode={phoneRoomCode(props.room)} fit>
       <PhoneStrip
         gameName={t.sketchPhone.title}
-        progress={progressLabel(t, props.view)}
+        progress={progressLabel(t, props.view, props.room.players, noTv)}
         right={<Timer deadline={props.deadline} clock={props.clock} size={78} startedAt={props.timerStartedAt} haptics />}
       />
       <PhaseEnter

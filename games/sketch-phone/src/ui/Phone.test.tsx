@@ -136,7 +136,10 @@ describe("the phone screens", () => {
     expect(preview.room.sharedScreen).toBe(false);
     expect(preview.view.isPresenter).toBe(true);
     expect(screen.queryByText(en.sketchPhone.yourChainOnTv)).toBeNull();
-    expect(screen.getByText(en.sketchPhone.yourChain)).toBeTruthy();
+    expect(screen.getByText("Priya's chain")).toBeTruthy();
+    // The phone is the stage: a strip of the chain, then the link before and the one shown.
+    expect(screen.getByLabelText(/^Link \d+ of \d+$/)).toBeTruthy();
+    expect(screen.getAllByText(/'s (words|drawing)$/).length).toBeGreaterThanOrEqual(2);
   });
 
   it("tells everyone else to look up when there is a shared screen", () => {

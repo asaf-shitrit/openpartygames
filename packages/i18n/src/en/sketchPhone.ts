@@ -39,7 +39,7 @@ export const sketchPhone = {
   nextUpWords: "Next up: words to write",
   yourChainOnTv: "Your chain is on the TV",
   yourChainHint: "Talk everyone through it. Tap Next to show each link.",
-  yourChain: "Your chain",
+  chainOfName: "{name}'s chain",
   hasNextButton: "{name} has the Next button",
   nextLink: "Next link",
   movesOnIn: "Moves on by itself in {seconds}",

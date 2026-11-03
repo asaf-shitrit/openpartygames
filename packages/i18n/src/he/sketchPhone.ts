@@ -39,7 +39,7 @@ export const sketchPhone = {
   nextUpWords: "הבא בתור: מילים לכתוב",
   yourChainOnTv: "השרשרת שלכם על המסך",
   yourChainHint: "ספרו לכולם עליה. הקישו על הבא כדי להראות כל חוליה.",
-  yourChain: "השרשרת שלכם",
+  chainOfName: "השרשרת של {name}",
   hasNextButton: "הכפתור ״הבא״ אצל {name}",
   nextLink: "החוליה הבאה",
   movesOnIn: "ממשיך מעצמו בעוד {seconds}",
