@@ -1,6 +1,6 @@
 import { z, type ZodType } from "zod";
 // Real or Nah: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
-import { normalizeAnswer, pullInDeadline } from "@opg/sdk";
+import { normalizeAnswer, pullInDeadline, restoreDeadline } from "@opg/sdk";
 import type {
   Fact,
   FactContent,
@@ -397,7 +397,7 @@ function settlePhase(state: RonState, ctx: Ctx): RonState {
       ? startVote(state, ctx)
       : startReveal(state, ctx);
   if (onlyAbsentPlayersLeft(state, ctx)) return pullInDeadline(state, ctx.now);
-  return state;
+  return restoreDeadline(state, ctx.now);
 }
 
 // ---------- Actions ----------
@@ -605,7 +605,7 @@ export function onPlayersChanged(state: RonState, ctx: Ctx): RonState {
   if (state.phase !== "write" && state.phase !== "vote") return state;
   return onlyAbsentPlayersLeft(state, ctx)
     ? pullInDeadline(state, ctx.now)
-    : state;
+    : restoreDeadline(state, ctx.now);
 }
 
 export function isOver(state: RonState): boolean {

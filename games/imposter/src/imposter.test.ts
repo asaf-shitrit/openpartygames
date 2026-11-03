@@ -532,12 +532,15 @@ describe("turn order and actions", () => {
     if (first === undefined || second === undefined || holdout === undefined)
       throw new Error("expected three players");
     const away = withCtx(c, { connectedIds: [first, second] });
+    const originalDeadline = state.deadline;
     state = onAction(state, first, { type: "vote", target: second }, away);
     state = onAction(state, second, { type: "vote", target: first }, away);
     expect(state.phase).toBe("vote");
     const back = withCtx(c, { now: BASE_NOW + 3000 });
-    expect(onPlayersChanged(state, back)).toBe(state);
-    state = onAction(state, holdout, { type: "vote", target: first }, back);
+    const restored = onPlayersChanged(state, back);
+    expect(restored.deadline).toBe(originalDeadline);
+    expect(onPlayersChanged(restored, back)).toBe(restored);
+    state = onAction(restored, holdout, { type: "vote", target: first }, back);
     expect(state.phase).toBe("reveal");
     expect(state.votes[holdout]).toBe(first);
   });

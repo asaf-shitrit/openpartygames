@@ -1,7 +1,7 @@
 // Most Likely To: constants, state and view types. Pure JSON, no classes/Map/Set.
 import { z } from "zod";
 import type { PlayerId } from "@opg/protocol";
-import type { Superlative } from "@opg/sdk";
+import type { GraceRestore, Superlative } from "@opg/sdk";
 
 // Timing constants (the UI imports these).
 export const ROUNDS_PER_GAME = 20;
@@ -78,6 +78,11 @@ export interface MltState {
   finished: boolean;
   /** Epoch ms of the current phase timeout; null once finished. */
   deadline: number | null;
+  /**
+   * Set by a grace pull-in so a returning player gets the original deadline back. Absent
+   * otherwise and on older saves.
+   */
+  graceRestore?: GraceRestore | undefined;
   /** One record per completed round, appended when its reveal ends. */
   history: MltRoundRecord[];
 }

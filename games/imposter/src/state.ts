@@ -1,6 +1,7 @@
 // Imposter game: constants, state and view types. Pure JSON, no classes/Map/Set.
 import { z } from "zod";
 import type { PlayerId } from "@opg/protocol";
+import type { GraceRestore } from "@opg/sdk";
 
 // Timing constants (the UI imports these).
 export const WORDS_PER_GAME = 6;
@@ -93,6 +94,11 @@ export interface ImposterState {
  finished: boolean;
  /** Epoch ms of the current phase timeout; null once finished. */
  deadline: number | null;
+  /**
+   * Set by a grace pull-in so a returning player gets the original deadline back. Absent
+   * otherwise and on older saves.
+   */
+  graceRestore?: GraceRestore | undefined;
  /**
   * The roster the current reveal was built for, frozen when the votes closed so a kick
   * mid-reveal cannot reshuffle the ceremony. Absent outside a reveal and on older saves.

@@ -1,6 +1,6 @@
 // Most Likely To: pure, deterministic GameDefinition. No I/O, no Date.now, no Math.random.
 import { z, type ZodType } from "zod";
-import { pullInDeadline } from "@opg/sdk";
+import { pullInDeadline, restoreDeadline } from "@opg/sdk";
 import type { GameContext, GameDefinition, Rng, SuperlativeContent } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 import { addPoints, matchedVoters, revealOutcome, roundPoints, tallyVotes } from "./rules";
@@ -102,7 +102,7 @@ function settleVote(state: MltState, ctx: Ctx): MltState {
     state.playerIds.every((id) => state.votes[id] !== undefined);
   if (everyoneVoted) return startReveal(state, ctx);
   if (allConnectedVoted(state, ctx)) return pullInDeadline(state, ctx.now);
-  return state;
+  return restoreDeadline(state, ctx.now);
 }
 
 export function startReveal(state: MltState, ctx: Ctx): MltState {
@@ -229,7 +229,9 @@ export function onPlayerRemoved(
 /** A connection flip can leave only disconnected players to vote: start the grace clock. */
 export function onPlayersChanged(state: MltState, ctx: Ctx): MltState {
   if (state.finished || state.phase !== "vote") return state;
-  return allConnectedVoted(state, ctx) ? pullInDeadline(state, ctx.now) : state;
+  return allConnectedVoted(state, ctx)
+    ? pullInDeadline(state, ctx.now)
+    : restoreDeadline(state, ctx.now);
 }
 
 export function isOver(state: MltState): boolean {

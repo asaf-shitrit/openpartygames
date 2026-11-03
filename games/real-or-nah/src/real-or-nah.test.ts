@@ -443,13 +443,17 @@ describe("left-player grace", () => {
   it("counts a holdout who reconnects and picks inside the grace", () => {
     const away = makeCtx({ n: 3, connected: ["p1", "p2"] });
     let state = toVote(away);
+    const originalDeadline = state.deadline;
     const truthId = optionIdByText(state, "emus");
     state = pick(state, "p1", truthId, away);
     state = pick(state, "p2", truthId, away);
     expect(state.phase).toBe("vote");
+    expect(state.deadline).toBe(BASE_NOW + LEFT_PLAYER_GRACE_MS);
     const back = { ...away, now: BASE_NOW + 3000, connectedIds: ["p1", "p2", "p3"] };
-    expect(onPlayersChanged(state, back)).toBe(state);
-    state = pick(state, "p3", truthId, back);
+    const restored = onPlayersChanged(state, back);
+    expect(restored.deadline).toBe(originalDeadline);
+    expect(onPlayersChanged(restored, back)).toBe(restored);
+    state = pick(restored, "p3", truthId, back);
     expect(state.phase).toBe("reveal");
     expect(state.votes.p3).toBe(truthId);
   });

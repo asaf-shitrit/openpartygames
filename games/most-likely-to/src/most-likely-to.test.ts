@@ -222,6 +222,24 @@ describe("early reveal", () => {
     expect(state.deadline).toBe(BASE_NOW + 5000 + LEFT_PLAYER_GRACE_MS);
   });
 
+  it("gives the original vote deadline back when a holdout returns after the pull-in", () => {
+    const c = makeCtx({ n: 3 });
+    const voted = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    const gone = withCtx(c, { now: BASE_NOW + 5000, connectedIds: ["p1", "p2"] });
+    const pulled = onPlayersChanged(voted, gone);
+    const back = withCtx(c, { now: BASE_NOW + 9000, connectedIds: ["p1", "p2", "p3"] });
+    expect(onPlayersChanged(pulled, back).deadline).toBe(BASE_NOW + VOTE_MS);
+  });
+
+  it("keeps the grace when the original vote deadline has already passed", () => {
+    const c = makeCtx({ n: 3 });
+    const voted = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
+    const gone = withCtx(c, { now: BASE_NOW + VOTE_MS - 2000, connectedIds: ["p1", "p2"] });
+    const pulled = onPlayersChanged(voted, gone);
+    const back = withCtx(c, { now: BASE_NOW + VOTE_MS + 1000, connectedIds: ["p1", "p2", "p3"] });
+    expect(onPlayersChanged(pulled, back)).toBe(pulled);
+  });
+
   it("never pushes a nearer deadline out", () => {
     const c = makeCtx({ n: 3 });
     const voted = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
@@ -233,8 +251,10 @@ describe("early reveal", () => {
     const c = makeCtx({ n: 3, connected: ["p1", "p2"] });
     const waiting = castVotes(setup(c), c, { p1: "p2", p2: "p2" });
     const back = withCtx(c, { now: BASE_NOW + 3000, connectedIds: ["p1", "p2", "p3"] });
-    expect(onPlayersChanged(waiting, back)).toBe(waiting);
-    const state = onAction(waiting, "p3", { type: "vote", target: "p1" }, back);
+    const restored = onPlayersChanged(waiting, back);
+    expect(restored.deadline).toBe(BASE_NOW + VOTE_MS);
+    expect(onPlayersChanged(restored, back)).toBe(restored);
+    const state = onAction(restored, "p3", { type: "vote", target: "p1" }, back);
     expect(state.phase).toBe("reveal");
     expect(state.votes.p3).toBe("p1");
   });
