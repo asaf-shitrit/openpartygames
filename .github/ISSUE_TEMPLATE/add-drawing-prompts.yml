@@ -15,6 +15,7 @@ body:
       options:
         - "English: doodle-absurd"
         - "English: doodle-everyday"
+        - "Hebrew: israeli-moments"
         - "Hebrew: playful-animals"
     validations:
       required: true
