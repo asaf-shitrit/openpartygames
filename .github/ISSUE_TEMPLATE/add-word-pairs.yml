@@ -13,10 +13,14 @@ body:
       label: Pack
       description: Which pack should these pairs go into?
       options:
-        - animals
-        - food-and-drink
-        - around-the-house
-        - movies-and-tv
+        - "English: animals"
+        - "English: around-the-house"
+        - "English: food-and-drink"
+        - "English: jobs-and-places"
+        - "English: movies-and-tv"
+        - "English: nature-and-weather"
+        - "Hebrew: israeli-snacks"
+        - "Hebrew: teen-life"
     validations:
       required: true
   - type: textarea

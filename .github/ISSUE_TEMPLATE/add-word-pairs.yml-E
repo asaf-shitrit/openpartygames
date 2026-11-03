@@ -1,0 +1,42 @@
+name: Add word pairs
+description: Submit word pairs for an Imposter pack
+title: "[Word pairs] "
+labels: ["pack-submission", "word-pairs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Word pairs for Imposter. Each line is `crew / decoy`: the crew word everyone gets, and the decoy the imposter sees. Both are lowercase, both are at most 24 characters, and they must differ.
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Pack
+      description: Which pack should these pairs go into?
+      options:
+        - "English: animals"
+        - "English: around-the-house"
+        - "English: food-and-drink"
+        - "English: jobs-and-places"
+        - "English: movies-and-tv"
+        - "English: nature-and-weather"
+        - "Hebrew: israeli-snacks"
+        - "Hebrew: teen-life"
+    validations:
+      required: true
+  - type: textarea
+    id: pairs
+    attributes:
+      label: Word pairs
+      description: One pair per line, written as `crew / decoy`.
+      placeholder: |
+        giraffe / zebra
+        dolphin / shark
+    validations:
+      required: true
+  - type: checkboxes
+    id: license
+    attributes:
+      label: License
+      options:
+        - label: These word pairs are my own original content, and I release them under CC BY-SA 4.0.
+          required: true

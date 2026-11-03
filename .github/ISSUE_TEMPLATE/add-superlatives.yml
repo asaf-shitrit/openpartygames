@@ -13,8 +13,9 @@ body:
       label: Pack
       description: Which pack should these prompts go into?
       options:
-        - most-likely-everyday
-        - most-likely-friends
+        - "English: most-likely-everyday"
+        - "English: most-likely-friends"
+        - "Hebrew: israeli-habits"
     validations:
       required: true
   - type: textarea
