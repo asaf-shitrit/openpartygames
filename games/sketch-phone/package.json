@@ -1,0 +1,30 @@
+{
+  "name": "@opg/game-sketch-phone",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ui": "./src/ui/index.tsx",
+    "./views": "./src/state.ts",
+    "./award-copy": "./src/ui/award-copy.ts",
+    "./preview": "./src/ui/preview.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opg/i18n": "workspace:*",
+    "@opg/protocol": "workspace:*",
+    "@opg/sdk": "workspace:*",
+    "@opg/ui": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "react": "*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "react": "^19.3.0"
+  }
+}

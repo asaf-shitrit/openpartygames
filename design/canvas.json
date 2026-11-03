@@ -699,7 +699,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: write" }
     },
     {
       "file": "TVSketchPhoneRound.dc.html",
@@ -709,7 +709,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: passing round" }
     },
     {
       "file": "TVSketchPhoneReplay.dc.html",
@@ -719,7 +719,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: replay" }
     },
     {
       "file": "TVSketchPhoneVote.dc.html",
@@ -729,7 +729,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: vote" }
     },
     {
       "file": "TVSketchPhoneFavourite.dc.html",
@@ -739,7 +739,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: favourite" }
     },
     {
       "file": "TVSketchPhoneReplayHe.dc.html",
@@ -749,7 +749,7 @@
       "y": 0,
       "w": 1920,
       "h": 1080,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Host: replay" }
     },
     {
       "file": "PhoneSketchPhoneWrite.dc.html",
@@ -759,7 +759,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Maya writing" }
     },
     {
       "file": "PhoneSketchPhoneDraw.dc.html",
@@ -769,7 +769,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam drawing" }
     },
     {
       "file": "PhoneSketchPhoneDescribe.dc.html",
@@ -779,7 +779,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Noa describing" }
     },
     {
       "file": "PhoneSketchPhoneSent.dc.html",
@@ -789,7 +789,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Maya sent" }
     },
     {
       "file": "PhoneSketchPhoneTimesUp.dc.html",
@@ -799,7 +799,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Maya sent" }
     },
     {
       "file": "PhoneSketchPhonePresent.dc.html",
@@ -809,7 +809,7 @@
       "y": 1300,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Priya presenting" }
     },
     {
       "file": "PhoneSketchPhoneVote.dc.html",
@@ -819,7 +819,7 @@
       "y": 1300,
       "w": 390,
       "h": 1240,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam voting" }
     },
     {
       "file": "PhoneNoTvSketchPhoneDraw.dc.html",
@@ -829,7 +829,7 @@
       "y": 2740,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Sam drawing" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplay.dc.html",
@@ -839,7 +839,7 @@
       "y": 2740,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya presenting" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplayWatch.dc.html",
@@ -849,7 +849,7 @@
       "y": 2740,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Sam watching" }
     },
     {
       "file": "PhoneNoTvSketchPhoneVote.dc.html",
@@ -859,7 +859,7 @@
       "y": 2740,
       "w": 390,
       "h": 1240,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Sam voting" }
     },
     {
       "file": "PhoneNoTvSketchPhoneFavourite.dc.html",
@@ -869,7 +869,7 @@
       "y": 2740,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya favourite" }
     },
     {
       "file": "PhoneSketchPhoneWriteHe.dc.html",
@@ -879,7 +879,7 @@
       "y": 4180,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Maya writing" }
     },
     {
       "file": "PhoneSketchPhoneDrawHe.dc.html",
@@ -889,7 +889,7 @@
       "y": 4180,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam drawing" }
     },
     {
       "file": "PhoneSketchPhoneDescribeHe.dc.html",
@@ -899,7 +899,7 @@
       "y": 4180,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Noa describing" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplayHe.dc.html",
@@ -909,7 +909,7 @@
       "y": 4180,
       "w": 390,
       "h": 844,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya presenting" }
     },
     {
       "file": "PhoneSketchPhoneVoteHe.dc.html",
@@ -919,7 +919,7 @@
       "y": 4180,
       "w": 390,
       "h": 1240,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam voting" }
     },
     {
       "file": "PhoneSketchPhoneDraw360.dc.html",
@@ -929,7 +929,7 @@
       "y": 5620,
       "w": 360,
       "h": 780,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam drawing" }
     },
     {
       "file": "PhoneSketchPhoneDrawHe360.dc.html",
@@ -939,7 +939,7 @@
       "y": 5620,
       "w": 360,
       "h": 780,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam drawing" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplay360.dc.html",
@@ -949,7 +949,7 @@
       "y": 5620,
       "w": 360,
       "h": 780,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya presenting" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplayHe360.dc.html",
@@ -959,7 +959,7 @@
       "y": 5620,
       "w": 360,
       "h": 780,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya presenting" }
     },
     {
       "file": "PhoneSketchPhoneDraw430.dc.html",
@@ -969,7 +969,7 @@
       "y": 5620,
       "w": 430,
       "h": 932,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone: Sam drawing" }
     },
     {
       "file": "PhoneNoTvSketchPhoneReplay430.dc.html",
@@ -979,7 +979,7 @@
       "y": 5620,
       "w": 430,
       "h": 932,
-      "screen": null
+      "screen": { "game": "sketch-phone", "label": "Phone (no-TV): Priya presenting" }
     }
   ],
   "annotations": [

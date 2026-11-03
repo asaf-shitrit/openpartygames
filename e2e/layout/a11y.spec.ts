@@ -177,15 +177,26 @@ for (const viewport of ZOOM_VIEWPORTS) {
           await page.evaluate(() => {
             document.documentElement.style.zoom = "200%";
           });
-          await page.waitForTimeout(60);
-          const violations = await page.evaluate(
-            (limits) => window.opgLayout.collectViolations(limits),
-            viewport.limits,
-          );
-          expect(
-            violations,
-            `${screen.id} at ${viewport.name} 200% (${locale}):\n${report(violations)}`,
-          ).toEqual([]);
+          // Zoom is the start of a chain of work, not the end of it. A screen that measures
+          // itself responds in the frame after it: `useStickyFooter` unpins a start-button
+          // footer that has grown past a third of the phone, the drawing pad re-fits its canvas
+          // and the pinned bars re-reserve their height — all from a ResizeObserver, and each
+          // of those is a React render. A single sample 60ms in caught them mid-flight, and
+          // reported a footer still pinned over the list it had already decided to let go of:
+          // the VIP controls screen flaked red on the same tree it passed on a minute later.
+          // Poll for the settled layout instead. What this pass still refuses is a screen whose
+          // content never stops being covered.
+          await expect
+            .poll(
+              async () =>
+                page.evaluate((limits) => window.opgLayout.collectViolations(limits), viewport.limits),
+              {
+                message: `${screen.id} at ${viewport.name} 200% (${locale}) never settled with every control uncovered`,
+                timeout: 10_000,
+                intervals: [100, 250, 500],
+              },
+            )
+            .toEqual([]);
         });
       }
     }

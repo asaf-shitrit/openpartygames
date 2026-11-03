@@ -11,6 +11,14 @@ export { LEFT_PLAYER_GRACE_MS, pullInDeadline, restoreDeadline } from "./grace";
 export type { GraceRestore } from "./grace";
 export { normalizeAnswer } from "./text";
 export {
+  chainHeldBy,
+  chainLength,
+  holderSeat,
+  stepKind,
+  transferRounds,
+} from "./chain";
+export type { ChainStepKind } from "./chain";
+export {
   doodleSchema,
   emptyDoodle,
   GAP_MS_CAP,

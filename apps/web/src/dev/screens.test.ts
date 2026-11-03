@@ -26,7 +26,7 @@ describe("SCREENS", () => {
   it("carries every game's previews, plus the app shell's own screens", () => {
     const games = new Set(SCREENS.map((screen) => screen.gameId));
     expect(games).toEqual(
-      new Set(["doodle-bluff", "imposter", "most-likely-to", "real-or-nah", "app"]),
+      new Set(["doodle-bluff", "imposter", "most-likely-to", "real-or-nah", "sketch-phone", "app"]),
     );
   });
 
