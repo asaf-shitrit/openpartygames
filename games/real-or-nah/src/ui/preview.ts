@@ -764,7 +764,7 @@ const stressHostRevealAllDuds: RonHostView = {
 
 /**
  * The widest a "Fooled" cell gets: one lie took everyone who did not write it. Seven avatars
- * and the "Fooled 7 people!" callout share a cell with seven other rows still on the table —
+ * and the "Fooled everyone!" callout share a cell with seven other rows still on the table —
  * and, as above, this is only reachable when every other lie is a dud.
  */
 const STRESS_ONE_FOOLER_LIES: RonFooledLie[] = STRESS_IDS.map((id, index) => ({
@@ -784,6 +784,27 @@ const STRESS_ONE_FOOLER_REVEAL: RonReveal = {
 const stressHostRevealOneFooler: RonHostView = {
   ...stressHostRevealAllDuds,
   reveal: STRESS_ONE_FOOLER_REVEAL,
+};
+
+/**
+ * One lie took six of the seven players who could pick it, so the callout counts ("Fooled 6
+ * people!") instead of saying "Fooled everyone!". The one player it missed found the truth.
+ */
+const STRESS_SIX_FOOLED_REVEAL: RonReveal = {
+  ...STRESS_ONE_FOOLER_REVEAL,
+  foundByIds: STRESS_IDS.slice(7),
+  lies: STRESS_IDS.map((id, index) => ({
+    optionId: `d${index + 1}`,
+    text: stressTableLie(index),
+    authorId: id,
+    fooledIds: index === 0 ? STRESS_IDS.slice(1, 7) : [],
+    points: index === 0 ? 6 * 500 : 0,
+  })),
+};
+
+const stressHostRevealSixFooled: RonHostView = {
+  ...stressHostRevealAllDuds,
+  reveal: STRESS_SIX_FOOLED_REVEAL,
 };
 
 const stressPhoneWrite: RonPlayerView = {
@@ -1020,6 +1041,12 @@ export const realOrNahPreviews: Array<{
     surface: "host",
     view: stressHostRevealOneFooler,
     room: hostRevealRoom(stressHostRevealOneFooler, STRESS_ONE_FOOLER_REVEAL, STRESS_PLAYERS),
+  },
+  {
+    label: "Host: worst case, reveal table (8 lies, one fooled six)",
+    surface: "host",
+    view: stressHostRevealSixFooled,
+    room: hostRevealRoom(stressHostRevealSixFooled, STRESS_SIX_FOOLED_REVEAL, STRESS_PLAYERS),
   },
 ];
 
