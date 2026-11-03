@@ -58,6 +58,7 @@ export const realOrNah = {
     dudsHeadline: "Your lie fooled nobody",
     dudsSub: "Next time!",
     fooledByHeadline: "{author}'s lie got you",
+    fooledByHouseHeadline: "The house lie got you",
     fooledBySub: "\"{text}\"",
     authorFooledHeadline: "You fooled {names}!",
     authorFooledSub: "+{points}",

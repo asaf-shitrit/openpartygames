@@ -115,6 +115,16 @@ describe("titleErrorOf", () => {
     expect(titleErrorOf(prompt, {}, "p1", "A Cat Riding A Skateboard")).toBe("truth");
   });
 
+  it("accepts different emoji-only titles because they normalize to empty", () => {
+    const existing = { p2: "🐸" };
+    expect(titleErrorOf(prompt, existing, "p1", "🦄")).toBeNull();
+  });
+
+  it("rejects an identical emoji-only title as a duplicate", () => {
+    const existing = { p2: "🐸" };
+    expect(titleErrorOf(prompt, existing, "p1", "🐸")).toBe("duplicate");
+  });
+
   it("rejects a title duplicating another player's, but not the same player's own", () => {
     const existing = { p2: "a dog on a scooter" };
     expect(titleErrorOf(prompt, existing, "p1", "a dog on a scooter")).toBe("duplicate");

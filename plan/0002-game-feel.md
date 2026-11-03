@@ -206,7 +206,7 @@ An `aria-live` region states the verdict in words at 8.0s.
 |---|---|---|---|---|
 | intro (2s) | "Let's see who fooled who" | Eyes on the TV | whoosh | heartbeat slow |
 | duds (2s) | Lies that fooled nobody drop in together with NAH stamps and author names: "These fooled nobody" | Your dud: "Your lie fooled nobody. Next time!" | stamp | soft |
-| each lie | Card slides in; fooled players' avatars pop on; card flips to "Written by Dov" with a NAH slam; "+1,000" chip; callout at ≥3 fooled or when everyone fell for it | Fooled: "Dov's lie got you". Author: "You fooled Sam and Noa! +1,000" (confetti) | whoosh, pop, flip + slam, boing | soft / good |
+| each lie | Card slides in; fooled players' avatars pop on; card flips to "Written by Dov" with a NAH slam; "+1,000" chip; callout at ≥3 fooled or when everyone fell for it | Fooled: "Dov's lie got you"; fooled by a house decoy: "The house lie got you". Author: "You fooled Sam and Noa! +1,000" (confetti) | whoosh, pop, flip + slam, boing | soft / good |
 | truth (4s) | Truth card shows "?", dim, drumroll, REAL slam and shake, answer and source; finders pop in with "+1,000 each" or "Nobody found it! Tricky one." | Finder: "You found it! +1,000" (confetti); others: "The truth: X" | drumroll, slam, pop | heartbeat fast → good / soft |
 | standings (3.5s) | Running standings slide in, count up from `totals − pointsThisFact`, FLIP reorder | "You're 2nd (+1,500)" | count-roll, whoosh | — |
 

@@ -267,7 +267,12 @@ export interface ApiErrorResponse {
 
 // ---------- Parsing untrusted client messages ----------
 
-const MAX_MESSAGE_LENGTH = 4096;
+/**
+ * The longest client frame a room parses, in characters (the same `.length` this file measures).
+ * A phone that builds a frame has to keep inside it: `parseClientMessage` drops a longer one in
+ * silence, so the action inside never happens. Doodle Bluff's `pendingChunks` sizes by it.
+ */
+export const MAX_MESSAGE_LENGTH = 4096;
 
 function parseJson(text: string): z.core.util.JSONType | undefined {
   try {
@@ -277,11 +282,25 @@ function parseJson(text: string): z.core.util.JSONType | undefined {
   }
 }
 
+/**
+ * Parses a decoded frame against the schema. `safeParse` can still throw: `z.json()` walks a
+ * payload one nesting level at a time, so a deeply nested `game-action` that fits inside
+ * `MAX_MESSAGE_LENGTH` overflows the stack with a `RangeError`. A frame nothing can walk is
+ * a malformed frame, not a reason to fail the caller.
+ */
+function parseMessage(json: z.core.util.JSONType | undefined): ClientMessage | null {
+  try {
+    const result = clientMessageSchema.safeParse(json);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Parses a raw WebSocket frame into a ClientMessage, or returns null if it is malformed. */
 export function parseClientMessage(raw: string | ArrayBuffer): ClientMessage | null {
   if (raw instanceof ArrayBuffer || raw.length > MAX_MESSAGE_LENGTH) return null;
-  const result = clientMessageSchema.safeParse(parseJson(raw));
-  return result.success ? result.data : null;
+  return parseMessage(parseJson(raw));
 }
 
 /**

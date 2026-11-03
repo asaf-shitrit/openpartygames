@@ -208,6 +208,17 @@ const REVEAL_WITH_HOUSE_LIE: RonReveal = {
   lies: [...LIES, HOUSE_LIE],
 };
 
+/**
+ * The same reveal, with the decoy as Priya's only fooled-by: "rabbits" stops fooling her, so
+ * her phone names the house lie instead of a player's lie.
+ */
+const REVEAL_PRIYA_HOUSE_LIE: RonReveal = {
+  ...REVEAL_WITH_HOUSE_LIE,
+  lies: REVEAL_WITH_HOUSE_LIE.lies.map((lie) =>
+    lie.optionId === "o1" ? { ...lie, fooledIds: [] } : lie,
+  ),
+};
+
 /** Nobody's lie fooled anybody: duds only, no lie beats to play. */
 const REVEAL_ALL_DUDS: RonReveal = {
   ...REVEAL,
@@ -398,6 +409,15 @@ const phoneRevealWasFooled: RonPlayerView = {
   phase: "reveal",
   myPick: "o6",
   reveal: REVEAL_DOV_WAS_FOOLED,
+  myPoints: 0,
+};
+
+/** Priya's only fooled-by is the house decoy, which no player wrote. */
+const phoneRevealHouseLie: RonPlayerView = {
+  ...phoneVote,
+  phase: "reveal",
+  myPick: "o8",
+  reveal: REVEAL_PRIYA_HOUSE_LIE,
   myPoints: 0,
 };
 
@@ -924,6 +944,12 @@ export const realOrNahPreviews: Array<{
     room: playerRevealRoom(phoneRevealWasFooled, REVEAL_DOV_WAS_FOOLED),
   },
   {
+    label: "Phone: Priya fooled by the house lie",
+    surface: "phone",
+    view: phoneRevealHouseLie,
+    room: playerRevealRoom(phoneRevealHouseLie, REVEAL_PRIYA_HOUSE_LIE, { you: PRIYA }),
+  },
+  {
     label: "Phone: Dov's lie fooled people",
     surface: "phone",
     view: phoneRevealAuthoredFooling,
@@ -1024,7 +1050,9 @@ export const realOrNahMoments: PreviewMoment[] = [
     "Phone: Dov was fooled",
     "Phone: Dov's lie fooled people",
   ]),
-  revealMoment("Host: reveal with a house lie", "house lie", REVEAL_WITH_HOUSE_LIE),
+  revealMoment("Host: reveal with a house lie", "house lie", REVEAL_WITH_HOUSE_LIE, [
+    "Phone: Priya fooled by the house lie",
+  ]),
   revealMoment("Host: reveal, 0 foolers (duds only)", "duds only", REVEAL_ALL_DUDS),
   revealMoment("Host: reveal, 2 foolers plus a dud", "2 foolers", REVEAL_TWO_FOOLERS),
   revealMoment("Host: reveal after a kick", "after a kick", REVEAL_AFTER_KICK),

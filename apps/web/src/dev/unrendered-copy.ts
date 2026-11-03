@@ -20,7 +20,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "common.errorRoomFull",
   "common.errorRoomLocked",
   "common.place.eighth",
-  "common.place.fifth",
   "common.place.fourth",
   "common.place.other",
   "common.place.seventh",

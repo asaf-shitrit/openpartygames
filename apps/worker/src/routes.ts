@@ -37,10 +37,12 @@ export interface AssetFetcher {
   fetch(request: Request): Promise<Response>;
 }
 
-/** Today's room allowance, as one operation so the router stays storage-agnostic. */
+/** Today's room allowance, so the router stays storage-agnostic. */
 export interface RoomBudget {
-  /** True when another room may be created today. */
+  /** True when another room may be created today, and counts it. */
   tryConsume(day: string): Promise<boolean>;
+  /** Gives back a count `tryConsume` took when no room came out of it. */
+  release(day: string): Promise<void>;
 }
 
 export interface RouteLimiters {
@@ -181,18 +183,40 @@ async function createRoom(
   }
 
   const fields = await parseCreateRoomFields(request);
-  const withinCap = await tryConsumeRoom(deps);
+  const day = dayKey(deps.now());
+  const withinCap = await tryConsumeRoom(deps, day);
   if (withinCap === null) return apiError("internal", 500);
   if (!withinCap) return apiError("full-tonight", 429);
-  return startRoom(deps, deps.newHostToken(), 0, fields);
+  const started = await startRoom(deps, deps.newHostToken(), 0, fields);
+  if (started === null) {
+    await giveBackRoom(deps, day);
+    return apiError("internal", 500);
+  }
+  return json(started);
 }
 
-async function tryConsumeRoom(deps: RouteDeps): Promise<boolean | null> {
+async function tryConsumeRoom(
+  deps: RouteDeps,
+  day: string,
+): Promise<boolean | null> {
   try {
-    return await deps.budget.tryConsume(dayKey(deps.now()));
+    return await deps.budget.tryConsume(day);
   } catch (error) {
     console.error("failed to count today's rooms", error);
     return null;
+  }
+}
+
+/**
+ * Gives the day's count back when the room it counted never came to exist: every code
+ * collided, or the room failed to initialize. Otherwise a failed create uses up a room
+ * somebody else could have played tonight.
+ */
+async function giveBackRoom(deps: RouteDeps, day: string): Promise<void> {
+  try {
+    await deps.budget.release(day);
+  } catch (error) {
+    console.error("failed to give back today's room", error);
   }
 }
 
@@ -202,12 +226,12 @@ async function startRoom(
   hostToken: string,
   attempt: number,
   fields: CreateRoomFields,
-): Promise<Response> {
-  if (attempt >= MAX_CODE_ATTEMPTS) return apiError("internal", 500);
+): Promise<CreateRoomResponse | null> {
+  if (attempt >= MAX_CODE_ATTEMPTS) return null;
   const code = deps.newRoomCode();
   if (!(await initRoom(deps, code, hostToken, fields)))
     return startRoom(deps, hostToken, attempt + 1, fields);
-  return json({ code, hostToken });
+  return { code, hostToken };
 }
 
 async function initRoom(

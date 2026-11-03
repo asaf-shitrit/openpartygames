@@ -118,6 +118,33 @@ describe("personalReveal", () => {
     expect(result.haptic).toBe("soft");
   });
 
+  it("voter who sat out but fooled someone with their own title", () => {
+    const result = personalReveal(en, {
+      isArtist: false,
+      myVote: null,
+      truthOptionId: "o1",
+      myPoints: 500,
+      foundByCount: 1,
+    });
+    expect(result.headline).toBe("You fooled someone!");
+    expect(result.sub).toContain("500");
+    expect(result.haptic).toBe("good");
+    expect(result.celebrate).toBe(true);
+  });
+
+  it("voter who sat out and scored nothing", () => {
+    const result = personalReveal(en, {
+      isArtist: false,
+      myVote: null,
+      truthOptionId: "o1",
+      myPoints: 0,
+      foundByCount: 1,
+    });
+    expect(result.headline).toBe("You sat this one out");
+    expect(result.haptic).toBe("soft");
+    expect(result.celebrate).toBe(false);
+  });
+
   it("voter who found the truth", () => {
     const result = personalReveal(en, {
       isArtist: false,

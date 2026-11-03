@@ -206,9 +206,19 @@ export class RoomHub {
     this.room = room;
     // A brand-new room has no seats a crash could have stranded, so it needs no grace.
     this.resumed = true;
+    this.reconcileAt = null;
+    // A reused idle instance can still hold the wait an earlier room booked here. Left in
+    // place, it would cut short the grace a future restore gives its phones.
+    await this.options.storage.setGraceUntil(null);
 
     const packs = await this.loadPacks();
-    await this.apply(room.setPackCatalog(packs, this.options.now()));
+    const result = room.setPackCatalog(packs, this.options.now());
+    // The snapshot comes first: once it is saved this code holds a room, and only the wake
+    // booked after it may fail without undoing the create.
+    await this.store(result);
+    this.notify(result);
+    await this.armFirstAlarm(code);
+    await this.runEffects(result.effects);
     return true;
   }
 
@@ -404,9 +414,8 @@ export class RoomHub {
    * no alarm will ever visit.
    */
   private async apply(result: HandleResult, socket?: HubSocket): Promise<void> {
-    const room = this.room;
-    if (!room) return;
-    if (result.changed) await this.options.storage.put(room.snapshot());
+    if (!this.room) return;
+    await this.store(result);
     if (socket) for (const reply of result.reply) socket.send(reply);
     this.notify(result, socket);
     await this.armAlarm();
@@ -525,6 +534,26 @@ export class RoomHub {
       if (caller.kind !== "player" || caller.playerId !== playerId) continue;
       socket.send({ t: "kicked" });
       socket.close(KICK, "kicked");
+    }
+  }
+
+  /** Saves the room when the change touched it: the snapshot is what a restart reads back. */
+  private async store(result: HandleResult): Promise<void> {
+    const room = this.room;
+    if (room && result.changed) await this.options.storage.put(room.snapshot());
+  }
+
+  /**
+   * Books a new room's first wake. The snapshot is already saved, so the code holds a room
+   * even when the alarm cannot be booked: a throw here must not read as "no room" and send
+   * the router looking for another code, which would leave two rooms under one day's count.
+   * Every later wake arms the alarm again.
+   */
+  private async armFirstAlarm(code: string): Promise<void> {
+    try {
+      await this.armAlarm();
+    } catch (error) {
+      console.error("failed to arm the new room's first alarm", code, error);
     }
   }
 

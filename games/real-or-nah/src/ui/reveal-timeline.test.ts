@@ -3,7 +3,7 @@ import type { Beat, Moment } from "@opg/ui";
 import { en, he } from "@opg/i18n";
 import { revealDurationMs, revealPlan } from "../reveal-plan";
 import type { RevealSegment } from "../reveal-plan";
-import { planLiesOf, type RonReveal } from "../types";
+import { planLiesOf, type RonFooledLie, type RonReveal } from "../types";
 import {
   callout,
   foolablePlayers,
@@ -18,6 +18,7 @@ const DOV = "dov";
 const SAM = "sam";
 const NOA = "noa";
 const LEO = "leo";
+const PRIYA = "priya";
 
 function lie(optionId: string, fooledCount: number) {
   return { optionId, fooledCount };
@@ -60,6 +61,7 @@ const NAMES = {
   [SAM]: "Sam",
   [NOA]: "Noa",
   [LEO]: "Leo",
+  [PRIYA]: "Priya",
 } satisfies Record<string, string>;
 
 describe("hostRevealBeats", () => {
@@ -264,6 +266,40 @@ describe("personalRevealCards", () => {
     expect(fooled?.haptic).toBe("soft");
   });
 
+  it("names the house lie when a decoy, not a player's lie, fooled the voter", () => {
+    const decoy: RonFooledLie = {
+      optionId: "o8",
+      text: "a surprisingly large lizard",
+      authorId: null,
+      fooledIds: [PRIYA],
+      points: 0,
+    };
+    const reveal: RonReveal = { ...REVEAL, lies: [...REVEAL.lies, decoy] };
+    const cards = personalRevealCards(en, {
+      segments: revealPlan({ lies: planLiesOf(reveal) }),
+      reveal,
+      me: PRIYA,
+      names: NAMES,
+      standingsOrdinal: 6,
+      myPointsThisFact: 0,
+    });
+    const fooled = cards.find((c) => c.id === "fooled-by");
+    expect(fooled?.headline).toBe("The house lie got you");
+    expect(fooled?.sub).toBe('"a surprisingly large lizard"');
+
+    const heCards = personalRevealCards(he, {
+      segments: revealPlan({ lies: planLiesOf(reveal) }),
+      reveal,
+      me: PRIYA,
+      names: NAMES,
+      standingsOrdinal: 6,
+      myPointsThisFact: 0,
+    });
+    expect(heCards.find((c) => c.id === "fooled-by")?.headline).toBe(
+      "השקר של הבית תפס אתכם",
+    );
+  });
+
   it("gives a dud author a soft 'fooled nobody' card", () => {
     const cards = personalRevealCards(en, {
       segments,
@@ -318,15 +354,17 @@ describe("personalRevealCards", () => {
     expect(standings?.haptic).toBeUndefined();
   });
 
-  it("orders cards chronologically by atMs", () => {
+  // Noa's lie plays first in the plan, so her cards arrive in a different order than Dov's.
+  it.each([DOV, NOA])("orders cards chronologically by atMs for %s", (me) => {
     const cards = personalRevealCards(en, {
       segments,
       reveal: REVEAL,
-      me: DOV,
+      me,
       names: NAMES,
       standingsOrdinal: 1,
       myPointsThisFact: 1000,
     });
+    expect(cards.length).toBeGreaterThan(1);
     for (let i = 1; i < cards.length; i += 1) {
       const a = cards[i - 1];
       const b = cards[i];

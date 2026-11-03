@@ -4,8 +4,10 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { MutableRefObject } from "react";
 import type { ServerClock } from "@opg/ui";
 import type { Doodle, Stroke } from "@opg/sdk";
+import { GAP_MS_CAP, MAX_INK_INDEX, STROKE_MS_CAP } from "@opg/sdk";
+import { MAX_MESSAGE_LENGTH, parseClientMessage } from "@opg/protocol";
 import { LocaleProvider } from "@opg/i18n";
-import type { DoodleAction, DoodlePlayerView } from "../state";
+import { MAX_POINTS_PER_CHUNK, type DoodleAction, type DoodlePlayerView } from "../state";
 import type { SentCursors } from "./PhoneDraw";
 import {
   commitDrawingChange,
@@ -68,20 +70,23 @@ function baseView(overrides: Partial<DoodlePlayerView> = {}): DoodlePlayerView {
   };
 }
 
+/** A player id at its longest: the room mints UUIDs, and a drawing id is that plus ":0" or ":1". */
+const DRAWING_ID = "7d444840-9dc0-11d1-b245-5ffdce74fad2:0";
+
 describe("pendingChunks", () => {
   it("returns nothing when there are no strokes past the cursor", () => {
-    expect(pendingChunks([stroke(2), stroke(2)], 2)).toEqual([]);
+    expect(pendingChunks([stroke(2), stroke(2)], 2, DRAWING_ID)).toEqual([]);
   });
 
   it("keeps strokes under the per-chunk point cap in one chunk", () => {
     const strokes = [stroke(2), stroke(2)];
-    expect(pendingChunks(strokes, 0)).toEqual([strokes]);
+    expect(pendingChunks(strokes, 0, DRAWING_ID)).toEqual([strokes]);
   });
 
   it("splits into a new chunk once the point cap would be exceeded", () => {
     const big = stroke(300);
     const strokes = [big, big];
-    const chunks = pendingChunks(strokes, 0);
+    const chunks = pendingChunks(strokes, 0, DRAWING_ID);
     expect(chunks).toHaveLength(2);
     expect(chunks[0]).toEqual([big]);
     expect(chunks[1]).toEqual([big]);
@@ -89,7 +94,50 @@ describe("pendingChunks", () => {
 
   it("respects the from cursor", () => {
     const strokes = [stroke(2), stroke(2), stroke(2)];
-    expect(pendingChunks(strokes, 1)).toEqual([[strokes[1], strokes[2]]]);
+    expect(pendingChunks(strokes, 1, DRAWING_ID)).toEqual([[strokes[1], strokes[2]]]);
+  });
+});
+
+/** A stroke that zig-zags the full width of the grid: every delta is 1023 or -1023, so every point
+ * costs the most characters a point can cost. */
+function denseStroke(points: number): Stroke {
+  const p: number[] = [1023, 1023];
+  for (let i = 1; i < points; i += 1) p.push(i % 2 === 1 ? -1023 : 1023, i % 2 === 1 ? -1023 : 1023);
+  return { c: MAX_INK_INDEX, d: STROKE_MS_CAP, g: GAP_MS_CAP, p };
+}
+
+function pointCount(strokes: readonly Stroke[]): number {
+  return strokes.reduce((sum, s) => sum + s.p.length / 2, 0);
+}
+
+/** The frame the socket builds for a "strokes" action: `useRoomSocket.send` stringifies exactly this. */
+function strokesFrame(from: number, strokes: Stroke[]): string {
+  return JSON.stringify({ t: "game-action", action: { type: "strokes", drawingId: DRAWING_ID, from, strokes } });
+}
+
+describe("pendingChunks frame sizing", () => {
+  it("splits a dense 400-point run into frames parseClientMessage keeps whole", () => {
+    const strokes = [denseStroke(128), denseStroke(128), denseStroke(128), denseStroke(16)];
+    expect(pointCount(strokes)).toBe(400);
+    const chunks = pendingChunks(strokes, 0, DRAWING_ID);
+    expect(chunks.length).toBeGreaterThan(1);
+    let from = 0;
+    for (const chunk of chunks) {
+      const frame = strokesFrame(from, chunk);
+      expect(frame.length).toBeLessThanOrEqual(MAX_MESSAGE_LENGTH);
+      expect(parseClientMessage(frame)).not.toBeNull();
+      from += chunk.length;
+    }
+    expect(chunks.flat()).toEqual(strokes);
+  });
+
+  it("splits on the rules' point bound when the frame would hold more", () => {
+    const strokes = [stroke(128), stroke(128), stroke(128), stroke(128)];
+    expect(strokesFrame(0, strokes).length).toBeLessThan(MAX_MESSAGE_LENGTH);
+    const chunks = pendingChunks(strokes, 0, DRAWING_ID);
+    expect(chunks.length).toBeGreaterThan(1);
+    for (const chunk of chunks) expect(pointCount(chunk)).toBeLessThanOrEqual(MAX_POINTS_PER_CHUNK);
+    expect(chunks.flat()).toEqual(strokes);
   });
 });
 

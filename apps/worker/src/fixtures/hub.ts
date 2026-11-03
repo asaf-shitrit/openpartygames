@@ -169,6 +169,8 @@ export class FakeStorage implements HubStorage {
   /** The alarm still armed: like the platform, deleteAll() leaves it alone. */
   alarmAt: number | undefined;
   deletions = 0;
+  /** Alarms the platform refuses before it accepts one: a test can break the very first. */
+  alarmFailures = 0;
   /** Counted, not just kept: a write per frame is the cost a flood is trying to run up. */
   writes = 0;
 
@@ -200,6 +202,10 @@ export class FakeStorage implements HubStorage {
   }
 
   async setAlarm(at: number): Promise<void> {
+    if (this.alarmFailures > 0) {
+      this.alarmFailures -= 1;
+      throw new Error("alarm unavailable");
+    }
     this.alarms.push(at);
     this.alarmAt = at;
   }

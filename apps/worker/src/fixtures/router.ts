@@ -69,9 +69,13 @@ export class RoutesHarness {
   readonly rooms: FakeRooms;
   readonly assets = new FakeAssets();
   readonly budgetDays: string[] = [];
+  readonly releasedDays: string[] = [];
+  /** Rooms today's counter holds: `tryConsume` adds one, `release` takes one back. */
+  roomCount = 0;
   readonly codes: string[];
   budgetAllows = true;
   budgetFails = false;
+  budgetReleaseFails = false;
   createLimiter: Limiter | undefined;
   joinLimiter: Limiter | undefined;
   private time = 1_700_000_000_000;
@@ -115,7 +119,14 @@ export class RoutesHarness {
       tryConsume: async (day: string): Promise<boolean> => {
         this.budgetDays.push(day);
         if (this.budgetFails) throw new Error("d1 unavailable");
-        return this.budgetAllows;
+        if (!this.budgetAllows) return false;
+        this.roomCount += 1;
+        return true;
+      },
+      release: async (day: string): Promise<void> => {
+        if (this.budgetReleaseFails) throw new Error("d1 unavailable");
+        this.releasedDays.push(day);
+        this.roomCount = Math.max(0, this.roomCount - 1);
       },
     };
   }

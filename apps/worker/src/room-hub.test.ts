@@ -105,6 +105,29 @@ describe("RoomHub.init", () => {
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });
+
+  it("opens the room when its first alarm cannot be booked, and books it on the next wake", async () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const harness = makeHub();
+    harness.storage.alarmFailures = 1;
+
+    expect(await harness.hub.init("BCDF", "host-token")).toBe(true);
+
+    // The snapshot is saved, so the code holds a room even though no wake was booked.
+    expect(storedRoom(harness.storage.stored)?.code).toBe("BCDF");
+    expect(harness.storage.alarmAt).toBeUndefined();
+    expect(error).toHaveBeenCalledWith(
+      "failed to arm the new room's first alarm",
+      "BCDF",
+      expect.any(Error),
+    );
+
+    await connectHost(harness);
+    expect(harness.storage.alarmAt).toBe(harness.clock.now() + IDLE_MS);
+    error.mockRestore();
+  });
 });
 
 describe("RoomHub sockets", () => {
@@ -671,6 +694,18 @@ describe("RoomHub restore after a crash or deploy", () => {
     expect(await fresh.hub.init("CDFG", "host-token")).toBe(true);
 
     await fresh.hub.close(accept(fresh));
+
+    expect(fresh.storage.graceUntil).toBeUndefined();
+  });
+
+  it("clears a stale grace left in storage when it takes over an idle room", async () => {
+    const old = makeHub();
+    await old.hub.init("BCDF", "host-token");
+    old.clock.advance(IDLE_MS + 1);
+    const fresh = restartHub(old);
+    fresh.storage.graceUntil = fresh.clock.now() + 5_000;
+
+    expect(await fresh.hub.init("CDFG", "host-token")).toBe(true);
 
     expect(fresh.storage.graceUntil).toBeUndefined();
   });
