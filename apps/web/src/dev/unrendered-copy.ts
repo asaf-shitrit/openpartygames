@@ -210,7 +210,6 @@ export const NOT_YET_RENDERED: readonly string[] = [
   "realOrNah.awards.people.other",
   "realOrNah.awards.truthFinder",
   "realOrNah.awards.truthFinderDetail",
-  "realOrNah.calloutEveryone",
   "realOrNah.everyoneIn",
   "realOrNah.hereItComes",
   "realOrNah.nobodyFoundIt",

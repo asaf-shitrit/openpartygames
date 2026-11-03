@@ -53,7 +53,7 @@ import {
 import type { TableDensity } from "./reveal-layout";
 import { avatarOf, nameOf, PersonTag, PromptText } from "./common";
 import { Standings } from "./Standings";
-import { callout, hostRevealBeats, revealProgress } from "./reveal-timeline";
+import { callout, foolablePlayers, hostRevealBeats, revealProgress } from "./reveal-timeline";
 import type { LieProgress, RevealProgress } from "./reveal-timeline";
 
 const HIDDEN: CSSProperties = {
@@ -523,7 +523,11 @@ function FoolerRow({
       <FooledCell
         fooledIds={lie.progress.fooledShown ? lie.fooledIds : null}
         players={players}
-        calloutText={lie.progress.pointsShown ? callout(t, lie.fooledIds.length, voterCount) : null}
+        calloutText={
+          lie.progress.pointsShown
+            ? callout(t, lie.fooledIds.length, foolablePlayers(lie.authorId, voterCount))
+            : null
+        }
         t={t}
       />
       <PointsCell points={lie.points} shown={lie.progress.pointsShown} />

@@ -6,15 +6,32 @@ By contributing you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Ways to contribute
 
-- **Content packs.** Add word pairs, facts, superlatives or drawing prompts without touching git. Open the "Add word pairs", "Add facts", "Add superlatives" or "Add a drawing prompt" issue form; an Action validates the submission and opens a pull request. You can also edit `packs/` and open a PR yourself.
+- **Content packs.** Add word pairs, facts, superlatives or drawing prompts without touching git. Open the "Add word pairs", "Add facts", "Add superlatives" or "Add a drawing prompt" issue form and pick a pack. Packs are grouped by language, English first, then Hebrew; a Hebrew fact goes into a Hebrew pack. An Action validates the submission and opens a pull request. You can also edit `packs/` and open a PR yourself.
 - **New games.** A game is a workspace package under `games/<id>/` built on the Game SDK. Read the SDK section below and mirror an MVP game.
 - **Bugs and ideas.** Open a GitHub issue. For a new game idea, include a working name, one paragraph of rules, player count, the SDK capabilities it needs, and where its content comes from. See [ROADMAP.md](ROADMAP.md).
 
 ## Before you open a PR
 
-Run `pnpm check` and make it pass. It validates packs, lints with Oxlint (type-aware, anti-slop, warnings fail), typechecks every workspace, runs all tests, enforces a CRAP score of at most 8 per function, and builds the web app.
+Set up as in the [README](README.md#run-it-locally), then run `pnpm check` and make it pass. It runs the same gates as CI, in this order:
+
+- `pnpm validate:packs`: every pack is valid, licensed and complete.
+- `pnpm lint`: Oxlint, type-aware, with the anti-slop plugin. Warnings fail.
+- `pnpm typecheck`: every workspace.
+- `pnpm test`: Vitest, one project per workspace.
+- `pnpm crap`: a CRAP score of at most 8 per function.
+- `pnpm build`: the web bundle.
+
+CI also runs the browser suites on every pull request: `pnpm e2e:layout` (every game screen at three phone sizes and the TV, in English and Hebrew), `pnpm e2e:api` and `pnpm e2e:browser` (real rooms against the Worker and a local D1). You do not have to run them locally. To try one, install the browser once with `pnpm exec playwright install chromium`. Run `pnpm e2e:layout` if you change what a screen draws: `pnpm check` stays green on a screen that overflows.
 
 Never add `oxlint-disable` comments, edit `.oxlintrc.json`, or loosen coverage settings to make a check pass. Fix findings at the root.
+
+A few rules are enforced by tests, so `pnpm test` fails when you break them:
+
+- Every key in the `en` dictionary has a `he` twin with the same `{placeholders}` (`packages/i18n/src/placeholder-parity.test.ts`). Player-visible copy comes from `packages/i18n`, never hardcoded.
+- Every `en` string is rendered by some gallery screen, so the layout suite measures it (`apps/web/src/i18n-render-coverage.test.tsx`). Give a new string a preview. `apps/web/src/dev/unrendered-copy.ts` may only shrink.
+- Every artboard in `design/canvas.json` names the preview that renders it, or `null` (`apps/web/src/dev/design-map.test.ts`). Renaming a preview label means updating its artboard.
+
+A new screen needs an accepted design in `design/` before it is built, and it has to work at phone sizes in English and in Hebrew (right to left). See [CLAUDE.md](CLAUDE.md) for the rest of the project's rules.
 
 ## The Game SDK in brief
 
@@ -47,10 +64,10 @@ Packs are JSON files under `packs/`. The rules live in `scripts/pack-rules.mjs`;
 Every pack declares:
 
 - `id` — kebab-case, and it must match the filename.
-- `name`, `attribution`.
+- `name`, `attribution`. `attribution` must be non-empty for `CC-BY-4.0` and `CC-BY-SA-4.0` packs.
 - `kind` — `word-pairs` in `packs/imposter/`, `facts` in `packs/real-or-nah/`, `superlatives` in `packs/most-likely-to/`, `drawing-prompts` in `packs/doodle-bluff/`.
 - `rating` — `family`, `teen` or `adult`.
-- `language` — `en` for now.
+- `language` — `en` or `he`. A Hebrew room lists only Hebrew packs, so a `he` pack's `name` must be written in Hebrew and an `en` pack's `name` must not contain Hebrew.
 - `license` — `CC0-1.0`, `CC-BY-4.0` or `CC-BY-SA-4.0`.
 - `items` — a non-empty array.
 
@@ -58,12 +75,12 @@ Word pairs are `{ "crew": "...", "decoy": "..." }`:
 
 - both fields lowercase, non-empty, at most 24 characters
 - `crew` and `decoy` must differ
-- no duplicate `crew` values within a pack
+- no duplicate `crew` values, within a pack or across packs
 
 Facts are `{ id, prompt, answer, alternates, decoys, source }`:
 
 - `id` — non-empty and unique within the pack
-- `prompt` — exactly one `____` blank
+- `prompt` — exactly one `____` blank; the same prompt (compared after normalizing) must not appear in two packs
 - `answer` — non-empty, at most 40 characters
 - `alternates` — array of other accepted spellings
 - `decoys` — at least 2, and none may normalize to the answer or an alternate
@@ -73,7 +90,7 @@ Superlatives are `{ id, prompt }`, where `prompt` finishes "Who's most likely to
 
 - `id` — non-empty and unique within the pack
 - `prompt` — at most 80 characters, starts lowercase, no ending `?`, `.` or `!` (the game adds the question mark)
-- no prompt may start with "most likely", "who" or "to", or repeat another prompt in the pack
+- no prompt may start with "most likely", "who" or "to", or repeat another prompt in the pack or in another superlatives pack
 - keep it playful: habits, quirks, harmless hypotheticals. Nothing about looks, bodies, intelligence, money, dating, alcohol or drugs, crime, health or protected traits. Family and teen packs are on by default, so every prompt has to be fine in a classroom.
 
 Drawing prompts are `{ id, prompt, houseTitles }`:
