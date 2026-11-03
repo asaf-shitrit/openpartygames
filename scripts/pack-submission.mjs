@@ -8,20 +8,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { isKebabCase, normalizeAnswer, validatePack } from "./pack-rules.mjs";
+import {
+  crossPackErrors,
+  isKebabCase,
+  loadPacks,
+  normalizeAnswer,
+  validatePack,
+} from "./pack-rules.mjs";
 
-
-const COMMUNITY_FACTS = Object.freeze({
-  id: "community-facts",
-  name: "Community facts",
-  kind: "facts",
-  rating: "family",
-  language: "en",
-  license: "CC-BY-SA-4.0",
-  attribution:
-    "Facts submitted by the community through GitHub issue forms (CC BY-SA 4.0); each item links its source.",
-  items: [],
-});
 
 /** "### Source URL" -> "source-url", so ids and labels both match. */
 /** @param {string} heading */
@@ -154,13 +148,35 @@ function parseFact(sections, taken) {
 }
 
 /**
+ * The cross-pack errors this change adds: the same duplicate check `pnpm validate:packs`
+ * runs, so the pull request a form opens passes it. Errors already on main are not the
+ * submission's fault, so they are left out.
+ * @param {{ rootDir: string, folder: string, filename: string, updated: object }} input
+ */
+function crossPackErrorsFor({ rootDir, folder, filename, updated }) {
+  const entries = loadPacks(rootDir);
+  const before = new Set(crossPackErrors(entries));
+  const after = crossPackErrors(
+    entries.map((entry) =>
+      entry.folder === folder && entry.filename === filename
+        ? { ...entry, pack: updated }
+        : entry,
+    ),
+  );
+  return after.filter((message) => !before.has(message));
+}
+
+/**
  * Read the pack, append the new items, validate, and write it back.
  * @param {{ rootDir: string, folder: string, filename: string, pack: { items: unknown[] }, items: unknown[] }} input
  */
 function appendToPack({ rootDir, folder, filename, pack, items }) {
   const filePath = path.join(rootDir, "packs", folder, filename);
   const updated = { ...pack, items: [...pack.items, ...items] };
-  const errors = validatePack(updated, { folder, filename });
+  const errors = [
+    ...validatePack(updated, { folder, filename }),
+    ...crossPackErrorsFor({ rootDir, folder, filename, updated }),
+  ];
   if (errors.length > 0) {
     throw new Error(
       `packs/${folder}/${filename} failed validation:\n${errors
@@ -176,11 +192,11 @@ function appendToPack({ rootDir, folder, filename, pack, items }) {
  * Read every pack in `packs/<folder>/`, keyed by id.
  * @param {string} rootDir
  * @param {string} folder
- * @returns {Record<string, { items: { id?: string }[] }>}
+ * @returns {Record<string, { language: string, items: { id?: string }[] }>}
  */
 function readPacks(rootDir, folder) {
   const dir = path.join(rootDir, "packs", folder);
-  /** @type {Record<string, { items: { id?: string }[] }>} */
+  /** @type {Record<string, { language: string, items: { id?: string }[] }>} */
   const packs = {};
   if (!fs.existsSync(dir)) return packs;
   for (const name of fs.readdirSync(dir)) {
@@ -192,11 +208,20 @@ function readPacks(rootDir, folder) {
 }
 
 /**
+ * The forms group their pack dropdown by language: "English: animals", "Hebrew: israeli-snacks".
+ * The pack id is what follows the language label; a bare id is accepted too.
+ * @param {string} choice
+ */
+export function packIdOf(choice) {
+  return choice.trim().replace(/^(?:English|Hebrew):\s*/u, "");
+}
+
+/**
  * Append the items `makeItems` builds to the pack the form's "Pack" dropdown names.
- * @param {{ rootDir: string, sections: Record<string, string>, folder: string, makeItems: (taken: Set<string>) => unknown[] }} input
+ * @param {{ rootDir: string, sections: Record<string, string>, folder: string, makeItems: (taken: Set<string>, pack: { language: string }, packId: string) => unknown[] }} input
  */
 function addToChosenPack({ rootDir, sections, folder, makeItems }) {
-  const packId = (sections.pack ?? "").trim();
+  const packId = packIdOf(sections.pack ?? "");
   const packs = readPacks(rootDir, folder);
   if (!isKebabCase(packId) || !Object.hasOwn(packs, packId)) {
     throw new Error(
@@ -210,7 +235,7 @@ function addToChosenPack({ rootDir, sections, folder, makeItems }) {
     folder,
     filename: `${packId}.json`,
     pack,
-    items: makeItems(taken),
+    items: makeItems(taken, pack, packId),
   });
 }
 
@@ -271,21 +296,33 @@ function addDrawingPrompts({ rootDir, sections }) {
   });
 }
 
+const HEBREW = /[\u0590-\u05FF]/u;
+
+/**
+ * A fact lands in the pack of its own language: Hebrew text in a Hebrew pack, nothing else.
+ * @param {Record<string, string>} sections
+ * @param {string} packId
+ * @param {string} language
+ */
+function assertFactLanguage(sections, packId, language) {
+  const isHebrew = HEBREW.test(`${sections.prompt ?? ""} ${sections.answer ?? ""}`);
+  if (isHebrew !== (language === "he")) {
+    throw new Error(
+      `Pack: "${packId}" is a ${language === "he" ? "Hebrew" : "English"} pack, but the fact is written in ${isHebrew ? "Hebrew" : "English"}`,
+    );
+  }
+}
+
 /** @param {{ rootDir: string, sections: Record<string, string> }} input */
 function addFacts({ rootDir, sections }) {
-  const filename = "community-facts.json";
-  const filePath = path.join(rootDir, "packs", "real-or-nah", filename);
-  const existing = fs.existsSync(filePath)
-    ? JSON.parse(fs.readFileSync(filePath, "utf8"))
-    : COMMUNITY_FACTS;
-  const taken = new Set(existing.items.map((item) => item.id));
-  const item = parseFact(sections, taken);
-  return appendToPack({
+  return addToChosenPack({
     rootDir,
+    sections,
     folder: "real-or-nah",
-    filename,
-    pack: existing,
-    items: [item],
+    makeItems: (taken, pack, packId) => {
+      assertFactLanguage(sections, packId, pack.language);
+      return [parseFact(sections, taken)];
+    },
   });
 }
 
