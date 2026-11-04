@@ -15,6 +15,7 @@ body:
       options:
         - "English: most-likely-everyday"
         - "English: most-likely-friends"
+        - "Hebrew: hebrew-teen-friends"
         - "Hebrew: israeli-habits"
     validations:
       required: true
