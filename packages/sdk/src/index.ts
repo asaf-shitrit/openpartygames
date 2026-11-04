@@ -7,8 +7,17 @@ export type * from "./types";
 export { dedupeContent, mergeContent } from "./content";
 export { createRng, restoreRng } from "./rng";
 export { createRoom, restoreRoom, START_TIMEOUT_MS, VIP_GRACE_MS } from "./room";
-export { LEFT_PLAYER_GRACE_MS, pullInDeadline } from "./grace";
+export { LEFT_PLAYER_GRACE_MS, pullInDeadline, restoreDeadline } from "./grace";
+export type { GraceRestore } from "./grace";
 export { normalizeAnswer } from "./text";
+export {
+  chainHeldBy,
+  chainLength,
+  holderSeat,
+  stepKind,
+  transferRounds,
+} from "./chain";
+export type { ChainStepKind } from "./chain";
 export {
   doodleSchema,
   emptyDoodle,

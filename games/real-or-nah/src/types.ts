@@ -1,6 +1,6 @@
 // Real or Nah: constants, state and view types. Pure JSON, no classes/Map/Set.
 import { z } from "zod";
-import type { Fact } from "@opg/sdk";
+import type { Fact, GraceRestore } from "@opg/sdk";
 import type { PlayerId } from "@opg/protocol";
 
 // Timing constants (the UI imports these).
@@ -107,6 +107,11 @@ export interface RonState {
  finished: boolean;
  /** Epoch ms of the current phase timeout; null once finished. */
  deadline: number | null;
+  /**
+   * Set by a grace pull-in so a returning player gets the original deadline back. Absent
+   * otherwise and on older saves.
+   */
+  graceRestore?: GraceRestore | undefined;
  /**
   * One record per fact whose reveal was left, used to compute end-of-game
   * awards. Optional: snapshots saved before this field existed lack it.

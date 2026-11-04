@@ -7,6 +7,17 @@ body:
     attributes:
       value: |
         Facts for Real or Nah. Write a prompt with one `____` blank, the true answer, and at least two decoys. Paraphrase the fact from the source you cite — do not copy the source text.
+  - type: dropdown
+    id: pack
+    attributes:
+      label: Pack
+      description: Which pack should this fact go into? Packs are grouped by language. A Hebrew fact goes into a Hebrew pack, an English fact into an English one.
+      options:
+        - "English: more-surprising-facts"
+        - "English: starter-facts"
+        - "Hebrew: hebrew-surprising-facts"
+    validations:
+      required: true
   - type: input
     id: prompt
     attributes:

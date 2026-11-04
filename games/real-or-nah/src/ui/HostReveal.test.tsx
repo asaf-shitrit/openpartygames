@@ -310,3 +310,28 @@ describe("HostReveal, every lie carries its own outcome", () => {
     expect(five.some((row) => row.includes("dingoes"))).toBe(true);
   });
 });
+
+describe("HostReveal, the callout on a player's lie", () => {
+  it("says Fooled everyone! when a lie took every other player", () => {
+    vi.useFakeTimers();
+    // Eight players: the lie's author cannot pick their own lie, so seven fooled is everyone.
+    setup("Host: worst case, reveal table (8 lies, one fooled seven)", 8000);
+    expect(screen.getByText("Fooled everyone!")).toBeTruthy();
+    expect(screen.queryByText("Fooled 7 people!")).toBeNull();
+  });
+
+  it("counts the people when a lie missed someone", () => {
+    vi.useFakeTimers();
+    setup("Host: worst case, reveal table (8 lies, one fooled six)", 8000);
+    expect(screen.getByText("Fooled 6 people!")).toBeTruthy();
+    expect(screen.queryByText("Fooled everyone!")).toBeNull();
+  });
+
+  it("says Fooled everyone! in Hebrew", () => {
+    vi.useFakeTimers();
+    window.localStorage.setItem("opg:locale", "he");
+    setup("Host: worst case, reveal table (8 lies, one fooled seven)", 8000);
+    expect(screen.getByText("רימו את כולם!")).toBeTruthy();
+    window.localStorage.removeItem("opg:locale");
+  });
+});

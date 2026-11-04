@@ -37,6 +37,10 @@ const wordPairsBody = [
 ].join("\n");
 
 const factsBody = [
+  "### Pack",
+  "",
+  "starter-facts",
+  "",
   "### Prompt",
   "",
   "Scotland's national animal is the ____.",
@@ -60,6 +64,58 @@ const factsBody = [
   "### Source URL",
   "",
   "https://en.wikipedia.org/wiki/National_symbols_of_Scotland",
+  "",
+].join("\n");
+
+const FACTS_PACK = {
+  id: "starter-facts",
+  name: "Starter facts",
+  kind: "facts",
+  rating: "family",
+  language: "en",
+  license: "CC-BY-SA-4.0",
+  attribution: "Fixture.",
+  items: [],
+};
+
+const HEBREW_FACTS_PACK = {
+  id: "hebrew-surprising-facts",
+  name: "עובדות מפתיעות",
+  kind: "facts",
+  rating: "family",
+  language: "he",
+  license: "CC-BY-SA-4.0",
+  attribution: "Fixture.",
+  items: [],
+};
+
+const hebrewFactsBody = [
+  "### Pack",
+  "",
+  "Hebrew: hebrew-surprising-facts",
+  "",
+  "### Prompt",
+  "",
+  "החיה הלאומית של סקוטלנד היא ה____.",
+  "",
+  "### Answer",
+  "",
+  "חד קרן",
+  "",
+  "### Alternates",
+  "",
+  "",
+  "### Decoys",
+  "",
+  "איל, נשר, פרה",
+  "",
+  "### Source title",
+  "",
+  "סמלים לאומיים של סקוטלנד",
+  "",
+  "### Source URL",
+  "",
+  "https://he.wikipedia.org/wiki/סקוטלנד",
   "",
 ].join("\n");
 
@@ -162,6 +218,8 @@ beforeEach(() => {
     `${JSON.stringify(WORD_PACK, null, 2)}\n`,
     "utf8",
   );
+  writePack("real-or-nah", FACTS_PACK);
+  writePack("real-or-nah", HEBREW_FACTS_PACK);
   writePack("most-likely-to", SUPERLATIVE_PACK);
   writePack("doodle-bluff", DRAWING_PACK);
 });
@@ -210,21 +268,14 @@ describe("applySubmission", () => {
     ]);
   });
 
-  it("creates community-facts.json with the right header", () => {
+  it("appends a fact to the pack the form names", () => {
     const changed = applySubmission({
       body: factsBody,
       label: "facts",
       rootDir,
     });
-    expect(changed).toBe("packs/real-or-nah/community-facts.json");
-    const pack = readPack("real-or-nah", "community-facts.json");
-    expect(pack).toMatchObject({
-      id: "community-facts",
-      kind: "facts",
-      rating: "family",
-      language: "en",
-      license: "CC-BY-SA-4.0",
-    });
+    expect(changed).toBe("packs/real-or-nah/starter-facts.json");
+    const pack = readPack("real-or-nah", "starter-facts.json");
     expect(pack.items).toHaveLength(1);
     expect(pack.items[0]).toMatchObject({
       prompt: "Scotland's national animal is the ____.",
@@ -236,14 +287,62 @@ describe("applySubmission", () => {
         url: "https://en.wikipedia.org/wiki/National_symbols_of_Scotland",
       },
     });
+    expect(fs.existsSync(path.join(rootDir, "packs/real-or-nah/community-facts.json"))).toBe(false);
   });
 
-  it("appends more facts to an existing community pack without duplicate ids", () => {
+  it("appends more facts to a pack without duplicate ids", () => {
     applySubmission({ body: factsBody, label: "facts", rootDir });
-    applySubmission({ body: factsBody, label: "facts", rootDir });
-    const pack = readPack("real-or-nah", "community-facts.json");
+    const second = factsBody
+      .replace("Scotland's national animal is the ____.", "Scotland's national dish is ____.")
+      .replace("### Answer\n\nunicorn", "### Answer\n\nunicorn stew");
+    applySubmission({ body: second, label: "facts", rootDir });
+    const pack = readPack("real-or-nah", "starter-facts.json");
     expect(pack.items).toHaveLength(2);
     expect(pack.items[0].id).not.toBe(pack.items[1].id);
+  });
+
+  it("puts a Hebrew fact in the Hebrew pack, and the result validates", () => {
+    const changed = applySubmission({
+      body: hebrewFactsBody,
+      label: "facts",
+      rootDir,
+    });
+    expect(changed).toBe("packs/real-or-nah/hebrew-surprising-facts.json");
+    const pack = readPack("real-or-nah", "hebrew-surprising-facts.json");
+    expect(pack.language).toBe("he");
+    expect(pack.items).toHaveLength(1);
+    expect(pack.items[0]).toMatchObject({ answer: "חד קרן", decoys: ["איל", "נשר", "פרה"] });
+    expect(
+      validatePack(pack, { folder: "real-or-nah", filename: "hebrew-surprising-facts.json" }),
+    ).toEqual([]);
+  });
+
+  it("rejects a Hebrew fact aimed at an English pack and an English fact aimed at a Hebrew pack", () => {
+    const toEnglish = hebrewFactsBody.replace("Hebrew: hebrew-surprising-facts", "English: starter-facts");
+    expect(() => applySubmission({ body: toEnglish, label: "facts", rootDir })).toThrow(
+      /English pack, but the fact is written in Hebrew/u,
+    );
+    const toHebrew = factsBody.replace("starter-facts", "Hebrew: hebrew-surprising-facts");
+    expect(() => applySubmission({ body: toHebrew, label: "facts", rootDir })).toThrow(
+      /Hebrew pack, but the fact is written in English/u,
+    );
+    expect(readPack("real-or-nah", "starter-facts.json").items).toEqual([]);
+    expect(readPack("real-or-nah", "hebrew-surprising-facts.json").items).toEqual([]);
+  });
+
+  it("accepts the dropdown's language label before the pack id", () => {
+    const body = wordPairsBody.replace("animals", "English: animals");
+    expect(applySubmission({ body, label: "word-pairs", rootDir })).toBe(
+      "packs/imposter/animals.json",
+    );
+  });
+
+  it("rejects a submission that repeats an item from another pack, as validate:packs would", () => {
+    writePack("imposter", { ...WORD_PACK, id: "food", name: "Food", items: [{ crew: "giraffe", decoy: "zebra" }] });
+    expect(() =>
+      applySubmission({ body: wordPairsBody, label: "word-pairs", rootDir }),
+    ).toThrow(/crew "giraffe" also appears in pack "animals"/u);
+    expect(readPack("imposter", "animals.json").items).toHaveLength(1);
   });
 
   it("throws a readable error and leaves the pack untouched when validation fails", () => {
@@ -334,16 +433,15 @@ describe("applySubmission", () => {
     });
   });
 
-  it("gives a drawing prompt a fresh id when its slug is already taken", () => {
+  it("rejects a drawing prompt the pack already has, as validate:packs would", () => {
     const body = drawingPromptsBody.replace(
       "a penguin at a bus stop",
       "the cat riding a skateboard",
     );
-    applySubmission({ body, label: "drawing-prompts", rootDir });
-    const ids = readPack("doodle-bluff", "doodle-everyday.json").items.map(
-      (item: { id: string }) => item.id,
+    expect(() => applySubmission({ body, label: "drawing-prompts", rootDir })).toThrow(
+      /also appears in pack "doodle-everyday"/u,
     );
-    expect(ids).toEqual(["cat-riding-a-skateboard", "cat-riding-a-skateboard-2"]);
+    expect(readPack("doodle-bluff", "doodle-everyday.json").items).toHaveLength(1);
   });
 
   it("rejects a drawing prompt with fewer than four house titles", () => {

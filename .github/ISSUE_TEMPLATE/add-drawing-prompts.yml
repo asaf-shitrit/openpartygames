@@ -13,8 +13,9 @@ body:
       label: Pack
       description: Which pack should this prompt go into?
       options:
-        - doodle-everyday
-        - doodle-absurd
+        - "English: doodle-absurd"
+        - "English: doodle-everyday"
+        - "Hebrew: playful-animals"
     validations:
       required: true
   - type: input
